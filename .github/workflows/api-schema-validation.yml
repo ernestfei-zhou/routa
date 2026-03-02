@@ -103,7 +103,11 @@ jobs:
       - name: Build Next.js app
         env:
           DATABASE_URL: postgresql://routa:routa_test@localhost:5432/routa_test
-        run: npm run build
+          # Disable Next.js build cache to ensure fresh environment variables
+          NEXT_TELEMETRY_DISABLED: 1
+        run: |
+          rm -rf .next
+          npm run build
 
       - name: Sync database schema
         env:
