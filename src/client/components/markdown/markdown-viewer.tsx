@@ -19,6 +19,7 @@
 
 import { useRef, useEffect, useMemo } from "react";
 import { MermaidRenderer } from "./mermaid-renderer";
+import { HtmlPreviewRenderer } from "./html-preview-renderer";
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
@@ -42,22 +43,31 @@ function markdownToHtml(md: string): string {
   }
 }
 
-// ─── Mermaid block splitting ─────────────────────────────────────────
+// ─── Block splitting (Mermaid + HTML) ───────────────────────────────
 type ContentSegment =
   | { type: "markdown"; content: string }
-  | { type: "mermaid"; code: string };
+  | { type: "mermaid"; code: string }
+  | { type: "html"; code: string };
 
 const MERMAID_BLOCK_RE = /```mermaid\n([\s\S]*?)```/gm;
+const HTML_BLOCK_RE = /```html\n([\s\S]*?)```/gm;
+// Combined regex for any special block
+const SPECIAL_BLOCK_RE = /```(mermaid|html)\n([\s\S]*?)```/gm;
 
 function hasMermaidBlocks(content: string): boolean {
   MERMAID_BLOCK_RE.lastIndex = 0;
   return MERMAID_BLOCK_RE.test(content);
 }
 
-function splitMermaidBlocks(content: string): ContentSegment[] {
+function hasHtmlBlocks(content: string): boolean {
+  HTML_BLOCK_RE.lastIndex = 0;
+  return HTML_BLOCK_RE.test(content);
+}
+
+function splitSpecialBlocks(content: string): ContentSegment[] {
   const segments: ContentSegment[] = [];
   let lastIndex = 0;
-  const re = /```mermaid\n([\s\S]*?)```/gm;
+  const re = /```(mermaid|html)\n([\s\S]*?)```/gm;
   let match: RegExpExecArray | null;
 
   while ((match = re.exec(content)) !== null) {
@@ -65,7 +75,13 @@ function splitMermaidBlocks(content: string): ContentSegment[] {
       const before = content.slice(lastIndex, match.index).trim();
       if (before) segments.push({ type: "markdown", content: before });
     }
-    segments.push({ type: "mermaid", code: match[1].trim() });
+    const lang = match[1] as "mermaid" | "html";
+    const code = match[2].trim();
+    if (lang === "mermaid") {
+      segments.push({ type: "mermaid", code });
+    } else {
+      segments.push({ type: "html", code });
+    }
     lastIndex = match.index + match[0].length;
   }
 
@@ -75,6 +91,11 @@ function splitMermaidBlocks(content: string): ContentSegment[] {
   }
 
   return segments;
+}
+
+/** @deprecated Use splitSpecialBlocks instead */
+function splitMermaidBlocks(content: string): ContentSegment[] {
+  return splitSpecialBlocks(content);
 }
 
 // ─── Content complexity detection ────────────────────────────────────
@@ -124,17 +145,24 @@ export function MarkdownViewer({
   className = "",
   onFileClick,
 }: MarkdownViewerProps) {
-  // ── Mermaid: split content and render blocks separately ─────────────
-  const hasMermaid = useMemo(() => hasMermaidBlocks(content), [content]);
+  // ── Special blocks: Mermaid + HTML previews ─────────────────────────
+  const hasSpecial = useMemo(
+    () => !isStreaming && (hasMermaidBlocks(content) || hasHtmlBlocks(content)),
+    [content, isStreaming]
+  );
 
-  if (hasMermaid && !isStreaming) {
-    const segments = splitMermaidBlocks(content);
+  if (hasSpecial) {
+    const segments = splitSpecialBlocks(content);
     return (
-      <div className={`markdown-viewer mermaid-content ${className}`}>
-        {segments.map((seg, i) =>
-          seg.type === "mermaid" ? (
-            <MermaidRenderer key={i} code={seg.code} className="my-2" />
-          ) : (
+      <div className={`markdown-viewer special-content ${className}`}>
+        {segments.map((seg, i) => {
+          if (seg.type === "mermaid") {
+            return <MermaidRenderer key={i} code={seg.code} className="my-2" />;
+          }
+          if (seg.type === "html") {
+            return <HtmlPreviewRenderer key={i} code={seg.code} className="my-2" />;
+          }
+          return (
             <MarkdownViewer
               key={i}
               content={seg.content}
@@ -142,8 +170,8 @@ export function MarkdownViewer({
               className=""
               onFileClick={onFileClick}
             />
-          )
-        )}
+          );
+        })}
       </div>
     );
   }
