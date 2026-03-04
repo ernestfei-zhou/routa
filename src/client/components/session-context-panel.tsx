@@ -147,7 +147,7 @@ export function SessionContextPanel({
     return null;
   }
 
-  const hasHierarchy = context.parent || context.children.length > 0;
+  const hasHierarchy = context.parent || context.children.length > 0 || context.siblings.length > 0;
 
   /** Inline rename/delete actions for a session row */
   const SessionActions = ({ sid, displayName }: { sid: string; displayName: string }) => (
@@ -333,6 +333,33 @@ export function SessionContextPanel({
                   </svg>
                 }
               />
+            )}
+
+            {/* Sibling Sessions */}
+            {context.siblings.length > 0 && (
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5 px-2 py-1">
+                  <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                  </svg>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                    {context.siblings.length} Sibling Session{context.siblings.length > 1 ? "s" : ""}
+                  </span>
+                </div>
+                {context.siblings.map((sibling) => (
+                  <SessionRow
+                    key={sibling.sessionId}
+                    session={sibling}
+                    indent
+                    icon={
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    }
+                    iconColor="text-purple-500"
+                  />
+                ))}
+              </div>
             )}
 
             {/* Child Sessions */}
