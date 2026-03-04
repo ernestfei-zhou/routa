@@ -26,7 +26,19 @@ export function loadCustomAcpProviders(): CustomAcpProvider[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as CustomAcpProvider[]) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    // Security: Validate parsed data is an array and has correct shape
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((p): p is CustomAcpProvider =>
+      typeof p === "object" &&
+      p !== null &&
+      typeof p.id === "string" &&
+      typeof p.name === "string" &&
+      typeof p.command === "string" &&
+      Array.isArray(p.args) &&
+      p.args.every((arg: unknown) => typeof arg === "string")
+    );
   } catch {
     return [];
   }
@@ -35,7 +47,12 @@ export function loadCustomAcpProviders(): CustomAcpProvider[] {
 /** Save custom ACP providers to localStorage. */
 export function saveCustomAcpProviders(providers: CustomAcpProvider[]): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(providers));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(providers));
+  } catch (err) {
+    // Security: Gracefully handle localStorage errors (quota exceeded, disabled, privacy mode)
+    console.warn("[custom-acp-providers] Failed to save providers to localStorage:", err);
+  }
 }
 
 /** Get a custom ACP provider by ID. */

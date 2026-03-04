@@ -228,6 +228,22 @@ export async function POST(request: NextRequest) {
       const customCommand = (p.customCommand as string | undefined);
       const customArgs = Array.isArray(p.customArgs) ? (p.customArgs as string[]) : undefined;
 
+      // ── Validate custom provider inputs ────────────────────────────────
+      // Security: Validate customCommand is a non-empty string
+      if (customCommand !== undefined && (typeof customCommand !== "string" || !customCommand.trim())) {
+        return jsonrpcResponse(id ?? null, null, {
+          code: -32602,
+          message: "customCommand must be a non-empty string",
+        });
+      }
+      // Security: Validate customArgs is an array of strings (if provided)
+      if (customArgs !== undefined && !customArgs.every((arg) => typeof arg === "string")) {
+        return jsonrpcResponse(id ?? null, null, {
+          code: -32602,
+          message: "customArgs must be an array of strings",
+        });
+      }
+
       // ── Idempotency check ──────────────────────────────────────────────
       // If client provides an idempotencyKey, check if we've already created
       // a session for this key. This prevents duplicate sessions when user
@@ -319,7 +335,8 @@ export async function POST(request: NextRequest) {
         );
       } else if (customCommand) {
         // ── Custom ACP provider (inline command + args from client) ─────
-        console.log(`[ACP Route] Using custom provider: command=${customCommand}, args=${JSON.stringify(customArgs ?? [])}`);
+        // Security: Avoid logging full command/args as they may contain secrets
+        console.log(`[ACP Route] Using custom provider: ${provider}`);
         acpSessionId = await manager.createSessionFromInline(
           sessionId,
           customCommand,
