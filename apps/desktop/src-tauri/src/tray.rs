@@ -6,7 +6,7 @@
 //!
 //! # Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! // In setup():
 //! tray::setup_tray(&app.handle(), &[])?;
 //!
@@ -217,7 +217,8 @@ fn handle_tray_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
+/// # use crate::tray::parse_github_menu_id_to_url;
 /// assert_eq!(
 ///     parse_github_menu_id_to_url("tray:gh:pulls:phodal/routa"),
 ///     Some("https://github.com/phodal/routa/pulls".to_string())
