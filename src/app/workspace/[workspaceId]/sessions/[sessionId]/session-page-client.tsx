@@ -18,6 +18,7 @@ import {useRouter, useParams} from "next/navigation";
 import {SkillPanel} from "@/client/components/skill-panel";
 import {ChatPanel} from "@/client/components/chat-panel";
 import {SessionPanel} from "@/client/components/session-panel";
+import {SessionContextPanel} from "@/client/components/session-context-panel";
 import {SpecialistManager} from "@/client/components/specialist-manager";
 import {type CrafterAgent, type CrafterMessage, TaskPanel} from "@/client/components/task-panel";
 import {CollaborativeTaskEditor} from "@/client/components/collaborative-task-editor";
@@ -1510,31 +1511,25 @@ export function SessionPageClient() {
             </div>
           </div>
 
-          {/* Sessions header + New Session */}
-          <div className="px-3 py-2 flex items-center justify-between border-b border-gray-100 dark:border-gray-800">
-            <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Sessions</span>
+          {/* Session Context Panel - shows current session info and hierarchy */}
+          <SessionContextPanel
+            sessionId={sessionId}
+            workspaceId={workspaceId}
+            onSelectSession={handleSelectSession}
+          />
+
+          {/* New Session Button */}
+          <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
             <button
               onClick={() => handleCreateSession("")}
               disabled={acp.providers.length === 0 || !acp.selectedProvider}
-              className="px-2 py-0.5 text-[11px] font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full px-2 py-1.5 text-[11px] font-medium rounded-md bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
             >
-              + New
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              New Session
             </button>
-          </div>
-
-          {/* Sessions - scrollable with max height */}
-          <div className="flex-1 min-h-0 max-h-[50%] overflow-y-auto">
-            <SessionPanel
-              selectedSessionId={sessionId}
-              onSelect={handleSelectSession}
-              refreshKey={refreshKey}
-              workspaceId={workspaceId}
-              onSessionDeleted={(deletedId) => {
-                if (sessionId === deletedId) {
-                  router.push(`/workspace/${workspaceId}`);
-                }
-              }}
-            />
           </div>
 
           {/* Divider */}
