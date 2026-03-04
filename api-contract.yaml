@@ -2439,6 +2439,37 @@ paths:
       responses:
         "200":
           description: Task detail
+    patch:
+      operationId: updateBackgroundTask
+      summary: Update a background task (PENDING only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                prompt:
+                  type: string
+                agentId:
+                  type: string
+                priority:
+                  type: integer
+      responses:
+        "200":
+          description: Updated task
+        "400":
+          description: Task is not in PENDING status
+        "404":
+          description: Task not found
     delete:
       operationId: cancelBackgroundTask
       summary: Cancel a background task
