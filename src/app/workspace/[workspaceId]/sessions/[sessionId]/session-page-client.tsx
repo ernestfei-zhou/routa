@@ -703,6 +703,36 @@ export function SessionPageClient() {
     });
   }, [acp.updates]);
 
+  // ── Sync crafter agent status back to task status ────────────────────
+  // When a CRAFTER finishes (completed/error) via SSE, update the
+  // corresponding routaTask so the Tasks view stays in sync.
+  useEffect(() => {
+    setCrafterAgents((agents) => {
+      // Read-only — we just need the current snapshot
+      for (const agent of agents) {
+        if (!agent.taskId) continue;
+        if (agent.status === "completed") {
+          setRoutaTasks((prev) =>
+            prev.map((t) =>
+              t.id === agent.taskId && t.status === "running"
+                ? { ...t, status: "completed" as const }
+                : t
+            )
+          );
+        } else if (agent.status === "error") {
+          setRoutaTasks((prev) =>
+            prev.map((t) =>
+              t.id === agent.taskId && t.status === "running"
+                ? { ...t, status: "confirmed" as const }
+                : t
+            )
+          );
+        }
+      }
+      return agents; // no mutation
+    });
+  }, [crafterAgents]);
+
   const bumpRefresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
   }, []);
@@ -1126,10 +1156,12 @@ export function SessionPageClient() {
       }
 
       // Mark status based on delegation outcome
+      // If delegation succeeded, keep task as "running" — it will be marked
+      // "completed" when the CRAFTER agent finishes via SSE updates.
       setRoutaTasks((prev) =>
         prev.map((t) =>
           t.id === taskId
-            ? { ...t, status: delegationError ? ("confirmed" as const) : ("completed" as const) }
+            ? { ...t, status: delegationError ? ("confirmed" as const) : ("running" as const) }
             : t
         )
       );
