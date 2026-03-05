@@ -65,4 +65,5 @@ Use `issues/_template.md` as the base. Key rules:
   ```
   Co-authored-by: GitHub Copilot Agent <198982749+copilot@users.noreply.github.com>
   Co-authored-by: Kiro AI <kiro@kiro.dev>
+  Co-authored-by: QoderAI <qoder_ai@qoder.com>
   ```

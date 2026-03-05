@@ -125,6 +125,16 @@ export const ACP_AGENT_PRESETS: readonly AcpAgentPreset[] = [
     description: "Amazon Kiro AI coding agent",
     envBinOverride: "KIRO_BIN",
   },
+  {
+    id: "qoder",
+    name: "Qoder",
+    command: "qodercli",
+    // --acp: start as ACP server communicating via stdin/stdout
+    // --yolo: bypass permission checks (equivalent to --allow-all-tools in other agents)
+    args: ["--acp", "--yolo"],
+    description: "Qoder AI coding agent",
+    envBinOverride: "QODER_BIN",
+  },
   // Claude Code uses a non-standard API and requires separate handling
   {
     id: "claude",
