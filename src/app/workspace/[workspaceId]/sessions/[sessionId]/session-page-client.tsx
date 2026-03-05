@@ -1282,89 +1282,6 @@ export function SessionPageClient() {
   }, [crafterAgents, notesHook]);
 
   /**
-   * Abort a running CRAFTER agent by sending session/cancel to the child session.
-   */
-  const handleAbortCrafter = useCallback(async (agentId: string, childSessionId: string) => {
-    if (!childSessionId) return;
-    try {
-      await fetch("/api/acp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: Date.now(),
-          method: "session/cancel",
-          params: { sessionId: childSessionId },
-        }),
-      });
-      console.log(`[SessionPage] Aborted CRAFTER agent ${agentId} (session: ${childSessionId})`);
-    } catch (err) {
-      console.error("[SessionPage] Failed to abort CRAFTER:", err);
-    }
-    // Update UI regardless of API success
-    setCrafterAgents((prev) =>
-      prev.map((a) =>
-        a.id === agentId
-          ? {
-              ...a,
-              status: "error" as const,
-              messages: [
-                ...a.messages,
-                {
-                  id: crypto.randomUUID(),
-                  role: "info" as const,
-                  content: "Aborted by user",
-                  timestamp: new Date(),
-                },
-              ],
-            }
-          : a
-      )
-    );
-    // Reset the associated task back to "confirmed" so it can be re-run
-    const agent = crafterAgents.find((a) => a.id === agentId);
-    if (agent?.taskId) {
-      setRoutaTasks((prev) =>
-        prev.map((t) => (t.id === agent.taskId ? { ...t, status: "confirmed" as const } : t))
-      );
-    }
-  }, [crafterAgents]);
-
-  /**
-   * Manually mark a CRAFTER agent as done without waiting for report_to_parent.
-   */
-  const handleMarkDoneCrafter = useCallback((agentId: string) => {
-    setCrafterAgents((prev) =>
-      prev.map((a) =>
-        a.id === agentId
-          ? {
-              ...a,
-              status: "completed" as const,
-              messages: [
-                ...a.messages,
-                {
-                  id: crypto.randomUUID(),
-                  role: "info" as const,
-                  content: "Marked as done by user",
-                  timestamp: new Date(),
-                },
-              ],
-            }
-          : a
-      )
-    );
-    const agent = crafterAgents.find((a) => a.id === agentId);
-    if (agent?.taskId) {
-      setRoutaTasks((prev) =>
-        prev.map((t) => (t.id === agent.taskId ? { ...t, status: "completed" as const } : t))
-      );
-    }
-  }, [crafterAgents]);
-
-  /**
    * Execute a single collaborative task note by creating it in the MCP task store
    * and delegating to a CRAFTER agent.
    */
@@ -1531,7 +1448,6 @@ export function SessionPageClient() {
   // - Spec/general notes: workspace-wide (no sessionId) or matching sessionId
   const sessionNotes = notesHook.notes;
   const hasCollabNotes = sessionNotes.some((n) => n.metadata.type === "task" || n.metadata.type === "spec");
-  const showTaskPanel = true;
 
   // Verify workspace exists, redirect to home if not
   // Allow "default" as a special workspace ID that always exists
