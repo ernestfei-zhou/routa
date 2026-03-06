@@ -20,14 +20,13 @@ import {SpecialistManager} from "@/client/components/specialist-manager";
 import {type CrafterAgent, type CrafterMessage, TaskPanel, CraftersView} from "@/client/components/task-panel";
 import {AgentInstallPanel} from "@/client/components/agent-install-panel";
 import {LeftSidebar} from "./left-sidebar";
-import {WorkspaceSwitcher} from "@/client/components/workspace-switcher";
+import {AppHeader} from "@/client/components/app-header";
 import {CodebasePicker} from "@/client/components/codebase-picker";
 import {useWorkspaces, useCodebases} from "@/client/hooks/use-workspaces";
 import {useAcp} from "@/client/hooks/use-acp";
 import {useNotes} from "@/client/hooks/use-notes";
 import type {RepoSelection} from "@/client/components/repo-picker";
 import type {ParsedTask} from "@/client/utils/task-block-parser";
-import {ProtocolBadge} from "@/app/protocol-badge";
 import {consumePendingPrompt} from "@/client/utils/pending-prompt";
 import {SettingsPanel, loadDefaultProviders, loadProviderConnectionConfig, getModelDefinitionByAlias} from "@/client/components/settings-panel";
 
@@ -1498,115 +1497,67 @@ export function SessionPageClient() {
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-[#0f1117]">
       {/* ─── Top Bar ──────────────────────────────────────────────── */}
-      <header className="h-[52px] shrink-0 bg-white dark:bg-[#161922] border-b border-gray-200 dark:border-gray-800 flex items-center px-3 md:px-4 gap-2 md:gap-4 z-10">
-        {/* Mobile hamburger */}
-        <button
-          onClick={() => setShowMobileSidebar(!showMobileSidebar)}
-          className="md:hidden w-8 h-8 flex items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            {showMobileSidebar ? (
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
-        </button>
-
-        {/* Logo - links back to workspace */}
-        <a href={`/workspace/${workspaceId}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <img
-            src="/logo.svg"
-            alt="Routa"
-            width={28}
-            height={28}
-            className="rounded-lg"
-          />
-          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 hidden sm:inline">
-            Routa
-          </span>
-        </a>
-
-        {/* Workspace switcher */}
-        <div className="w-px h-5 bg-gray-200 dark:bg-gray-700" />
-        <WorkspaceSwitcher
-          workspaces={workspacesHook.workspaces}
-          activeWorkspaceId={workspaceId}
-          onSelect={handleWorkspaceSelect}
-          onCreate={handleWorkspaceCreate}
-          loading={workspacesHook.loading}
-        />
-
-        {/* Agent selector */}
-        <div className="relative">
-          <select
-            value={selectedSpecialistId ? `specialist:${selectedSpecialistId}` : selectedAgent}
-            onChange={(e) => handleAgentChange(e.target.value)}
-            className="appearance-none pl-2.5 pr-6 py-0.5 text-xs font-medium rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1e2130] text-gray-900 dark:text-gray-100 cursor-pointer focus:ring-1 focus:ring-blue-500"
-          >
-            {/* Built-in roles */}
-            {BUILTIN_ROLES.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
-            ))}
-            {/* Custom specialists from DB */}
-            {specialists.length > 0 && (
-              <optgroup label="Custom Specialists">
-                {specialists.map((s) => (
-                  <option key={s.id} value={`specialist:${s.id}`}>
-                    {s.name}{s.model ? ` (${s.model})` : ""}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-          </select>
-          <svg className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-        </div>
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Protocol badges (hidden on small screens) */}
-        <div className="hidden lg:flex items-center gap-2">
-          <ProtocolBadge name="MCP" endpoint="/api/mcp" />
-          <ProtocolBadge name="ACP" endpoint="/api/acp" />
-        </div>
-
-        {/* Tool Mode Toggle */}
-        <label className="hidden md:flex items-center gap-1.5 cursor-pointer select-none" title={`Tool Mode: ${toolMode === "essential" ? "Essential (7 tools)" : "Full (34 tools)"}`}>
-          <span className="text-[10px] text-gray-400 dark:text-gray-500">Full</span>
+      <AppHeader
+        workspaceId={workspaceId}
+        workspaces={workspacesHook.workspaces}
+        workspacesLoading={workspacesHook.loading}
+        onWorkspaceSelect={handleWorkspaceSelect}
+        onWorkspaceCreate={handleWorkspaceCreate}
+        variant="session"
+        showMobileSidebar={showMobileSidebar}
+        onToggleMobileSidebar={() => setShowMobileSidebar(!showMobileSidebar)}
+        leftSlot={
+          /* Agent selector */
           <div className="relative">
-            <input
-              type="checkbox"
-              checked={toolMode === "essential"}
-              onChange={(e) => handleToolModeToggle(e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-7 h-3.5 bg-gray-300 dark:bg-gray-600 rounded-full peer peer-checked:bg-purple-500 transition-colors" />
-            <div className="absolute left-0.5 top-0.5 w-2.5 h-2.5 bg-white rounded-full transition-transform peer-checked:translate-x-3.5" />
+            <select
+              value={selectedSpecialistId ? `specialist:${selectedSpecialistId}` : selectedAgent}
+              onChange={(e) => handleAgentChange(e.target.value)}
+              className="appearance-none pl-2.5 pr-6 py-0.5 text-xs font-medium rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1e2130] text-gray-900 dark:text-gray-100 cursor-pointer focus:ring-1 focus:ring-blue-500"
+            >
+              {BUILTIN_ROLES.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+              {specialists.length > 0 && (
+                <optgroup label="Custom Specialists">
+                  {specialists.map((s) => (
+                    <option key={s.id} value={`specialist:${s.id}`}>
+                      {s.name}{s.model ? ` (${s.model})` : ""}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+            <svg className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
           </div>
-          <span className="text-[10px] text-purple-600 dark:text-purple-400 font-medium">Essential</span>
-        </label>
-
-        {/* MCP Tools link */}
-        <a
-          href="/mcp-tools"
-          className="hidden md:inline-flex px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-900/20 text-[11px] font-medium text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-        >
-          MCP Tools
-        </a>
-
-        {/* Traces link */}
-        <a
-          href="/traces"
-          className="hidden md:inline-flex px-2.5 py-1 rounded-md bg-purple-50 dark:bg-purple-900/20 text-[11px] font-medium text-purple-600 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
-        >
-          Traces
-        </a>
-      </header>
+        }
+        rightSlot={
+          <>
+            {/* Tool Mode Toggle */}
+            <label className="hidden md:flex items-center gap-1.5 cursor-pointer select-none" title={`Tool Mode: ${toolMode === "essential" ? "Essential (7 tools)" : "Full (34 tools)"}`}>
+              <span className="text-[10px] text-gray-400 dark:text-gray-500">Full</span>
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={toolMode === "essential"}
+                  onChange={(e) => handleToolModeToggle(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-7 h-3.5 bg-gray-300 dark:bg-gray-600 rounded-full peer peer-checked:bg-purple-500 transition-colors" />
+                <div className="absolute left-0.5 top-0.5 w-2.5 h-2.5 bg-white rounded-full transition-transform peer-checked:translate-x-3.5" />
+              </div>
+              <span className="text-[10px] text-purple-600 dark:text-purple-400 font-medium">Essential</span>
+            </label>
+            <a href="/mcp-tools" className="hidden md:inline-flex px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-900/20 text-[11px] font-medium text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+              MCP Tools
+            </a>
+            <a href="/traces" className="hidden md:inline-flex px-2.5 py-1 rounded-md bg-purple-50 dark:bg-purple-900/20 text-[11px] font-medium text-purple-600 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors">
+              Traces
+            </a>
+          </>
+        }
+      />
 
       {/* ─── Main Area ────────────────────────────────────────────── */}
       <div className="flex-1 flex min-h-0 relative">
