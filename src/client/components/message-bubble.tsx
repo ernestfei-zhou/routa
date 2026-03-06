@@ -22,6 +22,13 @@ interface AskUserQuestionPayload {
     answers?: Record<string, string>;
 }
 
+export function hasAskUserQuestionAnswers(message: ChatMessage): boolean {
+    const payload = message.toolRawInput as AskUserQuestionPayload | undefined;
+    const answers = payload?.answers;
+    if (!answers || typeof answers !== "object") return false;
+    return Object.values(answers).some((value) => typeof value === "string" && value.trim().length > 0);
+}
+
 export function MessageBubble({
     message,
     onSubmitAskUserQuestion,
@@ -504,9 +511,10 @@ export function AskUserQuestionBubble({
         setAnswers(existingAnswers);
     }, [message.id, rawInput.answers]);
 
-    const isCompleted = message.toolStatus === "completed";
+    const hasAnswers = hasAskUserQuestionAnswers(message);
+    const isCompleted = hasAnswers;
     const isFailed = message.toolStatus === "failed";
-    const isAwaitingInput = !isCompleted && !isFailed;
+    const isAwaitingInput = !hasAnswers && !isFailed;
 
     const updateSingleAnswer = (question: string, answer: string) => {
         setAnswers((prev) => ({ ...prev, [question]: answer }));

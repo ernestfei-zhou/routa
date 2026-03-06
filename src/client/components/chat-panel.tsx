@@ -18,7 +18,12 @@ import type {SkillSummary} from "../skill-client";
 import {RepoPicker, type RepoSelection} from "./repo-picker";
 import {extractTaskBlocks, hasTaskBlocks, type ParsedTask,} from "../utils/task-block-parser";
 import {type TaskInfo, TaskProgressBar, type FileChangesSummary} from "./task-progress-bar";
-import {MessageBubble, isAskUserQuestionMessage, AskUserQuestionBubble} from "@/client/components/message-bubble";
+import {
+  MessageBubble,
+  isAskUserQuestionMessage,
+  AskUserQuestionBubble,
+  hasAskUserQuestionAnswers,
+} from "@/client/components/message-bubble";
 import {TracePanel} from "@/client/components/trace-panel";
 import {type ChecklistItem, parseChecklist} from "../utils/checklist-parser";
 import type {WorkspaceData, CodebaseData} from "../hooks/use-workspaces";
@@ -215,7 +220,7 @@ export function ChatPanel({
       (msg) =>
         msg.role === "tool" &&
         isAskUserQuestionMessage(msg) &&
-        msg.toolStatus !== "completed" &&
+        !hasAskUserQuestionAnswers(msg) &&
         msg.toolStatus !== "failed",
     );
   }, [visibleMessages]);
@@ -1723,7 +1728,7 @@ export function ChatPanel({
                     return false;
                   }
                   // Hide pending AskUserQuestion from chat stream — shown sticky above input
-                  if (msg.role === "tool" && isAskUserQuestionMessage(msg) && msg.toolStatus !== "completed" && msg.toolStatus !== "failed") {
+                  if (msg.role === "tool" && isAskUserQuestionMessage(msg) && !hasAskUserQuestionAnswers(msg) && msg.toolStatus !== "failed") {
                     return false;
                   }
                   return true;
