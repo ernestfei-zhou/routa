@@ -96,9 +96,10 @@ function setupMcpConfig() {
     }
 
     // Playwright MCP (stdio) — available for headless browser testing
+    // OpenCode requires type:"local" with command as an array
     mcp['playwright'] = {
-      command: 'npx',
-      args: ['@playwright/mcp', '--headless', '--no-sandbox'],
+      type: 'local',
+      command: ['npx', '@playwright/mcp', '--headless', '--no-sandbox'],
       enabled: true,
     }
 

@@ -172,8 +172,14 @@ export class DockerOpenCodeAdapter {
     try {
       const data = JSON.parse(payload) as Record<string, unknown>;
 
-      // Already ACP-compatible.
+      // Already ACP-compatible — but override sessionId to match Routa's
+      // ACP session ID (the bridge relays the opencode-internal ID which
+      // won't match the frontend's activeSessionId).
       if (data.method === "session/update") {
+        const params = data.params as Record<string, unknown> | undefined;
+        if (params) {
+          params.sessionId = sessionId;
+        }
         return data as unknown as JsonRpcMessage;
       }
 
