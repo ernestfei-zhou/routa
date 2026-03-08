@@ -29,13 +29,17 @@ related_issues: [
 
 ### CLI 参数模式
 ```bash
-# 直接指定 specialist 执行任务
-routa agent run --specialist crafter --prompt "实现一个 hello world 函数"
+# 直接指定 specialist 执行任务 (使用短参数 -s)
+routa agent run -s crafter -p "实现一个 hello world 函数"
 
 # 交互式选择 specialist 后执行
 routa agent run --specialist
 # 然后在交互式界面选择 specialist
 ```
+
+### 全局配置支持
+- Specialist 定义支持配置在 `~/.routa/specialists/` 目录
+- 支持 YAML 和 Markdown (带 frontmatter) 格式
 
 ## User Stories
 
@@ -66,20 +70,24 @@ enum Commands {
 enum AgentCommand {
     Run {
         /// Specialist 名称 (如 crafter, gate, developer)
-        #[arg(short, long)]
+        #[arg(short = 's', long)]
         specialist: Option<String>,
 
         /// 要执行的 prompt
-        #[arg(short, long)]
+        #[arg(short = 'p', long)]
         prompt: Option<String>,
 
         /// 工作区 ID
-        #[arg(long, default_value = "default")]
+        #[arg(short = 'w', long, default_value = "default")]
         workspace_id: String,
 
         /// ACP provider
         #[arg(long, default_value = "opencode")]
         provider: String,
+
+        /// Specialist 定义目录 (可配置在 ~/.routa/specialists/)
+        #[arg(short = 'd', long)]
+        specialist_dir: Option<String>,
     },
 }
 ```
@@ -101,9 +109,26 @@ enum AgentCommand {
 // 复用现有的 specialist 加载逻辑
 // 参考 src/core/orchestration/specialist-prompts.rs
 fn load_available_specialists() -> Vec<Specialist> {
-    // 1. 从 ~/.routa/specialists/ 加载用户自定义
-    // 2. 从 resources/specialists/ 加载内置
-    // 3. 硬编码的 fallback (ROUTA, CRAFTER, GATE, DEVELOPER)
+    // 1. 从 ~/.routa/specialists/ 加载用户自定义 (最高优先级)
+    // 2. 从 ./specialists/ 加载项目级配置
+    // 3. 从 resources/specialists/ 加载内置
+    // 4. 硬编码的 fallback (ROUTA, CRAFTER, GATE, DEVELOPER)
+}
+
+// Specialist 搜索路径
+fn get_specialist_search_paths() -> Vec<PathBuf> {
+    let mut paths = vec![];
+
+    // 用户全局配置 ~/.routa/specialists/
+    if let Some(home) = dirs::home_dir() {
+        paths.push(home.join(".routa").join("specialists"));
+    }
+
+    // 当前项目路径
+    paths.push(PathBuf::from("specialists"));
+    paths.push(PathBuf::from("resources/specialists"));
+
+    paths
 }
 ```
 
