@@ -410,7 +410,8 @@ impl AgentTools {
     }
 
     // ─── Tool 7: Create Task ────────────────────────────────────────────
-    #[allow(clippy::too_many_arguments)]    pub async fn create_task(
+    #[allow(clippy::too_many_arguments)]
+    pub async fn create_task(
         &self,
         title: &str,
         objective: &str,
@@ -621,7 +622,9 @@ impl AgentTools {
                 })
             })
             .collect();
-        Ok(ToolResult::success(serde_json::json!({ "events": event_data })))
+        Ok(ToolResult::success(
+            serde_json::json!({ "events": event_data }),
+        ))
     }
 
     // ─── Tool: Get Agent Status ───────────────────────────────────────
@@ -692,4 +695,3 @@ impl AgentTools {
         })))
     }
 }
-

@@ -85,7 +85,10 @@ impl DockerProcessManager {
                     session_id: config.session_id.clone(),
                     ..p.info.clone()
                 };
-                self.containers.write().await.insert(config.session_id.clone(), session_info.clone());
+                self.containers
+                    .write()
+                    .await
+                    .insert(config.session_id.clone(), session_info.clone());
 
                 return Ok(session_info);
             }
@@ -100,10 +103,7 @@ impl DockerProcessManager {
     async fn is_container_healthy(&self, info: &DockerContainerInfo) -> bool {
         let health_url = format!("http://127.0.0.1:{}/health", info.host_port);
 
-        match tokio::time::timeout(
-            Duration::from_secs(3),
-            reqwest::get(&health_url)
-        ).await {
+        match tokio::time::timeout(Duration::from_secs(3), reqwest::get(&health_url)).await {
             Ok(Ok(response)) => response.status().is_success(),
             _ => false,
         }
@@ -166,7 +166,10 @@ impl DockerProcessManager {
 
         // Set Routa MCP URL
         let routa_port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
-        run_parts.push(format!("-e=ROUTA_MCP_URL=http://host.docker.internal:{}/api/mcp", routa_port));
+        run_parts.push(format!(
+            "-e=ROUTA_MCP_URL=http://host.docker.internal:{}/api/mcp",
+            routa_port
+        ));
 
         // Forward provider API keys
         Self::forward_env_vars(&mut run_parts);
@@ -197,7 +200,8 @@ impl DockerProcessManager {
         // Mount auth.json if provided
         if let Some(auth_json) = &config.auth_json {
             if !auth_json.trim().is_empty() {
-                if let Some(temp_file) = self.write_auth_json(&config.session_id, auth_json).await? {
+                if let Some(temp_file) = self.write_auth_json(&config.session_id, auth_json).await?
+                {
                     run_parts.push(format!(
                         "-v={}:/root/.local/share/opencode/auth.json:ro",
                         shell_escape(&temp_file.to_string_lossy())
@@ -370,9 +374,15 @@ impl DockerProcessManager {
                 .run_docker_command(&["docker", "rm", "-f", container_name])
                 .await;
 
-            self.used_ports.write().await.remove(&persistent_info.info.host_port);
+            self.used_ports
+                .write()
+                .await
+                .remove(&persistent_info.info.host_port);
 
-            tracing::info!("[DockerProcessManager] Stopped persistent container {}", container_name);
+            tracing::info!(
+                "[DockerProcessManager] Stopped persistent container {}",
+                container_name
+            );
         }
         Ok(())
     }
@@ -483,4 +493,3 @@ impl DockerProcessManager {
         Ok(Some(temp_file))
     }
 }
-

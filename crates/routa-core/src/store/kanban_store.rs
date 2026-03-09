@@ -15,7 +15,10 @@ impl KanbanStore {
         Self { db }
     }
 
-    pub async fn list_by_workspace(&self, workspace_id: &str) -> Result<Vec<KanbanBoard>, ServerError> {
+    pub async fn list_by_workspace(
+        &self,
+        workspace_id: &str,
+    ) -> Result<Vec<KanbanBoard>, ServerError> {
         let ws = workspace_id.to_string();
         self.db
             .with_conn_async(move |conn| {
@@ -53,7 +56,11 @@ impl KanbanStore {
             .await
     }
 
-    pub async fn set_default_for_workspace(&self, workspace_id: &str, board_id: &str) -> Result<(), ServerError> {
+    pub async fn set_default_for_workspace(
+        &self,
+        workspace_id: &str,
+        board_id: &str,
+    ) -> Result<(), ServerError> {
         let ws = workspace_id.to_string();
         let board_id = board_id.to_string();
         let workspace_label = ws.clone();
@@ -88,7 +95,10 @@ impl KanbanStore {
             })
     }
 
-    pub async fn ensure_default_board(&self, workspace_id: &str) -> Result<KanbanBoard, ServerError> {
+    pub async fn ensure_default_board(
+        &self,
+        workspace_id: &str,
+    ) -> Result<KanbanBoard, ServerError> {
         let boards = self.list_by_workspace(workspace_id).await?;
         if let Some(board) = boards.into_iter().find(|board| board.is_default) {
             return Ok(board);

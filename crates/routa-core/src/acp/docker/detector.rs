@@ -175,7 +175,15 @@ impl DockerDetector {
             Ok(Ok(output)) if output.status.success() => {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                let combined = format!("{}{}", stdout, if stderr.is_empty() { "".to_string() } else { format!("\n{}", stderr) });
+                let combined = format!(
+                    "{}{}",
+                    stdout,
+                    if stderr.is_empty() {
+                        "".to_string()
+                    } else {
+                        format!("\n{}", stderr)
+                    }
+                );
 
                 DockerPullResult {
                     ok: true,
@@ -208,4 +216,3 @@ impl DockerDetector {
         }
     }
 }
-

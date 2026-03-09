@@ -7,18 +7,13 @@
 //! GET  /api/a2ui/dashboard - Returns A2UI v0.10 messages (mock)
 //! POST /api/a2ui/dashboard - Accepts custom A2UI messages (mock)
 
-use axum::{
-    extract::Query,
-    routing::get,
-    Json, Router,
-};
+use axum::{extract::Query, routing::get, Json, Router};
 use serde::Deserialize;
 
 use crate::state::AppState;
 
 pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/dashboard", get(get_dashboard).post(post_dashboard))
+    Router::new().route("/dashboard", get(get_dashboard).post(post_dashboard))
 }
 
 #[derive(Debug, Deserialize)]

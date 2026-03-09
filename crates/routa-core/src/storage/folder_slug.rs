@@ -101,19 +101,13 @@ mod tests {
 
     #[test]
     fn test_mixed_separators() {
-        assert_eq!(
-            to_folder_slug("/Users/john\\project"),
-            "Users-john-project"
-        );
+        assert_eq!(to_folder_slug("/Users/john\\project"), "Users-john-project");
     }
 
     #[test]
     fn test_trailing_separator() {
         // Trailing separator is stripped to avoid slug mismatch
-        assert_eq!(
-            to_folder_slug("/Users/john/project/"),
-            "Users-john-project"
-        );
+        assert_eq!(to_folder_slug("/Users/john/project/"), "Users-john-project");
     }
 
     #[test]

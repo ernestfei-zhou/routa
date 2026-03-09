@@ -34,8 +34,8 @@ pub use installation_state::AcpInstallationState;
 pub use paths::AcpPaths;
 pub use registry_fetch::{fetch_registry, fetch_registry_json};
 pub use registry_types::*;
-pub use runtime_manager::{AcpRuntimeManager, RuntimeInfo, RuntimeType, current_platform};
-pub use warmup::{AcpWarmupService, WarmupStatus, WarmupState};
+pub use runtime_manager::{current_platform, AcpRuntimeManager, RuntimeInfo, RuntimeType};
+pub use warmup::{AcpWarmupService, WarmupState, WarmupStatus};
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -43,10 +43,8 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{broadcast, RwLock};
 
+use crate::trace::{Contributor, TraceConversation, TraceEventType, TraceRecord, TraceWriter};
 use process::AcpProcess;
-use crate::trace::{
-    Contributor, TraceConversation, TraceEventType, TraceRecord, TraceWriter,
-};
 
 // ─── Session Record ─────────────────────────────────────────────────────
 
@@ -204,7 +202,9 @@ impl AcpManager {
             return;
         }
         let mut history = self.history.write().await;
-        let entries = history.entry(session_id.to_string()).or_insert_with(Vec::new);
+        let entries = history
+            .entry(session_id.to_string())
+            .or_insert_with(Vec::new);
         entries.push(notification);
         // Cap at 500 entries (same limit as Next.js backend)
         if entries.len() > 500 {
@@ -335,7 +335,10 @@ impl AcpManager {
             Contributor::new(provider_name, None),
         )
         .with_workspace_id(&workspace_id)
-        .with_metadata("role", serde_json::json!(role.as_deref().unwrap_or("CRAFTER")))
+        .with_metadata(
+            "role",
+            serde_json::json!(role.as_deref().unwrap_or("CRAFTER")),
+        )
         .with_metadata("cwd", serde_json::json!(cwd));
 
         trace_writer.append_safe(&trace).await;
@@ -351,11 +354,7 @@ impl AcpManager {
     }
 
     /// Send a prompt to an existing session's agent process.
-    pub async fn prompt(
-        &self,
-        session_id: &str,
-        text: &str,
-    ) -> Result<serde_json::Value, String> {
+    pub async fn prompt(&self, session_id: &str, text: &str) -> Result<serde_json::Value, String> {
         let processes = self.processes.read().await;
         let managed = processes
             .get(session_id)
@@ -551,7 +550,11 @@ pub fn get_presets() -> Vec<AcpPreset> {
             id: "copilot".to_string(),
             name: "GitHub Copilot".to_string(),
             command: "copilot".to_string(),
-            args: vec!["--acp".to_string(), "--allow-all-tools".to_string(), "--no-ask-user".to_string()],
+            args: vec![
+                "--acp".to_string(),
+                "--allow-all-tools".to_string(),
+                "--no-ask-user".to_string(),
+            ],
             description: "GitHub Copilot CLI".to_string(),
         },
         AcpPreset {
@@ -588,7 +591,8 @@ pub fn get_presets() -> Vec<AcpPreset> {
 }
 
 /// ACP Registry URL
-const ACP_REGISTRY_URL: &str = "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json";
+const ACP_REGISTRY_URL: &str =
+    "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json";
 
 /// Get a preset by ID, checking both static presets and registry.
 /// Static presets take precedence.

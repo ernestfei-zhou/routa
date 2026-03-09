@@ -94,4 +94,3 @@ pub struct DockerPullResult {
 
 /// Notification handler type alias for session updates.
 pub type NotificationHandler = Box<dyn Fn(serde_json::Value) + Send + Sync>;
-

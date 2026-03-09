@@ -4,7 +4,8 @@ use std::sync::Arc;
 
 use crate::acp::{
     docker::{DockerDetector, DockerProcessManager},
-    AcpBinaryManager, AcpInstallationState, AcpManager, AcpPaths, AcpRuntimeManager, AcpWarmupService,
+    AcpBinaryManager, AcpInstallationState, AcpManager, AcpPaths, AcpRuntimeManager,
+    AcpWarmupService,
 };
 use crate::db::Database;
 use crate::events::EventBus;

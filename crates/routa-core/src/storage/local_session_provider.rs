@@ -7,12 +7,12 @@
 //! - Optional summary entries
 //! - Message entries (one per line, appended)
 
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use tokio::fs;
 
 use super::folder_slug::get_sessions_dir;
-use super::jsonl_writer::{JsonlWriter, read_jsonl_file, list_jsonl_files};
+use super::jsonl_writer::{list_jsonl_files, read_jsonl_file, JsonlWriter};
 
 /// Session metadata entry in JSONL file.
 #[allow(clippy::large_enum_variant)]
@@ -140,17 +140,24 @@ impl LocalSessionProvider {
             let mut lines: Vec<String> = Vec::new();
             for entry in &entries {
                 if entry.entry_type.as_deref() == Some("metadata") {
-                    lines.push(serde_json::to_string(&metadata)
-                        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?);
+                    lines
+                        .push(serde_json::to_string(&metadata).map_err(|e| {
+                            std::io::Error::new(std::io::ErrorKind::InvalidData, e)
+                        })?);
                     updated = true;
                 } else {
-                    lines.push(serde_json::to_string(entry)
-                        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?);
+                    lines
+                        .push(serde_json::to_string(entry).map_err(|e| {
+                            std::io::Error::new(std::io::ErrorKind::InvalidData, e)
+                        })?);
                 }
             }
             if !updated {
-                lines.insert(0, serde_json::to_string(&metadata)
-                    .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?);
+                lines.insert(
+                    0,
+                    serde_json::to_string(&metadata)
+                        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?,
+                );
             }
             let content = lines.join("\n") + "\n";
             fs::write(&file_path, content).await?;
@@ -170,26 +177,34 @@ impl LocalSessionProvider {
         }
 
         // Find metadata entry
-        let metadata = entries.iter().find(|e| e.entry_type.as_deref() == Some("metadata"))?;
+        let metadata = entries
+            .iter()
+            .find(|e| e.entry_type.as_deref() == Some("metadata"))?;
         let data = &metadata.data;
 
         let created_at = data["createdAt"].as_str().unwrap_or_default().to_string();
 
         // Find last timestamp for updatedAt
-        let updated_at = entries.iter().rev()
+        let updated_at = entries
+            .iter()
+            .rev()
             .find_map(|e| e.data["timestamp"].as_str())
             .unwrap_or(&created_at)
             .to_string();
 
         // Derive name: explicit name > summary > first user message > default
-        let name = data["name"].as_str().map(|s| s.to_string())
+        let name = data["name"]
+            .as_str()
+            .map(|s| s.to_string())
             .or_else(|| {
-                entries.iter()
+                entries
+                    .iter()
                     .find(|e| e.entry_type.as_deref() == Some("summary"))
                     .and_then(|e| e.data["summary"].as_str().map(|s| s.to_string()))
             })
             .or_else(|| {
-                entries.iter()
+                entries
+                    .iter()
                     .find(|e| e.entry_type.as_deref() == Some("user_message"))
                     .and_then(|e| {
                         let msg = e.data["message"].as_str().unwrap_or_default();
@@ -209,7 +224,10 @@ impl LocalSessionProvider {
             name,
             cwd: data["cwd"].as_str().unwrap_or_default().to_string(),
             branch: data["branch"].as_str().map(|s| s.to_string()),
-            workspace_id: data["workspaceId"].as_str().unwrap_or("default").to_string(),
+            workspace_id: data["workspaceId"]
+                .as_str()
+                .unwrap_or("default")
+                .to_string(),
             routa_agent_id: data["routaAgentId"].as_str().map(|s| s.to_string()),
             provider: data["provider"].as_str().map(|s| s.to_string()),
             role: data["role"].as_str().map(|s| s.to_string()),
@@ -227,7 +245,8 @@ impl LocalSessionProvider {
         let mut sessions = Vec::new();
 
         for file in files {
-            let session_id = file.file_stem()
+            let session_id = file
+                .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or_default()
                 .to_string();

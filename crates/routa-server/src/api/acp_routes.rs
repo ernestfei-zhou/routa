@@ -21,7 +21,8 @@ pub fn router() -> Router<AppState> {
 }
 
 /// Type alias for the SSE stream used in ACP responses.
-type AcpSseStream = std::pin::Pin<Box<dyn tokio_stream::Stream<Item = Result<Event, Infallible>> + Send>>;
+type AcpSseStream =
+    std::pin::Pin<Box<dyn tokio_stream::Stream<Item = Result<Event, Infallible>> + Send>>;
 
 /// Response type that can be either JSON or SSE stream.
 enum AcpResponse {
@@ -47,10 +48,7 @@ async fn acp_rpc(
     State(state): State<AppState>,
     Json(body): Json<serde_json::Value>,
 ) -> Result<AcpResponse, ServerError> {
-    let method = body
-        .get("method")
-        .and_then(|m| m.as_str())
-        .unwrap_or("");
+    let method = body.get("method").and_then(|m| m.as_str()).unwrap_or("");
     let id = body.get("id").cloned().unwrap_or(serde_json::json!(null));
     let params = body.get("params").cloned().unwrap_or_default();
 
@@ -101,9 +99,10 @@ async fn acp_rpc(
             let npx_available = shell_env::which("npx").is_some();
             let uvx_available = shell_env::which("uv").is_some();
 
-            if let Ok(response) = reqwest::get(
-                "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json",
-            ).await {
+            if let Ok(response) =
+                reqwest::get("https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json")
+                    .await
+            {
                 if let Ok(registry) = response.json::<serde_json::Value>().await {
                     if let Some(agents) = registry.get("agents").and_then(|a| a.as_array()) {
                         for agent in agents {
@@ -112,19 +111,27 @@ async fn acp_rpc(
                                 continue;
                             }
 
-                            let name = agent.get("name").and_then(|v| v.as_str()).unwrap_or(agent_id);
-                            let desc = agent.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                            let name = agent
+                                .get("name")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or(agent_id);
+                            let desc = agent
+                                .get("description")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("");
                             let dist = agent.get("distribution");
 
                             let (command, status) = if let Some(dist) = dist {
                                 if dist.get("npx").is_some() && npx_available {
-                                    let pkg = dist.get("npx")
+                                    let pkg = dist
+                                        .get("npx")
                                         .and_then(|v| v.get("package"))
                                         .and_then(|v| v.as_str())
                                         .unwrap_or(agent_id);
                                     (format!("npx {}", pkg), "available")
                                 } else if dist.get("uvx").is_some() && uvx_available {
-                                    let pkg = dist.get("uvx")
+                                    let pkg = dist
+                                        .get("uvx")
                                         .and_then(|v| v.get("package"))
                                         .and_then(|v| v.as_str())
                                         .unwrap_or(agent_id);
@@ -132,7 +139,8 @@ async fn acp_rpc(
                                 } else if dist.get("binary").is_some() {
                                     (agent_id.to_string(), "unavailable")
                                 } else if dist.get("npx").is_some() {
-                                    let pkg = dist.get("npx")
+                                    let pkg = dist
+                                        .get("npx")
                                         .and_then(|v| v.get("package"))
                                         .and_then(|v| v.as_str())
                                         .unwrap_or(agent_id);
@@ -147,7 +155,10 @@ async fn acp_rpc(
                             // If this agent ID conflicts with a built-in preset, use a suffixed ID
                             // to allow both versions to coexist in the UI
                             let (provider_id, provider_name) = if static_ids.contains(agent_id) {
-                                (format!("{}-registry", agent_id), format!("{} (Registry)", name))
+                                (
+                                    format!("{}-registry", agent_id),
+                                    format!("{} (Registry)", name),
+                                )
                             } else {
                                 (agent_id.to_string(), name.to_string())
                             };
@@ -288,7 +299,11 @@ async fn acp_rpc(
                 Ok((_our_sid, _agent_sid)) => {
                     // Assign worktree session now that creation succeeded
                     if let Some(ref wt_id) = validated_worktree_id {
-                        if let Err(e) = state.worktree_store.assign_session(wt_id, Some(&session_id)).await {
+                        if let Err(e) = state
+                            .worktree_store
+                            .assign_session(wt_id, Some(&session_id))
+                            .await
+                        {
                             tracing::warn!("[ACP Route] Failed to assign worktree session: {}", e);
                         }
                     }
@@ -312,7 +327,15 @@ async fn acp_rpc(
                     }
 
                     // Also persist to local JSONL file for file-level persistence
-                    persist_session_to_jsonl(&session_id, &cwd, &workspace_id, provider.as_deref(), role.as_deref(), parent_session_id.as_deref()).await;
+                    persist_session_to_jsonl(
+                        &session_id,
+                        &cwd,
+                        &workspace_id,
+                        provider.as_deref(),
+                        role.as_deref(),
+                        parent_session_id.as_deref(),
+                    )
+                    .await;
 
                     Ok(AcpResponse::Json(Json(serde_json::json!({
                         "jsonrpc": "2.0",
@@ -432,11 +455,22 @@ async fn acp_rpc(
                             )
                             .await
                         {
-                            tracing::warn!("[ACP Route] Failed to persist auto-created session: {}", e);
+                            tracing::warn!(
+                                "[ACP Route] Failed to persist auto-created session: {}",
+                                e
+                            );
                         }
 
                         // Also persist to local JSONL file
-                        persist_session_to_jsonl(&session_id, &cwd, &workspace_id, provider.as_deref(), role.as_deref(), None).await;
+                        persist_session_to_jsonl(
+                            &session_id,
+                            &cwd,
+                            &workspace_id,
+                            provider.as_deref(),
+                            role.as_deref(),
+                            None,
+                        )
+                        .await;
                     }
                     Err(e) => {
                         tracing::error!("[ACP Route] Failed to auto-create session: {}", e);
@@ -557,9 +591,16 @@ async fn acp_rpc(
             match state.acp_manager.prompt(&session_id, &prompt_text).await {
                 Ok(result) => {
                     // Persist history and mark first_prompt_sent after turn completes
-                    let _ = state.acp_session_store.set_first_prompt_sent(&session_id).await;
-                    if let Some(history) = state.acp_manager.get_session_history(&session_id).await {
-                        let _ = state.acp_session_store.save_history(&session_id, &history).await;
+                    let _ = state
+                        .acp_session_store
+                        .set_first_prompt_sent(&session_id)
+                        .await;
+                    if let Some(history) = state.acp_manager.get_session_history(&session_id).await
+                    {
+                        let _ = state
+                            .acp_session_store
+                            .save_history(&session_id, &history)
+                            .await;
                     }
                     Ok(AcpResponse::Json(Json(serde_json::json!({
                         "jsonrpc": "2.0",
@@ -679,9 +720,7 @@ async fn acp_sse(
         std::pin::Pin<Box<dyn tokio_stream::Stream<Item = Result<Event, Infallible>> + Send>>;
 
     // Subscribe to agent notifications for this session
-    let stream: SseStream = if let Some(mut rx) =
-        state.acp_manager.subscribe(&session_id).await
-    {
+    let stream: SseStream = if let Some(mut rx) = state.acp_manager.subscribe(&session_id).await {
         let notifications = async_stream::stream! {
             while let Ok(msg) = rx.recv().await {
                 yield Ok::<_, Infallible>(

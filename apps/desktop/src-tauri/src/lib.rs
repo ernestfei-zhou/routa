@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 
 // PTY module for interactive terminal support
 mod pty;
-pub use pty::{PtyState, pty_create, pty_write, pty_read, pty_resize, pty_kill, pty_list};
+pub use pty::{pty_create, pty_kill, pty_list, pty_read, pty_resize, pty_write, PtyState};
 
 // System tray module
 mod tray;
@@ -114,10 +114,7 @@ fn log_frontend(level: String, scope: String, message: String) {
 /// Called by the frontend after it loads (or saves) webhook configurations so
 /// that the tray immediately reflects the configured repositories.
 #[tauri::command]
-fn update_tray_github_repos(
-    app: tauri::AppHandle,
-    repos: Vec<GitHubRepo>,
-) -> Result<(), String> {
+fn update_tray_github_repos(app: tauri::AppHandle, repos: Vec<GitHubRepo>) -> Result<(), String> {
     tray::update_tray_repos(&app, &repos).map_err(|e| e.to_string())
 }
 
@@ -146,7 +143,8 @@ impl AcpState {
     }
 }
 
-const ACP_REGISTRY_URL: &str = "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json";
+const ACP_REGISTRY_URL: &str =
+    "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json";
 
 /// Fetch the ACP registry from the CDN.
 #[tauri::command]
@@ -180,7 +178,9 @@ async fn fetch_acp_registry(state: State<'_, AcpState>) -> Result<AcpRegistry, S
 
 /// Get list of installed agents.
 #[tauri::command]
-async fn get_installed_agents(state: State<'_, AcpState>) -> Result<Vec<InstalledAgentInfo>, String> {
+async fn get_installed_agents(
+    state: State<'_, AcpState>,
+) -> Result<Vec<InstalledAgentInfo>, String> {
     // Load state from disk if not already loaded
     state.installation_state.load().await?;
     Ok(state.installation_state.get_all_installed().await)
@@ -296,10 +296,7 @@ async fn uninstall_acp_agent(state: State<'_, AcpState>, agent_id: String) -> Re
 
 /// Check if an agent has an update available.
 #[tauri::command]
-async fn check_agent_update(
-    state: State<'_, AcpState>,
-    agent_id: String,
-) -> Result<bool, String> {
+async fn check_agent_update(state: State<'_, AcpState>, agent_id: String) -> Result<bool, String> {
     let registry = {
         let cache = state.registry_cache.read().await;
         cache.clone()
@@ -322,7 +319,10 @@ async fn check_agent_update(
         &agent.version
     };
 
-    Ok(state.installation_state.has_update(&agent_id, latest_version).await)
+    Ok(state
+        .installation_state
+        .has_update(&agent_id, latest_version)
+        .await)
 }
 
 fn detect_repo_root() -> Option<PathBuf> {
@@ -432,10 +432,7 @@ fn start_embedded_next_server(
             .app_data_dir()
             .unwrap_or_else(|_| dirs::home_dir().unwrap_or_default().join(".routa"));
         std::fs::create_dir_all(&data_dir).ok();
-        data_dir
-            .join("routa.db")
-            .to_string_lossy()
-            .to_string()
+        data_dir.join("routa.db").to_string_lossy().to_string()
     });
 
     let node_bin = env_or_default("ROUTA_NODE_BIN", "node");
@@ -476,10 +473,7 @@ fn resolve_db_path(app: &tauri::AppHandle) -> String {
             .app_data_dir()
             .unwrap_or_else(|_| dirs::home_dir().unwrap_or_default().join(".routa"));
         std::fs::create_dir_all(&data_dir).ok();
-        data_dir
-            .join("routa.db")
-            .to_string_lossy()
-            .to_string()
+        data_dir.join("routa.db").to_string_lossy().to_string()
     })
 }
 

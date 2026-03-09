@@ -27,7 +27,10 @@ async fn list_boards(
     Query(query): Query<BoardsQuery>,
 ) -> Result<Json<serde_json::Value>, ServerError> {
     let workspace_id = query.workspace_id.unwrap_or_else(|| "default".to_string());
-    state.kanban_store.ensure_default_board(&workspace_id).await?;
+    state
+        .kanban_store
+        .ensure_default_board(&workspace_id)
+        .await?;
     let boards = state.kanban_store.list_by_workspace(&workspace_id).await?;
     Ok(Json(serde_json::json!({ "boards": boards })))
 }
@@ -46,7 +49,9 @@ async fn create_board(
 ) -> Result<(axum::http::StatusCode, Json<serde_json::Value>), ServerError> {
     let name = body.name.trim();
     if name.is_empty() {
-        return Err(ServerError::BadRequest("board name cannot be blank".to_string()));
+        return Err(ServerError::BadRequest(
+            "board name cannot be blank".to_string(),
+        ));
     }
 
     let mut board = default_kanban_board(body.workspace_id.clone());
@@ -77,7 +82,10 @@ async fn get_board(
     let board = state.kanban_store.get(&board_id).await?;
     match board {
         Some(b) => Ok(Json(serde_json::json!({ "board": b }))),
-        None => Err(ServerError::NotFound(format!("Board not found: {}", board_id))),
+        None => Err(ServerError::NotFound(format!(
+            "Board not found: {}",
+            board_id
+        ))),
     }
 }
 
@@ -97,7 +105,12 @@ async fn update_board(
     let existing = state.kanban_store.get(&board_id).await?;
     let mut board = match existing {
         Some(b) => b,
-        None => return Err(ServerError::NotFound(format!("Board not found: {}", board_id))),
+        None => {
+            return Err(ServerError::NotFound(format!(
+                "Board not found: {}",
+                board_id
+            )))
+        }
     };
 
     // Update fields

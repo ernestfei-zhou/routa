@@ -62,9 +62,7 @@ impl ConversationStore {
                      FROM messages WHERE agent_id = ?1 ORDER BY timestamp DESC LIMIT ?2",
                 )?;
                 let mut rows: Vec<Message> = stmt
-                    .query_map(rusqlite::params![aid, limit], |row| {
-                        Ok(row_to_message(row))
-                    })?
+                    .query_map(rusqlite::params![aid, limit], |row| Ok(row_to_message(row)))?
                     .collect::<Result<Vec<_>, _>>()?;
                 rows.reverse();
                 Ok(rows)

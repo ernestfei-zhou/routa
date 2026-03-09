@@ -5,8 +5,8 @@ pub mod message;
 pub mod note;
 pub mod schedule;
 pub mod task;
-pub mod worktree;
 pub mod workspace;
+pub mod worktree;
 
 pub use agent::*;
 pub use codebase::*;
@@ -15,5 +15,5 @@ pub use message::*;
 pub use note::*;
 pub use schedule::*;
 pub use task::*;
-pub use worktree::*;
 pub use workspace::*;
+pub use worktree::*;

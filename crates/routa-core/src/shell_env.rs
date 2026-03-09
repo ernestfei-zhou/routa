@@ -156,8 +156,8 @@ pub fn which(cmd: &str) -> Option<String> {
 
     #[cfg(windows)]
     let extensions: Vec<&str> = {
-        let pathext = std::env::var("PATHEXT")
-            .unwrap_or_else(|_| ".COM;.EXE;.BAT;.CMD;.PS1".to_string());
+        let pathext =
+            std::env::var("PATHEXT").unwrap_or_else(|_| ".COM;.EXE;.BAT;.CMD;.PS1".to_string());
         // Leak the string so we get 'static references — fine for a one-time init
         let leaked: &'static str = Box::leak(pathext.into_boxed_str());
         leaked.split(';').collect()

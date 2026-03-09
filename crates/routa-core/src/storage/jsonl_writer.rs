@@ -42,9 +42,7 @@ impl JsonlWriter {
 }
 
 /// Read all entries from a JSONL file, skipping malformed lines.
-pub async fn read_jsonl_file<T: serde::de::DeserializeOwned>(
-    path: impl AsRef<Path>,
-) -> Vec<T> {
+pub async fn read_jsonl_file<T: serde::de::DeserializeOwned>(path: impl AsRef<Path>) -> Vec<T> {
     let content = match fs::read_to_string(path.as_ref()).await {
         Ok(c) => c,
         Err(_) => return Vec::new(),
@@ -52,9 +50,7 @@ pub async fn read_jsonl_file<T: serde::de::DeserializeOwned>(
     content
         .lines()
         .filter(|line| !line.trim().is_empty())
-        .filter_map(|line| {
-            serde_json::from_str(line).ok()
-        })
+        .filter_map(|line| serde_json::from_str(line).ok())
         .collect()
 }
 

@@ -140,4 +140,3 @@ pub fn has_input(raw_input: &Option<Value>) -> bool {
         }
     })
 }
-

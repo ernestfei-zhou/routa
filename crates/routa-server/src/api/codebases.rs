@@ -11,8 +11,14 @@ use crate::state::AppState;
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/workspaces/{workspace_id}/codebases", get(list_codebases).post(add_codebase))
-        .route("/codebases/{id}", patch(update_codebase).delete(delete_codebase))
+        .route(
+            "/workspaces/{workspace_id}/codebases",
+            get(list_codebases).post(add_codebase),
+        )
+        .route(
+            "/codebases/{id}",
+            patch(update_codebase).delete(delete_codebase),
+        )
         .route("/codebases/{id}/default", post(set_default_codebase))
 }
 
@@ -20,7 +26,10 @@ async fn list_codebases(
     State(state): State<AppState>,
     axum::extract::Path(workspace_id): axum::extract::Path<String>,
 ) -> Result<Json<serde_json::Value>, ServerError> {
-    let codebases = state.codebase_store.list_by_workspace(&workspace_id).await?;
+    let codebases = state
+        .codebase_store
+        .list_by_workspace(&workspace_id)
+        .await?;
     Ok(Json(serde_json::json!({ "codebases": codebases })))
 }
 
@@ -115,11 +124,18 @@ async fn delete_codebase(
         };
         let _guard = lock.lock().await;
 
-        let worktrees = state.worktree_store.list_by_codebase(&id).await
+        let worktrees = state
+            .worktree_store
+            .list_by_codebase(&id)
+            .await
             .map_err(|e| ServerError::Internal(format!("Failed to list worktrees: {}", e)))?;
         for wt in &worktrees {
             if let Err(e) = crate::git::worktree_remove(repo_path, &wt.worktree_path, true) {
-                tracing::warn!("[Codebase DELETE] Failed to remove worktree {}: {}", wt.id, e);
+                tracing::warn!(
+                    "[Codebase DELETE] Failed to remove worktree {}: {}",
+                    wt.id,
+                    e
+                );
             }
         }
         if !worktrees.is_empty() {

@@ -281,8 +281,13 @@ impl EventBus {
         let mut completed_groups: Vec<String> = Vec::new();
 
         for (group_id, group) in inner.wait_groups.iter_mut() {
-            if group.expected_agent_ids.contains(&completed_agent_id.to_string()) {
-                group.completed_agent_ids.insert(completed_agent_id.to_string());
+            if group
+                .expected_agent_ids
+                .contains(&completed_agent_id.to_string())
+            {
+                group
+                    .completed_agent_ids
+                    .insert(completed_agent_id.to_string());
 
                 tracing::info!(
                     "[EventBus] Wait group {}: {}/{} completed",
@@ -292,10 +297,7 @@ impl EventBus {
                 );
 
                 if group.completed_agent_ids.len() >= group.expected_agent_ids.len() {
-                    tracing::info!(
-                        "[EventBus] Wait group {} complete",
-                        group_id
-                    );
+                    tracing::info!("[EventBus] Wait group {} complete", group_id);
                     completed_groups.push(group_id.clone());
                 }
             }
@@ -324,4 +326,3 @@ impl EventBus {
         ]
     }
 }
-

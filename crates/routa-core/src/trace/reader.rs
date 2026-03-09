@@ -11,9 +11,9 @@
 //! - Efficient file scanning with early termination on match
 //! - Backward-compatible: searches both new and legacy paths
 
-use std::path::{Path, PathBuf};
-use std::collections::HashMap;
 use serde_json::Value;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 use super::types::TraceRecord;
 use crate::storage::get_traces_dir;
@@ -117,23 +117,25 @@ impl TraceReader {
             let mut day_dirs = collect_dirs(base_dir).await.unwrap_or_default();
             day_dirs.sort_by(|a, b| b.cmp(a));
 
-            let filtered_days = if let (Some(start), Some(end)) = (&query.start_date, &query.end_date) {
-                self.filter_days_by_range(&day_dirs, start, end)?
-            } else if let Some(start) = &query.start_date {
-                self.filter_days_since(&day_dirs, start)?
-            } else if let Some(end) = &query.end_date {
-                self.filter_days_until(&day_dirs, end)?
-            } else {
-                day_dirs
-            };
+            let filtered_days =
+                if let (Some(start), Some(end)) = (&query.start_date, &query.end_date) {
+                    self.filter_days_by_range(&day_dirs, start, end)?
+                } else if let Some(start) = &query.start_date {
+                    self.filter_days_since(&day_dirs, start)?
+                } else if let Some(end) = &query.end_date {
+                    self.filter_days_until(&day_dirs, end)?
+                } else {
+                    day_dirs
+                };
 
             for day_dir in filtered_days {
                 let mut trace_files = collect_jsonl_files(&day_dir).await.unwrap_or_default();
                 trace_files.sort_by(|a, b| b.cmp(a));
 
                 for trace_file in trace_files {
-                    let content = tokio::fs::read_to_string(&trace_file).await
-                        .map_err(|e| TraceReadError::Io(format!("Failed to read trace file: {}", e)))?;
+                    let content = tokio::fs::read_to_string(&trace_file).await.map_err(|e| {
+                        TraceReadError::Io(format!("Failed to read trace file: {}", e))
+                    })?;
 
                     for line in content.lines() {
                         if let Ok(record) = serde_json::from_str::<TraceRecord>(line) {
@@ -166,8 +168,9 @@ impl TraceReader {
                 let trace_files = collect_jsonl_files(&day_dir).await.unwrap_or_default();
 
                 for trace_file in trace_files {
-                    let content = tokio::fs::read_to_string(&trace_file).await
-                        .map_err(|e| TraceReadError::Io(format!("Failed to read trace file: {}", e)))?;
+                    let content = tokio::fs::read_to_string(&trace_file).await.map_err(|e| {
+                        TraceReadError::Io(format!("Failed to read trace file: {}", e))
+                    })?;
 
                     for line in content.lines() {
                         if let Ok(record) = serde_json::from_str::<TraceRecord>(line) {
@@ -188,8 +191,9 @@ impl TraceReader {
     /// Returns a JSON array of trace records.
     pub async fn export(&self, query: &TraceQuery) -> Result<Value, TraceReadError> {
         let traces = self.query(query).await?;
-        let traces_json: Value = serde_json::to_value(traces)
-            .map_err(|e| TraceReadError::Serialization(format!("Failed to serialize traces: {}", e)))?;
+        let traces_json: Value = serde_json::to_value(traces).map_err(|e| {
+            TraceReadError::Serialization(format!("Failed to serialize traces: {}", e))
+        })?;
         Ok(traces_json)
     }
 
@@ -212,8 +216,9 @@ impl TraceReader {
                 stats.total_files += trace_files.len() as u32;
 
                 for trace_file in trace_files {
-                    let content = tokio::fs::read_to_string(&trace_file).await
-                        .map_err(|e| TraceReadError::Io(format!("Failed to read trace file: {}", e)))?;
+                    let content = tokio::fs::read_to_string(&trace_file).await.map_err(|e| {
+                        TraceReadError::Io(format!("Failed to read trace file: {}", e))
+                    })?;
 
                     stats.total_records += content.lines().count();
 
@@ -352,7 +357,9 @@ async fn collect_dirs(path: &Path) -> Result<Vec<PathBuf>, TraceReadError> {
         .await
         .map_err(|e| TraceReadError::Io(format!("Failed to read directory: {}", e)))?;
 
-    while let Some(entry) = readdir.next_entry().await
+    while let Some(entry) = readdir
+        .next_entry()
+        .await
         .map_err(|e| TraceReadError::Io(format!("Failed to read dir entry: {}", e)))?
     {
         let path = entry.path();
@@ -371,7 +378,9 @@ async fn collect_jsonl_files(path: &Path) -> Result<Vec<PathBuf>, TraceReadError
         .await
         .map_err(|e| TraceReadError::Io(format!("Failed to read directory: {}", e)))?;
 
-    while let Some(entry) = readdir.next_entry().await
+    while let Some(entry) = readdir
+        .next_entry()
+        .await
         .map_err(|e| TraceReadError::Io(format!("Failed to read dir entry: {}", e)))?
     {
         let path = entry.path();

@@ -25,7 +25,10 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(list_tasks).post(create_task))
         .route("/process", axum::routing::post(process_task))
-        .route("/{id}", get(get_task).patch(update_task).delete(delete_task))
+        .route(
+            "/{id}",
+            get(get_task).patch(update_task).delete(delete_task),
+        )
         .route("/{id}/retry", axum::routing::post(retry_task))
 }
 

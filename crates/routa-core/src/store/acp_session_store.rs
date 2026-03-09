@@ -235,7 +235,15 @@ impl AcpSessionStore {
                         (id, cwd, workspace_id, provider, role, parent_session_id,
                          first_prompt_sent, message_history, created_at, updated_at)
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, '[]', ?7, ?7)",
-                    rusqlite::params![id, cwd, workspace_id, provider, role, parent_session_id, now],
+                    rusqlite::params![
+                        id,
+                        cwd,
+                        workspace_id,
+                        provider,
+                        role,
+                        parent_session_id,
+                        now
+                    ],
                 )?;
                 Ok(())
             })
@@ -263,7 +271,10 @@ impl AcpSessionStore {
         let id = session_id.to_string();
         self.db
             .with_conn_async(move |conn| {
-                conn.execute("DELETE FROM acp_sessions WHERE id = ?1", rusqlite::params![id])?;
+                conn.execute(
+                    "DELETE FROM acp_sessions WHERE id = ?1",
+                    rusqlite::params![id],
+                )?;
                 Ok(())
             })
             .await
@@ -320,7 +331,10 @@ mod tests {
     async fn setup() -> (AcpSessionStore, String) {
         let db = Database::open_in_memory().expect("in-memory DB failed");
         let workspace_store = WorkspaceStore::new(db.clone());
-        workspace_store.ensure_default().await.expect("ensure_default failed");
+        workspace_store
+            .ensure_default()
+            .await
+            .expect("ensure_default failed");
 
         let store = AcpSessionStore::new(db);
         let session_id = "test-session-1".to_string();
@@ -332,7 +346,14 @@ mod tests {
         let (store, session_id) = setup().await;
 
         store
-            .create(&session_id, "/tmp", "default", Some("claude"), Some("CRAFTER"), None)
+            .create(
+                &session_id,
+                "/tmp",
+                "default",
+                Some("claude"),
+                Some("CRAFTER"),
+                None,
+            )
             .await
             .expect("create failed");
 
@@ -352,13 +373,27 @@ mod tests {
     async fn test_rename_session() {
         let (store, session_id) = setup().await;
         store
-            .create(&session_id, "/tmp", "default", Some("opencode"), Some("CRAFTER"), None)
+            .create(
+                &session_id,
+                "/tmp",
+                "default",
+                Some("opencode"),
+                Some("CRAFTER"),
+                None,
+            )
             .await
             .expect("create failed");
 
-        store.rename(&session_id, "My Renamed Session").await.expect("rename failed");
+        store
+            .rename(&session_id, "My Renamed Session")
+            .await
+            .expect("rename failed");
 
-        let s = store.get(&session_id).await.expect("get failed").expect("should exist");
+        let s = store
+            .get(&session_id)
+            .await
+            .expect("get failed")
+            .expect("should exist");
         assert_eq!(s.name.as_deref(), Some("My Renamed Session"));
     }
 
@@ -366,7 +401,14 @@ mod tests {
     async fn test_delete_session() {
         let (store, session_id) = setup().await;
         store
-            .create(&session_id, "/tmp", "default", Some("opencode"), Some("CRAFTER"), None)
+            .create(
+                &session_id,
+                "/tmp",
+                "default",
+                Some("opencode"),
+                Some("CRAFTER"),
+                None,
+            )
             .await
             .expect("create failed");
 
@@ -383,16 +425,34 @@ mod tests {
     async fn test_set_first_prompt_sent() {
         let (store, session_id) = setup().await;
         store
-            .create(&session_id, "/tmp", "default", Some("opencode"), Some("CRAFTER"), None)
+            .create(
+                &session_id,
+                "/tmp",
+                "default",
+                Some("opencode"),
+                Some("CRAFTER"),
+                None,
+            )
             .await
             .expect("create failed");
 
-        let s = store.get(&session_id).await.expect("get failed").expect("exists");
+        let s = store
+            .get(&session_id)
+            .await
+            .expect("get failed")
+            .expect("exists");
         assert!(!s.first_prompt_sent);
 
-        store.set_first_prompt_sent(&session_id).await.expect("set_first_prompt_sent failed");
+        store
+            .set_first_prompt_sent(&session_id)
+            .await
+            .expect("set_first_prompt_sent failed");
 
-        let s = store.get(&session_id).await.expect("get failed").expect("exists");
+        let s = store
+            .get(&session_id)
+            .await
+            .expect("get failed")
+            .expect("exists");
         assert!(s.first_prompt_sent, "first_prompt_sent should be true");
     }
 
@@ -400,7 +460,14 @@ mod tests {
     async fn test_save_history() {
         let (store, session_id) = setup().await;
         store
-            .create(&session_id, "/tmp", "default", Some("claude"), Some("CRAFTER"), None)
+            .create(
+                &session_id,
+                "/tmp",
+                "default",
+                Some("claude"),
+                Some("CRAFTER"),
+                None,
+            )
             .await
             .expect("create failed");
 
@@ -409,9 +476,15 @@ mod tests {
             serde_json::json!({"sessionId": session_id, "update": {"sessionUpdate": "turn_complete"}}),
         ];
 
-        store.save_history(&session_id, &history).await.expect("save_history failed");
+        store
+            .save_history(&session_id, &history)
+            .await
+            .expect("save_history failed");
 
-        let retrieved = store.get_history(&session_id).await.expect("get_history failed");
+        let retrieved = store
+            .get_history(&session_id)
+            .await
+            .expect("get_history failed");
         assert_eq!(retrieved.len(), 2);
         assert_eq!(
             retrieved[1]["update"]["sessionUpdate"].as_str(),
@@ -425,11 +498,22 @@ mod tests {
         let parent_id = "parent-session-99";
 
         store
-            .create(&session_id, "/tmp", "default", Some("claude"), Some("CRAFTER"), Some(parent_id))
+            .create(
+                &session_id,
+                "/tmp",
+                "default",
+                Some("claude"),
+                Some("CRAFTER"),
+                Some(parent_id),
+            )
             .await
             .expect("create failed");
 
-        let s = store.get(&session_id).await.expect("get failed").expect("exists");
+        let s = store
+            .get(&session_id)
+            .await
+            .expect("get failed")
+            .expect("exists");
         assert_eq!(s.parent_session_id.as_deref(), Some(parent_id));
     }
 }

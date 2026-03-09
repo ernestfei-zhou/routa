@@ -17,10 +17,19 @@ pub struct Database {
 }
 
 impl Database {
-    fn ignore_duplicate_column(result: Result<usize, rusqlite::Error>) -> Result<(), rusqlite::Error> {
+    fn ignore_duplicate_column(
+        result: Result<usize, rusqlite::Error>,
+    ) -> Result<(), rusqlite::Error> {
         match result {
             Ok(_) => Ok(()),
-            Err(error) if error.to_string().to_ascii_lowercase().contains("duplicate column name") => Ok(()),
+            Err(error)
+                if error
+                    .to_string()
+                    .to_ascii_lowercase()
+                    .contains("duplicate column name") =>
+            {
+                Ok(())
+            }
             Err(error) => Err(error),
         }
     }

@@ -35,22 +35,21 @@ struct McpSessionData {
 pub fn router() -> Router<AppState> {
     let sessions: McpSessions = Arc::new(RwLock::new(HashMap::new()));
 
-    Router::new()
-        .route(
-            "/",
-            get({
-                let sessions = sessions.clone();
-                move |headers, state, query| mcp_get(headers, state, query, sessions)
-            })
-            .post({
-                let sessions = sessions.clone();
-                move |headers, state, body| mcp_post(headers, state, body, sessions)
-            })
-            .delete({
-                let sessions = sessions.clone();
-                move |headers, state| mcp_delete(headers, state, sessions)
-            }),
-        )
+    Router::new().route(
+        "/",
+        get({
+            let sessions = sessions.clone();
+            move |headers, state, query| mcp_get(headers, state, query, sessions)
+        })
+        .post({
+            let sessions = sessions.clone();
+            move |headers, state, body| mcp_post(headers, state, body, sessions)
+        })
+        .delete({
+            let sessions = sessions.clone();
+            move |headers, state| mcp_delete(headers, state, sessions)
+        }),
+    )
 }
 
 // ─── POST /api/mcp ────────────────────────────────────────────────────
@@ -98,10 +97,7 @@ async fn mcp_post(
                 },
             );
 
-            response_headers.insert(
-                "mcp-session-id",
-                new_session_id.parse().unwrap(),
-            );
+            response_headers.insert("mcp-session-id", new_session_id.parse().unwrap());
 
             let active_count = sessions.read().await.len();
             tracing::info!(
@@ -142,10 +138,7 @@ async fn mcp_post(
         }
 
         "tools/call" => {
-            let tool_name = params
-                .get("name")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let tool_name = params.get("name").and_then(|v| v.as_str()).unwrap_or("");
             let arguments = params
                 .get("arguments")
                 .cloned()
@@ -202,11 +195,11 @@ async fn mcp_get(
     State(_state): State<AppState>,
     Query(_query): Query<McpGetQuery>,
     sessions: McpSessions,
-) -> Result<Sse<impl tokio_stream::Stream<Item = Result<Event, Infallible>>>, (axum::http::StatusCode, Json<serde_json::Value>)>
-{
-    let session_id = headers
-        .get("mcp-session-id")
-        .and_then(|v| v.to_str().ok());
+) -> Result<
+    Sse<impl tokio_stream::Stream<Item = Result<Event, Infallible>>>,
+    (axum::http::StatusCode, Json<serde_json::Value>),
+> {
+    let session_id = headers.get("mcp-session-id").and_then(|v| v.to_str().ok());
 
     if session_id.is_none() || !sessions.read().await.contains_key(session_id.unwrap_or("")) {
         return Err((
@@ -254,7 +247,9 @@ async fn mcp_delete(
             Err(ServerError::NotFound("Session not found".into()))
         }
     } else {
-        Err(ServerError::BadRequest("Missing Mcp-Session-Id header".into()))
+        Err(ServerError::BadRequest(
+            "Missing Mcp-Session-Id header".into(),
+        ))
     }
 }
 
@@ -576,11 +571,7 @@ fn tool_def(name: &str, description: &str, input_schema: serde_json::Value) -> s
 }
 
 /// Execute an MCP tool by name.
-async fn execute_tool(
-    state: &AppState,
-    name: &str,
-    args: &serde_json::Value,
-) -> serde_json::Value {
+async fn execute_tool(state: &AppState, name: &str, args: &serde_json::Value) -> serde_json::Value {
     let workspace_id = args
         .get("workspaceId")
         .and_then(|v| v.as_str())
@@ -588,16 +579,25 @@ async fn execute_tool(
 
     match name {
         // ── Agent tools ──────────────────────────────────────────────────
-        "list_agents" => {
-            match state.agent_store.list_by_workspace(workspace_id).await {
-                Ok(agents) => tool_result_text(&serde_json::to_string_pretty(&agents).unwrap_or_default()),
-                Err(e) => tool_result_error(&e.to_string()),
+        "list_agents" => match state.agent_store.list_by_workspace(workspace_id).await {
+            Ok(agents) => {
+                tool_result_text(&serde_json::to_string_pretty(&agents).unwrap_or_default())
             }
-        }
+            Err(e) => tool_result_error(&e.to_string()),
+        },
         "create_agent" => {
-            let name_val = args.get("name").and_then(|v| v.as_str()).unwrap_or("unnamed");
-            let role_str = args.get("role").and_then(|v| v.as_str()).unwrap_or("CRAFTER");
-            let parent_id = args.get("parentId").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let name_val = args
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unnamed");
+            let role_str = args
+                .get("role")
+                .and_then(|v| v.as_str())
+                .unwrap_or("CRAFTER");
+            let parent_id = args
+                .get("parentId")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             let role = crate::models::agent::AgentRole::from_str(role_str);
             match role {
                 Some(r) => {
@@ -607,7 +607,8 @@ async fn execute_tool(
                         r,
                         workspace_id.to_string(),
                         parent_id,
-                        None, None,
+                        None,
+                        None,
                     );
                     match state.agent_store.save(&agent).await {
                         Ok(_) => tool_result_json(&serde_json::json!({
@@ -626,7 +627,9 @@ async fn execute_tool(
             let agent_id = args.get("agentId").and_then(|v| v.as_str()).unwrap_or("");
             let limit = args.get("limit").and_then(|v| v.as_i64()).unwrap_or(50) as usize;
             match state.conversation_store.get_last_n(agent_id, limit).await {
-                Ok(messages) => tool_result_text(&serde_json::to_string_pretty(&messages).unwrap_or_default()),
+                Ok(messages) => {
+                    tool_result_text(&serde_json::to_string_pretty(&messages).unwrap_or_default())
+                }
                 Err(e) => tool_result_error(&e.to_string()),
             }
         }
@@ -634,8 +637,16 @@ async fn execute_tool(
             let agent_id = args.get("agentId").and_then(|v| v.as_str()).unwrap_or("");
             match state.agent_store.get(agent_id).await {
                 Ok(Some(agent)) => {
-                    let tasks = state.task_store.list_by_assignee(agent_id).await.unwrap_or_default();
-                    let msg_count = state.conversation_store.get_message_count(agent_id).await.unwrap_or(0);
+                    let tasks = state
+                        .task_store
+                        .list_by_assignee(agent_id)
+                        .await
+                        .unwrap_or_default();
+                    let msg_count = state
+                        .conversation_store
+                        .get_message_count(agent_id)
+                        .await
+                        .unwrap_or(0);
                     tool_result_json(&serde_json::json!({
                         "agentId": agent.id,
                         "name": agent.name,
@@ -658,9 +669,18 @@ async fn execute_tool(
             let agent_id = args.get("agentId").and_then(|v| v.as_str()).unwrap_or("");
             match state.agent_store.get(agent_id).await {
                 Ok(Some(agent)) => {
-                    let messages = state.conversation_store.get_last_n(agent_id, 5).await.unwrap_or_default();
-                    let tasks = state.task_store.list_by_assignee(agent_id).await.unwrap_or_default();
-                    let active_tasks: Vec<_> = tasks.iter()
+                    let messages = state
+                        .conversation_store
+                        .get_last_n(agent_id, 5)
+                        .await
+                        .unwrap_or_default();
+                    let tasks = state
+                        .task_store
+                        .list_by_assignee(agent_id)
+                        .await
+                        .unwrap_or_default();
+                    let active_tasks: Vec<_> = tasks
+                        .iter()
                         .filter(|t| t.status == crate::models::task::TaskStatus::InProgress)
                         .collect();
                     tool_result_json(&serde_json::json!({
@@ -678,16 +698,22 @@ async fn execute_tool(
             }
         }
         // ── Task tools ───────────────────────────────────────────────────
-        "list_tasks" => {
-            match state.task_store.list_by_workspace(workspace_id).await {
-                Ok(tasks) => tool_result_text(&serde_json::to_string_pretty(&tasks).unwrap_or_default()),
-                Err(e) => tool_result_error(&e.to_string()),
+        "list_tasks" => match state.task_store.list_by_workspace(workspace_id).await {
+            Ok(tasks) => {
+                tool_result_text(&serde_json::to_string_pretty(&tasks).unwrap_or_default())
             }
-        }
+            Err(e) => tool_result_error(&e.to_string()),
+        },
         "create_task" => {
-            let title = args.get("title").and_then(|v| v.as_str()).unwrap_or("Untitled");
+            let title = args
+                .get("title")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Untitled");
             let objective = args.get("objective").and_then(|v| v.as_str()).unwrap_or("");
-            let session_id = args.get("sessionId").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let session_id = args
+                .get("sessionId")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             let task_id = uuid::Uuid::new_v4().to_string();
             let task = crate::models::task::Task::new(
                 task_id.clone(),
@@ -695,8 +721,13 @@ async fn execute_tool(
                 objective.to_string(),
                 workspace_id.to_string(),
                 session_id,
-                args.get("scope").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                None, None, None, None,
+                args.get("scope")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                None,
+                None,
+                None,
+                None,
             );
             match state.task_store.save(&task).await {
                 Ok(_) => tool_result_json(&serde_json::json!({
@@ -744,7 +775,9 @@ async fn execute_tool(
         "get_my_task" => {
             let agent_id = args.get("agentId").and_then(|v| v.as_str()).unwrap_or("");
             match state.task_store.list_by_assignee(agent_id).await {
-                Ok(tasks) => tool_result_text(&serde_json::to_string_pretty(&tasks).unwrap_or_default()),
+                Ok(tasks) => {
+                    tool_result_text(&serde_json::to_string_pretty(&tasks).unwrap_or_default())
+                }
                 Err(e) => tool_result_error(&e.to_string()),
             }
         }
@@ -752,10 +785,22 @@ async fn execute_tool(
         "delegate_task_to_agent" => {
             // This is a stub - full implementation requires Orchestrator integration
             let task_id = args.get("taskId").and_then(|v| v.as_str()).unwrap_or("");
-            let caller_agent_id = args.get("callerAgentId").and_then(|v| v.as_str()).unwrap_or("");
-            let specialist = args.get("specialist").and_then(|v| v.as_str()).unwrap_or("CRAFTER");
-            let provider = args.get("provider").and_then(|v| v.as_str()).unwrap_or("claude");
-            let wait_mode = args.get("waitMode").and_then(|v| v.as_str()).unwrap_or("after_all");
+            let caller_agent_id = args
+                .get("callerAgentId")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let specialist = args
+                .get("specialist")
+                .and_then(|v| v.as_str())
+                .unwrap_or("CRAFTER");
+            let provider = args
+                .get("provider")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
+            let wait_mode = args
+                .get("waitMode")
+                .and_then(|v| v.as_str())
+                .unwrap_or("after_all");
 
             // For now, return a placeholder - full implementation needs Orchestrator
             tool_result_json(&serde_json::json!({
@@ -772,7 +817,10 @@ async fn execute_tool(
             let agent_id = args.get("agentId").and_then(|v| v.as_str()).unwrap_or("");
             let task_id = args.get("taskId").and_then(|v| v.as_str()).unwrap_or("");
             let summary = args.get("summary").and_then(|v| v.as_str()).unwrap_or("");
-            let success = args.get("success").and_then(|v| v.as_bool()).unwrap_or(true);
+            let success = args
+                .get("success")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(true);
 
             // Update task status based on success
             let new_status = if success {
@@ -807,7 +855,10 @@ async fn execute_tool(
             }))
         }
         "send_message_to_agent" => {
-            let from_agent_id = args.get("fromAgentId").and_then(|v| v.as_str()).unwrap_or("");
+            let from_agent_id = args
+                .get("fromAgentId")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             let to_agent_id = args.get("toAgentId").and_then(|v| v.as_str()).unwrap_or("");
             let message = args.get("message").and_then(|v| v.as_str()).unwrap_or("");
 
@@ -848,20 +899,31 @@ async fn execute_tool(
             }))
         }
         // ── Note tools ───────────────────────────────────────────────────
-        "list_notes" => {
-            match state.note_store.list_by_workspace(workspace_id).await {
-                Ok(notes) => tool_result_text(&serde_json::to_string_pretty(&notes).unwrap_or_default()),
-                Err(e) => tool_result_error(&e.to_string()),
+        "list_notes" => match state.note_store.list_by_workspace(workspace_id).await {
+            Ok(notes) => {
+                tool_result_text(&serde_json::to_string_pretty(&notes).unwrap_or_default())
             }
-        }
+            Err(e) => tool_result_error(&e.to_string()),
+        },
         "create_note" => {
-            let title = args.get("title").and_then(|v| v.as_str()).unwrap_or("Untitled");
+            let title = args
+                .get("title")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Untitled");
             let content = args.get("content").and_then(|v| v.as_str()).unwrap_or("");
-            let note_id = args.get("noteId").and_then(|v| v.as_str())
+            let note_id = args
+                .get("noteId")
+                .and_then(|v| v.as_str())
                 .map(|s| s.to_string())
                 .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
-            let session_id = args.get("sessionId").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let note_type_str = args.get("type").and_then(|v| v.as_str()).unwrap_or("general");
+            let session_id = args
+                .get("sessionId")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let note_type_str = args
+                .get("type")
+                .and_then(|v| v.as_str())
+                .unwrap_or("general");
             let note_type = crate::models::note::NoteType::from_str(note_type_str);
             let note = crate::models::note::Note::new_with_session(
                 note_id.clone(),
@@ -886,7 +948,9 @@ async fn execute_tool(
         "read_note" => {
             let note_id = args.get("noteId").and_then(|v| v.as_str()).unwrap_or("");
             match state.note_store.get(note_id, workspace_id).await {
-                Ok(Some(note)) => tool_result_text(&serde_json::to_string_pretty(&note).unwrap_or_default()),
+                Ok(Some(note)) => {
+                    tool_result_text(&serde_json::to_string_pretty(&note).unwrap_or_default())
+                }
                 Ok(None) => tool_result_error(&format!("Note not found: {}", note_id)),
                 Err(e) => tool_result_error(&e.to_string()),
             }
@@ -894,7 +958,10 @@ async fn execute_tool(
         "set_note_content" => {
             let note_id = args.get("noteId").and_then(|v| v.as_str()).unwrap_or("");
             let content = args.get("content").and_then(|v| v.as_str()).unwrap_or("");
-            let session_id = args.get("sessionId").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let session_id = args
+                .get("sessionId")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             match state.note_store.get(note_id, workspace_id).await {
                 Ok(Some(mut note)) => {
                     note.content = content.to_string();
@@ -966,35 +1033,43 @@ async fn execute_tool(
             }
         }
         // ── Workspace tools ──────────────────────────────────────────────
-        "list_workspaces" => {
-            match state.workspace_store.list().await {
-                Ok(ws) => tool_result_text(&serde_json::to_string_pretty(&ws).unwrap_or_default()),
-                Err(e) => tool_result_error(&e.to_string()),
+        "list_workspaces" => match state.workspace_store.list().await {
+            Ok(ws) => tool_result_text(&serde_json::to_string_pretty(&ws).unwrap_or_default()),
+            Err(e) => tool_result_error(&e.to_string()),
+        },
+        "get_workspace_info" => match state.workspace_store.get(workspace_id).await {
+            Ok(Some(ws)) => {
+                let agents = state
+                    .agent_store
+                    .list_by_workspace(workspace_id)
+                    .await
+                    .unwrap_or_default();
+                let tasks = state
+                    .task_store
+                    .list_by_workspace(workspace_id)
+                    .await
+                    .unwrap_or_default();
+                let notes = state
+                    .note_store
+                    .list_by_workspace(workspace_id)
+                    .await
+                    .unwrap_or_default();
+                tool_result_json(&serde_json::json!({
+                    "workspace": ws,
+                    "agentCount": agents.len(),
+                    "taskCount": tasks.len(),
+                    "noteCount": notes.len(),
+                    "agents": agents.iter().map(|a| serde_json::json!({
+                        "id": a.id,
+                        "name": a.name,
+                        "role": a.role.as_str(),
+                        "status": a.status.as_str()
+                    })).collect::<Vec<_>>()
+                }))
             }
-        }
-        "get_workspace_info" => {
-            match state.workspace_store.get(workspace_id).await {
-                Ok(Some(ws)) => {
-                    let agents = state.agent_store.list_by_workspace(workspace_id).await.unwrap_or_default();
-                    let tasks = state.task_store.list_by_workspace(workspace_id).await.unwrap_or_default();
-                    let notes = state.note_store.list_by_workspace(workspace_id).await.unwrap_or_default();
-                    tool_result_json(&serde_json::json!({
-                        "workspace": ws,
-                        "agentCount": agents.len(),
-                        "taskCount": tasks.len(),
-                        "noteCount": notes.len(),
-                        "agents": agents.iter().map(|a| serde_json::json!({
-                            "id": a.id,
-                            "name": a.name,
-                            "role": a.role.as_str(),
-                            "status": a.status.as_str()
-                        })).collect::<Vec<_>>()
-                    }))
-                }
-                Ok(None) => tool_result_error(&format!("Workspace not found: {}", workspace_id)),
-                Err(e) => tool_result_error(&e.to_string()),
-            }
-        }
+            Ok(None) => tool_result_error(&format!("Workspace not found: {}", workspace_id)),
+            Err(e) => tool_result_error(&e.to_string()),
+        },
         "list_skills" => {
             let skills = state.skill_registry.list_skills();
             tool_result_text(&serde_json::to_string_pretty(&skills).unwrap_or_default())
@@ -1058,7 +1133,10 @@ async fn execute_tool(
             }))
         }
         "unsubscribe_from_events" => {
-            let subscription_id = args.get("subscriptionId").and_then(|v| v.as_str()).unwrap_or("");
+            let subscription_id = args
+                .get("subscriptionId")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             state.event_bus.unsubscribe(subscription_id).await;
             tool_result_json(&serde_json::json!({
                 "success": true,
@@ -1068,10 +1146,12 @@ async fn execute_tool(
         // ── Kanban tools ─────────────────────────────────────────────────
         "create_board" => {
             let name = args.get("name").and_then(|v| v.as_str()).unwrap_or("Board");
-            let columns: Option<Vec<String>> = args
-                .get("columns")
-                .and_then(|v| v.as_array())
-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect());
+            let columns: Option<Vec<String>> =
+                args.get("columns").and_then(|v| v.as_array()).map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                });
 
             let mut board = crate::models::kanban::default_kanban_board(workspace_id.to_string());
             board.id = uuid::Uuid::new_v4().to_string();
@@ -1102,25 +1182,31 @@ async fn execute_tool(
                 Err(e) => tool_result_error(&e.to_string()),
             }
         }
-        "list_boards" => {
-            match state.kanban_store.list_by_workspace(workspace_id).await {
-                Ok(boards) => tool_result_json(&serde_json::json!(
-                    boards.iter().map(|b| serde_json::json!({
-                        "id": b.id,
-                        "name": b.name,
-                        "isDefault": b.is_default,
-                        "columnCount": b.columns.len()
-                    })).collect::<Vec<_>>()
-                )),
-                Err(e) => tool_result_error(&e.to_string()),
-            }
-        }
+        "list_boards" => match state.kanban_store.list_by_workspace(workspace_id).await {
+            Ok(boards) => tool_result_json(&serde_json::json!(boards
+                .iter()
+                .map(|b| serde_json::json!({
+                    "id": b.id,
+                    "name": b.name,
+                    "isDefault": b.is_default,
+                    "columnCount": b.columns.len()
+                }))
+                .collect::<Vec<_>>())),
+            Err(e) => tool_result_error(&e.to_string()),
+        },
         "get_board" => {
             let board_id = args.get("boardId").and_then(|v| v.as_str()).unwrap_or("");
             match state.kanban_store.get(board_id).await {
                 Ok(Some(board)) => {
-                    let tasks = state.task_store.list_by_workspace(&board.workspace_id).await.unwrap_or_default();
-                    let board_tasks: Vec<_> = tasks.iter().filter(|t| t.board_id.as_deref() == Some(board_id)).collect();
+                    let tasks = state
+                        .task_store
+                        .list_by_workspace(&board.workspace_id)
+                        .await
+                        .unwrap_or_default();
+                    let board_tasks: Vec<_> = tasks
+                        .iter()
+                        .filter(|t| t.board_id.as_deref() == Some(board_id))
+                        .collect();
 
                     tool_result_json(&serde_json::json!({
                         "id": board.id,
@@ -1147,19 +1233,34 @@ async fn execute_tool(
         }
         "create_card" => {
             let board_id = args.get("boardId").and_then(|v| v.as_str()).unwrap_or("");
-            let column_id = args.get("columnId").and_then(|v| v.as_str()).unwrap_or("backlog");
+            let column_id = args
+                .get("columnId")
+                .and_then(|v| v.as_str())
+                .unwrap_or("backlog");
             let title = args.get("title").and_then(|v| v.as_str()).unwrap_or("");
             let description = args.get("description").and_then(|v| v.as_str());
             let priority = args.get("priority").and_then(|v| v.as_str());
             let labels: Vec<String> = args
                 .get("labels")
                 .and_then(|v| v.as_array())
-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                })
                 .unwrap_or_default();
 
-            let tasks = state.task_store.list_by_workspace(workspace_id).await.unwrap_or_default();
-            let position = tasks.iter()
-                .filter(|t| t.board_id.as_deref() == Some(board_id) && t.column_id.as_deref() == Some(column_id))
+            let tasks = state
+                .task_store
+                .list_by_workspace(workspace_id)
+                .await
+                .unwrap_or_default();
+            let position = tasks
+                .iter()
+                .filter(|t| {
+                    t.board_id.as_deref() == Some(board_id)
+                        && t.column_id.as_deref() == Some(column_id)
+                })
                 .count() as i64;
 
             let mut task = crate::models::task::Task::new(
@@ -1167,7 +1268,12 @@ async fn execute_tool(
                 title.to_string(),
                 description.unwrap_or("").to_string(),
                 workspace_id.to_string(),
-                None, None, None, None, None, None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
             );
             task.board_id = Some(board_id.to_string());
             task.column_id = Some(column_id.to_string());
@@ -1183,7 +1289,10 @@ async fn execute_tool(
         }
         "move_card" => {
             let card_id = args.get("cardId").and_then(|v| v.as_str()).unwrap_or("");
-            let target_column_id = args.get("targetColumnId").and_then(|v| v.as_str()).unwrap_or("");
+            let target_column_id = args
+                .get("targetColumnId")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             let position = args.get("position").and_then(|v| v.as_i64());
 
             match state.task_store.get(card_id).await {
@@ -1209,17 +1318,27 @@ async fn execute_tool(
             let title = args.get("title").and_then(|v| v.as_str());
             let description = args.get("description").and_then(|v| v.as_str());
             let priority = args.get("priority").and_then(|v| v.as_str());
-            let labels: Option<Vec<String>> = args
-                .get("labels")
-                .and_then(|v| v.as_array())
-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect());
+            let labels: Option<Vec<String>> =
+                args.get("labels").and_then(|v| v.as_array()).map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                });
 
             match state.task_store.get(card_id).await {
                 Ok(Some(mut task)) => {
-                    if let Some(t) = title { task.title = t.to_string(); }
-                    if let Some(d) = description { task.objective = d.to_string(); }
-                    if let Some(p) = priority { task.priority = crate::models::task::TaskPriority::from_str(p); }
-                    if let Some(l) = labels { task.labels = l; }
+                    if let Some(t) = title {
+                        task.title = t.to_string();
+                    }
+                    if let Some(d) = description {
+                        task.objective = d.to_string();
+                    }
+                    if let Some(p) = priority {
+                        task.priority = crate::models::task::TaskPriority::from_str(p);
+                    }
+                    if let Some(l) = labels {
+                        task.labels = l;
+                    }
                     task.updated_at = chrono::Utc::now();
 
                     match state.task_store.save(&task).await {
@@ -1234,7 +1353,9 @@ async fn execute_tool(
         "delete_card" => {
             let card_id = args.get("cardId").and_then(|v| v.as_str()).unwrap_or("");
             match state.task_store.delete(card_id).await {
-                Ok(()) => tool_result_json(&serde_json::json!({ "deleted": true, "cardId": card_id })),
+                Ok(()) => {
+                    tool_result_json(&serde_json::json!({ "deleted": true, "cardId": card_id }))
+                }
                 Err(e) => tool_result_error(&e.to_string()),
             }
         }
@@ -1276,7 +1397,10 @@ async fn execute_tool(
         "delete_column" => {
             let column_id = args.get("columnId").and_then(|v| v.as_str()).unwrap_or("");
             let board_id = args.get("boardId").and_then(|v| v.as_str()).unwrap_or("");
-            let delete_cards = args.get("deleteCards").and_then(|v| v.as_bool()).unwrap_or(false);
+            let delete_cards = args
+                .get("deleteCards")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
 
             match state.kanban_store.get(board_id).await {
                 Ok(Some(board)) => {
@@ -1284,9 +1408,17 @@ async fn execute_tool(
                         return tool_result_error(&format!("Column not found: {}", column_id));
                     }
 
-                    let tasks = state.task_store.list_by_workspace(&board.workspace_id).await.unwrap_or_default();
-                    let column_tasks: Vec<_> = tasks.iter()
-                        .filter(|t| t.board_id.as_deref() == Some(board_id) && t.column_id.as_deref() == Some(column_id))
+                    let tasks = state
+                        .task_store
+                        .list_by_workspace(&board.workspace_id)
+                        .await
+                        .unwrap_or_default();
+                    let column_tasks: Vec<_> = tasks
+                        .iter()
+                        .filter(|t| {
+                            t.board_id.as_deref() == Some(board_id)
+                                && t.column_id.as_deref() == Some(column_id)
+                        })
                         .collect();
 
                     let mut deleted_count = 0;
@@ -1321,17 +1453,33 @@ async fn execute_tool(
             let board_id = args.get("boardId").and_then(|v| v.as_str());
             let query_lower = query.to_lowercase();
 
-            let tasks = state.task_store.list_by_workspace(workspace_id).await.unwrap_or_default();
-            let matching: Vec<_> = tasks.iter()
+            let tasks = state
+                .task_store
+                .list_by_workspace(workspace_id)
+                .await
+                .unwrap_or_default();
+            let matching: Vec<_> = tasks
+                .iter()
                 .filter(|t| {
                     if let Some(bid) = board_id {
-                        if t.board_id.as_deref() != Some(bid) { return false; }
+                        if t.board_id.as_deref() != Some(bid) {
+                            return false;
+                        }
                     }
-                    if t.board_id.is_none() { return false; }
+                    if t.board_id.is_none() {
+                        return false;
+                    }
 
                     let title_match = t.title.to_lowercase().contains(&query_lower);
-                    let label_match = t.labels.iter().any(|l| l.to_lowercase().contains(&query_lower));
-                    let assignee_match = t.assignee.as_ref().map(|a| a.to_lowercase().contains(&query_lower)).unwrap_or(false);
+                    let label_match = t
+                        .labels
+                        .iter()
+                        .any(|l| l.to_lowercase().contains(&query_lower));
+                    let assignee_match = t
+                        .assignee
+                        .as_ref()
+                        .map(|a| a.to_lowercase().contains(&query_lower))
+                        .unwrap_or(false);
 
                     title_match || label_match || assignee_match
                 })
@@ -1351,9 +1499,17 @@ async fn execute_tool(
                         return tool_result_error(&format!("Column not found: {}", column_id));
                     }
 
-                    let tasks = state.task_store.list_by_workspace(&board.workspace_id).await.unwrap_or_default();
-                    let mut column_tasks: Vec<_> = tasks.iter()
-                        .filter(|t| t.board_id.as_deref() == Some(board_id) && t.column_id.as_deref().unwrap_or("backlog") == column_id)
+                    let tasks = state
+                        .task_store
+                        .list_by_workspace(&board.workspace_id)
+                        .await
+                        .unwrap_or_default();
+                    let mut column_tasks: Vec<_> = tasks
+                        .iter()
+                        .filter(|t| {
+                            t.board_id.as_deref() == Some(board_id)
+                                && t.column_id.as_deref().unwrap_or("backlog") == column_id
+                        })
                         .collect();
                     column_tasks.sort_by_key(|t| t.position);
 

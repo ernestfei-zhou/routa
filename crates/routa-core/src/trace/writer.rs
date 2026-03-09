@@ -8,12 +8,12 @@
 //! - Daily file rotation
 //! - Graceful error handling (never fails the main flow)
 
+use chrono::{Local, Utc};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::fs::{self, OpenOptions};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
-use chrono::{Local, Utc};
 
 use super::TraceRecord;
 use crate::storage::get_traces_dir;
@@ -62,7 +62,7 @@ impl TraceWriter {
     /// - Automatically creates directories and rotates files
     pub async fn append(&self, record: &TraceRecord) -> Result<(), TraceWriteError> {
         let today = Local::now().format("%Y-%m-%d").to_string();
-        
+
         // Get or create the file path for today
         let file_path = self.get_file_path(&today).await?;
 
@@ -146,4 +146,3 @@ pub enum TraceWriteError {
     #[error("Serialization error: {0}")]
     Serialization(String),
 }
-

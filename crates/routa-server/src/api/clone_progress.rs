@@ -30,7 +30,8 @@ fn parse_git_error(stderr: &str, exit_code: Option<i32>) -> String {
         || stderr_lower.contains("could not read password")
         || stderr_lower.contains("terminal prompts disabled")
     {
-        return "Git credentials not configured. Set up a credential manager or use SSH.".to_string();
+        return "Git credentials not configured. Set up a credential manager or use SSH."
+            .to_string();
     }
 
     // SSH auth errors
@@ -189,8 +190,10 @@ async fn clone_with_progress(
                             Some("Resolving deltas") => "resolving",
                             _ => "progress",
                         };
-                        let percent: i32 =
-                            caps.get(2).and_then(|m| m.as_str().parse().ok()).unwrap_or(0);
+                        let percent: i32 = caps
+                            .get(2)
+                            .and_then(|m| m.as_str().parse().ok())
+                            .unwrap_or(0);
                         let _ = tx
                             .send(Ok(Event::default().data(
                                 serde_json::json!({

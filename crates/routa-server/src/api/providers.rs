@@ -179,8 +179,8 @@ async fn get_providers_without_checking() -> Vec<ProviderInfo> {
     // Add registry agents (without checking)
     if let Ok(registry) = super::acp_registry::fetch_registry().await {
         let static_ids: HashSet<_> = providers.iter().map(|p| p.id.clone()).collect();
-        let platform = super::acp_registry::detect_platform()
-            .unwrap_or_else(|| "unknown".to_string());
+        let platform =
+            super::acp_registry::detect_platform().unwrap_or_else(|| "unknown".to_string());
 
         for agent in registry.agents {
             let command = get_agent_command(&agent, &platform);
@@ -241,8 +241,8 @@ async fn get_providers_with_checking() -> Vec<ProviderInfo> {
     if let Ok(registry) = super::acp_registry::fetch_registry().await {
         let npx_available = shell_env::which("npx").is_some();
         let uvx_available = shell_env::which("uv").is_some();
-        let platform = super::acp_registry::detect_platform()
-            .unwrap_or_else(|| "unknown".to_string());
+        let platform =
+            super::acp_registry::detect_platform().unwrap_or_else(|| "unknown".to_string());
 
         for agent in registry.agents {
             let (command, status) = if agent.distribution.get("npx").is_some() {

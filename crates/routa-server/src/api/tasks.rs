@@ -14,8 +14,14 @@ use crate::state::AppState;
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/", get(list_tasks).post(create_task).delete(delete_all_tasks))
-    .route("/{id}", get(get_task).patch(update_task).delete(delete_task))
+        .route(
+            "/",
+            get(list_tasks).post(create_task).delete(delete_all_tasks),
+        )
+        .route(
+            "/{id}",
+            get(get_task).patch(update_task).delete(delete_task),
+        )
         .route("/{id}/status", axum::routing::post(update_task_status))
         .route("/ready", get(find_ready_tasks))
 }
@@ -98,7 +104,10 @@ async fn create_task(
     Json(body): Json<CreateTaskRequest>,
 ) -> Result<(axum::http::StatusCode, Json<serde_json::Value>), ServerError> {
     let workspace_id = body.workspace_id.unwrap_or_else(|| "default".to_string());
-    let default_board = state.kanban_store.ensure_default_board(&workspace_id).await?;
+    let default_board = state
+        .kanban_store
+        .ensure_default_board(&workspace_id)
+        .await?;
     let codebase = resolve_codebase(&state, &workspace_id, body.repo_path.as_deref()).await?;
 
     let mut task = Task::new(
@@ -156,9 +165,8 @@ async fn create_task(
                 }
             },
             None => {
-                task.last_sync_error = Some(
-                    "Selected codebase is not linked to a GitHub repository.".to_string(),
-                );
+                task.last_sync_error =
+                    Some("Selected codebase is not linked to a GitHub repository.".to_string());
             }
         }
     }
@@ -223,42 +231,94 @@ async fn update_task(
     let retry_trigger = body.retry_trigger.unwrap_or(false);
     let repo_path = body.repo_path.clone();
 
-    if let Some(value) = body.title { task.title = value; }
-    if let Some(value) = body.objective { task.objective = value; }
-    if let Some(value) = body.scope { task.scope = Some(value); }
-    if let Some(value) = body.acceptance_criteria { task.acceptance_criteria = Some(value); }
-    if let Some(value) = body.verification_commands { task.verification_commands = Some(value); }
-    if let Some(value) = body.assigned_to { task.assigned_to = Some(value); }
+    if let Some(value) = body.title {
+        task.title = value;
+    }
+    if let Some(value) = body.objective {
+        task.objective = value;
+    }
+    if let Some(value) = body.scope {
+        task.scope = Some(value);
+    }
+    if let Some(value) = body.acceptance_criteria {
+        task.acceptance_criteria = Some(value);
+    }
+    if let Some(value) = body.verification_commands {
+        task.verification_commands = Some(value);
+    }
+    if let Some(value) = body.assigned_to {
+        task.assigned_to = Some(value);
+    }
     if let Some(value) = body.status {
         task.status = TaskStatus::from_str(&value)
             .ok_or_else(|| ServerError::BadRequest(format!("Invalid status: {}", value)))?;
     }
-    if body.board_id.is_some() { task.board_id = body.board_id; }
-    if body.column_id.is_some() { task.column_id = body.column_id; }
-    if let Some(value) = body.position { task.position = value; }
+    if body.board_id.is_some() {
+        task.board_id = body.board_id;
+    }
+    if body.column_id.is_some() {
+        task.column_id = body.column_id;
+    }
+    if let Some(value) = body.position {
+        task.position = value;
+    }
     if let Some(value) = body.priority {
         task.priority = Some(
             TaskPriority::from_str(&value)
                 .ok_or_else(|| ServerError::BadRequest(format!("Invalid priority: {}", value)))?,
         );
     }
-    if let Some(value) = body.labels { task.labels = sanitize_labels(value); }
-    if body.assignee.is_some() { task.assignee = body.assignee; }
-    if body.assigned_provider.is_some() { task.assigned_provider = body.assigned_provider; }
-    if body.assigned_role.is_some() { task.assigned_role = body.assigned_role; }
-    if body.assigned_specialist_id.is_some() { task.assigned_specialist_id = body.assigned_specialist_id; }
-    if body.assigned_specialist_name.is_some() { task.assigned_specialist_name = body.assigned_specialist_name; }
-    if body.trigger_session_id.is_some() { task.trigger_session_id = body.trigger_session_id; }
-    if body.github_id.is_some() { task.github_id = body.github_id; }
-    if body.github_number.is_some() { task.github_number = body.github_number; }
-    if body.github_url.is_some() { task.github_url = body.github_url; }
-    if body.github_repo.is_some() { task.github_repo = body.github_repo; }
-    if body.github_state.is_some() { task.github_state = body.github_state; }
-    if body.last_sync_error.is_some() { task.last_sync_error = body.last_sync_error; }
-    if let Some(value) = body.dependencies { task.dependencies = value; }
-    if body.parallel_group.is_some() { task.parallel_group = body.parallel_group; }
-    if body.completion_summary.is_some() { task.completion_summary = body.completion_summary; }
-    if body.verification_report.is_some() { task.verification_report = body.verification_report; }
+    if let Some(value) = body.labels {
+        task.labels = sanitize_labels(value);
+    }
+    if body.assignee.is_some() {
+        task.assignee = body.assignee;
+    }
+    if body.assigned_provider.is_some() {
+        task.assigned_provider = body.assigned_provider;
+    }
+    if body.assigned_role.is_some() {
+        task.assigned_role = body.assigned_role;
+    }
+    if body.assigned_specialist_id.is_some() {
+        task.assigned_specialist_id = body.assigned_specialist_id;
+    }
+    if body.assigned_specialist_name.is_some() {
+        task.assigned_specialist_name = body.assigned_specialist_name;
+    }
+    if body.trigger_session_id.is_some() {
+        task.trigger_session_id = body.trigger_session_id;
+    }
+    if body.github_id.is_some() {
+        task.github_id = body.github_id;
+    }
+    if body.github_number.is_some() {
+        task.github_number = body.github_number;
+    }
+    if body.github_url.is_some() {
+        task.github_url = body.github_url;
+    }
+    if body.github_repo.is_some() {
+        task.github_repo = body.github_repo;
+    }
+    if body.github_state.is_some() {
+        task.github_state = body.github_state;
+    }
+    if body.last_sync_error.is_some() {
+        task.last_sync_error = body.last_sync_error;
+    }
+    if let Some(value) = body.dependencies {
+        task.dependencies = value;
+    }
+    if body.parallel_group.is_some() {
+        task.parallel_group = body.parallel_group;
+    }
+    if body.completion_summary.is_some() {
+        task.completion_summary = body.completion_summary;
+    }
+    if body.verification_report.is_some() {
+        task.verification_report = body.verification_report;
+    }
 
     if retry_trigger {
         task.trigger_session_id = None;
@@ -290,7 +350,11 @@ async fn update_task(
                 &task.title,
                 Some(&task.objective),
                 &task.labels,
-                if task.status == TaskStatus::Completed { "closed" } else { "open" },
+                if task.status == TaskStatus::Completed {
+                    "closed"
+                } else {
+                    "open"
+                },
                 task.assignee.as_deref(),
             )
             .await
@@ -311,10 +375,13 @@ async fn update_task(
         }
     }
 
-    let entering_dev = task.column_id.as_deref() == Some("dev") && existing_column_id.as_deref() != Some("dev");
+    let entering_dev =
+        task.column_id.as_deref() == Some("dev") && existing_column_id.as_deref() != Some("dev");
     let assigned_while_in_dev = task.column_id.as_deref() == Some("dev")
         && task.trigger_session_id.is_none()
-        && (has_assigned_provider_update || has_assigned_specialist_update || has_assigned_role_update);
+        && (has_assigned_provider_update
+            || has_assigned_specialist_update
+            || has_assigned_role_update);
     let retrying_trigger = retry_trigger;
 
     if (entering_dev || assigned_while_in_dev || retrying_trigger)
@@ -439,7 +506,10 @@ async fn resolve_codebase(
     repo_path: Option<&str>,
 ) -> Result<Option<crate::models::codebase::Codebase>, ServerError> {
     if let Some(path) = repo_path {
-        state.codebase_store.find_by_repo_path(workspace_id, path).await
+        state
+            .codebase_store
+            .find_by_repo_path(workspace_id, path)
+            .await
     } else {
         state.codebase_store.get_default(workspace_id).await
     }
@@ -466,7 +536,11 @@ fn github_token() -> Option<String> {
     std::env::var("GITHUB_TOKEN")
         .ok()
         .filter(|value| !value.is_empty())
-        .or_else(|| std::env::var("GH_TOKEN").ok().filter(|value| !value.is_empty()))
+        .or_else(|| {
+            std::env::var("GH_TOKEN")
+                .ok()
+                .filter(|value| !value.is_empty())
+        })
 }
 
 async fn create_github_issue(
@@ -512,8 +586,15 @@ async fn create_github_issue(
         .map_err(|error| format!("GitHub issue create failed: {}", error))?;
 
     Ok(GitHubIssueRef {
-        id: data.get("id").and_then(|value| value.as_i64()).unwrap_or_default().to_string(),
-        number: data.get("number").and_then(|value| value.as_i64()).unwrap_or_default(),
+        id: data
+            .get("id")
+            .and_then(|value| value.as_i64())
+            .unwrap_or_default()
+            .to_string(),
+        number: data
+            .get("number")
+            .and_then(|value| value.as_i64())
+            .unwrap_or_default(),
         url: data
             .get("html_url")
             .and_then(|value| value.as_str())
@@ -551,7 +632,10 @@ async fn update_github_issue(
     }
 
     let response = client
-        .patch(format!("https://api.github.com/repos/{}/issues/{}", repo, issue_number))
+        .patch(format!(
+            "https://api.github.com/repos/{}/issues/{}",
+            repo, issue_number
+        ))
         .header(AUTHORIZATION, format!("token {}", token))
         .header(ACCEPT, "application/vnd.github+json")
         .header(CONTENT_TYPE, "application/json")
@@ -616,7 +700,11 @@ async fn trigger_assigned_task_agent(
     let session_id = uuid::Uuid::new_v4().to_string();
     let cwd = cwd
         .map(|value| value.to_string())
-        .or_else(|| std::env::current_dir().ok().map(|path| path.to_string_lossy().to_string()))
+        .or_else(|| {
+            std::env::current_dir()
+                .ok()
+                .map(|path| path.to_string_lossy().to_string())
+        })
         .unwrap_or_else(|| ".".to_string());
 
     state
@@ -655,7 +743,11 @@ async fn trigger_assigned_task_agent(
     let _branch = branch.map(|value| value.to_string());
 
     tokio::spawn(async move {
-        if let Err(error) = state_clone.acp_manager.prompt(&session_id_clone, &prompt).await {
+        if let Err(error) = state_clone
+            .acp_manager
+            .prompt(&session_id_clone, &prompt)
+            .await
+        {
             tracing::error!(
                 "[kanban] Failed to auto-prompt ACP task session {} in workspace {} with provider {} at {}: {}",
                 session_id_clone,
@@ -667,9 +759,19 @@ async fn trigger_assigned_task_agent(
             return;
         }
 
-        let _ = state_clone.acp_session_store.set_first_prompt_sent(&session_id_clone).await;
-        if let Some(history) = state_clone.acp_manager.get_session_history(&session_id_clone).await {
-            let _ = state_clone.acp_session_store.save_history(&session_id_clone, &history).await;
+        let _ = state_clone
+            .acp_session_store
+            .set_first_prompt_sent(&session_id_clone)
+            .await;
+        if let Some(history) = state_clone
+            .acp_manager
+            .get_session_history(&session_id_clone)
+            .await
+        {
+            let _ = state_clone
+                .acp_session_store
+                .save_history(&session_id_clone, &history)
+                .await;
         }
     });
 

@@ -212,7 +212,10 @@ impl DockerOpenCodeAdapter {
 
         if content_type.contains("text/event-stream") {
             // Handle SSE stream
-            let bytes = resp.bytes().await.map_err(|e| format!("Failed to read SSE stream: {}", e))?;
+            let bytes = resp
+                .bytes()
+                .await
+                .map_err(|e| format!("Failed to read SSE stream: {}", e))?;
             let text = String::from_utf8_lossy(&bytes);
 
             self.parse_sse_stream(&text, &session_id).await;
@@ -316,4 +319,3 @@ impl DockerOpenCodeAdapter {
         })
     }
 }
-

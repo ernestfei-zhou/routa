@@ -14,4 +14,3 @@ pub use detector::DockerDetector;
 pub use process_manager::DockerProcessManager;
 pub use types::*;
 pub use utils::*;
-

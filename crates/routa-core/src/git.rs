@@ -77,7 +77,11 @@ pub fn get_current_branch(repo_path: &str) -> Option<String> {
         .ok()?;
     if output.status.success() {
         let s = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        if s.is_empty() { None } else { Some(s) }
+        if s.is_empty() {
+            None
+        } else {
+            Some(s)
+        }
     } else {
         None
     }
@@ -212,8 +216,7 @@ pub fn get_branch_status(repo_path: &str, branch: &str) -> BranchStatus {
         .output()
     {
         if o.status.success() {
-            result.has_uncommitted_changes =
-                !String::from_utf8_lossy(&o.stdout).trim().is_empty();
+            result.has_uncommitted_changes = !String::from_utf8_lossy(&o.stdout).trim().is_empty();
         }
     }
 
@@ -473,7 +476,13 @@ pub fn get_worktree_base_dir() -> PathBuf {
 pub fn branch_to_safe_dir_name(branch: &str) -> String {
     branch
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == '.' || c == '_' || c == '-' { c } else { '-' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '.' || c == '_' || c == '-' {
+                c
+            } else {
+                '-'
+            }
+        })
         .collect()
 }
 

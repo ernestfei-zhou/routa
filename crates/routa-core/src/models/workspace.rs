@@ -39,11 +39,7 @@ pub struct Workspace {
 }
 
 impl Workspace {
-    pub fn new(
-        id: String,
-        title: String,
-        metadata: Option<HashMap<String, String>>,
-    ) -> Self {
+    pub fn new(id: String, title: String, metadata: Option<HashMap<String, String>>) -> Self {
         let now = Utc::now();
         Self {
             id,

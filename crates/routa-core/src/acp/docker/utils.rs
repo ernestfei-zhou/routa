@@ -126,4 +126,3 @@ mod tests {
         assert_eq!(sanitized.get("SECRET_TOKEN"), Some(&"***".to_string()));
     }
 }
-

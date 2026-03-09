@@ -41,14 +41,9 @@ After generating or modifying **source code** (not docs, configs, or workflows),
 
 ## Git Discipline
 
-### Commit Without Asking Permission
-
-- Always include a `Co-authored-by:` line in the commit message.
-- Ensure tests pass before pushing.
-
 ### Baby-Step Commits (Enforced)
 
-- Each commit does **one thing**: one feature, one bug fix, or one refactor.
+- Each commit does **one thing**: one feature, one bug fix, or one refactor. Each commit should less than 10 files and less than 1000 lines of code.
 - No "kitchen sink" commits. If changes span multiple concerns, split into multiple commits.
 - Always include the related **GitHub issue ID** when applicable.
 - All tests + API contract check must pass before pushing (enforced by pre-push hook).

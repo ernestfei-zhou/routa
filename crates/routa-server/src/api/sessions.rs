@@ -11,7 +11,12 @@ use crate::state::AppState;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(list_sessions))
-        .route("/{session_id}", get(get_session).patch(rename_session).delete(delete_session))
+        .route(
+            "/{session_id}",
+            get(get_session)
+                .patch(rename_session)
+                .delete(delete_session),
+        )
         .route("/{session_id}/history", get(get_session_history))
         .route("/{session_id}/context", get(get_session_context))
         .route("/{session_id}/disconnect", post(disconnect_session))
@@ -37,8 +42,10 @@ async fn list_sessions(
     let in_memory_sessions = state.acp_manager.list_sessions().await;
 
     // Get session IDs currently in memory
-    let in_memory_ids: std::collections::HashSet<String> =
-        in_memory_sessions.iter().map(|s| s.session_id.clone()).collect();
+    let in_memory_ids: std::collections::HashSet<String> = in_memory_sessions
+        .iter()
+        .map(|s| s.session_id.clone())
+        .collect();
 
     // Convert in-memory sessions to JSON values
     let mut sessions: Vec<serde_json::Value> = in_memory_sessions
@@ -95,11 +102,27 @@ async fn list_sessions(
     sessions.sort_by(|a, b| {
         let a_time = a
             .get("createdAt")
-            .and_then(|v| v.as_i64().or_else(|| v.as_str().and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok().map(|d| d.timestamp_millis()))))
+            .and_then(|v| {
+                v.as_i64().or_else(|| {
+                    v.as_str().and_then(|s| {
+                        chrono::DateTime::parse_from_rfc3339(s)
+                            .ok()
+                            .map(|d| d.timestamp_millis())
+                    })
+                })
+            })
             .unwrap_or(0);
         let b_time = b
             .get("createdAt")
-            .and_then(|v| v.as_i64().or_else(|| v.as_str().and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok().map(|d| d.timestamp_millis()))))
+            .and_then(|v| {
+                v.as_i64().or_else(|| {
+                    v.as_str().and_then(|s| {
+                        chrono::DateTime::parse_from_rfc3339(s)
+                            .ok()
+                            .map(|d| d.timestamp_millis())
+                    })
+                })
+            })
             .unwrap_or(0);
         b_time.cmp(&a_time)
     });
@@ -385,26 +408,30 @@ async fn get_session_context(
 ) -> Result<Json<serde_json::Value>, ServerError> {
     // Build a unified flat list of all sessions (in-memory + DB)
     let in_memory_sessions = state.acp_manager.list_sessions().await;
-    let in_memory_ids: std::collections::HashSet<String> =
-        in_memory_sessions.iter().map(|s| s.session_id.clone()).collect();
+    let in_memory_ids: std::collections::HashSet<String> = in_memory_sessions
+        .iter()
+        .map(|s| s.session_id.clone())
+        .collect();
 
     // Collect all sessions as JSON objects
     let mut all_sessions: Vec<serde_json::Value> = in_memory_sessions
         .iter()
-        .map(|s| serde_json::json!({
-            "sessionId": s.session_id,
-            "name": s.name,
-            "cwd": s.cwd,
-            "workspaceId": s.workspace_id,
-            "routaAgentId": s.routa_agent_id,
-            "provider": s.provider,
-            "role": s.role,
-            "modeId": s.mode_id,
-            "model": s.model,
-            "createdAt": s.created_at,
-            "parentSessionId": s.parent_session_id,
-            "firstPromptSent": true,
-        }))
+        .map(|s| {
+            serde_json::json!({
+                "sessionId": s.session_id,
+                "name": s.name,
+                "cwd": s.cwd,
+                "workspaceId": s.workspace_id,
+                "routaAgentId": s.routa_agent_id,
+                "provider": s.provider,
+                "role": s.role,
+                "modeId": s.mode_id,
+                "model": s.model,
+                "createdAt": s.created_at,
+                "parentSessionId": s.parent_session_id,
+                "firstPromptSent": true,
+            })
+        })
         .collect();
 
     if let Ok(db_sessions) = state.acp_session_store.list(None, Some(500)).await {
@@ -447,29 +474,40 @@ async fn get_session_context(
 
     // Helper: is the session non-empty (firstPromptSent is not false)
     let is_non_empty = |s: &serde_json::Value| {
-        s.get("firstPromptSent").and_then(|v| v.as_bool()).unwrap_or(true)
+        s.get("firstPromptSent")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true)
     };
 
     // Parent session
     let parent = parent_session_id.as_ref().and_then(|pid| {
-        all_sessions.iter().find(|s| {
-            s.get("sessionId").and_then(|v| v.as_str()) == Some(pid.as_str())
-        }).cloned()
+        all_sessions
+            .iter()
+            .find(|s| s.get("sessionId").and_then(|v| v.as_str()) == Some(pid.as_str()))
+            .cloned()
     });
 
     // Child sessions
-    let children: Vec<_> = all_sessions.iter().filter(|s| {
-        s.get("parentSessionId").and_then(|v| v.as_str()) == Some(&session_id)
-            && is_non_empty(s)
-    }).cloned().collect();
+    let children: Vec<_> = all_sessions
+        .iter()
+        .filter(|s| {
+            s.get("parentSessionId").and_then(|v| v.as_str()) == Some(&session_id)
+                && is_non_empty(s)
+        })
+        .cloned()
+        .collect();
 
     // Sibling sessions (same parent, not current, non-empty)
     let siblings: Vec<_> = if let Some(ref pid) = parent_session_id {
-        all_sessions.iter().filter(|s| {
-            s.get("parentSessionId").and_then(|v| v.as_str()) == Some(pid.as_str())
-                && s.get("sessionId").and_then(|v| v.as_str()) != Some(&session_id)
-                && is_non_empty(s)
-        }).cloned().collect()
+        all_sessions
+            .iter()
+            .filter(|s| {
+                s.get("parentSessionId").and_then(|v| v.as_str()) == Some(pid.as_str())
+                    && s.get("sessionId").and_then(|v| v.as_str()) != Some(&session_id)
+                    && is_non_empty(s)
+            })
+            .cloned()
+            .collect()
     } else {
         vec![]
     };
@@ -492,19 +530,41 @@ async fn get_session_context(
     }
 
     // Recent sessions in the same workspace (most recent first, limit 5)
-    let mut recent_in_workspace: Vec<_> = all_sessions.iter().filter(|s| {
-        let sid = s.get("sessionId").and_then(|v| v.as_str()).unwrap_or("");
-        let ws = s.get("workspaceId").and_then(|v| v.as_str()).unwrap_or("");
-        ws == workspace_id && !exclude_ids.contains(sid) && is_non_empty(s)
-    }).cloned().collect();
+    let mut recent_in_workspace: Vec<_> = all_sessions
+        .iter()
+        .filter(|s| {
+            let sid = s.get("sessionId").and_then(|v| v.as_str()).unwrap_or("");
+            let ws = s.get("workspaceId").and_then(|v| v.as_str()).unwrap_or("");
+            ws == workspace_id && !exclude_ids.contains(sid) && is_non_empty(s)
+        })
+        .cloned()
+        .collect();
 
     // Sort by createdAt descending
     recent_in_workspace.sort_by(|a, b| {
-        let a_time = a.get("createdAt")
-            .and_then(|v| v.as_i64().or_else(|| v.as_str().and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok().map(|d| d.timestamp_millis()))))
+        let a_time = a
+            .get("createdAt")
+            .and_then(|v| {
+                v.as_i64().or_else(|| {
+                    v.as_str().and_then(|s| {
+                        chrono::DateTime::parse_from_rfc3339(s)
+                            .ok()
+                            .map(|d| d.timestamp_millis())
+                    })
+                })
+            })
             .unwrap_or(0);
-        let b_time = b.get("createdAt")
-            .and_then(|v| v.as_i64().or_else(|| v.as_str().and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok().map(|d| d.timestamp_millis()))))
+        let b_time = b
+            .get("createdAt")
+            .and_then(|v| {
+                v.as_i64().or_else(|| {
+                    v.as_str().and_then(|s| {
+                        chrono::DateTime::parse_from_rfc3339(s)
+                            .ok()
+                            .map(|d| d.timestamp_millis())
+                    })
+                })
+            })
             .unwrap_or(0);
         b_time.cmp(&a_time)
     });

@@ -144,4 +144,3 @@ async fn stop_container(
         Err(e) => Ok(Json(serde_json::json!({ "ok": false, "error": e }))),
     }
 }
-
