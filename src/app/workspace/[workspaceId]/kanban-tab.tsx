@@ -77,7 +77,16 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
   const [agentSessionId, setAgentSessionId] = useState<string | null>(null);
 
   // Settings state - column automation rules (initialized from board columns)
-  const [columnAutomation, setColumnAutomation] = useState<Record<string, { enabled: boolean; providerId?: string; role?: string; specialistId?: string; specialistName?: string }>>({});
+  const [columnAutomation, setColumnAutomation] = useState<Record<string, {
+    enabled: boolean;
+    providerId?: string;
+    role?: string;
+    specialistId?: string;
+    specialistName?: string;
+    transitionType?: "entry" | "exit" | "both";
+    requiredArtifacts?: ("screenshot" | "test_results" | "code_diff")[];
+    autoAdvanceOnSuccess?: boolean;
+  }>>({});
   const [settingsSaving, setSettingsSaving] = useState(false);
 
   // Handle agent input submission
@@ -86,10 +95,14 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
 
     setAgentLoading(true);
     try {
-      // Build a system prompt that instructs the agent to use Kanban tools
-      const systemPrompt = `You are a Kanban board assistant. The user wants to manage their tasks on the Kanban board.
-Use the available Kanban tools to help them:
-- create_card: Create a new card/task
+      // Build a system prompt that instructs the Kanban Agent to decompose tasks
+      const systemPrompt = `You are the Kanban Agent — an orchestrator that transforms natural language input into structured Kanban tasks.
+
+Your primary tool is decompose_tasks which creates multiple cards in bulk. You can also use individual card tools.
+
+Available Kanban tools:
+- decompose_tasks: Create multiple cards from a task breakdown (preferred for multi-task input)
+- create_card: Create a single card/task
 - move_card: Move a card to a different column
 - update_card: Update card details
 - delete_card: Delete a card
@@ -98,6 +111,13 @@ Use the available Kanban tools to help them:
 
 Current workspace: ${workspaceId}
 Default board ID: ${defaultBoardId ?? "default"}
+
+Instructions:
+1. Parse the user's input to identify discrete, actionable tasks
+2. Each task should be self-contained and completable independently
+3. Use decompose_tasks to create all tasks at once on the backlog
+4. Assign appropriate priorities and labels
+5. Report what was created
 
 User request: ${agentInput}`;
 
@@ -902,6 +922,38 @@ User request: ${agentInput}`;
                               ))}
                             </select>
                           </div>
+                          {/* Transition Type */}
+                          <div className="flex items-center gap-2">
+                            <span className="w-16 shrink-0 text-xs text-gray-500 dark:text-gray-400">Trigger</span>
+                            <select
+                              value={automation.transitionType ?? "entry"}
+                              onChange={(e) => {
+                                setColumnAutomation((prev) => ({
+                                  ...prev,
+                                  [column.id]: { ...automation, transitionType: e.target.value as "entry" | "exit" | "both" },
+                                }));
+                              }}
+                              className="flex-1 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0d1018] px-2 py-1.5 text-sm"
+                            >
+                              <option value="entry">On entry</option>
+                              <option value="exit">On exit</option>
+                              <option value="both">Both</option>
+                            </select>
+                          </div>
+                          {/* Auto-advance */}
+                          <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 mt-1">
+                            <input
+                              type="checkbox"
+                              checked={automation.autoAdvanceOnSuccess ?? false}
+                              onChange={(e) => {
+                                setColumnAutomation((prev) => ({
+                                  ...prev,
+                                  [column.id]: { ...automation, autoAdvanceOnSuccess: e.target.checked },
+                                }));
+                              }}
+                            />
+                            Auto-advance on success
+                          </label>
                         </div>
                       )}
                     </div>

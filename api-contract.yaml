@@ -200,6 +200,16 @@ components:
           type: string
         specialistName:
           type: string
+        transitionType:
+          type: string
+          enum: [entry, exit, both]
+        requiredArtifacts:
+          type: array
+          items:
+            type: string
+            enum: [screenshot, test_results, code_diff]
+        autoAdvanceOnSuccess:
+          type: boolean
 
     KanbanColumn:
       type: object
@@ -914,6 +924,57 @@ paths:
                     $ref: "#/components/schemas/KanbanBoard"
         "404":
           description: Board not found
+
+  /api/kanban/decompose:
+    post:
+      operationId: decomposeKanbanTasks
+      summary: Decompose natural language input into multiple Kanban tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [boardId, workspaceId, tasks]
+              properties:
+                boardId:
+                  type: string
+                workspaceId:
+                  type: string
+                tasks:
+                  type: array
+                  items:
+                    type: object
+                    required: [title]
+                    properties:
+                      title:
+                        type: string
+                      description:
+                        type: string
+                      priority:
+                        type: string
+                        enum: [low, medium, high, urgent]
+                      labels:
+                        type: array
+                        items:
+                          type: string
+                columnId:
+                  type: string
+                  default: backlog
+      responses:
+        "200":
+          description: Tasks created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  cards:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Task"
 
   # ── Notes ──
   /api/notes:
