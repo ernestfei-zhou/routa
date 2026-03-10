@@ -37,6 +37,10 @@ export interface TaskInfo {
   githubSyncedAt?: string;
   lastSyncError?: string;
   sessionId?: string;
+  /** Associated codebase IDs for this task */
+  codebaseIds?: string[];
+  /** Git worktree ID for this task */
+  worktreeId?: string;
   createdAt: string;
 }
 
@@ -97,4 +101,19 @@ export interface TraceInfo {
   summary?: string;
   durationMs?: number;
   createdAt: string;
+}
+
+export interface WorktreeInfo {
+  id: string;
+  codebaseId: string;
+  workspaceId: string;
+  worktreePath: string;
+  branch: string;
+  baseBranch: string;
+  status: "creating" | "active" | "error" | "removing";
+  sessionId?: string;
+  label?: string;
+  errorMessage?: string;
+  createdAt: string;
+  updatedAt: string;
 }

@@ -95,6 +95,8 @@ export class GitWorktreeService {
       branch?: string;
       baseBranch?: string;
       label?: string;
+      /** Optional workspace worktree root (Req 5): overrides default ~/.routa/worktrees/{workspaceId} base. */
+      worktreeRoot?: string;
     } = {}
   ): Promise<Worktree> {
     const codebase = await this.codebaseStore.get(codebaseId);
@@ -127,12 +129,12 @@ export class GitWorktreeService {
       }
 
       // Compute worktree path
-      const worktreePath = path.join(
-        getWorktreeBaseDir(),
-        codebase.workspaceId,
-        codebaseId,
-        branchToSafeDirName(branch)
-      );
+      // Req 5: when worktreeRoot is provided use {worktreeRoot}/{codebaseLabel}/{issueId-slug} format.
+      const codebaseLabel = branchToSafeDirName(codebase.label ?? codebase.id);
+      const worktreeDir = branchToSafeDirName(options.label ?? branch);
+      const worktreePath = options.worktreeRoot
+        ? path.join(options.worktreeRoot, codebaseLabel, worktreeDir)
+        : path.join(getWorktreeBaseDir(), codebase.workspaceId, codebaseId, worktreeDir);
 
       // Create DB record
       const worktree = createWorktree({

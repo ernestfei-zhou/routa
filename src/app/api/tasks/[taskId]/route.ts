@@ -4,6 +4,8 @@ import { TaskPriority, TaskStatus, type Task } from "@/core/models/task";
 import { columnIdToTaskStatus, taskStatusToColumnId } from "@/core/models/kanban";
 import { updateGitHubIssue } from "@/core/kanban/github-issues";
 import { getInternalApiOrigin, triggerAssignedTaskAgent } from "@/core/kanban/agent-trigger";
+import { GitWorktreeService } from "@/core/git/git-worktree-service";
+import { getDefaultWorkspaceWorktreeRoot, getEffectiveWorkspaceMetadata } from "@/core/models/workspace";
 import type { ArtifactType } from "@/core/models/artifact";
 
 export const dynamic = "force-dynamic";
@@ -77,6 +79,8 @@ export async function PATCH(
     repoPath?: string;
     syncToGitHub?: boolean;
     retryTrigger?: boolean;
+    codebaseIds?: string[];
+    worktreeId?: string | null;
   };
   try {
     body = await request.json() as Partial<Task> & {
@@ -150,6 +154,11 @@ export async function PATCH(
   if (body.completionSummary !== undefined) nextTask.completionSummary = body.completionSummary;
   if (body.verificationVerdict !== undefined) nextTask.verificationVerdict = body.verificationVerdict;
   if (body.verificationReport !== undefined) nextTask.verificationReport = body.verificationReport;
+  if (body.codebaseIds !== undefined && Array.isArray(body.codebaseIds)) {
+    nextTask.codebaseIds = body.codebaseIds.filter((id): id is string => typeof id === "string");
+  }
+  if (body.worktreeId === null) nextTask.worktreeId = undefined;
+  if (typeof body.worktreeId === "string") nextTask.worktreeId = body.worktreeId;
 
   const normalizedLabels = sanitizeLabels(body.labels);
   if (body.labels !== undefined && normalizedLabels === undefined) {
@@ -222,19 +231,74 @@ export async function PATCH(
   const retryingTrigger = body.retryTrigger === true;
 
   if ((enteringDev || assignedWhileInDev || retryingTrigger) && !nextTask.triggerSessionId) {
-    const preferredCodebase = body.repoPath
+    // Determine which codebase to use: first from task's codebaseIds, else repo path, else default
+    let preferredCodebase = body.repoPath
       ? await system.codebaseStore.findByRepoPath(nextTask.workspaceId, body.repoPath)
-      : await system.codebaseStore.getDefault(nextTask.workspaceId);
+      : undefined;
+    if (!preferredCodebase && (nextTask.codebaseIds?.length ?? 0) > 0) {
+      preferredCodebase = await system.codebaseStore.get(nextTask.codebaseIds![0]);
+    }
+    if (!preferredCodebase) {
+      preferredCodebase = await system.codebaseStore.getDefault(nextTask.workspaceId);
+    }
+
+    // Auto-create worktree when entering dev column (if no worktree yet and codebase exists)
+    let worktreeCwd = preferredCodebase?.repoPath ?? process.cwd();
+    if (enteringDev && preferredCodebase && !nextTask.worktreeId) {
+      try {
+        const worktreeService = new GitWorktreeService(system.worktreeStore, system.codebaseStore);
+        const slugifiedTitle = nextTask.title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")
+          .slice(0, 40);
+        const branch = `issue/${nextTask.id.slice(0, 8)}-${slugifiedTitle}`;
+        const label = `${nextTask.id.slice(0, 8)}-${slugifiedTitle}`;
+        // Req 5: use worktreeRoot from workspace metadata if configured
+        const workspace = await system.workspaceStore.get(nextTask.workspaceId);
+        const worktreeRoot = workspace
+          ? getEffectiveWorkspaceMetadata(workspace).worktreeRoot
+          : getDefaultWorkspaceWorktreeRoot(nextTask.workspaceId);
+        const worktree = await worktreeService.createWorktree(preferredCodebase.id, {
+          branch,
+          baseBranch: preferredCodebase.branch ?? "main",
+          label,
+          worktreeRoot,
+        });
+        nextTask.worktreeId = worktree.id;
+        worktreeCwd = worktree.worktreePath;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error("[kanban] Failed to auto-create worktree:", msg);
+        // Mark task as blocked if worktree creation fails
+        nextTask.status = TaskStatus.BLOCKED;
+        nextTask.columnId = "blocked";
+        nextTask.lastSyncError = `Worktree creation failed: ${msg}`;
+        await system.taskStore.save(nextTask);
+        return NextResponse.json({ task: serializeTask(nextTask) });
+      }
+    } else if (nextTask.worktreeId) {
+      // Use existing worktree path
+      const existingWorktree = await system.worktreeStore.get(nextTask.worktreeId);
+      if (existingWorktree?.worktreePath) {
+        worktreeCwd = existingWorktree.worktreePath;
+      }
+    }
+
     const triggerResult = await triggerAssignedTaskAgent({
       origin: getInternalApiOrigin(),
       workspaceId: nextTask.workspaceId,
-      cwd: preferredCodebase?.repoPath ?? process.cwd(),
+      cwd: worktreeCwd,
       branch: preferredCodebase?.branch,
       task: nextTask,
     });
     if (triggerResult.sessionId) {
       nextTask.triggerSessionId = triggerResult.sessionId;
       nextTask.lastSyncError = undefined;
+      // Associate the session with the worktree
+      if (nextTask.worktreeId) {
+        await system.worktreeStore.assignSession(nextTask.worktreeId, triggerResult.sessionId);
+      }
     } else if (triggerResult.error) {
       nextTask.lastSyncError = triggerResult.error;
     }

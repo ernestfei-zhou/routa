@@ -88,6 +88,15 @@ export class SqliteWorkspaceStore implements WorkspaceStore {
       .where(eq(sqliteSchema.workspaces.id, workspaceId));
   }
 
+  async updateMetadata(workspaceId: string, metadata: Record<string, string>): Promise<void> {
+    const existing = await this.get(workspaceId);
+    const merged = { ...(existing?.metadata ?? {}), ...metadata };
+    await this.db
+      .update(sqliteSchema.workspaces)
+      .set({ metadata: merged, updatedAt: new Date() })
+      .where(eq(sqliteSchema.workspaces.id, workspaceId));
+  }
+
   async delete(workspaceId: string): Promise<void> {
     await this.db
       .delete(sqliteSchema.workspaces)
@@ -459,6 +468,8 @@ export class SqliteTaskStore implements TaskStore {
         parallelGroup: task.parallelGroup,
         workspaceId: task.workspaceId,
         sessionId: task.sessionId,
+        codebaseIds: task.codebaseIds ?? [],
+        worktreeId: task.worktreeId,
         completionSummary: task.completionSummary,
         verificationVerdict: task.verificationVerdict,
         verificationReport: task.verificationReport,
@@ -497,6 +508,8 @@ export class SqliteTaskStore implements TaskStore {
           dependencies: task.dependencies,
           parallelGroup: task.parallelGroup,
           sessionId: task.sessionId,
+          codebaseIds: task.codebaseIds ?? [],
+          worktreeId: task.worktreeId,
           completionSummary: task.completionSummary,
           verificationVerdict: task.verificationVerdict,
           verificationReport: task.verificationReport,
@@ -638,6 +651,8 @@ export class SqliteTaskStore implements TaskStore {
       parallelGroup: row.parallelGroup ?? undefined,
       workspaceId: row.workspaceId,
       sessionId: row.sessionId ?? undefined,
+      codebaseIds: (row.codebaseIds as string[]) ?? [],
+      worktreeId: row.worktreeId ?? undefined,
       completionSummary: row.completionSummary ?? undefined,
       verificationVerdict: row.verificationVerdict as
         | import("../models/task").VerificationVerdict

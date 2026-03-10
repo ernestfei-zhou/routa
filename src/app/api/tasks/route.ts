@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
     assignedSpecialistName,
     createGitHubIssue: shouldCreateGitHubIssue,
     repoPath,
+    codebaseIds,
   } = body;
 
   const normalizedTitle = typeof title === "string" ? title : "";
@@ -127,6 +128,9 @@ export async function POST(request: NextRequest) {
   const normalizedAssignedSpecialistName = typeof assignedSpecialistName === "string" ? assignedSpecialistName : undefined;
   const normalizedCreateGitHubIssue = shouldCreateGitHubIssue === true;
   const normalizedRepoPath = typeof repoPath === "string" ? repoPath : undefined;
+  const requestedCodebaseIds = Array.isArray(codebaseIds)
+    ? codebaseIds.filter((id): id is string => typeof id === "string")
+    : [];
 
   if (!normalizedTitle) {
     return NextResponse.json({ error: "title is required" }, { status: 400 });
@@ -144,10 +148,16 @@ export async function POST(request: NextRequest) {
 
   const system = getRoutaSystem();
   const defaultBoard = await ensureDefaultBoard(system, normalizedWorkspaceId);
+  const workspaceCodebases = await system.codebaseStore.listByWorkspace(normalizedWorkspaceId);
+  const normalizedCodebaseIds = requestedCodebaseIds.length > 0
+    ? requestedCodebaseIds
+    : workspaceCodebases.map((codebase) => codebase.id);
 
   const codebase = normalizedRepoPath
     ? await system.codebaseStore.findByRepoPath(normalizedWorkspaceId, normalizedRepoPath)
-    : await system.codebaseStore.getDefault(normalizedWorkspaceId);
+    : normalizedCodebaseIds.length > 0
+      ? await system.codebaseStore.get(normalizedCodebaseIds[0])
+      : await system.codebaseStore.getDefault(normalizedWorkspaceId);
 
   const repo = parseGitHubRepo(codebase?.sourceUrl);
 
@@ -211,6 +221,7 @@ export async function POST(request: NextRequest) {
     githubState,
     githubSyncedAt,
     lastSyncError,
+    codebaseIds: normalizedCodebaseIds,
   });
 
   await system.taskStore.save(task);
@@ -264,6 +275,8 @@ function serializeTask(task: Task) {
     parallelGroup: task.parallelGroup,
     workspaceId: task.workspaceId,
     sessionId: task.sessionId,
+    codebaseIds: task.codebaseIds ?? [],
+    worktreeId: task.worktreeId,
     completionSummary: task.completionSummary,
     verificationVerdict: task.verificationVerdict,
     verificationReport: task.verificationReport,

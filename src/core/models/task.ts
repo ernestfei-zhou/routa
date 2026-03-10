@@ -59,6 +59,10 @@ export interface Task {
   workspaceId: string;
   /** Session ID that created this task (for session-scoped filtering) */
   sessionId?: string;
+  /** Associated codebase IDs for this task */
+  codebaseIds: string[];
+  /** Git worktree ID created for this task when it enters the dev column */
+  worktreeId?: string;
   createdAt: Date;
   updatedAt: Date;
   completionSummary?: string;
@@ -95,6 +99,8 @@ export function createTask(params: {
   githubSyncedAt?: Date;
   lastSyncError?: string;
   status?: TaskStatus;
+  codebaseIds?: string[];
+  worktreeId?: string;
 }): Task {
   const now = new Date();
   return {
@@ -126,6 +132,8 @@ export function createTask(params: {
     parallelGroup: params.parallelGroup,
     workspaceId: params.workspaceId,
     sessionId: params.sessionId,
+    codebaseIds: params.codebaseIds ?? [],
+    worktreeId: params.worktreeId,
     createdAt: now,
     updatedAt: now,
   };

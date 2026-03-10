@@ -14,6 +14,7 @@ export interface WorkspaceStore {
   listByStatus(status: WorkspaceStatus): Promise<Workspace[]>;
   updateTitle(workspaceId: string, title: string): Promise<void>;
   updateStatus(workspaceId: string, status: WorkspaceStatus): Promise<void>;
+  updateMetadata(workspaceId: string, metadata: Record<string, string>): Promise<void>;
   delete(workspaceId: string): Promise<void>;
 }
 
@@ -79,6 +80,13 @@ export class PgWorkspaceStore implements WorkspaceStore {
       .where(eq(workspaces.id, workspaceId));
   }
 
+  async updateMetadata(workspaceId: string, metadata: Record<string, string>): Promise<void> {
+    await this.db
+      .update(workspaces)
+      .set({ metadata, updatedAt: new Date() })
+      .where(eq(workspaces.id, workspaceId));
+  }
+
   async delete(workspaceId: string): Promise<void> {
     await this.db.delete(workspaces).where(eq(workspaces.id, workspaceId));
   }
@@ -130,6 +138,14 @@ export class InMemoryWorkspaceStore implements WorkspaceStore {
     const ws = this.store.get(workspaceId);
     if (ws) {
       ws.status = status;
+      ws.updatedAt = new Date();
+    }
+  }
+
+  async updateMetadata(workspaceId: string, metadata: Record<string, string>): Promise<void> {
+    const ws = this.store.get(workspaceId);
+    if (ws) {
+      ws.metadata = { ...ws.metadata, ...metadata };
       ws.updatedAt = new Date();
     }
   }

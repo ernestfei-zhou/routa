@@ -153,6 +153,7 @@ async function testTaskStore() {
       position: 0,
       labels: [],
       dependencies: [],
+      codebaseIds: [],
       workspaceId: "default",
       acceptanceCriteria: ["Has email field", "Has password field"],
       createdAt: new Date(),

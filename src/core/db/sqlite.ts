@@ -150,6 +150,8 @@ function initializeSqliteTables(db: SqliteDatabase): void {
   runAddColumn(sql`ALTER TABLE tasks ADD COLUMN github_synced_at INTEGER`);
   runAddColumn(sql`ALTER TABLE tasks ADD COLUMN last_sync_error TEXT`);
   runAddColumn(sql`ALTER TABLE tasks ADD COLUMN session_id TEXT`);
+  runAddColumn(sql`ALTER TABLE tasks ADD COLUMN codebase_ids TEXT DEFAULT '[]'`);
+  runAddColumn(sql`ALTER TABLE tasks ADD COLUMN worktree_id TEXT`);
 
   db.run(sql`
     CREATE TABLE IF NOT EXISTS notes (

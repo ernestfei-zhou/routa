@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import type { AcpProviderInfo } from "@/client/acp-client";
 import type { CodebaseData } from "@/client/hooks/use-workspaces";
 import type { UseAcpState } from "@/client/hooks/use-acp";
-import type { KanbanBoardInfo, SessionInfo, TaskInfo } from "./types";
+import type { KanbanBoardInfo, SessionInfo, TaskInfo, WorktreeInfo } from "./types";
 
 interface SpecialistOption {
   id: string;
@@ -34,6 +34,7 @@ type DraftIssue = {
   priority: string;
   labels: string;
   createGitHubIssue: boolean;
+  codebaseIds: string[];
 };
 
 const EMPTY_DRAFT: DraftIssue = {
@@ -42,6 +43,7 @@ const EMPTY_DRAFT: DraftIssue = {
   priority: "medium",
   labels: "",
   createGitHubIssue: false,
+  codebaseIds: [],
 };
 
 const ROLE_OPTIONS = ["CRAFTER", "ROUTA", "GATE", "DEVELOPER"];
@@ -51,6 +53,10 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
   const defaultBoardId = useMemo(
     () => boards.find((board) => board.isDefault)?.id ?? boards[0]?.id ?? null,
     [boards],
+  );
+  const allCodebaseIds = useMemo(
+    () => codebases.map((codebase) => codebase.id),
+    [codebases],
   );
   const defaultCodebase = useMemo(
     () => codebases.find((codebase) => codebase.isDefault) ?? codebases[0] ?? null,
@@ -75,6 +81,14 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
   const [agentInput, setAgentInput] = useState("");
   const [agentLoading, setAgentLoading] = useState(false);
   const [agentSessionId, setAgentSessionId] = useState<string | null>(null);
+
+  // Codebase detail popup state
+  const [selectedCodebase, setSelectedCodebase] = useState<CodebaseData | null>(null);
+  const [codebaseWorktrees, setCodebaseWorktrees] = useState<WorktreeInfo[]>([]);
+
+  // Worktree cache: worktreeId -> WorktreeInfo
+  const [worktreeCache, setWorktreeCache] = useState<Record<string, WorktreeInfo>>({});
+  const [detailUpdateError, setDetailUpdateError] = useState<string | null>(null);
 
   // Settings state - column automation rules (initialized from board columns)
   const [columnAutomation, setColumnAutomation] = useState<Record<string, {
@@ -192,11 +206,49 @@ User request: ${agentInput}`;
     [sessions],
   );
 
+  // Fetch worktrees for tasks that have worktreeId
+  useEffect(() => {
+    const worktreeIds = [...new Set(localTasks.map((t) => t.worktreeId).filter((id): id is string => Boolean(id)))];
+    const missing = worktreeIds.filter((id) => !worktreeCache[id]);
+    if (missing.length === 0) return;
+
+    (async () => {
+      const results: Record<string, WorktreeInfo> = {};
+      await Promise.allSettled(
+        missing.map(async (id) => {
+          try {
+            const res = await fetch(`/api/worktrees/${encodeURIComponent(id)}`, { cache: "no-store" });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.worktree) results[id] = data.worktree as WorktreeInfo;
+            }
+          } catch { /* ignore */ }
+        })
+      );
+      if (Object.keys(results).length > 0) {
+        setWorktreeCache((prev) => ({ ...prev, ...results }));
+      }
+    })();
+  }, [localTasks, worktreeCache]);
+
+  async function fetchCodebaseWorktrees(codebase: CodebaseData) {
+    try {
+      const res = await fetch(
+        `/api/workspaces/${encodeURIComponent(workspaceId)}/codebases/${encodeURIComponent(codebase.id)}/worktrees`,
+        { cache: "no-store" }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setCodebaseWorktrees(Array.isArray(data.worktrees) ? data.worktrees as WorktreeInfo[] : []);
+      }
+    } catch { /* ignore */ }
+  }
+
   async function patchTask(taskId: string, payload: Record<string, unknown>) {
     const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...payload, repoPath: defaultCodebase?.repoPath }),
+      body: JSON.stringify(payload),
     });
     const data = await response.json();
     if (!response.ok) {
@@ -208,6 +260,7 @@ User request: ${agentInput}`;
   }
 
   async function createIssue() {
+    const effectiveCodebaseIds = draft.codebaseIds.length > 0 ? draft.codebaseIds : allCodebaseIds;
     const response = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -219,7 +272,10 @@ User request: ${agentInput}`;
         priority: draft.priority,
         labels: draft.labels.split(",").map((label) => label.trim()).filter(Boolean),
         createGitHubIssue: draft.createGitHubIssue,
-        repoPath: defaultCodebase?.repoPath,
+        repoPath: effectiveCodebaseIds.length > 0
+          ? codebases.find((codebase) => codebase.id === effectiveCodebaseIds[0])?.repoPath
+          : defaultCodebase?.repoPath,
+        codebaseIds: effectiveCodebaseIds,
       }),
     });
     const data = await response.json();
@@ -244,6 +300,13 @@ User request: ${agentInput}`;
     const movingTask = localTasks.find((task) => task.id === taskId);
     if (!movingTask) return;
 
+    let shouldCleanupWorktree = false;
+    if (targetColumnId === "done" && movingTask.worktreeId) {
+      shouldCleanupWorktree = window.confirm(
+        "This issue has an attached worktree. Clean it up now?"
+      );
+    }
+
     const nextPosition = boardTasks.filter((task) => task.columnId === targetColumnId).length;
     const optimistic = localTasks.map((task) =>
       task.id === taskId
@@ -262,7 +325,22 @@ User request: ${agentInput}`;
     setLocalTasks(optimistic);
 
     try {
-      const updated = await patchTask(taskId, { columnId: targetColumnId, position: nextPosition });
+      let updated = await patchTask(taskId, { columnId: targetColumnId, position: nextPosition });
+      if (shouldCleanupWorktree && movingTask.worktreeId) {
+        const response = await fetch(`/api/worktrees/${encodeURIComponent(movingTask.worktreeId)}`, {
+          method: "DELETE",
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error ?? "Failed to remove worktree");
+        }
+        updated = await patchTask(taskId, { worktreeId: null });
+        setWorktreeCache((current) => {
+          const next = { ...current };
+          delete next[movingTask.worktreeId!];
+          return next;
+        });
+      }
       if (updated.triggerSessionId && updated.triggerSessionId !== movingTask.triggerSessionId) {
         setActiveSessionId(updated.triggerSessionId);
       }
@@ -296,23 +374,68 @@ User request: ${agentInput}`;
 
   return (
     <div className="flex flex-col h-full space-y-4">
+      {/* Requirement 1: Workspace Repository Info Toolbar */}
+      <div className="flex-shrink-0 rounded-xl border border-gray-200/70 dark:border-[#1c1f2e] bg-white dark:bg-[#12141c] px-4 py-2.5">
+        {codebases.length === 0 ? (
+          <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
+            <span>No repositories linked.</span>
+            <a
+              href={`/workspace/${workspaceId}`}
+              className="text-amber-600 dark:text-amber-400 hover:underline"
+            >
+              Add a codebase in Workspace settings →
+            </a>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mr-1">Repos:</span>
+            {codebases.map((cb) => (
+              <button
+                key={cb.id}
+                onClick={() => {
+                  setSelectedCodebase(cb);
+                  void fetchCodebaseWorktrees(cb);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0d1018] px-2.5 py-1 text-xs text-gray-700 dark:text-gray-300 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors"
+                data-testid="codebase-badge"
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${cb.sourceType === "github" ? "bg-violet-500" : "bg-emerald-500"}`} />
+                <span className="font-medium">{cb.label ?? cb.repoPath.split("/").pop() ?? cb.repoPath}</span>
+                {cb.branch && <span className="text-gray-400 dark:text-gray-500">@{cb.branch}</span>}
+                <span className={`text-[10px] rounded px-1 ${cb.isDefault ? "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300" : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"}`}>
+                  {cb.isDefault ? "default" : cb.sourceType ?? "local"}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <select
-            value={selectedBoardId ?? ""}
-            onChange={(event) => setSelectedBoardId(event.target.value)}
-            className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#12141c] px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
-          >
-            {boards.map((item) => (
-              <option key={item.id} value={item.id}>{item.name}</option>
-            ))}
-          </select>
-          <button
-            onClick={createBoard}
-            className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#191c28]"
-          >
-            New board
-          </button>
+          {boards.length > 1 ? (
+            <>
+              <select
+                value={selectedBoardId ?? ""}
+                onChange={(event) => setSelectedBoardId(event.target.value)}
+                className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#12141c] px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+              >
+                {boards.map((item) => (
+                  <option key={item.id} value={item.id}>{item.name}</option>
+                ))}
+              </select>
+              <button
+                onClick={createBoard}
+                className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#191c28]"
+              >
+                New board
+              </button>
+            </>
+          ) : (
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              {board?.name ?? "Kanban board"}
+            </div>
+          )}
           <a
             href={pathname?.endsWith("/kanban") ? `/workspace/${workspaceId}` : `/workspace/${workspaceId}/kanban`}
             className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#191c28]"
@@ -409,6 +532,7 @@ User request: ${agentInput}`;
                     setDragTaskId(null);
                   }}
                   className="min-h-[6.5625rem] w-[18rem] flex-shrink-0 rounded-2xl border border-gray-200/70 bg-white p-3 dark:border-[#1c1f2e] dark:bg-[#12141c]"
+                  data-testid="kanban-column"
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <div>
@@ -431,6 +555,7 @@ User request: ${agentInput}`;
                           draggable
                           onDragStart={() => setDragTaskId(task.id)}
                           className="rounded-xl border border-gray-200/70 dark:border-[#262938] bg-gray-50/80 dark:bg-[#0d1018] p-3 shadow-sm"
+                          data-testid="kanban-card"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
@@ -464,6 +589,56 @@ User request: ${agentInput}`;
                               ))}
                             </div>
                           )}
+
+                          {/* Repository badge (Requirement 2 + 4) */}
+                          {((task.codebaseIds && task.codebaseIds.length > 0) || allCodebaseIds.length > 0) && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {(task.codebaseIds && task.codebaseIds.length > 0 ? task.codebaseIds : allCodebaseIds).map((cbId) => {
+                                const cb = codebases.find((c) => c.id === cbId);
+                                return cb ? (
+                                  <span
+                                    key={cbId}
+                                    className="inline-flex items-center gap-1 rounded-full bg-violet-100 dark:bg-violet-900/20 px-2 py-0.5 text-[10px] text-violet-700 dark:text-violet-300"
+                                    data-testid="repo-badge"
+                                  >
+                                    <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+                                    {cb.label ?? cb.repoPath.split("/").pop() ?? cb.repoPath}
+                                  </span>
+                                ) : (
+                                  <span key={cbId} className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] text-red-600 dark:bg-red-900/20 dark:text-red-400" title="Repository no longer available">
+                                    ⚠ repo missing
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Worktree status badge (Requirement 4) */}
+                          {task.worktreeId && (() => {
+                            const wt = worktreeCache[task.worktreeId];
+                            if (!wt) return <div className="mt-2 text-[10px] text-gray-400">Loading worktree...</div>;
+                            const wtBadgeColor = wt.status === "active"
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300"
+                              : wt.status === "creating"
+                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
+                                : "bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300";
+                            return (
+                              <button
+                                onClick={() => {
+                                  setActiveTaskId(task.id);
+                                  setActiveSessionId(task.triggerSessionId ?? null);
+                                }}
+                                className="mt-2 flex items-center gap-1.5 group"
+                                title="Click to view worktree details"
+                                data-testid="worktree-badge"
+                              >
+                                <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${wtBadgeColor}`}>
+                                  {wt.status}
+                                </span>
+                                <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[120px]">{wt.branch}</span>
+                              </button>
+                            );
+                          })()}
 
                           {/* Assignment Section */}
                           <div className="mt-3 space-y-2 border-t border-gray-200/50 pt-3 dark:border-[#262938]">
@@ -669,6 +844,45 @@ User request: ${agentInput}`;
                   Current default codebase is not linked to a GitHub repo. The issue will be local-only.
                 </div>
               )}
+
+              {/* Requirement 2: Repository selector */}
+              {codebases.length > 0 && (
+                <div>
+                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Link Repositories</div>
+                  <div className="flex flex-wrap gap-2" data-testid="repo-selector">
+                    {codebases.map((cb) => {
+                      const selected = draft.codebaseIds.includes(cb.id);
+                      return (
+                        <button
+                          key={cb.id}
+                          type="button"
+                          onClick={() => setDraft((current) => ({
+                            ...current,
+                            codebaseIds: selected
+                              ? current.codebaseIds.filter((id) => id !== cb.id)
+                              : [...current.codebaseIds, cb.id],
+                          }))}
+                          className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-colors ${
+                            selected
+                              ? "border-violet-400 bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-600"
+                              : "border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0d1018] text-gray-600 dark:text-gray-400 hover:border-violet-300"
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${cb.sourceType === "github" ? "bg-violet-500" : "bg-emerald-500"}`} />
+                          {cb.label ?? cb.repoPath.split("/").pop() ?? cb.repoPath}
+                          {cb.isDefault && !selected && <span className="text-[10px] text-gray-400">(default)</span>}
+                          {selected && <span className="text-violet-600 dark:text-violet-400">✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {draft.codebaseIds.length === 0 && codebases.length > 0 && (
+                    <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      No selection → all workspace repositories will be linked.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="mt-5 flex justify-end gap-2">
@@ -783,6 +997,106 @@ User request: ${agentInput}`;
                           </a>
                         </div>
                       )}
+
+                      {/* Requirement 2: Associated Codebases in detail panel */}
+                      <div>
+                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Repositories</div>
+                        {((task.codebaseIds && task.codebaseIds.length > 0) || allCodebaseIds.length > 0) ? (
+                          <div className="space-y-1">
+                            {(task.codebaseIds && task.codebaseIds.length > 0 ? task.codebaseIds : allCodebaseIds).map((cbId) => {
+                              const cb = codebases.find((c) => c.id === cbId);
+                              return cb ? (
+                                <div key={cbId} className="flex items-center gap-2 text-sm">
+                                  <span className={`w-2 h-2 rounded-full ${cb.sourceType === "github" ? "bg-violet-500" : "bg-emerald-500"}`} />
+                                  <span className="text-gray-700 dark:text-gray-300">{cb.label ?? cb.repoPath.split("/").pop()}</span>
+                                  {cb.branch && <span className="text-gray-400">@{cb.branch}</span>}
+                                </div>
+                              ) : (
+                                <div key={cbId} className="text-sm text-red-500">⚠ Repository no longer available</div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-400 dark:text-gray-500">No repositories linked</div>
+                        )}
+                        {codebases.length > 0 && (
+                          <div className="mt-3">
+                            <div className="mb-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">Edit linked repositories</div>
+                            <div className="flex flex-wrap gap-2">
+                              {codebases.map((cb) => {
+                                const currentCodebaseIds = (task.codebaseIds && task.codebaseIds.length > 0)
+                                  ? task.codebaseIds
+                                  : allCodebaseIds;
+                                const selected = currentCodebaseIds.includes(cb.id);
+                                return (
+                                  <button
+                                    key={cb.id}
+                                    type="button"
+                                    onClick={async () => {
+                                      setDetailUpdateError(null);
+                                      try {
+                                        const nextCodebaseIds = selected
+                                          ? currentCodebaseIds.filter((id) => id !== cb.id)
+                                          : [...currentCodebaseIds, cb.id];
+                                        await patchTask(task.id, { codebaseIds: nextCodebaseIds });
+                                        onRefresh();
+                                      } catch (error) {
+                                        setDetailUpdateError(
+                                          error instanceof Error ? error.message : "Failed to update repositories"
+                                        );
+                                      }
+                                    }}
+                                    className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-colors ${
+                                      selected
+                                        ? "border-violet-400 bg-violet-50 text-violet-700 dark:border-violet-600 dark:bg-violet-900/20 dark:text-violet-300"
+                                        : "border-gray-200 bg-white text-gray-600 hover:border-violet-300 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-400"
+                                    }`}
+                                    data-testid="detail-repo-toggle"
+                                  >
+                                    <span className={`h-1.5 w-1.5 rounded-full ${cb.sourceType === "github" ? "bg-violet-500" : "bg-emerald-500"}`} />
+                                    {cb.label ?? cb.repoPath.split("/").pop() ?? cb.repoPath}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {detailUpdateError && (
+                              <div className="mt-2 text-xs text-rose-600 dark:text-rose-400">{detailUpdateError}</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Requirement 3: Worktree info in card detail panel */}
+                      {task.worktreeId && (() => {
+                        const wt = worktreeCache[task.worktreeId];
+                        return (
+                          <div data-testid="worktree-detail">
+                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Worktree</div>
+                            {wt ? (
+                              <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-2 space-y-1 text-sm">
+                                <div className="flex items-center gap-2">
+                                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                    wt.status === "active"
+                                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300"
+                                      : wt.status === "creating"
+                                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
+                                        : "bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300"
+                                  }`}>{wt.status}</span>
+                                  <span className="text-gray-600 dark:text-gray-400 font-mono text-xs">{wt.branch}</span>
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-500 font-mono truncate" title={wt.worktreePath}>
+                                  {wt.worktreePath}
+                                </div>
+                                {wt.errorMessage && (
+                                  <div className="text-xs text-red-600 dark:text-red-400">{wt.errorMessage}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-sm text-gray-400">Loading worktree info...</div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
@@ -1007,6 +1321,73 @@ User request: ${agentInput}`;
               >
                 {settingsSaving ? "Saving..." : "Save Settings"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Requirement 1: Codebase detail popup */}
+      {selectedCodebase && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-[#1c1f2e] dark:bg-[#12141c]" data-testid="codebase-detail-modal">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {selectedCodebase.label ?? selectedCodebase.repoPath.split("/").pop()}
+              </h3>
+              <button
+                onClick={() => { setSelectedCodebase(null); setCodebaseWorktrees([]); }}
+                className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                Close
+              </button>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Path</div>
+                  <div className="text-gray-700 dark:text-gray-300 font-mono text-xs truncate">{selectedCodebase.repoPath}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Branch</div>
+                  <div className="text-gray-700 dark:text-gray-300">{selectedCodebase.branch ?? "—"}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Source Type</div>
+                  <div className="text-gray-700 dark:text-gray-300">{selectedCodebase.sourceType ?? "local"}</div>
+                </div>
+                {selectedCodebase.sourceUrl && (
+                  <div>
+                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Source URL</div>
+                    <a href={selectedCodebase.sourceUrl} target="_blank" rel="noreferrer" className="text-amber-600 dark:text-amber-400 hover:underline text-xs truncate block">
+                      {selectedCodebase.sourceUrl}
+                    </a>
+                  </div>
+                )}
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Worktrees ({codebaseWorktrees.length})</div>
+                {codebaseWorktrees.length === 0 ? (
+                  <div className="text-gray-400 dark:text-gray-500 text-xs">No worktrees created yet</div>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {codebaseWorktrees.map((wt) => (
+                      <div key={wt.id} className="rounded-lg border border-gray-200 dark:border-gray-700 p-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                            wt.status === "active"
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300"
+                              : wt.status === "creating"
+                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
+                                : "bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300"
+                          }`}>{wt.status}</span>
+                          <span className="font-mono text-xs text-gray-600 dark:text-gray-400">{wt.branch}</span>
+                        </div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500 font-mono mt-0.5 truncate">{wt.worktreePath}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

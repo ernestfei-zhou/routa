@@ -7,9 +7,16 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getRoutaSystem } from "@/core/routa-system";
-import { createWorkspace, WorkspaceStatus } from "@/core/models/workspace";
+import { createWorkspace, getEffectiveWorkspaceMetadata, WorkspaceStatus } from "@/core/models/workspace";
 
 export const dynamic = "force-dynamic";
+
+function serializeWorkspace(workspace: { id: string; title: string; status: WorkspaceStatus; metadata: Record<string, string>; createdAt: Date; updatedAt: Date; }) {
+  return {
+    ...workspace,
+    metadata: getEffectiveWorkspaceMetadata(workspace),
+  };
+}
 
 export async function GET(request: NextRequest) {
   const status = request.nextUrl.searchParams.get("status") as WorkspaceStatus | null;
@@ -19,7 +26,7 @@ export async function GET(request: NextRequest) {
     ? await system.workspaceStore.listByStatus(status)
     : await system.workspaceStore.list();
 
-  return NextResponse.json({ workspaces });
+  return NextResponse.json({ workspaces: workspaces.map(serializeWorkspace) });
 }
 
 export async function POST(request: NextRequest) {
@@ -38,5 +45,5 @@ export async function POST(request: NextRequest) {
 
   await system.workspaceStore.save(workspace);
 
-  return NextResponse.json({ workspace }, { status: 201 });
+  return NextResponse.json({ workspace: serializeWorkspace(workspace) }, { status: 201 });
 }

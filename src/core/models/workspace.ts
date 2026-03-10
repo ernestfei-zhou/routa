@@ -5,6 +5,9 @@
  * session, and codebase belongs to exactly one workspace.
  */
 
+import os from "os";
+import path from "path";
+
 export type WorkspaceStatus = "active" | "archived";
 
 export interface Workspace {
@@ -14,6 +17,17 @@ export interface Workspace {
   metadata: Record<string, string>;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export function getDefaultWorkspaceWorktreeRoot(workspaceId: string): string {
+  return path.join(os.homedir(), ".routa", "workspace", workspaceId);
+}
+
+export function getEffectiveWorkspaceMetadata(workspace: Pick<Workspace, "id" | "metadata">): Record<string, string> {
+  const metadata = { ...(workspace.metadata ?? {}) };
+  const explicitRoot = metadata.worktreeRoot?.trim();
+  metadata.worktreeRoot = explicitRoot || getDefaultWorkspaceWorktreeRoot(workspace.id);
+  return metadata;
 }
 
 export function createWorkspace(params: {
@@ -26,7 +40,10 @@ export function createWorkspace(params: {
     id: params.id,
     title: params.title,
     status: "active",
-    metadata: params.metadata ?? {},
+    metadata: getEffectiveWorkspaceMetadata({
+      id: params.id,
+      metadata: params.metadata ?? {},
+    }),
     createdAt: now,
     updatedAt: now,
   };

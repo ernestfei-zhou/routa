@@ -93,6 +93,10 @@ export const tasks = pgTable("tasks", {
   workspaceId: text("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
   /** Session ID that created this task (for session-scoped filtering) */
   sessionId: text("session_id"),
+  /** Associated codebase IDs for this task */
+  codebaseIds: jsonb("codebase_ids").$type<string[]>().default([]),
+  /** Git worktree ID created for this task when it enters the dev column */
+  worktreeId: text("worktree_id"),
   completionSummary: text("completion_summary"),
   verificationVerdict: text("verification_verdict"),
   verificationReport: text("verification_report"),

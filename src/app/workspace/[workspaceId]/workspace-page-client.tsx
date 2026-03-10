@@ -75,6 +75,12 @@ export function WorkspacePageClient({
   const [customA2UISurfaces, setCustomA2UISurfaces] = useState<A2UIMessage[]>([]);
   const [bgTasks, setBgTasks] = useState<BackgroundTaskInfo[]>([]);
   const [specialists, setSpecialists] = useState<SpecialistOption[]>([]);
+  const [worktreeRootDraft, setWorktreeRootDraft] = useState("");
+  const [worktreeRootState, setWorktreeRootState] = useState<{ saving: boolean; message: string | null; error: string | null }>({
+    saving: false,
+    message: null,
+    error: null,
+  });
   // Sessions modal state
   const [showSessionsModal, setShowSessionsModal] = useState(false);
   const [sessionsPage, setSessionsPage] = useState(1);
@@ -212,6 +218,12 @@ export function WorkspacePageClient({
   const isDefaultWorkspace = workspaceId === "default";
 
   useEffect(() => {
+    const currentRoot = workspace?.metadata?.worktreeRoot ?? "";
+    const defaultSuffix = `/.routa/workspace/${workspaceId}`;
+    setWorktreeRootDraft(currentRoot.endsWith(defaultSuffix) ? "" : currentRoot);
+  }, [workspace?.metadata?.worktreeRoot, workspaceId]);
+
+  useEffect(() => {
     if (!workspacesHook.loading && !workspace && !isDefaultWorkspace) {
       router.push("/");
     }
@@ -255,6 +267,8 @@ export function WorkspacePageClient({
   const activeAgents = agentsHook.agents.filter((a) => a.status === "ACTIVE");
   const pendingTasks = tasks.filter((t) => t.status === "PENDING" || t.status === "IN_PROGRESS");
   const runningBgTasks = bgTasks.filter((t) => t.status === "RUNNING").length;
+  const defaultWorktreeRootHint = `~/.routa/workspace/${workspaceId}`;
+  const displayedWorktreeRoot = worktreeRootDraft || workspace?.metadata?.worktreeRoot || defaultWorktreeRootHint;
 
   const handleCreateTask = async (title: string, objective: string, sessionId?: string) => {
     await fetch("/api/tasks", {
@@ -321,6 +335,30 @@ export function WorkspacePageClient({
       )
     );
     setRefreshKey((k) => k + 1);
+  };
+
+  const handleSaveWorktreeRoot = async () => {
+    setWorktreeRootState({ saving: true, message: null, error: null });
+    try {
+      const response = await fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ metadata: { worktreeRoot: worktreeRootDraft.trim() } }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error ?? "Failed to update worktree root");
+      }
+      await workspacesHook.fetchWorkspaces();
+      setWorktreeRootDraft(data.workspace?.metadata?.worktreeRoot ?? "");
+      setWorktreeRootState({ saving: false, message: "Workspace worktree root saved.", error: null });
+    } catch (error) {
+      setWorktreeRootState({
+        saving: false,
+        message: null,
+        error: error instanceof Error ? error.message : "Failed to update worktree root",
+      });
+    }
   };
 
   return (
@@ -435,6 +473,45 @@ export function WorkspacePageClient({
               }
               color="amber"
             />
+          </div>
+
+          <div className="mb-8 rounded-2xl border border-gray-200/70 bg-white p-4 dark:border-[#1c1f2e] dark:bg-[#12141c]" data-testid="workspace-worktree-settings">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Worktree Root Override</div>
+                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  You do not need to configure this for the normal flow. By default, this workspace uses {defaultWorktreeRootHint}. Only set a custom path if you want to override that location.
+                </div>
+                <input
+                  value={worktreeRootDraft}
+                  onChange={(event) => setWorktreeRootDraft(event.target.value)}
+                  placeholder={defaultWorktreeRootHint}
+                  className="mt-3 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-amber-400 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-200"
+                  data-testid="worktree-root-input"
+                />
+                <div className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">
+                  Effective path: {displayedWorktreeRoot}
+                </div>
+                {worktreeRootState.error && (
+                  <div className="mt-2 text-xs text-rose-600 dark:text-rose-400" data-testid="worktree-root-error">
+                    {worktreeRootState.error}
+                  </div>
+                )}
+                {worktreeRootState.message && (
+                  <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
+                    {worktreeRootState.message}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => void handleSaveWorktreeRoot()}
+                disabled={worktreeRootState.saving}
+                className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+                data-testid="save-worktree-root"
+              >
+                {worktreeRootState.saving ? "Saving..." : "Save worktree root"}
+              </button>
+            </div>
           </div>
 
           {/* ─── Tab Bar ─────────────────────────────────────────────── */}
