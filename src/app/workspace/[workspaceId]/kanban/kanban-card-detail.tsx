@@ -144,20 +144,18 @@ export function KanbanCardDetail({
         {/* GitHub Link */}
         <GitHubSection task={task} />
 
-        {/* Repositories */}
-        <RepositoriesSection
+        {/* Repositories & Worktree (compact row) */}
+        <RepositoriesWorktreeRow
           task={task}
           codebases={codebases}
           allCodebaseIds={allCodebaseIds}
+          worktreeCache={worktreeCache}
           updateError={updateError}
           setUpdateError={setUpdateError}
           onPatchTask={onPatchTask}
           onRefresh={onRefresh}
           onRepositoryChange={onRepositoryChange}
         />
-
-        {/* Worktree */}
-        <WorktreeSection task={task} worktreeCache={worktreeCache} />
 
         {/* Delete Button */}
         <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -295,10 +293,11 @@ function GitHubSection({ task }: { task: TaskInfo }) {
   );
 }
 
-function RepositoriesSection({
+function RepositoriesWorktreeRow({
   task,
   codebases,
   allCodebaseIds,
+  worktreeCache,
   updateError,
   setUpdateError,
   onPatchTask,
@@ -308,111 +307,112 @@ function RepositoriesSection({
   task: TaskInfo;
   codebases: CodebaseData[];
   allCodebaseIds: string[];
+  worktreeCache: Record<string, WorktreeInfo>;
   updateError: string | null;
   setUpdateError: (error: string | null) => void;
   onPatchTask: (taskId: string, payload: Record<string, unknown>) => Promise<TaskInfo>;
   onRefresh: () => void;
   onRepositoryChange?: (codebaseIds: string[]) => void;
 }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const currentCodebaseIds = (task.codebaseIds && task.codebaseIds.length > 0) ? task.codebaseIds : allCodebaseIds;
+  const primaryCodebase = codebases.find((c) => c.id === currentCodebaseIds[0]);
+  const wt = task.worktreeId ? worktreeCache[task.worktreeId] : null;
+
   return (
     <div>
-      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Repositories</div>
-      {((task.codebaseIds && task.codebaseIds.length > 0) || allCodebaseIds.length > 0) ? (
-        <div className="space-y-1">
-          {(task.codebaseIds && task.codebaseIds.length > 0 ? task.codebaseIds : allCodebaseIds).map((cbId) => {
-            const cb = codebases.find((c) => c.id === cbId);
-            return cb ? (
-              <div key={cbId} className="flex items-center gap-2 text-sm">
-                <span className={`w-2 h-2 rounded-full ${cb.sourceType === "github" ? "bg-violet-500" : "bg-emerald-500"}`} />
-                <span className="text-gray-700 dark:text-gray-300">{cb.label ?? cb.repoPath.split("/").pop()}</span>
-                {cb.branch && <span className="text-gray-400">@{cb.branch}</span>}
-              </div>
-            ) : (
-              <div key={cbId} className="text-sm text-red-500">⚠ Repository no longer available</div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="text-sm text-gray-400 dark:text-gray-500">No repositories linked</div>
-      )}
-      {codebases.length > 0 && (
-        <div className="mt-3">
-          <div className="mb-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">Edit linked repositories</div>
-          <div className="flex flex-wrap gap-2">
-            {codebases.map((cb) => {
-              const currentCodebaseIds = (task.codebaseIds && task.codebaseIds.length > 0)
-                ? task.codebaseIds
-                : allCodebaseIds;
-              const selected = currentCodebaseIds.includes(cb.id);
-              return (
-                <button
-                  key={cb.id}
-                  type="button"
-                  onClick={async () => {
-                    setUpdateError(null);
-                    try {
-                      const nextCodebaseIds = selected
-                        ? currentCodebaseIds.filter((id) => id !== cb.id)
-                        : [...currentCodebaseIds, cb.id];
-                      await onPatchTask(task.id, { codebaseIds: nextCodebaseIds });
-                      // Notify parent about repository change
-                      onRepositoryChange?.(nextCodebaseIds);
-                      onRefresh();
-                    } catch (error) {
-                      setUpdateError(
-                        error instanceof Error ? error.message : "Failed to update repositories"
-                      );
-                    }
-                  }}
-                  className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-colors ${
-                    selected
-                      ? "border-violet-400 bg-violet-50 text-violet-700 dark:border-violet-600 dark:bg-violet-900/20 dark:text-violet-300"
-                      : "border-gray-200 bg-white text-gray-600 hover:border-violet-300 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-400"
-                  }`}
-                  data-testid="detail-repo-toggle"
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full ${cb.sourceType === "github" ? "bg-violet-500" : "bg-emerald-500"}`} />
-                  {cb.label ?? cb.repoPath.split("/").pop() ?? cb.repoPath}
-                </button>
-              );
-            })}
+      {/* Compact header row */}
+      <div className="flex items-center gap-2 text-sm">
+        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Repo</div>
+        {primaryCodebase ? (
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${primaryCodebase.sourceType === "github" ? "bg-violet-500" : "bg-emerald-500"}`} />
+            <span className="text-gray-700 dark:text-gray-300 truncate">
+              {primaryCodebase.label ?? primaryCodebase.repoPath.split("/").pop()}
+            </span>
+            {currentCodebaseIds.length > 1 && (
+              <span className="text-gray-400 text-xs">+{currentCodebaseIds.length - 1}</span>
+            )}
           </div>
-          {updateError && (
-            <div className="mt-2 text-xs text-rose-600 dark:text-rose-400">{updateError}</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function WorktreeSection({ task, worktreeCache }: { task: TaskInfo; worktreeCache: Record<string, WorktreeInfo> }) {
-  if (!task.worktreeId) return null;
-  const wt = worktreeCache[task.worktreeId];
-  return (
-    <div data-testid="worktree-detail">
-      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Worktree</div>
-      {wt ? (
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-2 space-y-1 text-sm">
-          <div className="flex items-center gap-2">
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+        ) : (
+          <span className="text-gray-400 dark:text-gray-500 text-xs">None</span>
+        )}
+        {wt && (
+          <>
+            <span className="text-gray-300 dark:text-gray-600">|</span>
+            <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
               wt.status === "active"
                 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300"
                 : wt.status === "creating"
                   ? "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
                   : "bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300"
-            }`}>{wt.status}</span>
-            <span className="text-gray-600 dark:text-gray-400 font-mono text-xs">{wt.branch}</span>
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-500 font-mono truncate" title={wt.worktreePath}>
-            {wt.worktreePath}
-          </div>
-          {wt.errorMessage && (
-            <div className="text-xs text-red-600 dark:text-red-400">{wt.errorMessage}</div>
+            }`}>{wt.branch}</span>
+          </>
+        )}
+        <button
+          type="button"
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs"
+        >
+          {isExpanded ? "▲" : "▼"}
+        </button>
+      </div>
+
+      {/* Expanded edit section */}
+      {isExpanded && (
+        <div className="mt-2 space-y-2 pl-2 border-l-2 border-gray-200 dark:border-gray-700">
+          {/* Repository selection */}
+          {codebases.length > 0 && (
+            <div>
+              <div className="mb-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">Edit linked repositories</div>
+              <div className="flex flex-wrap gap-1.5">
+                {codebases.map((cb) => {
+                  const selected = currentCodebaseIds.includes(cb.id);
+                  return (
+                    <button
+                      key={cb.id}
+                      type="button"
+                      onClick={async () => {
+                        setUpdateError(null);
+                        try {
+                          const nextCodebaseIds = selected
+                            ? currentCodebaseIds.filter((id) => id !== cb.id)
+                            : [...currentCodebaseIds, cb.id];
+                          await onPatchTask(task.id, { codebaseIds: nextCodebaseIds });
+                          onRepositoryChange?.(nextCodebaseIds);
+                          onRefresh();
+                        } catch (error) {
+                          setUpdateError(error instanceof Error ? error.message : "Failed to update repositories");
+                        }
+                      }}
+                      className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[11px] transition-colors ${
+                        selected
+                          ? "border-violet-400 bg-violet-50 text-violet-700 dark:border-violet-600 dark:bg-violet-900/20 dark:text-violet-300"
+                          : "border-gray-200 bg-white text-gray-600 hover:border-violet-300 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-400"
+                      }`}
+                      data-testid="detail-repo-toggle"
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full ${cb.sourceType === "github" ? "bg-violet-500" : "bg-emerald-500"}`} />
+                      {cb.label ?? cb.repoPath.split("/").pop() ?? cb.repoPath}
+                    </button>
+                  );
+                })}
+              </div>
+              {updateError && (
+                <div className="mt-1 text-xs text-rose-600 dark:text-rose-400">{updateError}</div>
+              )}
+            </div>
+          )}
+          {/* Worktree details */}
+          {wt && (
+            <div data-testid="worktree-detail" className="text-xs text-gray-500 dark:text-gray-500 font-mono truncate" title={wt.worktreePath}>
+              {wt.worktreePath}
+              {wt.errorMessage && (
+                <div className="text-red-600 dark:text-red-400 mt-0.5">{wt.errorMessage}</div>
+              )}
+            </div>
           )}
         </div>
-      ) : (
-        <div className="text-sm text-gray-400">Loading worktree info...</div>
       )}
     </div>
   );
