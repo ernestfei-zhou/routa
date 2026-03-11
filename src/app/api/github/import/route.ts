@@ -16,7 +16,8 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { owner, repo, ref } = body as { owner?: string; repo?: string; ref?: string };
+    let { owner, repo } = body as { owner?: string; repo?: string; ref?: string };
+    const { ref } = body as { ref?: string };
 
     // Support shorthand URL
     if (!owner && body.url) {

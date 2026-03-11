@@ -308,9 +308,9 @@ export async function PATCH(
   await system.taskStore.save(nextTask);
 
   // Emit column transition event if column changed
-  if (body.columnId !== undefined && existing.columnId !== nextTask.columnId) {
+  if (body.columnId !== undefined && existing.columnId !== nextTask.columnId && nextTask.boardId && nextTask.columnId) {
     const board = await system.kanbanBoardStore.get(nextTask.boardId);
-    if (board) {
+    if (board && existing.columnId) {
       const fromColumn = board.columns.find((c) => c.id === existing.columnId);
       const toColumn = board.columns.find((c) => c.id === nextTask.columnId);
 

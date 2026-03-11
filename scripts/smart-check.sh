@@ -152,7 +152,24 @@ main() {
   echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
   echo ""
 
-  # Errors already shown in real-time above
+  # Show summary of which checks failed
+  echo -e "${YELLOW}Summary:${NC}"
+  if [[ $lint_exit -ne 0 ]]; then
+    echo -e "  ${RED}✗${NC} Lint failed (exit code: $lint_exit)"
+  else
+    echo -e "  ${GREEN}✓${NC} Lint passed"
+  fi
+  if [[ $typecheck_exit -ne 0 ]]; then
+    echo -e "  ${RED}✗${NC} Type check failed (exit code: $typecheck_exit)"
+  else
+    echo -e "  ${GREEN}✓${NC} Type check passed"
+  fi
+  if [[ $test_exit -ne 0 ]]; then
+    echo -e "  ${RED}✗${NC} Tests failed (exit code: $test_exit)"
+  else
+    echo -e "  ${GREEN}✓${NC} Tests passed"
+  fi
+  echo ""
 
   # Check if we're in an AI agent environment
   if is_ai_agent; then

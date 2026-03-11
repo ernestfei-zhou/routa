@@ -60,11 +60,11 @@ export function KanbanCardDetail({
     return primaryCodebase?.repoPath ?? null;
   };
 
-  const sessionCwdMismatch = sessionInfo && task.triggerSessionId && (() => {
+  const sessionCwdMismatch = sessionInfo && task.triggerSessionId ? (() => {
     const taskRepoPath = getTaskRepositoryPath();
     if (!taskRepoPath) return false;
     return sessionInfo.cwd !== taskRepoPath;
-  })();
+  })() : undefined;
 
   return (
     <div className="w-1/3 border-r border-gray-200 dark:border-[#191c28] overflow-y-auto p-4">

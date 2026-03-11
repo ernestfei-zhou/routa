@@ -86,8 +86,8 @@ export function WorkspacePageClient({
   // Sessions modal state
   const [showSessionsModal, _setShowSessionsModal] = useState(false);
   const [_sessionsPage, _setSessionsPage] = useState(1);
-  const [_hasMoreSessions, _setHasMoreSessions] = useState(false);
-  const [_allSessions, _setAllSessions] = useState<SessionInfo[]>([]);
+  const [_hasMoreSessions, setHasMoreSessions] = useState(false);
+  const [_allSessions, setAllSessions] = useState<SessionInfo[]>([]);
 
   // Auto-connect ACP
   useEffect(() => {
