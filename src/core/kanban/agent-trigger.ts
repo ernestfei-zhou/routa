@@ -20,6 +20,11 @@ export function buildTaskPrompt(task: Task): string {
   return [
     `You are assigned to Kanban task: ${task.title}`,
     "",
+    "## Context",
+    "",
+    "**IMPORTANT**: You are working in Kanban context. Use MCP tools (update_card, move_card, etc.) to manage this card.",
+    "Do NOT use `gh issue create` or other GitHub CLI commands — those are for GitHub issue context only.",
+    "",
     "## Task Details",
     "",
     `**Card ID:** ${task.id}`,

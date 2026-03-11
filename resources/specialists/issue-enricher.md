@@ -62,7 +62,23 @@ When creating/updating an issue, use this structure:
 - [ ] Out of scope is explicit
 
 ## Tools
+
+### When Working with Kanban Cards
+If you have access to MCP tools (check if `update_card` is available):
+- **update_card**: Update the card's title and description with your analysis
+  - Use the `cardId` provided in the task context
+  - Put the full analysis in the `description` field
+  - Update the `title` if it's vague or can be improved
+- **move_card**: Move the card to appropriate column (e.g., 'in-progress', 'done')
+- **create_note**: Create notes for detailed documentation
+- **report_to_parent**: Report completion when analysis is done
+
+### When Working with GitHub Issues
+If MCP tools are not available (e.g., running via `scripts/issue-enricher.ts`):
 - Use `gh issue create` or `gh issue comment` to update GitHub
+- Use `gh issue edit` to update title and labels
+
+### General Tools
 - Use codebase search to find patterns and context
 - Reference specific files and line numbers when relevant
 
@@ -71,5 +87,7 @@ When creating/updating an issue, use this structure:
 2. **Be honest about trade-offs** — Every approach has pros and cons
 3. **Be specific about effort** — Give realistic estimates
 4. **Reference the codebase** — Cite specific files and patterns
-5. **Use `gh` CLI** — Create issues and comments via command line
+5. **Use the right tool for the context**:
+   - If you have `update_card` available → Use MCP tools to update the card
+   - If you don't have `update_card` → Use `gh` CLI to update GitHub issues
 

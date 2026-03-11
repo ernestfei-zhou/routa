@@ -665,19 +665,44 @@ fn build_task_prompt(task: &Task) -> String {
     [
         format!("You are assigned to Kanban task: {}", task.title),
         String::new(),
-        task.objective.clone(),
+        "## Context".to_string(),
         String::new(),
+        "**IMPORTANT**: You are working in Kanban context. Use MCP tools (update_card, move_card, etc.) to manage this card.".to_string(),
+        "Do NOT use `gh issue create` or other GitHub CLI commands — those are for GitHub issue context only.".to_string(),
+        String::new(),
+        "## Task Details".to_string(),
+        String::new(),
+        format!("**Card ID:** {}", task.id),
         format!(
-            "Priority: {}",
+            "**Priority:** {}",
             task.priority.as_ref().map(|value| value.as_str()).unwrap_or("medium")
         ),
         labels,
         task.github_url
             .as_ref()
-            .map(|url| format!("GitHub Issue: {}", url))
-            .unwrap_or_else(|| "GitHub Issue: local-only".to_string()),
+            .map(|url| format!("**GitHub Issue:** {}", url))
+            .unwrap_or_else(|| "**GitHub Issue:** local-only".to_string()),
         String::new(),
-        "Start implementation work immediately. Report progress in the session and keep changes focused on this task.".to_string(),
+        "## Objective".to_string(),
+        String::new(),
+        task.objective.clone(),
+        String::new(),
+        "## Available MCP Tools".to_string(),
+        String::new(),
+        "You have access to the following MCP tools for task management:".to_string(),
+        String::new(),
+        format!("- **update_card**: Update this card's title, description, priority, or labels. Use cardId: \"{}\"", task.id),
+        "- **move_card**: Move this card to a different column (e.g., 'in-progress', 'done')".to_string(),
+        "- **report_to_parent**: Report completion status to the parent agent when done".to_string(),
+        "- **create_note**: Create notes for documentation or progress tracking".to_string(),
+        String::new(),
+        "## Instructions".to_string(),
+        String::new(),
+        "1. Start implementation work immediately".to_string(),
+        "2. Use `update_card` to track progress in the card description".to_string(),
+        "3. Use `move_card` to move the card to 'in-progress' when starting".to_string(),
+        "4. Keep changes focused on this task".to_string(),
+        "5. When complete, use `move_card` to move to 'done' and `report_to_parent` to report completion".to_string(),
     ]
     .join("\n")
 }
