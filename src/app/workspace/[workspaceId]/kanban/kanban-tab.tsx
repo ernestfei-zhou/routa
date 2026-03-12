@@ -10,6 +10,7 @@ import { KanbanCard } from "./kanban-card";
 import { KanbanSettingsModal, type ColumnAutomationConfig } from "./kanban-settings-modal";
 import { KanbanCardDetail } from "./kanban-card-detail";
 import { ChatPanel } from "@/client/components/chat-panel";
+import { RepoPicker, type RepoSelection } from "@/client/components/repo-picker";
 
 interface SpecialistOption {
   id: string;
@@ -68,10 +69,9 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
   // Codebase detail popup state
   const [selectedCodebase, setSelectedCodebase] = useState<CodebaseData | null>(null);
   const [codebaseWorktrees, setCodebaseWorktrees] = useState<WorktreeInfo[]>([]);
-  // Codebase edit state
+  // Codebase edit state - use RepoPicker for re-selecting/cloning
   const [editingCodebase, setEditingCodebase] = useState(false);
-  const [editLabel, setEditLabel] = useState("");
-  const [editRepoPath, setEditRepoPath] = useState("");
+  const [editRepoSelection, setEditRepoSelection] = useState<RepoSelection | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -225,24 +225,29 @@ User request: ${agentInput}`;
     setActiveSessionId(null);
   }, []);
 
-  // Codebase edit handlers
+  // Codebase edit handlers - use RepoPicker for re-selecting/cloning
   const handleStartEditCodebase = useCallback(() => {
     if (!selectedCodebase) return;
-    setEditLabel(selectedCodebase.label ?? "");
-    setEditRepoPath(selectedCodebase.repoPath);
+    // Initialize with current selection
+    setEditRepoSelection({
+      path: selectedCodebase.repoPath,
+      branch: selectedCodebase.branch ?? "",
+      name: selectedCodebase.label ?? selectedCodebase.repoPath.split("/").pop() ?? "",
+    });
     setEditError(null);
     setEditingCodebase(true);
   }, [selectedCodebase]);
 
-  const handleSaveCodebase = useCallback(async () => {
-    if (!selectedCodebase) return;
+  const handleRepoSelectionChange = useCallback(async (selection: RepoSelection | null) => {
+    if (!selection || !selectedCodebase) return;
+    setEditRepoSelection(selection);
     setEditSaving(true);
     setEditError(null);
     try {
       const res = await fetch(`/api/codebases/${encodeURIComponent(selectedCodebase.id)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: editLabel, repoPath: editRepoPath }),
+        body: JSON.stringify({ label: selection.name, repoPath: selection.path, branch: selection.branch }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to update repository");
@@ -255,10 +260,11 @@ User request: ${agentInput}`;
     } finally {
       setEditSaving(false);
     }
-  }, [selectedCodebase, editLabel, editRepoPath, onRefresh]);
+  }, [selectedCodebase, onRefresh]);
 
   const handleCancelEditCodebase = useCallback(() => {
     setEditingCodebase(false);
+    setEditRepoSelection(null);
     setEditError(null);
   }, []);
 
@@ -838,29 +844,23 @@ User request: ${agentInput}`;
               </div>
             </div>
 
-            {/* Edit form */}
+            {/* Edit mode - use RepoPicker to select/clone repository */}
             {editingCodebase ? (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Label</label>
-                  <input
-                    value={editLabel}
-                    onChange={(e) => setEditLabel(e.target.value)}
-                    placeholder="e.g. routa-js"
-                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-amber-400 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-200"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Repository Path</label>
-                  <input
-                    value={editRepoPath}
-                    onChange={(e) => setEditRepoPath(e.target.value)}
-                    placeholder="/path/to/repo"
-                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-mono text-gray-700 outline-none focus:border-amber-400 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-200"
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    Select or clone a repository
+                  </label>
+                  <RepoPicker
+                    value={editRepoSelection}
+                    onChange={handleRepoSelectionChange}
                   />
                 </div>
                 {editError && (
                   <div className="text-xs text-rose-600 dark:text-rose-400">{editError}</div>
+                )}
+                {editSaving && (
+                  <div className="text-xs text-amber-600 dark:text-amber-400">Updating repository...</div>
                 )}
                 <div className="flex gap-2 justify-end">
                   <button
@@ -869,13 +869,6 @@ User request: ${agentInput}`;
                     className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-[#191c28]"
                   >
                     Cancel
-                  </button>
-                  <button
-                    onClick={() => void handleSaveCodebase()}
-                    disabled={editSaving}
-                    className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-60"
-                  >
-                    {editSaving ? "Saving…" : "Save"}
                   </button>
                 </div>
               </div>
