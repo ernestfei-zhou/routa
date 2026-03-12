@@ -154,6 +154,7 @@ export function SessionPageClient() {
   useEffect(() => {
     if (codebases.length === 0) return;
     const def = codebases.find((c) => c.isDefault) ?? codebases[0];
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync default codebase selection from loaded list
     setRepoSelection({ path: def.repoPath, branch: def.branch ?? "", name: def.label ?? def.repoPath.split("/").pop() ?? "" });
   }, [codebases]);
 
@@ -382,7 +383,7 @@ export function SessionPageClient() {
 
   useEffect(() => {
     if (!notesHook.notes.length) return;
-
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync crafter agents with notes metadata
     setCrafterAgents((prev) => {
       let changed = false;
       const next = prev.map((agent) => {
@@ -412,6 +413,7 @@ export function SessionPageClient() {
     if (!focusedSessionId) return;
     const matchedAgent = crafterAgents.find((agent) => agent.sessionId === focusedSessionId);
     if (matchedAgent && matchedAgent.id !== activeCrafterId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- keep active crafter in sync with focused session
       setActiveCrafterId(matchedAgent.id);
     }
   }, [activeCrafterId, crafterAgents, focusedSessionId]);
@@ -489,6 +491,7 @@ export function SessionPageClient() {
       acp.selectedProvider === "docker-opencode"
     ) {
       const errMsg = (update.error as string | undefined) ?? "Docker session failed to start";
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- surface docker error state from session updates
       setDockerErrorMessage(errMsg);
       // Restore pending text so user can retry after configuring
       if (pendingPromptTextRef.current) {
@@ -638,6 +641,7 @@ export function SessionPageClient() {
     if (!pending.length) return;
     lastChildUpdateIndexRef.current = updates.length;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- update crafter agent state from streaming updates
     setCrafterAgents((prev) => {
       const updated = [...prev];
       let changed = false;
@@ -832,6 +836,7 @@ export function SessionPageClient() {
     });
 
     if (hasRename) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh UI for rename updates
       bumpRefresh();
     }
   }, [acp.updates, bumpRefresh]);
@@ -1420,37 +1425,7 @@ export function SessionPageClient() {
   }, []);
 
   // ── Auto-advance sequential queue when an agent completes ────────────
-  // Forward-declared refs so the effect callbacks can read the latest handlers
-  // without causing circular dependency loops.
-  const handleExecuteNoteTaskRef = useRef<((noteId: string) => Promise<CrafterAgent | null>) | null>(null);
   const handleExecuteTaskRef = useRef<((taskId: string) => Promise<CrafterAgent | null>) | null>(null);
-
-  useEffect(() => {
-    const prevRunning = runningCrafterCountRef.current;
-    const nowRunning = crafterAgents.filter((a) => a.status === "running").length;
-    runningCrafterCountRef.current = nowRunning;
-
-    // A crafter just finished (running count decreased) — advance the queue
-    if (nowRunning < prevRunning) {
-      const queuedNoteTask = noteTaskQueueRef.current.shift();
-      if (queuedNoteTask) {
-        const handler = queuedNoteTask.mode === "provider"
-          ? handleExecuteProviderNoteTaskRef.current
-          : handleExecuteNoteTaskRef.current;
-        handler?.(queuedNoteTask.noteId).then((agent) => {
-          if (agent) setActiveCrafterId(agent.id);
-        });
-        return;
-      }
-      const taskId = routaTaskQueueRef.current.shift();
-      if (taskId && handleExecuteTaskRef.current) {
-        handleExecuteTaskRef.current(taskId).then((agent) => {
-          if (agent) setActiveCrafterId(agent.id);
-        });
-      }
-    }
-   
-  }, [crafterAgents]);
 
   // ── Sync CRAFTER state to collaborative notes ────────────────────────
   const syncedCrafterStatusRef = useRef<Map<string, string>>(new Map());
@@ -1945,6 +1920,32 @@ export function SessionPageClient() {
     }
   }, [bumpRefresh, concurrency, notesHook, repoSelection, resolveAgentConfig, sessionId, workspaceId]);
 
+  useEffect(() => {
+    const prevRunning = runningCrafterCountRef.current;
+    const nowRunning = crafterAgents.filter((a) => a.status === "running").length;
+    runningCrafterCountRef.current = nowRunning;
+
+    // A crafter just finished (running count decreased) — advance the queue
+    if (nowRunning < prevRunning) {
+      const queuedNoteTask = noteTaskQueueRef.current.shift();
+      if (queuedNoteTask) {
+        const handler = queuedNoteTask.mode === "provider"
+          ? handleExecuteProviderNoteTask
+          : handleExecuteQuickAccessNoteTask;
+        handler?.(queuedNoteTask.noteId).then((agent) => {
+          if (agent) setActiveCrafterId(agent.id);
+        });
+        return;
+      }
+      const taskId = routaTaskQueueRef.current.shift();
+      if (taskId && handleExecuteTaskRef.current) {
+        handleExecuteTaskRef.current(taskId).then((agent) => {
+          if (agent) setActiveCrafterId(agent.id);
+        });
+      }
+    }
+  }, [crafterAgents, handleExecuteProviderNoteTask, handleExecuteQuickAccessNoteTask]);
+
   const handleExecuteSelectedNoteTasks = useCallback(async (noteIds: string[], requestedConcurrency: number) => {
     const pendingNoteIds = noteIds.filter((noteId) => {
       const note = notesHook.notes.find((item) => item.id === noteId);
@@ -1985,9 +1986,6 @@ export function SessionPageClient() {
   }, [findCrafterForNote, handleExecuteProviderNoteTask, handleSelectNoteTask, notesHook.notes]);
 
   // Keep refs up to date so the queue-advance effect always calls the latest version
-  const handleExecuteProviderNoteTaskRef = useRef<((noteId: string) => Promise<CrafterAgent | null>) | null>(null);
-  useEffect(() => { handleExecuteNoteTaskRef.current = handleExecuteQuickAccessNoteTask; }, [handleExecuteQuickAccessNoteTask]);
-  useEffect(() => { handleExecuteProviderNoteTaskRef.current = handleExecuteProviderNoteTask; }, [handleExecuteProviderNoteTask]);
   useEffect(() => { handleExecuteTaskRef.current = handleExecuteTask; }, [handleExecuteTask]);
 
   // Notes are now pre-filtered by useNotes(workspaceId, sessionId)
