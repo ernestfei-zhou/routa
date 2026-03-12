@@ -150,7 +150,7 @@ function memoryWrite(filePath: string, data: string | NodeJS.ArrayBufferView): v
  * Node.js ESM exports are non-configurable by default. We try direct
  * assignment first, then `Object.defineProperty`, then give up silently.
  */
-function patchFsMethod(name: string, fn: Function): void {
+function patchFsMethod(name: string, fn: (...args: unknown[]) => unknown): void {
   try {
     // Try making it configurable + writable first
     Object.defineProperty(fs, name, {

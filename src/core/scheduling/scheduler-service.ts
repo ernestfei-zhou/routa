@@ -42,7 +42,7 @@ export function startSchedulerService(): void {
       if (data.fired > 0) {
         console.log(`[Scheduler] Tick fired ${data.fired} schedule(s): ${data.scheduleIds?.join(", ")}`);
       }
-    } catch (err) {
+    } catch {
       // Server may not be ready yet during cold start — silently ignore
     }
   });

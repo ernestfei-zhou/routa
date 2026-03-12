@@ -75,7 +75,6 @@ export class CRDTDocumentManager {
    * Initialize a document with content (replaces existing content).
    */
   initializeWithContent(workspaceId: string, noteId: string, content: string): void {
-    const key = this.key(workspaceId, noteId);
     const entry = this.getOrCreate(workspaceId, noteId);
     const text = entry.doc.getText("content");
 

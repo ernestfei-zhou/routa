@@ -154,7 +154,7 @@ class TauriProcessHandle implements IProcessHandle {
     for (const handler of this._errorHandlers) handler(err);
   }
 
-  kill(signal?: string): void {
+  kill(_signal?: string): void {
     if (this._killFn) this._killFn();
   }
 
