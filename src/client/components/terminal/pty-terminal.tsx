@@ -64,7 +64,7 @@ export function PtyTerminal({
   args,
   cwd,
   env,
-  onExit,
+  onExit: _onExit,
   rows = 24,
   cols = 80,
 }: PtyTerminalProps) {
@@ -101,6 +101,8 @@ export function PtyTerminal({
         allowTransparency: true,
         convertEol: true,
         theme: TERMINAL_THEME,
+        rows,
+        cols,
       });
 
       terminal.loadAddon(fitAddon);
@@ -117,8 +119,8 @@ export function PtyTerminal({
         args,
         cwd,
         env,
-        rows: terminal.rows,
-        cols: terminal.cols,
+        rows,
+        cols,
       });
       sessionIdRef.current = sessionId;
 
@@ -164,7 +166,7 @@ export function PtyTerminal({
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [command, args, cwd, env, isTauri]);
+  }, [command, args, cwd, env, isTauri, rows, cols]);
 
   // Initialize on mount
   useEffect(() => {
@@ -261,4 +263,3 @@ export function PtyTerminal({
     </div>
   );
 }
-

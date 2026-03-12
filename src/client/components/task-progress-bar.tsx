@@ -38,10 +38,9 @@ export function TaskProgressBar({ tasks, fileChanges, className = "" }: TaskProg
   const [expanded, setExpanded] = useState(false);
 
   // Find current running task and calculate progress
-  const { currentTaskIndex, completedCount, runningTask, delegatedCount } = useMemo(() => {
+  const { completedCount, runningTask } = useMemo(() => {
     let runningIdx = -1;
     let completed = 0;
-    let delegated = 0;
     let running: TaskInfo | null = null;
 
     for (let i = 0; i < tasks.length; i++) {
@@ -52,9 +51,6 @@ export function TaskProgressBar({ tasks, fileChanges, className = "" }: TaskProg
       if ((tasks[i].status === "running" || tasks[i].status === "delegated") && runningIdx === -1) {
         runningIdx = i;
         running = tasks[i];
-      }
-      if (tasks[i].status === "delegated") {
-        delegated++;
       }
     }
 
@@ -72,7 +68,6 @@ export function TaskProgressBar({ tasks, fileChanges, className = "" }: TaskProg
     return {
       currentTaskIndex: runningIdx >= 0 ? runningIdx + 1 : completed + 1,
       completedCount: completed,
-      delegatedCount: delegated,
       runningTask: running,
     };
   }, [tasks]);
@@ -204,4 +199,3 @@ function TaskRow({ task, index }: { task: TaskInfo; index: number }) {
     </div>
   );
 }
-

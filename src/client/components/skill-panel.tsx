@@ -30,7 +30,6 @@ export function SkillPanel({ skillsHook: externalHook }: SkillPanelProps) {
     repoSkills,
     loadedSkill,
     loading,
-    cloning,
     error,
     loadSkill,
     reloadFromDisk,

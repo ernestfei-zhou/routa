@@ -60,7 +60,7 @@ const TERMINAL_THEME = {
 };
 
 export function TerminalBubble({
-  terminalId,
+  terminalId: _terminalId,
   command,
   args,
   data,

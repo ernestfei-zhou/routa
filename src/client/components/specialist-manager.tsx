@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { desktopAwareFetch } from "../utils/diagnostics";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -321,7 +321,7 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
 
               {specialists.length === 0 && !loading && (
                 <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                  <p>No specialists found. Click "Sync Bundled" to load default specialists.</p>
+                  <p>No specialists found. Click &quot;Sync Bundled&quot; to load default specialists.</p>
                 </div>
               )}
             </>

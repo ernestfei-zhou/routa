@@ -77,10 +77,6 @@ export function CollaborativeTaskEditor({
     [notes]
   );
 
-  if (taskNotes.length === 0) {
-    return null;
-  }
-
   const hasPending = taskNotes.some(
     (n) => !n.metadata.taskStatus || n.metadata.taskStatus === "PENDING"
   );
@@ -155,6 +151,10 @@ export function CollaborativeTaskEditor({
       onSelectTaskNote?.(crafter.taskId);
     }
   }, [crafterAgents, onSelectTaskNote]);
+
+  if (taskNotes.length === 0) {
+    return null;
+  }
 
   return (
     <div ref={containerRef} className="flex flex-col h-full">

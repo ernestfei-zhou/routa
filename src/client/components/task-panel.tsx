@@ -77,23 +77,14 @@ export function TaskPanel({
   onSelectCrafter,
   concurrency = 1,
   onConcurrencyChange,
-  onAbortCrafter,
-  onMarkDoneCrafter,
+  onAbortCrafter: _onAbortCrafter,
+  onMarkDoneCrafter: _onMarkDoneCrafter,
   onUpdateAgentMessages,
 }: TaskPanelProps) {
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<PanelView>("tasks");
-
-  // Auto-switch to crafters view only on the first agent spawn,
-  // then let the user freely toggle between tabs.
-  const hasAutoSwitchedRef = useRef(false);
-  useEffect(() => {
-    if (crafterAgents.length > 0 && !hasAutoSwitchedRef.current) {
-      hasAutoSwitchedRef.current = true;
-      setViewMode("crafters");
-    }
-  }, [crafterAgents.length]);
+  const [userViewMode, setUserViewMode] = useState<PanelView | null>(null);
+  const viewMode = userViewMode ?? (crafterAgents.length > 0 ? "crafters" : "tasks");
 
   if (tasks.length === 0 && crafterAgents.length === 0) return null;
 
@@ -168,8 +159,8 @@ export function TaskPanel({
           {/* View toggle */}
           {crafterAgents.length > 0 && (
             <div className="flex items-center rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <button
-                onClick={() => setViewMode("tasks")}
+            <button
+              onClick={() => setUserViewMode("tasks")}
                 className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${
                   viewMode === "tasks"
                     ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
@@ -178,8 +169,8 @@ export function TaskPanel({
               >
                 Tasks
               </button>
-              <button
-                onClick={() => setViewMode("crafters")}
+            <button
+              onClick={() => setUserViewMode("crafters")}
                 className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${
                   viewMode === "crafters"
                     ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"

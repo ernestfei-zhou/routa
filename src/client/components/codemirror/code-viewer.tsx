@@ -235,7 +235,7 @@ export function CodeViewer({
       view.destroy();
       editorRef.current = null;
     };
-  }, []); // Only run once on mount
+  }, [code, langInfo.extensions, maxHeight, showLineNumbers, wordWrap]);
 
   // Update code content when it changes
   useEffect(() => {

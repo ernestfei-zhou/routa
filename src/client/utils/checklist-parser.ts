@@ -18,7 +18,7 @@ export interface ChecklistItem {
 }
 
 // Regex to match checklist items: - [ ], - [x], - [X], - [/], - [-]
-const CHECKLIST_REGEX = /^[\t ]*[-*]\s*\[([ xX\/\-])\]\s+(.+?)$/gm;
+const CHECKLIST_REGEX = /^[\t ]*[-*]\s*\[([ xX/-])\]\s+(.+?)$/gm;
 
 /**
  * Parse markdown checklist items from content
@@ -107,4 +107,3 @@ export function countChecklistStats(items: ChecklistItem[]): {
 
   return stats;
 }
-
