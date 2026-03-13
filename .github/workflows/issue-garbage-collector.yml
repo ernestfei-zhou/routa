@@ -76,12 +76,14 @@ jobs:
           env.ANTHROPIC_API_KEY != '' &&
           steps.phase1.outputs.suspects != '0' &&
           (github.event.inputs.mode == 'full' || github.event.inputs.mode == '' || github.event_name == 'schedule')
+        env:
+          INPUT_MODE: ${{ github.event.inputs.mode }}
         run: |
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 🤖 AI Analysis" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ github.event.inputs.mode }}" == "dry-run" ]; then
+          if [ "$INPUT_MODE" == "dry-run" ]; then
             npx tsx scripts/issue-gc.ts --dry-run 2>&1 | tee -a $GITHUB_STEP_SUMMARY
           else
             npx tsx scripts/issue-gc.ts 2>&1 | tee -a $GITHUB_STEP_SUMMARY

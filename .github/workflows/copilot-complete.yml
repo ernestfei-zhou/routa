@@ -53,12 +53,17 @@ jobs:
 
       - name: Determine issue number
         id: issue
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_ISSUE_NUMBER: ${{ github.event.inputs.issue_number }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "number=${{ github.event.inputs.issue_number }}" >> $GITHUB_OUTPUT
-            echo "dry_run=${{ github.event.inputs.dry_run }}" >> $GITHUB_OUTPUT
+          if [ "$EVENT_NAME" == "workflow_dispatch" ]; then
+            echo "number=$INPUT_ISSUE_NUMBER" >> $GITHUB_OUTPUT
+            echo "dry_run=$INPUT_DRY_RUN" >> $GITHUB_OUTPUT
           else
-            echo "number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+            echo "number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
             echo "dry_run=false" >> $GITHUB_OUTPUT
           fi
 
