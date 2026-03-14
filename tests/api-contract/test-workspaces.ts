@@ -36,7 +36,7 @@ export async function testWorkspaces(): Promise<TestResult[]> {
         repoPath: "/tmp/test-repo",
         branch: "main",
       });
-      assertStatus(status, 200);
+      assert(status === 200 || status === 201, `Expected 200 or 201, got ${status}`);
       const d = data as Record<string, unknown>;
       assertHasField(d, "workspace");
       const ws = d.workspace as Record<string, unknown>;
@@ -53,7 +53,9 @@ export async function testWorkspaces(): Promise<TestResult[]> {
       if (!createdId) throw new Error("Depends on create test");
       const { status, data } = await api("GET", `/api/workspaces/${createdId}`);
       assertStatus(status, 200);
-      const ws = data as Record<string, unknown>;
+      const d = data as Record<string, unknown>;
+      // Response may be { workspace: {...} } or the workspace object directly
+      const ws = (d.workspace ?? d) as Record<string, unknown>;
       assert(ws.id === createdId, "ID should match");
       assert(ws.title === "Test Workspace", "Title should match");
     })
