@@ -181,6 +181,8 @@ struct UpdateTaskRequest {
     sync_to_github: Option<bool>,
     retry_trigger: Option<bool>,
     repo_path: Option<String>,
+    codebase_ids: Option<Vec<String>>,
+    worktree_id: Option<serde_json::Value>,
 }
 
 fn create_task_command(body: CreateTaskRequest) -> CreateTaskCommand {
@@ -242,6 +244,8 @@ fn update_task_command(body: UpdateTaskRequest) -> UpdateTaskCommand {
         sync_to_github: body.sync_to_github,
         retry_trigger: body.retry_trigger,
         repo_path: body.repo_path,
+        codebase_ids: body.codebase_ids,
+        worktree_id: body.worktree_id,
     }
 }
 

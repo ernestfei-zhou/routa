@@ -187,6 +187,12 @@ impl TaskApplicationService {
         if command.verification_report.is_some() {
             task.verification_report = command.verification_report;
         }
+        if let Some(ids) = command.codebase_ids {
+            task.codebase_ids = ids;
+        }
+        if let Some(wt) = command.worktree_id {
+            task.worktree_id = wt.as_str().map(|s| s.to_string());
+        }
 
         if retry_trigger {
             task.trigger_session_id = None;
@@ -291,6 +297,8 @@ pub struct UpdateTaskCommand {
     pub sync_to_github: Option<bool>,
     pub retry_trigger: Option<bool>,
     pub repo_path: Option<String>,
+    pub codebase_ids: Option<Vec<String>>,
+    pub worktree_id: Option<serde_json::Value>, // null clears, string sets
 }
 
 #[derive(Debug)]

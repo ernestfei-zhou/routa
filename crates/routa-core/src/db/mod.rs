@@ -208,6 +208,8 @@ impl Database {
                     completion_summary      TEXT,
                     verification_verdict    TEXT,
                     verification_report     TEXT,
+                    codebase_ids            TEXT NOT NULL DEFAULT '[]',
+                    worktree_id             TEXT,
                     version                 INTEGER NOT NULL DEFAULT 1,
                     created_at              INTEGER NOT NULL,
                     updated_at              INTEGER NOT NULL
@@ -345,6 +347,8 @@ impl Database {
             Self::ignore_duplicate_column(conn.execute("ALTER TABLE tasks ADD COLUMN github_state TEXT", []))?;
             Self::ignore_duplicate_column(conn.execute("ALTER TABLE tasks ADD COLUMN github_synced_at INTEGER", []))?;
             Self::ignore_duplicate_column(conn.execute("ALTER TABLE tasks ADD COLUMN last_sync_error TEXT", []))?;
+            Self::ignore_duplicate_column(conn.execute("ALTER TABLE tasks ADD COLUMN codebase_ids TEXT NOT NULL DEFAULT '[]'", []))?;
+            Self::ignore_duplicate_column(conn.execute("ALTER TABLE tasks ADD COLUMN worktree_id TEXT", []))?;
             // Add session_id to notes if it doesn't exist yet (ignore error if already present)
             Self::ignore_duplicate_column(conn.execute("ALTER TABLE notes ADD COLUMN session_id TEXT", []))?;
             // Add parent_session_id to acp_sessions for CRAFTER child session tracking

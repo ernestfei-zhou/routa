@@ -170,6 +170,12 @@ pub struct Task {
     /// Session ID that created this task (for session-scoped filtering)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub session_id: Option<String>,
+    /// Codebase IDs linked to this task
+    #[serde(default)]
+    pub codebase_ids: Vec<String>,
+    /// Worktree ID assigned to this task
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub worktree_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -226,6 +232,8 @@ impl Task {
             parallel_group,
             workspace_id,
             session_id,
+            codebase_ids: Vec::new(),
+            worktree_id: None,
             created_at: now,
             updated_at: now,
             completion_summary: None,
