@@ -77,6 +77,7 @@ export function createTask(params: {
   title: string;
   objective: string;
   workspaceId: string;
+  triggerSessionId?: string;
   sessionId?: string;
   scope?: string;
   acceptanceCriteria?: string[];
@@ -103,7 +104,6 @@ export function createTask(params: {
   status?: TaskStatus;
   codebaseIds?: string[];
   worktreeId?: string;
-  triggerSessionId?: string;
 }): Task {
   const now = new Date();
   return {
