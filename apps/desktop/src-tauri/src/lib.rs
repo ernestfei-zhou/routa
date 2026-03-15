@@ -658,6 +658,47 @@ pub fn run() {
                 Some("CmdOrCtrl+Option+I"),
             )?;
 
+            let toggle_tool_mode = MenuItem::with_id(
+                app_handle,
+                "toggle_tool_mode",
+                "Toggle Tool Mode (Essential/Full)",
+                true,
+                Some("CmdOrCtrl+Shift+T"),
+            )?;
+
+            // Navigation menu items
+            let nav_dashboard = MenuItem::with_id(
+                app_handle,
+                "nav_dashboard",
+                "Dashboard",
+                true,
+                Some("CmdOrCtrl+1"),
+            )?;
+
+            let nav_kanban = MenuItem::with_id(
+                app_handle,
+                "nav_kanban",
+                "Kanban Board",
+                true,
+                Some("CmdOrCtrl+2"),
+            )?;
+
+            let nav_traces = MenuItem::with_id(
+                app_handle,
+                "nav_traces",
+                "Agent Traces",
+                true,
+                Some("CmdOrCtrl+3"),
+            )?;
+
+            let nav_settings = MenuItem::with_id(
+                app_handle,
+                "nav_settings",
+                "Settings",
+                true,
+                Some("CmdOrCtrl+,"),
+            )?;
+
             // Build Tools submenu
             let tools_submenu = Submenu::with_items(
                 app_handle,
@@ -679,11 +720,19 @@ pub fn run() {
                 app_handle,
                 "View",
                 true,
-                &[&toggle_devtools],
+                &[&toggle_devtools, &toggle_tool_mode],
+            )?;
+
+            // Build Navigate submenu
+            let navigate_submenu = Submenu::with_items(
+                app_handle,
+                "Navigate",
+                true,
+                &[&nav_dashboard, &nav_kanban, &nav_traces, &nav_settings],
             )?;
 
             // Build main menu
-            let menu = Menu::with_items(app_handle, &[&file_submenu, &view_submenu, &tools_submenu])?;
+            let menu = Menu::with_items(app_handle, &[&file_submenu, &view_submenu, &navigate_submenu, &tools_submenu])?;
 
             // Set the menu on the main window
             if let Some(window) = app.get_webview_window("main") {
@@ -728,6 +777,89 @@ pub fn run() {
                             } else {
                                 window.open_devtools();
                             }
+                        }
+                    }
+                    "toggle_tool_mode" => {
+                        // Toggle between essential and full tool mode
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            let js = r#"
+                                (async () => {
+                                    try {
+                                        // Get current mode
+                                        const res = await fetch('/api/mcp/tools');
+                                        const data = await res.json();
+                                        const currentMode = data?.globalMode || 'essential';
+                                        const newMode = currentMode === 'essential' ? 'full' : 'essential';
+
+                                        // Update mode
+                                        await fetch('/api/mcp/tools', {
+                                            method: 'PATCH',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ mode: newMode })
+                                        });
+
+                                        console.log(`[menu] Tool mode toggled to: ${newMode}`);
+
+                                        // Reload page to reflect changes
+                                        window.location.reload();
+                                    } catch (err) {
+                                        console.error('[menu] Failed to toggle tool mode:', err);
+                                    }
+                                })();
+                            "#;
+                            let _ = window.eval(js);
+                            println!("[menu] Toggling tool mode");
+                        }
+                    }
+                    "nav_dashboard" => {
+                        // Navigate to workspace dashboard
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            let port = api_port();
+                            // Get current workspace ID from URL or use default
+                            let js = format!(r#"
+                                (function() {{
+                                    const match = window.location.pathname.match(/\/workspace\/([^\/]+)/);
+                                    const workspaceId = match ? match[1] : '8844519a-5f3c-437c-aac4-286d2e7517a7';
+                                    window.location.href = `http://127.0.0.1:{}/workspace/${{workspaceId}}`;
+                                }})();
+                            "#, port);
+                            let _ = window.eval(&js);
+                            println!("[menu] Navigating to Dashboard");
+                        }
+                    }
+                    "nav_kanban" => {
+                        // Navigate to Kanban board
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            let port = api_port();
+                            let js = format!(r#"
+                                (function() {{
+                                    const match = window.location.pathname.match(/\/workspace\/([^\/]+)/);
+                                    const workspaceId = match ? match[1] : '8844519a-5f3c-437c-aac4-286d2e7517a7';
+                                    window.location.href = `http://127.0.0.1:{}/workspace/${{workspaceId}}/kanban`;
+                                }})();
+                            "#, port);
+                            let _ = window.eval(&js);
+                            println!("[menu] Navigating to Kanban");
+                        }
+                    }
+                    "nav_traces" => {
+                        // Navigate to Agent Traces
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            let port = api_port();
+                            let url = format!("http://127.0.0.1:{}/traces", port);
+                            let js = format!("window.location.href = '{}';", url);
+                            let _ = window.eval(&js);
+                            println!("[menu] Navigating to Traces: {}", url);
+                        }
+                    }
+                    "nav_settings" => {
+                        // Navigate to Settings
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            let port = api_port();
+                            let url = format!("http://127.0.0.1:{}/settings", port);
+                            let js = format!("window.location.href = '{}';", url);
+                            let _ = window.eval(&js);
+                            println!("[menu] Navigating to Settings: {}", url);
                         }
                     }
                     _ => {}
