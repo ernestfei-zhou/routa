@@ -536,7 +536,11 @@ fn resolve_static_dir(app: &tauri::AppHandle) -> Option<String> {
 ///
 /// Creates a shared `AppState` that is used by both the HTTP server and
 /// the `rpc_call` Tauri command, enabling direct JSON-RPC calls without HTTP.
-fn start_rust_server(app: &tauri::AppHandle, host: &str, port: u16) -> Result<(), String> {
+fn start_rust_server(
+    app: &tauri::AppHandle,
+    host: &str,
+    port: u16,
+) -> Result<std::net::SocketAddr, String> {
     let db_path = resolve_db_path(app);
     let static_dir = resolve_static_dir(app);
     let host = host.to_string();
@@ -550,7 +554,6 @@ fn start_rust_server(app: &tauri::AppHandle, host: &str, port: u16) -> Result<()
     println!("[rust-server] Listening on {}:{}", host, port);
 
     let rpc_state: RpcState = app.state::<RpcState>().inner().clone();
-    let db_path_clone = db_path.clone();
 
     let config = server::ServerConfig {
         host,
@@ -559,33 +562,19 @@ fn start_rust_server(app: &tauri::AppHandle, host: &str, port: u16) -> Result<()
         static_dir,
     };
 
-    // Start the server in the Tauri async runtime
-    tauri::async_runtime::spawn(async move {
-        // Create the shared AppState first
-        let app_state = match server::create_app_state(&db_path_clone).await {
-            Ok(state) => state,
-            Err(e) => {
-                eprintln!("[rust-server] Failed to create app state: {}", e);
-                return;
-            }
-        };
+    // Block startup until the backend is definitely ready so we don't
+    // redirect the webview to a stale process that merely happens to own 3210.
+    let app_state = tauri::async_runtime::block_on(server::create_app_state(&config.db_path))
+        .map_err(|e| format!("Failed to create app state: {}", e))?;
 
-        // Share the state with the RPC command handler
-        rpc_state.set(app_state.clone()).await;
-        println!("[rust-server] AppState shared with JSON-RPC handler");
+    tauri::async_runtime::block_on(rpc_state.set(app_state.clone()));
+    println!("[rust-server] AppState shared with JSON-RPC handler");
 
-        // Start the HTTP server with the same state
-        match server::start_server_with_state(config, app_state).await {
-            Ok(addr) => {
-                println!("[rust-server] Server started on {}", addr);
-            }
-            Err(e) => {
-                eprintln!("[rust-server] Failed to start server: {}", e);
-            }
-        }
-    });
+    let addr = tauri::async_runtime::block_on(server::start_server_with_state(config, app_state))
+        .map_err(|e| format!("Failed to start server: {}", e))?;
+    println!("[rust-server] Server started on {}", addr);
 
-    Ok(())
+    Ok(addr)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -756,22 +745,11 @@ pub fn run() {
                     // 2. The Rust server can serve the correct placeholder HTML for each route
                     // 3. The `remote` capability allows IPC access from http://127.0.0.1:*
                     match start_rust_server(&app.handle(), &api_host, port) {
-                        Ok(()) => {
-                            // Wait for the Rust server to become ready
-                            if wait_for_port(&api_host, port, 5) {
-                                if let Some(window) = app.get_webview_window("main") {
-                                    let js =
-                                        format!("window.location.replace('{}');", api_url);
-                                    let _ = window.eval(&js);
-                                    println!(
-                                        "[rust-server] Webview navigated to {}",
-                                        api_url
-                                    );
-                                }
-                            } else {
-                                eprintln!(
-                                    "[rust-server] Timed out waiting for server. Falling back to static UI."
-                                );
+                        Ok(_) => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let js = format!("window.location.replace('{}');", api_url);
+                                let _ = window.eval(&js);
+                                println!("[rust-server] Webview navigated to {}", api_url);
                             }
                         }
                         Err(e) => {
