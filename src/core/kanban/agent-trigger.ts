@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import type { Task } from "../models/task";
-import { getRoutaSystem } from "../routa-system";
 import { AgentEventType } from "../events/event-bus";
+import { isClaudeCodeSdkConfigured } from "../acp/claude-code-sdk-adapter";
 
 export function getInternalApiOrigin(): string {
   const configuredOrigin = process.env.ROUTA_INTERNAL_API_ORIGIN
@@ -30,8 +30,6 @@ export function buildTaskPrompt(task: Task): string {
       ]
     : [
         `- **update_card**: Update this card's title, description, priority, or labels. Use cardId: "${task.id}"`,
-        "- **move_card**: Move this card to a different column (e.g., 'in-progress', 'done')",
-        "- **report_to_parent**: Report completion status to the parent agent when done",
         "- **create_note**: Create notes for documentation or progress tracking",
       ];
   const instructions = isBacklogPlanning
@@ -48,9 +46,9 @@ export function buildTaskPrompt(task: Task): string {
     : [
         "1. Start implementation work immediately",
         "2. Use `update_card` to track progress in the card description",
-        "3. Use `move_card` to move the card to 'in-progress' when starting",
-        "4. Keep changes focused on this task",
-        "5. When complete, use `move_card` to move to 'done' and `report_to_parent` to report completion",
+        "3. Keep changes focused on this task",
+        "4. Do not move the card between columns yourself; Kanban workflow automation advances columns after your session completes",
+        "5. Do not call `report_to_parent`; this Kanban automation session is managed directly by the workflow",
       ];
 
   return [
@@ -85,6 +83,14 @@ export function buildTaskPrompt(task: Task): string {
   ].join("\n");
 }
 
+export function resolveKanbanAutomationProvider(provider?: string): string {
+  if (provider === "claude" && isClaudeCodeSdkConfigured()) {
+    return "claude-code-sdk";
+  }
+
+  return provider ?? "opencode";
+}
+
 export async function triggerAssignedTaskAgent(params: {
   origin: string;
   workspaceId: string;
@@ -93,7 +99,7 @@ export async function triggerAssignedTaskAgent(params: {
   task: Task;
 }): Promise<{ sessionId?: string; error?: string }> {
   const { origin, workspaceId, cwd, branch, task } = params;
-  const provider = task.assignedProvider ?? "opencode";
+  const provider = resolveKanbanAutomationProvider(task.assignedProvider);
   const role = task.assignedRole ?? "CRAFTER";
 
   const newSessionResponse = await fetch(`${origin}/api/acp`, {
@@ -108,6 +114,7 @@ export async function triggerAssignedTaskAgent(params: {
         branch,
         provider,
         role,
+        toolMode: "full",
         workspaceId,
         specialistId: task.assignedSpecialistId,
         name: `${task.title} · ${provider}`,
@@ -157,6 +164,7 @@ export async function triggerAssignedTaskAgent(params: {
       await response.arrayBuffer();
     }
 
+    const { getRoutaSystem } = require("../routa-system") as typeof import("../routa-system");
     getRoutaSystem().eventBus.emit({
       type: AgentEventType.AGENT_COMPLETED,
       agentId: sessionId,
@@ -169,6 +177,7 @@ export async function triggerAssignedTaskAgent(params: {
     });
   })().catch((error) => {
     console.error("[kanban] Failed to auto-prompt ACP task session:", error);
+    const { getRoutaSystem } = require("../routa-system") as typeof import("../routa-system");
     getRoutaSystem().eventBus.emit({
       type: AgentEventType.AGENT_FAILED,
       agentId: sessionId,

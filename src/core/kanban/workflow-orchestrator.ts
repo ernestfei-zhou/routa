@@ -40,6 +40,7 @@ export type CreateAutomationSession = (params: {
 export class KanbanWorkflowOrchestrator {
   private handlerKey = "kanban-workflow-orchestrator";
   private activeAutomations = new Map<string, ActiveAutomation>();
+  private started = false;
 
   constructor(
     private eventBus: EventBus,
@@ -50,6 +51,9 @@ export class KanbanWorkflowOrchestrator {
 
   /** Start listening for column transition events */
   start(): void {
+    if (this.started) {
+      return;
+    }
     this.eventBus.on(this.handlerKey, (event: AgentEvent) => {
       if (event.type === AgentEventType.COLUMN_TRANSITION) {
         void this.handleColumnTransition(event);
@@ -63,12 +67,17 @@ export class KanbanWorkflowOrchestrator {
         void this.handleAgentCompletion(event);
       }
     });
+    this.started = true;
   }
 
   /** Stop listening */
   stop(): void {
+    if (!this.started) {
+      return;
+    }
     this.eventBus.off(this.handlerKey);
     this.activeAutomations.clear();
+    this.started = false;
   }
 
   /** Set the session creation callback */
@@ -162,8 +171,11 @@ export class KanbanWorkflowOrchestrator {
       }
 
       // Clean up completed automations after a delay
+      const completedAutomation = automation;
       setTimeout(() => {
-        this.activeAutomations.delete(cardId);
+        if (this.activeAutomations.get(cardId) === completedAutomation) {
+          this.activeAutomations.delete(cardId);
+        }
       }, 30_000);
     }
   }
@@ -194,6 +206,9 @@ export class KanbanWorkflowOrchestrator {
 
       task.columnId = nextColumn.id;
       task.status = columnIdToTaskStatus(nextColumn.id);
+      // The single-session task model should not carry the previous lane's
+      // session into the next automation run.
+      task.triggerSessionId = undefined;
       task.updatedAt = new Date();
       await this.taskStore.save(task);
 

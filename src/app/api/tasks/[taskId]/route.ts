@@ -7,7 +7,7 @@ import { GitWorktreeService } from "@/core/git/git-worktree-service";
 import { getDefaultWorkspaceWorktreeRoot, getEffectiveWorkspaceMetadata } from "@/core/models/workspace";
 import type { ArtifactType } from "@/core/models/artifact";
 import { emitColumnTransition } from "@/core/kanban/column-transition";
-import { enqueueKanbanTaskSession } from "@/core/kanban/workflow-orchestrator-singleton";
+import { enqueueKanbanTaskSession, startWorkflowOrchestrator } from "@/core/kanban/workflow-orchestrator-singleton";
 
 export const dynamic = "force-dynamic";
 
@@ -301,6 +301,7 @@ export async function PATCH(
       const fromColumn = board.columns.find((c) => c.id === existing.columnId);
       const toColumn = board.columns.find((c) => c.id === nextTask.columnId);
 
+      startWorkflowOrchestrator(system);
       emitColumnTransition(system.eventBus, {
         cardId: nextTask.id,
         cardTitle: nextTask.title,

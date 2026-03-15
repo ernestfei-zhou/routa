@@ -490,6 +490,18 @@ export class KanbanTools {
       return;
     }
 
+    // Lazy-load to avoid circular dependency issues.
+    // Import the module first, then access the function to handle potential circular dependency timing.
+    const routaSystemModule = require("../routa-system") as typeof import("../routa-system");
+    const orchestratorModule = require("../kanban/workflow-orchestrator-singleton") as typeof import("../kanban/workflow-orchestrator-singleton");
+
+    // Defensive check: ensure the function is available before calling
+    if (typeof orchestratorModule.startWorkflowOrchestrator === "function") {
+      orchestratorModule.startWorkflowOrchestrator(routaSystemModule.getRoutaSystem());
+    } else {
+      console.warn("[KanbanTools] startWorkflowOrchestrator not available yet (circular dependency)");
+    }
+
     emitColumnTransition(this.eventBus, {
       cardId: task.id,
       cardTitle: task.title,

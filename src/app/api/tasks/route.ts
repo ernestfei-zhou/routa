@@ -18,6 +18,7 @@ import {
 } from "@/core/kanban/task-creation-policy";
 import { columnIdToTaskStatus } from "@/core/models/kanban";
 import { emitColumnTransition } from "@/core/kanban/column-transition";
+import { startWorkflowOrchestrator } from "@/core/kanban/workflow-orchestrator-singleton";
 
 export const dynamic = "force-dynamic";
 
@@ -239,6 +240,7 @@ export async function POST(request: NextRequest) {
   const board = await system.kanbanBoardStore.get(task.boardId ?? defaultBoard.id);
   const targetColumn = board?.columns.find((column) => column.id === (task.columnId ?? "backlog"));
   if (board && targetColumn?.automation?.enabled) {
+    startWorkflowOrchestrator(system);
     emitColumnTransition(system.eventBus, {
       cardId: task.id,
       cardTitle: task.title,

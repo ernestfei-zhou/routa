@@ -1,6 +1,12 @@
-import { describe, expect, it } from "vitest";
-import { buildTaskPrompt } from "../agent-trigger";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { buildTaskPrompt, resolveKanbanAutomationProvider } from "../agent-trigger";
 import { createTask } from "../../models/task";
+
+vi.mock("../../acp/claude-code-sdk-adapter", () => ({
+  isClaudeCodeSdkConfigured: vi.fn(),
+}));
+
+import { isClaudeCodeSdkConfigured } from "../../acp/claude-code-sdk-adapter";
 
 describe("buildTaskPrompt", () => {
   it("keeps backlog automation in planning mode", () => {
@@ -36,7 +42,28 @@ describe("buildTaskPrompt", () => {
     const prompt = buildTaskPrompt(task);
 
     expect(prompt).toContain("Start implementation work immediately");
-    expect(prompt).toContain("move_card");
-    expect(prompt).toContain("report_to_parent");
+    expect(prompt).toContain("Do not move the card between columns yourself");
+    expect(prompt).toContain("Do not call `report_to_parent`");
+    expect(prompt).not.toContain("Tool: report_to_parent");
+  });
+});
+
+describe("resolveKanbanAutomationProvider", () => {
+  afterEach(() => {
+    vi.mocked(isClaudeCodeSdkConfigured).mockReset();
+  });
+
+  it("falls back to the Claude SDK when automation targets claude and the SDK is configured", () => {
+    vi.mocked(isClaudeCodeSdkConfigured).mockReturnValue(true);
+
+    expect(resolveKanbanAutomationProvider("claude")).toBe("claude-code-sdk");
+  });
+
+  it("preserves the configured provider when no Claude SDK fallback is needed", () => {
+    vi.mocked(isClaudeCodeSdkConfigured).mockReturnValue(false);
+
+    expect(resolveKanbanAutomationProvider("claude")).toBe("claude");
+    expect(resolveKanbanAutomationProvider("codex")).toBe("codex");
+    expect(resolveKanbanAutomationProvider(undefined)).toBe("opencode");
   });
 });
