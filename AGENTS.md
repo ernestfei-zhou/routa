@@ -15,6 +15,7 @@
 - Use **Playwright MCP tool** or CLI (`playwright-cli`) or Skills to test the web UI directly.
 - Use **Playwright e2e** tests for automated coverage.
 - Test Tauri UI: `npm run tauri dev`, then use Playwright against `http://127.0.0.1:3210/`.
+- **Tauri routing debug**: If Tauri shows wrong page, check `crates/routa-server/src/lib.rs` fallback service maps routes to correct `__placeholder__` files; verify with `ls -la out/workspace/__placeholder__/`.
 - For Rust test coverage work, follow this sequence: `AGENTS.md` -> `docs/fitness/README.md` -> `docs/fitness/unit-test.md`.
 - For Rust test coverage work, maintain progress and coverage metrics (line coverage when `llvm-cov` is available, otherwise file-level proxy) in `docs/fitness/unit-test.md`; progress checklist alone is insufficient.
 - When changes span many files, do a full manual walkthrough in the browser:
