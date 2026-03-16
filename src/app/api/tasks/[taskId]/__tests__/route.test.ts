@@ -5,8 +5,8 @@ import { createTask, TaskStatus, type Task } from "@/core/models/task";
 const notify = vi.fn();
 const removeCardJob = vi.fn();
 const enqueueKanbanTaskSession = vi.fn();
-const archiveActiveTaskSession = vi.fn();
-const prepareTaskForColumnChange = vi.fn(() => false);
+const archiveActiveTaskSession = vi.fn<(task: Task) => void>();
+const prepareTaskForColumnChange = vi.fn<(fromColumnId?: string, task?: Task) => boolean>(() => false);
 let capturedEnqueueTask: Task | undefined;
 
 const taskStore = {
@@ -54,12 +54,14 @@ vi.mock("@/core/kanban/column-transition", () => ({
 }));
 
 vi.mock("@/core/kanban/task-session-transition", () => ({
-  archiveActiveTaskSession: (...args: unknown[]) => archiveActiveTaskSession(...args),
-  prepareTaskForColumnChange: (...args: unknown[]) => prepareTaskForColumnChange(...args),
+  archiveActiveTaskSession: (task: Task) => archiveActiveTaskSession(task),
+  prepareTaskForColumnChange: (fromColumnId?: string, task?: Task) =>
+    prepareTaskForColumnChange(fromColumnId, task),
 }));
 
 vi.mock("@/core/kanban/workflow-orchestrator-singleton", () => ({
-  enqueueKanbanTaskSession: (...args: unknown[]) => enqueueKanbanTaskSession(...args),
+  enqueueKanbanTaskSession: (currentSystem: typeof system, params: { task: Task }) =>
+    enqueueKanbanTaskSession(currentSystem, params),
   getKanbanSessionQueue: () => ({ removeCardJob }),
 }));
 
