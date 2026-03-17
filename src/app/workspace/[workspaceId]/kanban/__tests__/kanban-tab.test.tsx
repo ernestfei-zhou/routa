@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { KanbanTab } from "../kanban-tab";
+import { KanbanCardDetail } from "../kanban-card-detail";
 import type { KanbanBoardInfo, TaskInfo } from "../../types";
 import type { UseAcpActions, UseAcpState } from "@/client/hooks/use-acp";
 
@@ -443,6 +444,81 @@ describe("KanbanTab quick ACP assignment", () => {
           assignedRole: "DEVELOPER",
         }),
       });
+    });
+    expect(onRefresh).toHaveBeenCalled();
+  });
+});
+
+describe("KanbanCardDetail repository health", () => {
+  it("offers session mismatch interventions in repositories", async () => {
+    const onPatchTask = vi.fn(async () => createTask("task-1", "Story One"));
+    const onSelectSession = vi.fn();
+    const onRefresh = vi.fn();
+
+    render(
+      <KanbanCardDetail
+        task={{
+          ...createTask("task-1", "Story One"),
+          triggerSessionId: "session-123",
+          codebaseIds: ["repo-a"],
+        }}
+        boardColumns={board.columns}
+        availableProviders={[]}
+        specialists={[]}
+        codebases={[
+          {
+            id: "repo-a",
+            workspaceId: "workspace-1",
+            repoPath: "/tmp/repo-a",
+            label: "Repo A",
+            isDefault: true,
+            sourceType: "local",
+            createdAt: "2025-01-01T00:00:00.000Z",
+            updatedAt: "2025-01-01T00:00:00.000Z",
+          },
+          {
+            id: "repo-b",
+            workspaceId: "workspace-1",
+            repoPath: "/tmp/repo-b",
+            label: "Repo B",
+            isDefault: false,
+            sourceType: "local",
+            createdAt: "2025-01-01T00:00:00.000Z",
+            updatedAt: "2025-01-01T00:00:00.000Z",
+          },
+        ]}
+        allCodebaseIds={["repo-a", "repo-b"]}
+        worktreeCache={{}}
+        sessionInfo={{
+          sessionId: "session-123",
+          workspaceId: "workspace-1",
+          cwd: "/tmp/repo-b",
+          provider: "claude",
+          role: "DEVELOPER",
+          createdAt: "2025-01-01T00:00:00.000Z",
+        }}
+        sessions={[]}
+        fullWidth
+        onPatchTask={onPatchTask}
+        onRetryTrigger={vi.fn()}
+        onDelete={vi.fn()}
+        onRefresh={onRefresh}
+        onSelectSession={onSelectSession}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Repo").closest("summary")!);
+
+    expect(await screen.findByText("Repo Health")).toBeTruthy();
+    expect(screen.getByText(/Active session is running in a different directory/i)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Open active session/i }));
+    expect(onSelectSession).toHaveBeenCalledWith("session-123");
+
+    fireEvent.click(screen.getByRole("button", { name: /Use session repo/i }));
+
+    await waitFor(() => {
+      expect(onPatchTask).toHaveBeenCalledWith("task-1", { codebaseIds: ["repo-b", "repo-a"] });
     });
     expect(onRefresh).toHaveBeenCalled();
   });

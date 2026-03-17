@@ -93,6 +93,8 @@ export function KanbanCardDetail({
   const [updateError, setUpdateError] = useState<string | null>(null);
 
   const getTaskRepositoryPath = (): string | null => {
+    const worktreePath = task.worktreeId ? worktreeCache[task.worktreeId]?.worktreePath : null;
+    if (worktreePath) return worktreePath;
     const taskCodebaseIds = task.codebaseIds && task.codebaseIds.length > 0 ? task.codebaseIds : allCodebaseIds;
     if (taskCodebaseIds.length === 0) return null;
     const primaryCodebase = codebases.find((codebase) => codebase.id === taskCodebaseIds[0]);
@@ -192,7 +194,6 @@ export function KanbanCardDetail({
             boardColumns={boardColumns ?? []}
             availableProviders={availableProviders}
             specialists={specialists}
-            sessionCwdMismatch={sessionCwdMismatch}
             onPatchTask={onPatchTask}
             onRetryTrigger={onRetryTrigger}
             onProviderChange={onProviderChange}
@@ -215,11 +216,14 @@ export function KanbanCardDetail({
             codebases={codebases}
             allCodebaseIds={allCodebaseIds}
             worktreeCache={worktreeCache}
+            sessionInfo={sessionInfo}
+            sessionCwdMismatch={sessionCwdMismatch}
             updateError={updateError}
             setUpdateError={setUpdateError}
             onPatchTask={onPatchTask}
             onRefresh={onRefresh}
             onRepositoryChange={onRepositoryChange}
+            onSelectSession={onSelectSession}
             compact={compactMode}
           />
         </div>
@@ -320,7 +324,6 @@ function ExecutionSection({
   boardColumns,
   availableProviders,
   specialists,
-  sessionCwdMismatch,
   onPatchTask,
   onRetryTrigger,
   onProviderChange,
@@ -331,7 +334,6 @@ function ExecutionSection({
   boardColumns: KanbanColumnInfo[];
   availableProviders: AcpProviderInfo[];
   specialists: SpecialistOption[];
-  sessionCwdMismatch?: boolean;
   onPatchTask: (taskId: string, payload: Record<string, unknown>) => Promise<TaskInfo>;
   onRetryTrigger: (taskId: string) => Promise<void>;
   onProviderChange?: (providerId: string | null) => void;
@@ -492,11 +494,6 @@ function ExecutionSection({
         <div className={`mt-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/10 dark:text-amber-300 ${compact ? "leading-[1.125rem]" : "leading-5"}`}>
           Moving this card to {transitionArtifacts.nextColumn?.name ?? "the next stage"} requires {formatArtifactSummary(transitionArtifacts.nextRequiredArtifacts)}.
           {" "}This gate is injected into the ACP prompt, but the agent still needs to create those artifacts before calling <code>move_card</code>.
-        </div>
-      )}
-      {sessionCwdMismatch && (
-        <div className={`mt-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-900/50 dark:bg-amber-900/10 dark:text-amber-400 ${compact ? "leading-[1.125rem]" : "leading-5"}`}>
-          Repository changed. The active session is still running in an older directory. Rerun to apply the new repo selection.
         </div>
       )}
       <div className={`flex flex-wrap items-center gap-2 ${compact ? "mt-2.5" : "mt-3"}`}>
@@ -891,27 +888,40 @@ function RepositoriesWorktreeRow({
   codebases,
   allCodebaseIds,
   worktreeCache,
+  sessionInfo,
+  sessionCwdMismatch,
   updateError,
   setUpdateError,
   onPatchTask,
   onRefresh,
   onRepositoryChange,
+  onSelectSession,
   compact = false,
 }: {
   task: TaskInfo;
   codebases: CodebaseData[];
   allCodebaseIds: string[];
   worktreeCache: Record<string, WorktreeInfo>;
+  sessionInfo?: SessionInfo | null;
+  sessionCwdMismatch?: boolean;
   updateError: string | null;
   setUpdateError: (error: string | null) => void;
   onPatchTask: (taskId: string, payload: Record<string, unknown>) => Promise<TaskInfo>;
   onRefresh: () => void;
   onRepositoryChange?: (codebaseIds: string[]) => void;
+  onSelectSession?: (sessionId: string) => void;
   compact?: boolean;
 }) {
   const currentCodebaseIds = task.codebaseIds && task.codebaseIds.length > 0 ? task.codebaseIds : allCodebaseIds;
   const primaryCodebase = codebases.find((codebase) => codebase.id === currentCodebaseIds[0]);
   const worktree = task.worktreeId ? worktreeCache[task.worktreeId] : null;
+  const expectedPath = worktree?.worktreePath ?? primaryCodebase?.repoPath ?? null;
+  const sessionRepoCodebase = sessionInfo ? codebases.find((codebase) => codebase.repoPath === sessionInfo.cwd) : undefined;
+  const canAdoptSessionRepo = Boolean(
+    sessionCwdMismatch
+      && sessionRepoCodebase
+      && currentCodebaseIds[0] !== sessionRepoCodebase.id,
+  );
   const repoSummary = primaryCodebase
     ? `${primaryCodebase.label ?? primaryCodebase.repoPath.split("/").pop()}${currentCodebaseIds.length > 1 ? ` +${currentCodebaseIds.length - 1}` : ""}`
     : "No repository linked";
@@ -949,6 +959,76 @@ function RepositoriesWorktreeRow({
           </span>
         </summary>
         <div className={`space-y-3 border-l-2 border-gray-200 dark:border-gray-700 ${compact ? "mt-2.5 pl-2.5" : "mt-3 pl-3"}`}>
+          {sessionInfo && (
+            <div className={`rounded-2xl border px-3 py-2 ${sessionCwdMismatch
+              ? "border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-900/10"
+              : "border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-900/10"}`}>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">
+                    Repo Health
+                  </div>
+                  <div className={`mt-1 text-xs ${sessionCwdMismatch ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-300"}`}>
+                    {sessionCwdMismatch
+                      ? "Active session is running in a different directory than this card."
+                      : "Active session matches this card repo."}
+                  </div>
+                </div>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                  sessionCwdMismatch
+                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                    : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300"
+                }`}>
+                  {sessionCwdMismatch ? "Session mismatch" : "Aligned"}
+                </span>
+              </div>
+              <div className="mt-2 space-y-1 text-[11px] text-gray-600 dark:text-gray-400">
+                {expectedPath && (
+                  <div>
+                    Expected: <span className="font-mono">{expectedPath}</span>
+                  </div>
+                )}
+                <div>
+                  Active session: <span className="font-mono">{sessionInfo.cwd}</span>
+                </div>
+              </div>
+              {sessionCwdMismatch && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {task.triggerSessionId && onSelectSession && (
+                    <button
+                      type="button"
+                      onClick={() => onSelectSession(task.triggerSessionId!)}
+                      className="rounded-xl border border-amber-200 bg-white px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:border-amber-300 hover:bg-amber-100 dark:border-amber-900/50 dark:bg-[#121620] dark:text-amber-300 dark:hover:bg-amber-900/20"
+                    >
+                      Open active session
+                    </button>
+                  )}
+                  {canAdoptSessionRepo && sessionRepoCodebase && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setUpdateError(null);
+                        try {
+                          const nextCodebaseIds = [
+                            sessionRepoCodebase.id,
+                            ...currentCodebaseIds.filter((id) => id !== sessionRepoCodebase.id),
+                          ];
+                          await onPatchTask(task.id, { codebaseIds: nextCodebaseIds });
+                          onRepositoryChange?.(nextCodebaseIds);
+                          onRefresh();
+                        } catch (error) {
+                          setUpdateError(error instanceof Error ? error.message : "Failed to switch to the active session repo");
+                        }
+                      }}
+                      className="rounded-xl border border-amber-200 bg-white px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:border-amber-300 hover:bg-amber-100 dark:border-amber-900/50 dark:bg-[#121620] dark:text-amber-300 dark:hover:bg-amber-900/20"
+                    >
+                      Use session repo
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           {codebases.length > 0 && (
             <div>
               <div className="mb-2 text-[11px] font-medium text-gray-500 dark:text-gray-400">Edit linked repositories</div>
