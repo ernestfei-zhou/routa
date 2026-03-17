@@ -205,7 +205,21 @@ pub async fn start_server_with_state(
                                 ("index.html".to_string(), "text/html; charset=utf-8")
                             }
                         } else {
-                            ("index.html".to_string(), "text/html; charset=utf-8")
+                            let clean_path = path.trim_start_matches('/').trim_end_matches('/');
+                            if is_rsc_request {
+                                (
+                                    if clean_path.is_empty() {
+                                        "index.txt".to_string()
+                                    } else {
+                                        format!("{}.txt", clean_path)
+                                    },
+                                    "text/x-component; charset=utf-8",
+                                )
+                            } else if clean_path.is_empty() {
+                                ("index.html".to_string(), "text/html; charset=utf-8")
+                            } else {
+                                (format!("{}.html", clean_path), "text/html; charset=utf-8")
+                            }
                         };
 
                         let file_path = std::path::Path::new(&static_dir).join(&target_file);
