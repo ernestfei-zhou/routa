@@ -29,6 +29,8 @@ const ROLE_DESCRIPTIONS: Record<AgentRoleKey, string> = {
 const STORAGE_KEY = "routa.defaultProviders";
 const CONNECTIONS_STORAGE_KEY = "routa.providerConnections";
 const MODEL_DEFINITIONS_KEY = "routa.modelDefinitions";
+const SETTINGS_PANEL_HEIGHT = "92vh";
+const SETTINGS_PANEL_BODY_MAX_HEIGHT = "calc(92vh - 148px)";
 
 /**
  * Memory statistics interface from /api/memory
@@ -259,7 +261,7 @@ function ModelsTab() {
   const canAdd = form.alias.trim().length > 0 && form.modelName.trim().length > 0;
 
   return (
-    <div className="px-4 py-4 space-y-4 overflow-y-auto" style={{ maxHeight: "calc(90vh - 148px)" }}>
+    <div className="px-4 py-4 space-y-4 overflow-y-auto" style={{ maxHeight: SETTINGS_PANEL_BODY_MAX_HEIGHT }}>
       <datalist id={baseUrlListId}>
         {BASE_URL_SUGGESTIONS.map((url) => <option key={url} value={url} />)}
       </datalist>
@@ -512,7 +514,7 @@ function SpecialistsTab({ modelDefs }: { modelDefs: ModelDefinition[] }) {
 
   if (showForm) {
     return (
-      <div className="px-4 py-4 space-y-3 overflow-y-auto" style={{ maxHeight: "calc(90vh - 148px)" }}>
+      <div className="px-4 py-4 space-y-3 overflow-y-auto" style={{ maxHeight: SETTINGS_PANEL_BODY_MAX_HEIGHT }}>
         <div className="flex items-center gap-2 mb-1">
           <button onClick={() => { setShowForm(false); setEditingId(null); setForm(EMPTY_FORM); }}
             className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors">
@@ -595,7 +597,7 @@ function SpecialistsTab({ modelDefs }: { modelDefs: ModelDefinition[] }) {
   }
 
   return (
-    <div className="px-4 py-4 space-y-3 overflow-y-auto" style={{ maxHeight: "calc(90vh - 148px)" }}>
+    <div className="px-4 py-4 space-y-3 overflow-y-auto" style={{ maxHeight: SETTINGS_PANEL_BODY_MAX_HEIGHT }}>
       <div className="flex items-center justify-between">
         <div>
           <p className={sectionHeadCls}>Specialists ({specialists.length})</p>
@@ -717,7 +719,7 @@ function MemoryStatsTab() {
   };
 
   return (
-    <div className="px-4 py-4 space-y-4 overflow-y-auto" style={{ maxHeight: "calc(90vh - 148px)" }}>
+    <div className="px-4 py-4 space-y-4 overflow-y-auto" style={{ maxHeight: SETTINGS_PANEL_BODY_MAX_HEIGHT }}>
       <div className="flex items-center justify-between">
         <p className={sectionHeadCls}>Memory Monitor</p>
         <button onClick={fetchData} disabled={loading}
@@ -1260,7 +1262,7 @@ function McpServersTab() {
 
   if (showForm) {
     return (
-      <div className="px-4 py-4 space-y-3 overflow-y-auto" style={{ maxHeight: "calc(90vh - 148px)" }}>
+      <div className="px-4 py-4 space-y-3 overflow-y-auto" style={{ maxHeight: SETTINGS_PANEL_BODY_MAX_HEIGHT }}>
         <div className="flex items-center gap-2 mb-1">
           <button onClick={() => { setShowForm(false); setEditingId(null); setForm(EMPTY_MCP_FORM); }}
             className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors">
@@ -1371,7 +1373,7 @@ function McpServersTab() {
   }
 
   return (
-    <div className="px-4 py-4 space-y-3 overflow-y-auto" style={{ maxHeight: "calc(90vh - 148px)" }}>
+    <div className="px-4 py-4 space-y-3 overflow-y-auto" style={{ maxHeight: SETTINGS_PANEL_BODY_MAX_HEIGHT }}>
       <div className="flex items-center justify-between">
         <div>
           <p className={sectionHeadCls}>MCP Servers ({servers.length})</p>
@@ -1674,7 +1676,10 @@ function SettingsPanelContent({ onClose, providers, initialTab }: Omit<SettingsP
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white dark:bg-[#1a1d2e] rounded-xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col" style={{ maxHeight: "90vh" }}>
+      <div
+        className="relative mx-4 flex h-full max-h-[92vh] w-[calc(100vw-2rem)] max-w-6xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-[#1a1d2e]"
+        style={{ height: SETTINGS_PANEL_HEIGHT }}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
           <div className="flex items-center gap-2">
