@@ -415,6 +415,34 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
   const boardQueue = board?.queue;
   const queuedPositions = boardQueue?.queuedPositions ?? {};
 
+  const kanbanHeader = (
+    <div
+      className="shrink-0 border-b border-gray-200/70 px-4 py-2 dark:border-[#1c1f2e]"
+      data-testid="kanban-page-header"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125z" />
+          </svg>
+          <h1 className="text-[13px] font-medium text-gray-900 dark:text-gray-100">Kanban Board</h1>
+          {tasks.length > 0 && (
+            <span className="text-[11px] text-gray-500 dark:text-gray-400" data-testid="kanban-task-count">({tasks.length} tasks)</span>
+          )}
+        </div>
+        <button
+          onClick={onRefresh}
+          className="rounded p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-[#1f232f] dark:hover:text-gray-200"
+          title="Refresh"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001m-11.01 9.296V14.52m0 0H4.995m4.992 0l-3.183 3.182a8.25 8.25 0 10-3.7 3.7M12.065 7.9A8.25 8.25 0 1019.868 11M12 9m0 3h.01" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+
   // Initialize visible columns when board changes
   useEffect(() => {
     if (board) {
@@ -898,34 +926,37 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
 
   if (!board) {
     return (
-      <div className="flex h-full flex-col space-y-4">
-        <div className="flex justify-end">
-          <div ref={bgAgentPanelRef} className="relative">
-            <button
-              type="button"
-              onClick={() => setBgAgentPanelOpen((current) => !current)}
-              data-testid="kanban-bg-agent-toggle"
-              aria-expanded={bgAgentPanelOpen}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-[#12141c] dark:text-gray-300 dark:hover:bg-[#191c28]"
-            >
-              <svg
-                className={`h-3.5 w-3.5 text-gray-400 transition-transform ${bgAgentPanelOpen ? "rotate-90" : ""}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
+      <div className="flex h-full flex-col space-y-2">
+        <div className="shrink-0 rounded-2xl border border-gray-200/70 bg-white px-4 py-2 dark:border-[#1c1f2e] dark:bg-[#12141c]">
+          <div className="flex justify-end">
+            <div ref={bgAgentPanelRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setBgAgentPanelOpen((current) => !current)}
+                data-testid="kanban-bg-agent-toggle"
+                aria-expanded={bgAgentPanelOpen}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-[#12141c] dark:text-gray-300 dark:hover:bg-[#191c28]"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-              Background Agents
-            </button>
-            {bgAgentPanelOpen && (
-              <div className="absolute right-0 top-full z-30 mt-2 w-[min(72rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto rounded-2xl shadow-2xl">
-                <KanbanBgAgentPanel workspaceId={workspaceId} />
-              </div>
-            )}
+                <svg
+                  className={`h-3.5 w-3.5 text-gray-400 transition-transform ${bgAgentPanelOpen ? "rotate-90" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+                Background Agents
+              </button>
+              {bgAgentPanelOpen && (
+                <div className="absolute right-0 top-full z-30 mt-2 w-[min(72rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto rounded-2xl shadow-2xl">
+                  <KanbanBgAgentPanel workspaceId={workspaceId} />
+                </div>
+              )}
+            </div>
           </div>
         </div>
+        {kanbanHeader}
         <div className="rounded-2xl border border-gray-200/60 bg-white p-6 text-sm text-gray-500 dark:border-[#1c1f2e] dark:bg-[#12141c] dark:text-gray-400">
           No board available yet.
         </div>
@@ -1155,6 +1186,7 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
         </div>
       </div>
 
+      {kanbanHeader}
       {board && (
         <div className="mb-3 flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
           <span className="rounded-full bg-gray-100 px-2.5 py-1 dark:bg-[#191c28]">
