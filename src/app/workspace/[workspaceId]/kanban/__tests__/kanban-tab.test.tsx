@@ -267,57 +267,114 @@ describe("KanbanTab card detail manual runs", () => {
     expect(screen.getByText(/This gate is injected into the ACP prompt/i)).toBeTruthy();
   });
 
-  it("switches the right-side activity tabs inside card detail", async () => {
+  it("switches the right-side run tabs above the session pane", async () => {
+    vi.stubGlobal("scrollIntoView", vi.fn());
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+
+    const acp = {
+      connected: true,
+      sessionId: null,
+      updates: [],
+      providers: [{ id: "claude", name: "Claude Code", description: "Claude Code provider", command: "claude" }],
+      selectedProvider: "claude",
+      loading: false,
+      error: null,
+      authError: null,
+      dockerConfigError: null,
+      connect: vi.fn(),
+      createSession: vi.fn(),
+      selectSession: vi.fn(),
+      setProvider: vi.fn(),
+      setMode: vi.fn(),
+      prompt: vi.fn(),
+      promptSession: vi.fn(),
+      respondToUserInput: vi.fn(),
+      writeTerminal: vi.fn(),
+      resizeTerminal: vi.fn(),
+      cancel: vi.fn(),
+      disconnect: vi.fn(),
+      clearAuthError: vi.fn(),
+      clearDockerConfigError: vi.fn(),
+      listProviderModels: vi.fn(),
+    } satisfies Partial<UseAcpState & UseAcpActions> as UseAcpState & UseAcpActions;
+
     render(
       <KanbanTab
         workspaceId="workspace-1"
         boards={[board]}
         tasks={[{
           ...createTask("task-1", "Story One"),
-          sessionIds: ["session-123"],
-          laneHandoffs: [{
-            id: "handoff-1",
-            fromSessionId: "session-123",
-            toSessionId: "session-456",
-            fromColumnId: "backlog",
-            toColumnId: "backlog",
-            requestType: "runtime_context",
-            request: "Share the latest verification context",
-            status: "completed",
-            requestedAt: "2025-01-01T00:00:00.000Z",
-            respondedAt: "2025-01-01T00:01:00.000Z",
-            responseSummary: "Context delivered",
-          }],
-          githubNumber: 42,
-          githubUrl: "https://github.com/example/repo/issues/42",
-          githubRepo: "example/repo",
-          githubState: "open",
+          sessionIds: ["session-123", "session-456"],
+          laneSessions: [
+            {
+              sessionId: "session-123",
+              provider: "claude",
+              role: "DEVELOPER",
+              specialistId: "dev",
+              specialistName: "Dev Crafter",
+              status: "completed",
+              columnId: "dev",
+              columnName: "Dev",
+            },
+            {
+              sessionId: "session-456",
+              provider: "claude",
+              role: "GATE",
+              specialistId: "review",
+              specialistName: "Review Guard",
+              status: "completed",
+              columnId: "review",
+              columnName: "Review",
+            },
+          ],
         }]}
-        sessions={[{
-          sessionId: "session-123",
-          workspaceId: "workspace-1",
-          cwd: "/tmp/repo",
-          provider: "claude",
-          role: "DEVELOPER",
-          createdAt: "2025-01-01T00:00:00.000Z",
-        }]}
+        sessions={[
+          {
+            sessionId: "session-123",
+            workspaceId: "workspace-1",
+            cwd: "/tmp/repo",
+            provider: "claude",
+            role: "DEVELOPER",
+            createdAt: "2025-01-01T00:00:00.000Z",
+            name: "Initial run",
+          },
+          {
+            sessionId: "session-456",
+            workspaceId: "workspace-1",
+            cwd: "/tmp/repo",
+            provider: "claude",
+            role: "GATE",
+            createdAt: "2025-01-01T00:05:00.000Z",
+            name: "Verify run",
+          },
+        ]}
         providers={[]}
         specialists={[]}
         codebases={[]}
         onRefresh={vi.fn()}
+        acp={acp}
       />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Open Story One" }));
 
-    expect(await screen.findByText("Run History")).toBeTruthy();
+    await waitFor(() => {
+      expect(acp.selectSession).toHaveBeenCalledWith("session-456");
+    });
 
-    fireEvent.click(screen.getByRole("button", { name: /Handoffs/i }));
-    expect(await screen.findByText("Share the latest verification context")).toBeTruthy();
-    expect(screen.getByText("Context delivered")).toBeTruthy();
+    const runOne = await screen.findByRole("button", { name: /Run 1/i });
+    const runTwo = await screen.findByRole("button", { name: /Run 2/i });
 
-    fireEvent.click(screen.getByRole("button", { name: /GitHub/i }));
-    expect((await screen.findByRole("link", { name: "#42" })).getAttribute("href")).toBe("https://github.com/example/repo/issues/42");
+    expect(runOne.textContent).toContain("Dev");
+    expect(runTwo.textContent).toContain("Review");
+    expect(runTwo.getAttribute("aria-pressed")).toBe("true");
+
+    fireEvent.click(runOne);
+
+    await waitFor(() => {
+      expect(acp.selectSession).toHaveBeenCalledWith("session-123");
+    });
+    expect(runOne.getAttribute("aria-pressed")).toBe("true");
   });
 });
 

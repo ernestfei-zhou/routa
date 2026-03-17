@@ -110,7 +110,8 @@ export function KanbanCardDetail({
     [boardColumns, task.columnId],
   );
   const orderedSessionIds = useMemo(() => getOrderedSessionIds(task), [task]);
-  const compactMode = !fullWidth;
+  const splitMode = !fullWidth;
+  const compactMode = splitMode;
 
   return (
     <div className="h-full w-full overflow-y-auto bg-gray-50/80 dark:bg-[#10131a]">
@@ -166,55 +167,40 @@ export function KanbanCardDetail({
           </div>
         </section>
 
-        <div className={compactMode ? "space-y-3" : "grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(21rem,0.95fr)]"}>
-          <div className={compactMode ? "space-y-3" : "space-y-4"}>
-            <DetailSection
-              title="Description"
-              description={compactMode ? undefined : "Capture the context, constraints, and acceptance notes for this card."}
+        <div className={compactMode ? "space-y-3" : "space-y-4"}>
+          <DetailSection
+            title="Description"
+            description={compactMode ? undefined : "Capture the context, constraints, and acceptance notes for this card."}
+            compact={compactMode}
+          >
+            <KanbanDescriptionEditor
+              value={editObjective}
               compact={compactMode}
-            >
-              <KanbanDescriptionEditor
-                value={editObjective}
-                compact={compactMode}
-                onSave={async (nextObjective) => {
-                  if (nextObjective !== (task.objective ?? "")) {
-                    setEditObjective(nextObjective);
-                    await onPatchTask(task.id, { objective: nextObjective });
-                    onRefresh();
-                  }
-                }}
-              />
-            </DetailSection>
-
-            <ExecutionSection
-              task={task}
-              lane={currentLane}
-              boardColumns={boardColumns ?? []}
-              availableProviders={availableProviders}
-              specialists={specialists}
-              sessionCwdMismatch={sessionCwdMismatch}
-              onPatchTask={onPatchTask}
-              onRetryTrigger={onRetryTrigger}
-              onProviderChange={onProviderChange}
-              compact={compactMode}
+              onSave={async (nextObjective) => {
+                if (nextObjective !== (task.objective ?? "")) {
+                  setEditObjective(nextObjective);
+                  await onPatchTask(task.id, { objective: nextObjective });
+                  onRefresh();
+                }
+              }}
             />
+          </DetailSection>
 
-            <RepositoriesWorktreeRow
-              task={task}
-              codebases={codebases}
-              allCodebaseIds={allCodebaseIds}
-              worktreeCache={worktreeCache}
-              updateError={updateError}
-              setUpdateError={setUpdateError}
-              onPatchTask={onPatchTask}
-              onRefresh={onRefresh}
-              onRepositoryChange={onRepositoryChange}
-              compact={compactMode}
-            />
-          </div>
+          <ExecutionSection
+            task={task}
+            lane={currentLane}
+            boardColumns={boardColumns ?? []}
+            availableProviders={availableProviders}
+            specialists={specialists}
+            sessionCwdMismatch={sessionCwdMismatch}
+            onPatchTask={onPatchTask}
+            onRetryTrigger={onRetryTrigger}
+            onProviderChange={onProviderChange}
+            compact={compactMode}
+          />
 
-          <div className={compactMode ? "space-y-3" : "space-y-4"}>
-            <ActivitySection
+          {!splitMode && (
+            <KanbanCardActivityPanel
               task={task}
               sessions={sessions ?? []}
               specialists={specialists}
@@ -222,7 +208,20 @@ export function KanbanCardDetail({
               onSelectSession={onSelectSession}
               compact={compactMode}
             />
-          </div>
+          )}
+
+          <RepositoriesWorktreeRow
+            task={task}
+            codebases={codebases}
+            allCodebaseIds={allCodebaseIds}
+            worktreeCache={worktreeCache}
+            updateError={updateError}
+            setUpdateError={setUpdateError}
+            onPatchTask={onPatchTask}
+            onRefresh={onRefresh}
+            onRepositoryChange={onRepositoryChange}
+            compact={compactMode}
+          />
         </div>
 
         <div className={`mt-auto border-t border-gray-200 dark:border-gray-700 ${compactMode ? "pt-3" : "pt-4"}`}>
@@ -302,11 +301,15 @@ function MetaSelect({
   );
 }
 
-function CompactInfo({ label, value, compact = false }: { label: string; value: string; compact?: boolean }) {
+function InlineSummary({ label, value, compact = false }: { label: string; value: string; compact?: boolean }) {
   return (
-    <div className={`rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-[#0d1018] ${compact ? "px-2.5 py-2" : "px-3 py-2"}`}>
-      <div className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">{label}</div>
-      <div className={`mt-1 truncate font-medium text-gray-800 dark:text-gray-100 ${compact ? "text-[13px]" : "text-sm"}`}>{value}</div>
+    <div className={`flex items-start justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-[#0d1018] ${compact ? "px-2.5 py-2" : "px-3 py-2.5"}`}>
+      <div className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400 dark:text-gray-500">
+        {label}
+      </div>
+      <div className={`min-w-0 text-right font-medium text-gray-800 dark:text-gray-100 ${compact ? "text-[12px] leading-[1.1rem]" : "text-sm"}`}>
+        {value}
+      </div>
     </div>
   );
 }
@@ -367,27 +370,31 @@ function ExecutionSection({
           {lane?.automation?.enabled ? "Automation on" : "Manual"}
         </span>
       </div>
-      <div className={`grid gap-2 ${compact ? "mt-2 grid-cols-1" : "mt-2.5 sm:grid-cols-2"}`}>
-        <CompactInfo
+      <div className="mt-2.5 space-y-1.5">
+        <InlineSummary
           label="Lane default"
           value={`${laneProvider} · ${lane?.automation?.role ?? "DEVELOPER"} · ${laneSpecialist}`}
           compact={compact}
         />
-        <CompactInfo
+        <InlineSummary
           label="Manual run"
           value={`${effectiveProvider} · ${effectiveAutomation.role ?? "DEVELOPER"} · ${effectiveSpecialist}`}
           compact={compact}
         />
       </div>
-      {(transitionArtifacts.currentRequiredArtifacts.length > 0 || transitionArtifacts.nextRequiredArtifacts.length > 0) && (
-        <div className={`grid gap-2 ${compact ? "mt-2 grid-cols-1" : "mt-2.5 sm:grid-cols-2"}`}>
-          <CompactInfo
+      {transitionArtifacts.currentRequiredArtifacts.length > 0 && (
+        <div className="mt-1.5">
+          <InlineSummary
             label={`Enter ${laneName}`}
             value={formatArtifactSummary(transitionArtifacts.currentRequiredArtifacts)}
             compact={compact}
           />
-          <CompactInfo
-            label={transitionArtifacts.nextColumn?.name ? `Move to ${transitionArtifacts.nextColumn.name}` : "Next move"}
+        </div>
+      )}
+      {transitionArtifacts.nextRequiredArtifacts.length > 0 && (
+        <div className="mt-1.5">
+          <InlineSummary
+            label={transitionArtifacts.nextColumn?.name ? `Before ${transitionArtifacts.nextColumn.name}` : "Next move"}
             value={formatArtifactSummary(transitionArtifacts.nextRequiredArtifacts)}
             compact={compact}
           />
@@ -526,7 +533,7 @@ function ExecutionSection({
   );
 }
 
-function ActivitySection({
+export function KanbanCardActivityPanel({
   task,
   sessions,
   specialists,
@@ -555,29 +562,8 @@ function ActivitySection({
       description={compact ? undefined : "Run history, lane handoffs, and issue linkage collected on the right for faster switching."}
       compact={compact}
     >
-      <div className={compact ? "space-y-3" : "grid gap-3 md:grid-cols-[minmax(0,1fr)_7.5rem]"}>
-        <div className={compact ? "" : "order-1"}>
-          {visibleTab === "runs" && (
-            <SessionHistoryPanel
-              task={task}
-              specialists={specialists}
-              sessions={sessions}
-              currentSessionId={currentSessionId}
-              onSelectSession={onSelectSession}
-              compact={compact}
-            />
-          )}
-          {visibleTab === "handoffs" && (
-            <HandoffPanel
-              task={task}
-              compact={compact}
-            />
-          )}
-          {visibleTab === "github" && (
-            <GitHubPanel task={task} compact={compact} />
-          )}
-        </div>
-        <div className={compact ? "flex flex-wrap gap-1.5" : "order-2 flex flex-col items-stretch gap-2 border-l border-gray-200 pl-3 dark:border-gray-700"}>
+      <div>
+        <div className="flex flex-wrap gap-1.5">
           {tabs.map((tab) => {
             const active = tab.id === activeTab;
             return (
@@ -601,8 +587,98 @@ function ActivitySection({
             );
           })}
         </div>
+        <div className={compact ? "mt-3" : "mt-4"}>
+          {visibleTab === "runs" && (
+            <SessionHistoryPanel
+              task={task}
+              specialists={specialists}
+              sessions={sessions}
+              currentSessionId={currentSessionId}
+              onSelectSession={onSelectSession}
+              compact={compact}
+            />
+          )}
+          {visibleTab === "handoffs" && (
+            <HandoffPanel
+              task={task}
+              compact={compact}
+            />
+          )}
+          {visibleTab === "github" && (
+            <GitHubPanel task={task} compact={compact} />
+          )}
+        </div>
       </div>
     </DetailSection>
+  );
+}
+
+export function KanbanCardActivityBar({
+  task,
+  currentSessionId,
+  onSelectSession,
+}: {
+  task: TaskInfo;
+  currentSessionId?: string;
+  onSelectSession?: (sessionId: string) => void;
+}) {
+  const orderedSessionIds = getOrderedSessionIds(task);
+  const laneSessions = task.laneSessions ?? [];
+  const laneSessionMap = new Map(laneSessions.map((entry) => [entry.sessionId, entry]));
+  const selectedRunId = currentSessionId && orderedSessionIds.includes(currentSessionId)
+    ? currentSessionId
+    : orderedSessionIds[orderedSessionIds.length - 1];
+
+  if (orderedSessionIds.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-gray-300 bg-white/90 px-3 py-2 text-[11px] text-gray-500 dark:border-gray-700 dark:bg-[#121620] dark:text-gray-400">
+        No ACP runs yet
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-gray-200/80 bg-white/95 px-3 py-2 shadow-sm dark:border-[#232736] dark:bg-[#121620]">
+      <div className="overflow-x-auto">
+        <div className="flex min-w-max items-center gap-1.5">
+          {orderedSessionIds.map((sessionId, index) => {
+            const active = sessionId === selectedRunId;
+            const laneSession = laneSessionMap.get(sessionId);
+            const laneLabel = laneSession?.columnName ?? laneSession?.columnId;
+
+            return (
+              <button
+                key={sessionId}
+                type="button"
+                onClick={() => onSelectSession?.(sessionId)}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                  active
+                    ? "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700/50 dark:bg-amber-900/20 dark:text-amber-200"
+                    : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-400 dark:hover:text-gray-200"
+                }`}
+                aria-pressed={active}
+              >
+                <span>{`Run ${index + 1}`}</span>
+                {laneLabel && (
+                  <span className={`max-w-24 truncate rounded-full px-1.5 py-0.5 text-[10px] ${
+                    active
+                      ? "bg-amber-200/70 text-amber-900 dark:bg-amber-800/50 dark:text-amber-100"
+                      : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                  }`}>
+                    {laneLabel}
+                  </span>
+                )}
+                {laneSession?.status && active && (
+                  <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
+                    {laneSession.status}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 

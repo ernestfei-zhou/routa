@@ -8,7 +8,7 @@ import type { KanbanBoardInfo, SessionInfo, TaskInfo, WorktreeInfo } from "../ty
 import { KanbanCreateModal, EMPTY_DRAFT, type DraftIssue } from "../kanban-create-modal";
 import { KanbanCard } from "./kanban-card";
 import { KanbanSettingsModal, type ColumnAutomationConfig } from "./kanban-settings-modal";
-import { KanbanCardDetail } from "./kanban-card-detail";
+import { KanbanCardActivityBar, KanbanCardDetail } from "./kanban-card-detail";
 import { buildKanbanTaskAgentPrompt, scheduleKanbanRefreshBurst } from "./kanban-agent-input";
 import { KanbanBgAgentPanel } from "./kanban-bg-agent-panel";
 import { ChatPanel } from "@/client/components/chat-panel";
@@ -1408,24 +1408,38 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
 
                 return (
                   <div
-                    className="h-full min-w-0 flex-1 overflow-hidden"
+                    className="flex h-full min-w-0 flex-1 flex-col overflow-hidden"
                     style={activeTaskId ? { width: `${(1 - detailSplitRatio) * 100}%` } : undefined}
                   >
+                    {activeTask && (
+                      <div className="shrink-0 border-b border-gray-200/80 bg-gray-50/80 p-2 dark:border-[#202433] dark:bg-[#10131a]">
+                        <KanbanCardActivityBar
+                          task={activeTask}
+                          currentSessionId={activeSessionId ?? undefined}
+                          onSelectSession={(sessionId) => {
+                            setActiveSessionId(sessionId);
+                            acp?.selectSession(sessionId);
+                          }}
+                        />
+                      </div>
+                    )}
                     {acp && (
-                    <ChatPanel
-                      acp={acp}
-                      activeSessionId={activeSessionId}
-                      onEnsureSession={async () => activeSessionId}
-                      onSelectSession={async (sessionId) => {
-                        setActiveSessionId(sessionId);
-                        acp.selectSession(sessionId);
-                      }}
-                      repoSelection={repoSelection}
-                      onRepoChange={() => {}}
-                      codebases={codebases}
-                      activeWorkspaceId={workspaceId}
-                      agentRole={taskAgentRole}
-                    />
+                    <div className="min-h-0 flex-1">
+                      <ChatPanel
+                        acp={acp}
+                        activeSessionId={activeSessionId}
+                        onEnsureSession={async () => activeSessionId}
+                        onSelectSession={async (sessionId) => {
+                          setActiveSessionId(sessionId);
+                          acp.selectSession(sessionId);
+                        }}
+                        repoSelection={repoSelection}
+                        onRepoChange={() => {}}
+                        codebases={codebases}
+                        activeWorkspaceId={workspaceId}
+                        agentRole={taskAgentRole}
+                      />
+                    </div>
                     )}
                   </div>
                 );
