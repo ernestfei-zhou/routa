@@ -64,7 +64,7 @@ function QueueStatusBadge({
 
   return (
     <span
-      className={`group relative rounded-full px-2.5 py-1 ${className}`}
+      className={`group inline-flex h-6 items-center rounded-full px-2 text-[11px] ${className}`}
       title={tooltip}
     >
       {label} {count}
@@ -417,7 +417,7 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
 
   const kanbanHeader = (
     <div
-      className="shrink-0 border-b border-gray-200/70 px-4 py-2 dark:border-[#1c1f2e]"
+      className="shrink-0 border-b border-gray-200/70 px-4 py-1.5 dark:border-[#1c1f2e]"
       data-testid="kanban-page-header"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -434,7 +434,7 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
         <div className="flex shrink-0 flex-wrap items-center gap-1.5">
           {board && (
             <>
-              <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] dark:bg-[#191c28]">
+              <span className="inline-flex h-6 items-center rounded-full bg-gray-100 px-2 text-[11px] dark:bg-[#191c28]">
                 Limit {board.sessionConcurrencyLimit ?? 1}
               </span>
               <QueueStatusBadge
@@ -453,7 +453,7 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
           )}
 
           {(repoHealth.missingRepoTasks > 0 || repoHealth.cwdMismatchTasks > 0) && (
-            <div className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/10 dark:text-amber-300">
+            <div className="inline-flex h-6 items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2 text-[11px] text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/10 dark:text-amber-300">
               <span className="font-medium">Kanban Health</span>
               {repoHealth.missingRepoTasks > 0 && (
                 <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
@@ -469,10 +469,10 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
           )}
 
           {boards.length > 1 && (
-            <select
-              value={selectedBoardId ?? ""}
-              onChange={(event) => setSelectedBoardId(event.target.value)}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-[#12141c] dark:text-gray-200"
+              <select
+                value={selectedBoardId ?? ""}
+                onChange={(event) => setSelectedBoardId(event.target.value)}
+                className="h-8 min-h-8 rounded-md border border-gray-200 bg-white px-3 text-[12px] text-gray-700 dark:border-gray-700 dark:bg-[#12141c] dark:text-gray-200"
             >
               {boards.map((item) => (
                 <option key={item.id} value={item.id}>{item.name}</option>
@@ -485,7 +485,7 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
               onClick={() => setBgAgentPanelOpen((current) => !current)}
               data-testid="kanban-bg-agent-toggle"
               aria-expanded={bgAgentPanelOpen}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-[#12141c] dark:text-gray-300 dark:hover:bg-[#191c28]"
+              className="inline-flex h-8 items-center gap-2 rounded-md border border-gray-200 bg-white px-2.5 text-[12px] text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-[#12141c] dark:text-gray-300 dark:hover:bg-[#191c28]"
             >
               <svg
                 className={`h-3.5 w-3.5 text-gray-400 transition-transform ${bgAgentPanelOpen ? "rotate-90" : ""}`}
@@ -506,7 +506,7 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
           </div>
           <button
             onClick={() => setShowSettings(true)}
-            className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-[#12141c] dark:text-gray-300 dark:hover:bg-[#191c28]"
+            className="inline-flex h-8 items-center rounded-md border border-gray-200 bg-white px-2.5 text-[12px] text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-[#12141c] dark:text-gray-300 dark:hover:bg-[#191c28]"
             title="Board settings"
           >
             Settings
@@ -516,8 +516,10 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-[#1f232f] dark:hover:text-gray-200"
             title="Refresh"
           >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.581m15.356 2A8.001 8.001 0 004.581 9m0 0H9m11 11v-5h-.582m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 12a8 8 0 0 1 13.28-5.7" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M20 12a8 8 0 0 1-13.28 5.7" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 12a8 8 0 0 0 16 0M20 12l-1-1M20 12l-1 1" />
             </svg>
           </button>
         </div>
@@ -1021,10 +1023,10 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
     <div className="flex flex-col h-full space-y-2">
       {kanbanHeader}
       <div className="shrink-0 rounded-2xl border border-gray-200/70 bg-white px-4 py-2 dark:border-[#1c1f2e] dark:bg-[#12141c]">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-3">
-          <div className="flex min-w-0 flex-1 flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
+        <div className="flex flex-col gap-1.5 lg:flex-row lg:items-center lg:justify-between lg:gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5 lg:flex-row lg:items-center lg:gap-2">
             <div className="flex min-w-0 items-center gap-2 xl:max-w-xl">
-              <span className="inline-flex h-10 items-center text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Repos</span>
+              <span className="inline-flex h-8 items-center text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Repos</span>
               {codebases.length === 0 ? (
                 <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-dashed border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-[#0d1018]">
                   <span className="text-sm text-gray-400 dark:text-gray-500">No repositories linked.</span>
@@ -1065,7 +1067,7 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
                         setSelectedCodebase(defaultCodebase);
                         void fetchCodebaseWorktrees(defaultCodebase);
                       }}
-                      className="inline-flex h-10 max-w-[200px] items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-xs text-gray-700 transition-colors hover:border-amber-400 hover:bg-amber-50 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-300 dark:hover:bg-amber-900/10"
+                      className="inline-flex h-8 max-w-[200px] items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-[11px] text-gray-700 transition-colors hover:border-amber-400 hover:bg-amber-50 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-300 dark:hover:bg-amber-900/10"
                       data-testid="codebase-badge"
                       title={`${defaultCodebase.label ?? defaultCodebase.repoPath} - ${defaultCodebase.branch ? `@${defaultCodebase.branch}` : ''}`}
                     >
@@ -1085,7 +1087,7 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
                           void fetchCodebaseWorktrees(otherRepo);
                         }
                       }}
-                      className="inline-flex h-10 items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2 text-xs text-gray-600 transition-colors hover:border-amber-400 hover:bg-amber-50 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-400 dark:hover:bg-amber-900/10"
+                      className="inline-flex h-8 items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2 text-[11px] text-gray-600 transition-colors hover:border-amber-400 hover:bg-amber-50 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-400 dark:hover:bg-amber-900/10"
                       title={`+${codebases.length - 1} more ${codebases.length - 1 === 1 ? 'repository' : 'repositories'} - click to view all`}
                     >
                       <span className="font-medium">+{codebases.length - 1}</span>
@@ -1097,14 +1099,14 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
           </div>
 
           {onAgentPrompt ? (
-            <div className="flex min-w-[20rem] flex-1 items-center gap-2 lg:max-w-none">
-            <div className="group relative flex min-w-0 flex-1 items-center rounded-2xl border border-gray-200 bg-white shadow-sm transition-colors focus-within:border-amber-400/80 focus-within:ring-2 focus-within:ring-amber-400/15 dark:border-gray-700 dark:bg-[#12141c]">
-              <div className="relative shrink-0">
-                <select
-                  value={acp?.selectedProvider ?? ""}
-                  onChange={(event) => acp?.setProvider(event.target.value)}
-                  disabled={!acp?.connected || availableProviders.length === 0}
-                  className="h-10 appearance-none rounded-l-2xl border-r border-gray-200 bg-transparent pl-3 pr-8 text-sm font-medium text-gray-700 outline-none transition-colors disabled:opacity-50 dark:border-gray-700 dark:text-gray-200"
+            <div className="flex min-w-0 flex-1 items-center justify-center">
+              <div className="group relative flex w-full max-w-3xl items-center rounded-2xl border border-gray-200 bg-white shadow-sm transition-colors focus-within:border-amber-400/80 focus-within:ring-2 focus-within:ring-amber-400/15 dark:border-gray-700 dark:bg-[#12141c]">
+                <div className="relative shrink-0">
+                  <select
+                    value={acp?.selectedProvider ?? ""}
+                    onChange={(event) => acp?.setProvider(event.target.value)}
+                    disabled={!acp?.connected || availableProviders.length === 0}
+                  className="h-8 appearance-none rounded-l-2xl border-r border-gray-200 bg-transparent px-2.5 text-[12px] font-medium text-gray-700 outline-none transition-colors disabled:opacity-50 dark:border-gray-700 dark:text-gray-200"
                     aria-label="KanbanTask Agent provider"
                     data-testid="kanban-agent-provider"
                   >
@@ -1136,12 +1138,12 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
                   }}
                   placeholder={acp?.connected ? "Describe work to plan in Kanban..." : "Connecting..."}
                   disabled={agentLoading || !acp?.connected}
-                  className="h-10 w-full bg-transparent px-3 pr-2 text-sm text-gray-800 placeholder-gray-400 outline-none disabled:opacity-50 dark:text-gray-200 dark:placeholder-gray-500"
+                      className="h-8 w-full bg-transparent px-3 pr-2 text-sm text-gray-800 placeholder-gray-400 outline-none disabled:opacity-50 dark:text-gray-200 dark:placeholder-gray-500"
                 />
                 <button
                   onClick={() => void handleAgentSubmit()}
                   disabled={!agentInput.trim() || agentLoading || !acp?.connected}
-                  className="mr-1.5 inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-gray-900 px-3 text-xs font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 dark:bg-amber-500 dark:hover:bg-amber-400 dark:disabled:bg-[#1a1d29] dark:disabled:text-gray-500"
+                  className="mr-1.5 inline-flex h-8 shrink-0 items-center gap-1 rounded-lg bg-gray-900 px-3 text-[12px] font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 dark:bg-amber-500 dark:hover:bg-amber-400 dark:disabled:bg-[#1a1d29] dark:disabled:text-gray-500"
                 >
                   {agentLoading ? (
                     "..."
@@ -1156,7 +1158,7 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
                 </button>
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="inline-flex h-10 shrink-0 items-center rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-0 text-xs font-semibold text-white shadow-sm transition-all hover:from-amber-600 hover:to-orange-500"
+                className="inline-flex h-8 shrink-0 items-center rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-0 text-[12px] font-semibold text-white shadow-sm transition-all hover:from-amber-600 hover:to-orange-500"
                 >
                   Manual
                 </button>
@@ -1172,10 +1174,10 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
               )}
             </div>
           ) : (
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="inline-flex h-10 items-center rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-all hover:from-amber-600 hover:to-orange-500"
-            >
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="inline-flex h-8 items-center rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-3 text-[12px] font-medium text-white shadow-sm transition-all hover:from-amber-600 hover:to-orange-500"
+              >
               Manual
             </button>
           )}
