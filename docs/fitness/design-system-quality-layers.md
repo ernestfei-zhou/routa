@@ -1,6 +1,7 @@
 ---
-dimension: maintainability
-weight: 8
+dimension: design_system
+weight: 10
+tier: normal
 threshold:
   pass: 90
   warn: 80
@@ -11,24 +12,28 @@ metrics:
     command: npm run lint:css 2>&1
     pattern: "Design-system CSS lint passed"
     hard_gate: false
+    tier: normal
     description: "代码层与设计层：桌面 shell 禁止回退为硬编码颜色，并保持 dt token 命名契约"
 
   - name: design_system_component_visual
     command: npm run test:e2e:desktop-shell 2>&1
     pattern: "\\d+\\s+passed"
     hard_gate: true
+    tier: deep
     description: "组件层：desktop shell 关键 chrome 的 Playwright 视觉回归"
 
   - name: design_system_experience_accessibility
     command: npm run test:accessibility 2>&1
     pattern: "accessibility smoke passed"
     hard_gate: false
+    tier: deep
     description: "页面层与体验层：关键桌面路由的 aria 结构快照与可访问性 smoke"
 
   - name: design_system_page_performance
     command: npm run test:performance 2>&1
     pattern: "✅"
     hard_gate: false
+    tier: deep
     description: "性能层：关键桌面路由的导航、FCP、CSS 成本与 long task smoke"
 ---
 

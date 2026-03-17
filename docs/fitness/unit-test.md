@@ -1,6 +1,7 @@
 ---
 dimension: testability
-weight: 14
+weight: 20
+tier: normal
 threshold:
   pass: 80
   warn: 70
@@ -11,11 +12,13 @@ metrics:
     command: npm run test:run 2>&1
     pattern: "Tests\\s+(\\d+)\\s+passed"
     hard_gate: true
+    tier: fast
 
   - name: rust_test_pass
     command: cargo test --workspace --exclude routa-desktop 2>&1
     pattern: "test result: ok"
     hard_gate: true
+    tier: normal
 ---
 
 # 单元测试与集成测试证据

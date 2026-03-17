@@ -1,6 +1,7 @@
 ---
 dimension: evolvability
-weight: 10
+weight: 8
+tier: fast
 threshold:
   pass: 100
   warn: 95
@@ -10,16 +11,19 @@ metrics:
     command: npm run api:schema:validate 2>&1
     pattern: "schema is valid|validation passed|Summary: 0 error\\(s\\)"
     hard_gate: true
+    tier: fast
 
   - name: api_parity_check
     command: npm run api:check 2>&1 && echo "api parity passed"
     pattern: "api parity passed"
     hard_gate: true
+    tier: fast
 
   - name: no_breaking_changes
     command: npm run api:check 2>&1 && echo "no breaking changes"
     pattern: "no breaking changes"
     hard_gate: false
+    tier: normal
 ---
 
 # API Contract 证据

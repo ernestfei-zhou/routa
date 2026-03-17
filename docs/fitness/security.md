@@ -1,6 +1,7 @@
 ---
 dimension: security
-weight: 14
+weight: 20
+tier: normal
 threshold:
   pass: 100
   warn: 90
@@ -9,22 +10,25 @@ metrics:
   # ══════════════════════════════════════════════════════════════
   # Hard Gates - 必须通过
   # ══════════════════════════════════════════════════════════════
-  
+
   - name: npm_audit_critical
     command: npm audit --audit-level=critical 2>&1
     hard_gate: true
+    tier: fast
     description: "检测 npm 依赖中的 critical 级别漏洞"
 
   - name: cargo_audit
     command: cargo audit 2>&1 || echo "cargo-audit not installed"
     pattern: "0 vulnerabilities|No vulnerabilities found|cargo-audit not installed"
     hard_gate: true
+    tier: normal
     description: "检测 Rust 依赖中的已知漏洞"
 
   - name: semgrep_critical
     command: semgrep --config=p/security-audit --config=p/owasp-top-ten --severity=ERROR --error --quiet . 2>&1 && echo "semgrep critical passed" || true
     pattern: "semgrep critical passed|no matches found|Ran .* rules|0 findings"
     hard_gate: true
+    tier: deep
     description: "Semgrep SAST 扫描 - 仅 ERROR 级别"
 
   # ══════════════════════════════════════════════════════════════
@@ -35,24 +39,28 @@ metrics:
     command: npm audit --audit-level=high 2>&1 || true
     pattern: "found 0 vulnerabilities|0 high|no vulnerabilities"
     hard_gate: false
+    tier: normal
     description: "检测 npm 依赖中的 high 级别漏洞"
 
   - name: semgrep_warning
     command: semgrep --config=p/security-audit --severity=WARNING --quiet . 2>&1 && echo "semgrep warning passed" || true
     pattern: "semgrep warning passed|no matches found|Ran .* rules|0 findings"
     hard_gate: false
+    tier: deep
     description: "Semgrep SAST 扫描 - WARNING 级别"
 
   - name: trivy_filesystem
     command: trivy fs --severity HIGH,CRITICAL --exit-code 0 . 2>&1 || true
     pattern: "Total: 0|no vulnerabilities"
     hard_gate: false
+    tier: deep
     description: "Trivy 文件系统扫描"
 
   - name: hadolint_dockerfile
     command: hadolint Dockerfile 2>&1 || echo "no dockerfile or hadolint"
     pattern: "^$|no dockerfile|not found"
     hard_gate: false
+    tier: deep
     description: "Dockerfile 最佳实践检查"
 ---
 

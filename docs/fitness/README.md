@@ -13,12 +13,27 @@
 ## Quick Start
 
 ```bash
-# 运行 fitness 检查（解析 frontmatter，执行命令，输出结果）
+# 快速检查（仅 fast tier，<30s）
+python3 docs/fitness/scripts/fitness.py --tier fast
+
+# 标准检查（fast + normal tier，<5min）
+python3 docs/fitness/scripts/fitness.py --tier normal
+
+# 完整检查（所有 tier，<15min）
 python3 docs/fitness/scripts/fitness.py
+
+# 并行执行（加速）
+python3 docs/fitness/scripts/fitness.py --parallel
 
 # 仅查看会执行什么（不实际运行）
 python3 docs/fitness/scripts/fitness.py --dry-run
 ```
+
+### Tier 分层
+
+- **fast** (<30s): Lints, 静态分析, 契约检查
+- **normal** (<5min): 单元测试, API 测试, 代码质量
+- **deep** (<15min): E2E 测试, 安全扫描, 视觉回归
 
 ## Scope
 
@@ -44,19 +59,19 @@ Fitness = Σ (Weight_i × Score_i) / 100
 阻断: < 80 | 强告警: 80-90 | 通过: ≥ 90
 ```
 
-## Dimensions (九大维度)
+## Dimensions (七大维度)
 
 | 维度 | 权重 | 描述 | 关键指标 | 证据文件 |
 |------|------|------|----------|----------|
-| testability | 14% | 测试覆盖与通过率 | 覆盖率≥80%, 通过率100% | [unit-test.md](unit-test.md) |
-| performance | 10% | API 延迟与错误率 | p95<300ms, 错误率<1% | k6/wrk |
-| security | 14% | 依赖漏洞与安全扫描 | critical=0, high≤阈值 | [security.md](security.md) |
-| maintainability | 14% | 架构回归与代码质量 | 新增smell=0, 契约100% | [rust-api-test.md](rust-api-test.md), [code-quality.md](code-quality.md) |
-| deployability | 10% | 容器构建与配置 | 构建成功, 镜像回归≤5% | Dockerfile |
-| evolvability | 10% | API 兼容性与契约 | breaking changes=0, parity=100% | [api-contract.md](api-contract.md) |
-| observability | 10% | 日志/指标/追踪 | trace覆盖≥80% | OTEL |
-| compliance | 10% | 策略合规 | policy deny=0 | OPA/Conftest |
-| ai | 8% | AI 特有治理 | prompt回归≤2%, 对抗测试通过 | promptfoo |
+| code_quality | 24% | 代码质量与架构 | Lint通过, 无循环依赖, 文件≤1000行 | [code-quality.md](code-quality.md) |
+| testability | 20% | 测试覆盖与通过率 | 覆盖率≥80%, 通过率100% | [unit-test.md](unit-test.md) |
+| security | 20% | 依赖漏洞与安全扫描 | critical=0, high≤阈值 | [security.md](security.md) |
+| api_contract | 10% | API 契约测试 | Rust API 测试通过, 契约同步 | [rust-api-test.md](rust-api-test.md) |
+| design_system | 10% | 设计系统质量 | 视觉回归, 可访问性, 性能 | [design-system-quality-layers.md](design-system-quality-layers.md) |
+| evolvability | 8% | API 兼容性与契约 | breaking changes=0, parity=100% | [api-contract.md](api-contract.md) |
+| ui_consistency | 8% | UI 一致性 | Shell 组件覆盖, Token 接入 | [design-system-shell.md](design-system-shell.md) |
+
+**Total: 100%**
 
 ## Hard Gates
 

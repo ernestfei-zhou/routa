@@ -1,6 +1,7 @@
 ---
-dimension: maintainability
-weight: 14
+dimension: code_quality
+weight: 24
+tier: normal
 threshold:
   pass: 90
   warn: 80
@@ -23,6 +24,7 @@ metrics:
       fi
     pattern: "changed_files_over_1000_lines: 0"
     hard_gate: false
+    tier: fast
     description: "本次变更的代码文件行数限制 ≤1000 行"
 
   - name: function_line_limit
@@ -33,6 +35,7 @@ metrics:
       awk '{print "function_check: scanned", $1, "definitions"}'
     pattern: "function_check: scanned"
     hard_gate: false
+    tier: normal
     description: "函数行数限制 ≤100 行（需人工审查）"
 
   # ══════════════════════════════════════════════════════════════
@@ -53,6 +56,7 @@ metrics:
       fi
     pattern: "Found 0 clones|No duplicates found|No changed TS/JS files"
     hard_gate: false
+    tier: deep
     description: "本次变更的 TypeScript/JavaScript 文件不应新增大块复制代码"
 
   - name: ast_grep_structural_smells
@@ -94,6 +98,7 @@ metrics:
       fi
     pattern: "ast_grep_structural_matches: 0|No changed TS/JS files|ast-grep not installed"
     hard_gate: false
+    tier: deep
     description: "用 ast-grep 检查本次变更中新增的可疑结构性包装代码"
 
   - name: duplicate_function_name
@@ -105,6 +110,7 @@ metrics:
       awk '{print "duplicate_new_function_names:", $1}'
     pattern: "duplicate_new_function_names: 0"
     hard_gate: false
+    tier: fast
     description: "本次变更中不应新增重复函数名"
 
   - name: duplicate_code_rust
@@ -114,6 +120,7 @@ metrics:
       awk '$1 > 3 {dup++} END {print "rust_duplicate_impls:", dup+0}'
     pattern: "rust_duplicate_impls: 0"
     hard_gate: false
+    tier: normal
     description: "Rust 重复 impl 块检测"
 
   # ══════════════════════════════════════════════════════════════
@@ -125,6 +132,7 @@ metrics:
       npx eslint --rule "complexity: [error, 15]" --format compact src 2>&1 | grep -c "complexity" || echo "0"
     pattern: "^0$|No files"
     hard_gate: false
+    tier: normal
     description: "圈复杂度限制 ≤15"
 
   - name: cognitive_complexity
@@ -135,6 +143,7 @@ metrics:
       awk '{print "deep_nesting_count:", $1}'
     pattern: "deep_nesting_count: [0-9]$"
     hard_gate: false
+    tier: normal
     description: "深层嵌套检测（>3层）"
 
   # ══════════════════════════════════════════════════════════════
@@ -153,6 +162,7 @@ metrics:
         npx --yes dependency-cruiser --config .dependency-cruiser.cjs src --validate
       fi
     hard_gate: true
+    tier: fast
     description: "基于 dependency-cruiser 检测变更范围内循环依赖与依赖规则违规"
 
   # ══════════════════════════════════════════════════════════════
@@ -160,15 +170,15 @@ metrics:
   # ══════════════════════════════════════════════════════════════
 
   - name: eslint_pass
-    command: npm run lint 2>&1 && echo "eslint passed"
-    pattern: "eslint passed"
+    command: npm run lint 2>&1
     hard_gate: true
+    tier: fast
     description: "ESLint 必须通过"
 
   - name: clippy_pass
-    command: cargo clippy --workspace -- -D warnings 2>&1 || true
-    pattern: "Finished|could not find|warning: 0 warnings"
+    command: cargo clippy --workspace -- -D warnings 2>&1
     hard_gate: true
+    tier: fast
     description: "Clippy 必须通过（无警告）"
 
   # ══════════════════════════════════════════════════════════════
@@ -181,6 +191,7 @@ metrics:
         src apps crates 2>/dev/null | wc -l | awk '{print "todo_count:", $1}'
     pattern: "todo_count: [0-9]$|todo_count: [1-9][0-9]$"
     hard_gate: false
+    tier: normal
     description: "TODO/FIXME 数量监控（<100）"
 
   - name: console_log_check
@@ -191,6 +202,7 @@ metrics:
       awk '{print "new_console_log_count:", $1}'
     pattern: "new_console_log_count: 0"
     hard_gate: false
+    tier: fast
     description: "本次变更不得新增生产代码中的 console.log/debug"
 
   - name: any_type_check
@@ -199,6 +211,7 @@ metrics:
         src apps 2>/dev/null | wc -l | awk '{print "any_type_count:", $1}'
     pattern: "any_type_count: [0-9]$|any_type_count: [1-4][0-9]$"
     hard_gate: false
+    tier: normal
     description: "TypeScript any 类型使用检测（<50）"
 ---
 

@@ -1,20 +1,22 @@
 ---
-dimension: maintainability
-weight: 14
+dimension: api_contract
+weight: 10
+tier: normal
 threshold:
   pass: 100
   warn: 90
 
 metrics:
   - name: api_contract_parity
-    command: npm run api:check 2>&1 && echo "api parity passed"
-    pattern: "api parity passed"
+    command: npm run api:check 2>&1
     hard_gate: true
+    tier: fast
 
   - name: rust_api_test
     command: cargo test -p routa-server --test rust_api_end_to_end 2>&1
     pattern: "test result: ok"
     hard_gate: false
+    tier: normal
 ---
 
 # API 契约测试证据

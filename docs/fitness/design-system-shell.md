@@ -1,6 +1,7 @@
 ---
-dimension: maintainability
+dimension: ui_consistency
 weight: 8
+tier: normal
 threshold:
   pass: 90
   warn: 80
@@ -11,23 +12,27 @@ metrics:
     command: npm run test:e2e:desktop-shell 2>&1
     pattern: '\d+\s+passed'
     hard_gate: true
+    tier: deep
     description: "桌面 shell 的关键路由、导航入口与视觉基线回归"
 
   - name: desktop_shell_token_wiring
     command: "rg -q -- '--dt-bg-primary|--dt-bg-secondary|--dt-border|--dt-accent' src/app/styles/desktop-theme.css && rg -q 'desktop-theme' 'src/client/components/desktop-layout.tsx' && rg -q 'desktop-theme' 'src/client/components/desktop-app-shell.tsx' && rg -q 'desktop-(bg|text|border|accent)' 'src/client/components/desktop-sidebar.tsx' && rg -q 'desktop-(bg|text|border|accent)' 'src/client/components/desktop-nav-rail.tsx' && rg -q 'desktop-(bg|text|border|accent)' 'src/client/components/workspace-switcher.tsx' && echo 'desktop shell tokens wired'"
     pattern: "desktop shell tokens wired"
     hard_gate: false
+    tier: normal
     description: "关键 shell 组件仍接入共享 dt tokens，而不是完全回退到页面内硬编码配色"
 
   - name: desktop_shell_color_contract
     command: "npx eslint src/client/components/desktop-layout.tsx src/client/components/desktop-app-shell.tsx src/client/components/desktop-sidebar.tsx src/client/components/desktop-nav-rail.tsx"
     hard_gate: false
+    tier: normal
     description: "共享 shell 组件禁止重新引入硬编码颜色或 palette utility"
 
   - name: desktop_shell_page_coverage
     command: "rg -q 'DesktopAppShell|DesktopLayout|DesktopNavRail' 'src/app/traces/page.tsx' 'src/app/workspace/[workspaceId]/workspace-page-client.tsx' 'src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx' 'src/app/workspace/[workspaceId]/sessions/[sessionId]/session-page-client.tsx' && echo 'desktop shell coverage wired'"
     pattern: "desktop shell coverage wired"
     hard_gate: false
+    tier: normal
     description: "关键桌面页面继续通过共享 shell 组件接入，而不是复制各自的页面壳体"
 ---
 
