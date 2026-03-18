@@ -6,6 +6,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use super::policy::{ResolvedSandboxPolicy, SandboxPolicyInput};
+
 /// Docker label used to identify sandbox containers.
 pub const SANDBOX_LABEL: &str = "routa.sandbox";
 
@@ -36,6 +38,9 @@ pub struct SandboxInfo {
     /// Host port mapped to the in-sandbox server.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub port: Option<u16>,
+    /// Effective sandbox policy after workspace/codebase resolution.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effective_policy: Option<ResolvedSandboxPolicy>,
     /// When this sandbox was created.
     pub created_at: DateTime<Utc>,
     /// When this sandbox was last active.
@@ -48,6 +53,18 @@ pub struct SandboxInfo {
 pub struct CreateSandboxRequest {
     /// Language for the sandbox kernel (currently only "python" is supported).
     pub lang: String,
+    /// Optional workspace-aware sandbox policy. When omitted, legacy sandbox behavior is used.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub policy: Option<SandboxPolicyInput>,
+}
+
+/// Internal request passed to the sandbox manager after policy resolution.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResolvedCreateSandboxRequest {
+    pub lang: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub policy: Option<ResolvedSandboxPolicy>,
 }
 
 /// Request body for executing code in a sandbox.

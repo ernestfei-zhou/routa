@@ -18,8 +18,9 @@ use tokio::sync::RwLock;
 
 use crate::acp::docker::find_available_port;
 
+use super::policy::{ResolvedSandboxPolicy, SandboxEnvMode, SandboxNetworkMode};
 use super::types::{
-    CreateSandboxRequest, ExecuteRequest, SandboxInfo, SANDBOX_CHECK_INTERVAL_SECS,
+    ExecuteRequest, ResolvedCreateSandboxRequest, SandboxInfo, SANDBOX_CHECK_INTERVAL_SECS,
     SANDBOX_CONTAINER_PORT, SANDBOX_IDLE_TIMEOUT_SECS, SANDBOX_IMAGE, SANDBOX_LABEL,
 };
 
@@ -72,7 +73,8 @@ impl SandboxManager {
         let used_ports = self.used_ports.clone();
 
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(Duration::from_secs(SANDBOX_CHECK_INTERVAL_SECS));
+            let mut interval =
+                tokio::time::interval(Duration::from_secs(SANDBOX_CHECK_INTERVAL_SECS));
             loop {
                 interval.tick().await;
                 let now = Instant::now();
@@ -134,7 +136,7 @@ impl SandboxManager {
     /// Create a new sandbox container and return its info.
     pub async fn create_sandbox(
         &self,
-        req: CreateSandboxRequest,
+        req: ResolvedCreateSandboxRequest,
     ) -> Result<SandboxInfo, String> {
         let lang = req.lang.to_lowercase();
         if lang != "python" {
@@ -153,23 +155,10 @@ impl SandboxManager {
         let container_name = format!("routa-sandbox-{}", short_id);
 
         // Build `docker run` command.
+        let docker_args =
+            build_docker_run_args(&container_name, host_port, &lang, req.policy.as_ref());
         let output = Command::new("docker")
-            .args([
-                "run",
-                "-d",
-                "--rm",
-                &format!("--name={}", container_name),
-                &format!("-p={}:{}", host_port, SANDBOX_CONTAINER_PORT),
-                &format!("--label={}=1", SANDBOX_LABEL),
-                &format!("--label={}.lang={}", SANDBOX_LABEL, lang),
-                // Resource limits to prevent runaway processes.
-                "--memory=512m",
-                "--cpus=1",
-                "--pids-limit=64",
-                // Network isolation: no outbound internet for untrusted code.
-                "--network=bridge",
-                SANDBOX_IMAGE,
-            ])
+            .args(&docker_args)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
@@ -192,6 +181,7 @@ impl SandboxManager {
             status: "running".to_string(),
             lang,
             port: Some(host_port),
+            effective_policy: req.policy,
             created_at: now,
             last_active_at: now,
         };
@@ -252,6 +242,9 @@ impl SandboxManager {
             .write()
             .await
             .insert(id.to_string(), Instant::now());
+        if let Some(stored) = self.sandboxes.write().await.get_mut(&info.id) {
+            stored.last_active_at = Utc::now();
+        }
 
         Ok(response)
     }
@@ -307,6 +300,96 @@ async fn stop_container(container_id: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn build_docker_run_args(
+    container_name: &str,
+    host_port: u16,
+    lang: &str,
+    policy: Option<&ResolvedSandboxPolicy>,
+) -> Vec<String> {
+    let mut args = vec![
+        "run".to_string(),
+        "-d".to_string(),
+        "--rm".to_string(),
+        format!("--name={}", container_name),
+        format!("-p={}:{}", host_port, SANDBOX_CONTAINER_PORT),
+        format!("--label={}=1", SANDBOX_LABEL),
+        format!("--label={}.lang={}", SANDBOX_LABEL, lang),
+        "--memory=512m".to_string(),
+        "--cpus=1".to_string(),
+        "--pids-limit=64".to_string(),
+    ];
+
+    if let Some(policy) = policy {
+        if let Some(workspace_id) = &policy.workspace_id {
+            args.push(format!(
+                "--label={}.workspace_id={}",
+                SANDBOX_LABEL, workspace_id
+            ));
+        }
+        if let Some(codebase_id) = &policy.codebase_id {
+            args.push(format!(
+                "--label={}.codebase_id={}",
+                SANDBOX_LABEL, codebase_id
+            ));
+        }
+        args.push(format!(
+            "--label={}.network_mode={}",
+            SANDBOX_LABEL,
+            match policy.network_mode {
+                SandboxNetworkMode::Bridge => "bridge",
+                SandboxNetworkMode::None => "none",
+            }
+        ));
+
+        for mount in &policy.mounts {
+            args.push("-v".to_string());
+            args.push(format!(
+                "{}:{}:{}",
+                mount.host_path,
+                mount.container_path,
+                mount.access.docker_suffix()
+            ));
+        }
+
+        args.push("-w".to_string());
+        args.push(policy.container_workdir.clone());
+
+        for (key, value) in collect_policy_env(policy) {
+            args.push("-e".to_string());
+            args.push(format!("{}={}", key, value));
+        }
+
+        args.push("--network".to_string());
+        args.push(
+            match policy.network_mode {
+                SandboxNetworkMode::Bridge => "bridge",
+                SandboxNetworkMode::None => "none",
+            }
+            .to_string(),
+        );
+    } else {
+        args.push("--network=bridge".to_string());
+    }
+
+    args.push(SANDBOX_IMAGE.to_string());
+    args
+}
+
+fn collect_policy_env(policy: &ResolvedSandboxPolicy) -> Vec<(String, String)> {
+    let mut env_pairs = match policy.env_mode {
+        SandboxEnvMode::Sanitized => policy
+            .env_allowlist
+            .iter()
+            .filter_map(|key| std::env::var(key).ok().map(|value| (key.clone(), value)))
+            .collect::<Vec<_>>(),
+        SandboxEnvMode::Inherit => std::env::vars().collect::<Vec<_>>(),
+    };
+
+    env_pairs.sort_by(|left, right| left.0.cmp(&right.0));
+    env_pairs.dedup_by(|left, right| left.0 == right.0);
+    env_pairs
+}
+
 /// Parse container port from `docker inspect` JSON output.
 #[allow(dead_code)]
 async fn get_container_port(container_id: &str, container_port: u16) -> Option<u16> {
@@ -338,6 +421,9 @@ async fn get_container_port(container_id: &str, container_port: u16) -> Option<u
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sandbox::{
+        ResolvedSandboxPolicy, SandboxEnvMode, SandboxMount, SandboxMountAccess, SandboxNetworkMode,
+    };
 
     #[test]
     fn sandbox_manager_creates_default() {
@@ -366,8 +452,9 @@ mod tests {
     async fn create_sandbox_rejects_unsupported_lang() {
         let mgr = SandboxManager::new();
         let err = mgr
-            .create_sandbox(CreateSandboxRequest {
+            .create_sandbox(ResolvedCreateSandboxRequest {
                 lang: "ruby".to_string(),
+                policy: None,
             })
             .await
             .unwrap_err();
@@ -386,10 +473,14 @@ mod tests {
                 status: "running".to_string(),
                 lang: "python".to_string(),
                 port: Some(19999),
+                effective_policy: None,
                 created_at: now,
                 last_active_at: now,
             };
-            mgr.sandboxes.write().await.insert("fake-id".to_string(), info);
+            mgr.sandboxes
+                .write()
+                .await
+                .insert("fake-id".to_string(), info);
         }
         let err = mgr
             .execute_in_sandbox(
@@ -407,5 +498,44 @@ mod tests {
     async fn delete_sandbox_returns_err_for_unknown() {
         let mgr = SandboxManager::new();
         assert!(mgr.delete_sandbox("nonexistent").await.is_err());
+    }
+
+    #[test]
+    fn docker_args_include_policy_mounts_and_workdir() {
+        let policy = ResolvedSandboxPolicy {
+            workspace_id: Some("ws-1".to_string()),
+            codebase_id: Some("cb-1".to_string()),
+            scope_root: "/repo".to_string(),
+            host_workdir: "/repo/src".to_string(),
+            container_workdir: "/workspace/src".to_string(),
+            read_only_paths: vec![],
+            read_write_paths: vec!["/repo/src".to_string()],
+            network_mode: SandboxNetworkMode::None,
+            env_mode: SandboxEnvMode::Sanitized,
+            env_allowlist: vec![],
+            mounts: vec![
+                SandboxMount {
+                    host_path: "/repo".to_string(),
+                    container_path: "/workspace".to_string(),
+                    access: SandboxMountAccess::ReadOnly,
+                    reason: Some("scopeRoot".to_string()),
+                },
+                SandboxMount {
+                    host_path: "/repo/src".to_string(),
+                    container_path: "/workspace/src".to_string(),
+                    access: SandboxMountAccess::ReadWrite,
+                    reason: Some("scopeOverride".to_string()),
+                },
+            ],
+            notes: vec![],
+        };
+
+        let args = build_docker_run_args("sandbox-name", 12345, "python", Some(&policy));
+        assert!(args.iter().any(|arg| arg == "--network"));
+        assert!(args.iter().any(|arg| arg == "none"));
+        assert!(args.iter().any(|arg| arg == "/workspace/src"));
+        assert!(args
+            .iter()
+            .any(|arg| arg == "/repo:/workspace:ro" || arg == "/repo/src:/workspace/src:rw"));
     }
 }

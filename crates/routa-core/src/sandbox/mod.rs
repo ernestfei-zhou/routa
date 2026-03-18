@@ -21,10 +21,15 @@
 //! Reference: <https://amirmalik.net/2025/03/07/code-sandboxes-for-llm-ai-agents>
 
 pub mod manager;
+pub mod policy;
 pub mod types;
 
 pub use manager::SandboxManager;
+pub use policy::{
+    ResolvedSandboxPolicy, SandboxEnvMode, SandboxMount, SandboxMountAccess, SandboxNetworkMode,
+    SandboxPolicyContext, SandboxPolicyInput, SANDBOX_SCOPE_CONTAINER_ROOT,
+};
 pub use types::{
-    CreateSandboxRequest, ExecuteRequest, SandboxInfo, SandboxOutputEvent, SANDBOX_IMAGE,
-    SANDBOX_LABEL,
+    CreateSandboxRequest, ExecuteRequest, ResolvedCreateSandboxRequest, SandboxInfo,
+    SandboxOutputEvent, SANDBOX_IMAGE, SANDBOX_LABEL,
 };

@@ -24,12 +24,16 @@ use axum::{
 use serde_json::json;
 
 use crate::error::ServerError;
-use crate::sandbox::types::{CreateSandboxRequest, ExecuteRequest};
+use crate::sandbox::{
+    policy::SandboxPolicyContext,
+    types::{CreateSandboxRequest, ExecuteRequest, ResolvedCreateSandboxRequest},
+};
 use crate::state::AppState;
 
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(list_sandboxes))
+        .route("/explain", post(explain_policy))
         .route("/", post(create_sandbox))
         .route("/{id}", get(get_sandbox))
         .route("/{id}/execute", post(execute_code))
@@ -53,13 +57,26 @@ async fn create_sandbox(
     State(state): State<AppState>,
     Json(body): Json<CreateSandboxRequest>,
 ) -> Result<(StatusCode, Json<serde_json::Value>), ServerError> {
+    let resolved = resolve_create_request(&state, body).await?;
     let info = state
         .sandbox_manager
-        .create_sandbox(body)
+        .create_sandbox(resolved)
         .await
         .map_err(ServerError::Internal)?;
 
     Ok((StatusCode::CREATED, Json(json!(info))))
+}
+
+async fn explain_policy(
+    State(state): State<AppState>,
+    Json(body): Json<CreateSandboxRequest>,
+) -> Result<Json<serde_json::Value>, ServerError> {
+    let resolved = resolve_create_request(&state, body).await?;
+    let policy = resolved.policy.ok_or_else(|| {
+        ServerError::BadRequest("Sandbox policy is required for /api/sandboxes/explain".to_string())
+    })?;
+
+    Ok(Json(json!({ "policy": policy })))
 }
 
 // ── GET /sandboxes/{id} ───────────────────────────────────────────────────────
@@ -133,4 +150,78 @@ async fn delete_sandbox(
         })?;
 
     Ok(Json(json!({ "message": format!("Sandbox {id} deleted") })))
+}
+
+async fn resolve_create_request(
+    state: &AppState,
+    body: CreateSandboxRequest,
+) -> Result<ResolvedCreateSandboxRequest, ServerError> {
+    let policy = match body.policy {
+        Some(policy) if !policy.is_empty() => {
+            let context = resolve_policy_context(state, &policy).await?;
+            Some(policy.resolve(context).map_err(ServerError::BadRequest)?)
+        }
+        _ => None,
+    };
+
+    Ok(ResolvedCreateSandboxRequest {
+        lang: body.lang,
+        policy,
+    })
+}
+
+async fn resolve_policy_context(
+    state: &AppState,
+    policy: &crate::sandbox::policy::SandboxPolicyInput,
+) -> Result<Option<SandboxPolicyContext>, ServerError> {
+    let workspace_id = policy.workspace_id.clone();
+    let codebase_id = policy.codebase_id.clone();
+
+    if workspace_id.is_none() && codebase_id.is_none() {
+        return Ok(None);
+    }
+
+    let mut context = SandboxPolicyContext {
+        workspace_id,
+        codebase_id,
+        workspace_root: None,
+    };
+
+    if let Some(codebase_id) = context.codebase_id.clone() {
+        let codebase = state
+            .codebase_store
+            .get(&codebase_id)
+            .await?
+            .ok_or_else(|| ServerError::NotFound(format!("Codebase {} not found", codebase_id)))?;
+
+        if let Some(workspace_id) = &context.workspace_id {
+            if workspace_id != &codebase.workspace_id {
+                return Err(ServerError::BadRequest(format!(
+                    "Codebase {} does not belong to workspace {}",
+                    codebase_id, workspace_id
+                )));
+            }
+        }
+
+        context.workspace_id = Some(codebase.workspace_id.clone());
+        context.workspace_root = Some(std::path::PathBuf::from(&codebase.repo_path));
+        return Ok(Some(context));
+    }
+
+    if let Some(workspace_id) = context.workspace_id.clone() {
+        state
+            .workspace_store
+            .get(&workspace_id)
+            .await?
+            .ok_or_else(|| {
+                ServerError::NotFound(format!("Workspace {} not found", workspace_id))
+            })?;
+
+        if let Some(codebase) = state.codebase_store.get_default(&workspace_id).await? {
+            context.codebase_id = Some(codebase.id);
+            context.workspace_root = Some(std::path::PathBuf::from(codebase.repo_path));
+        }
+    }
+
+    Ok(Some(context))
 }
