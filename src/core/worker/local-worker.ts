@@ -121,6 +121,10 @@ export class LocalWorker implements Worker {
           sessionId,
           cwd,
           noopNotification,
+          {
+            workspaceId: task.workspaceId,
+            sandboxId: task.sandboxId,
+          },
         );
       } else if (KNOWN_PROVIDERS.has(task.agentId)) {
         acpSessionId = await manager.createSession(

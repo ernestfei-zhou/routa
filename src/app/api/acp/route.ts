@@ -53,6 +53,11 @@ import { getTerminalManager } from "@/core/acp/terminal-manager";
 
 export const dynamic = "force-dynamic";
 
+function isWorkspaceProvider(provider: string): boolean {
+  const normalized = provider.toLowerCase();
+  return normalized === "workspace" || normalized === "workspace-agent" || normalized === "routa-native";
+}
+
 // ─── Session write buffer singleton ─────────────────────────────────────
 // Batches and debounces history writes to reduce I/O during streaming.
 let _writeBuffer: SessionWriteBuffer | null = null;
@@ -251,6 +256,7 @@ export async function POST(request: NextRequest) {
       const parentSessionId = (p.parentSessionId as string | undefined) || undefined;
       const model = (p.model as string | undefined);
       const specialistId = (p.specialistId as string | undefined);
+      const sandboxId = (p.sandboxId as string | undefined)?.trim() || undefined;
       const toolMode = p.toolMode === "full"
         ? "full"
         : p.toolMode === "essential"
@@ -317,6 +323,7 @@ export async function POST(request: NextRequest) {
 
       const preset = getPresetById(provider);
       const isClaudeCode = preset?.nonStandardApi === true || provider === "claude";
+      const isWorkspaceAgent = isWorkspaceProvider(provider);
       // claude-code-sdk is the SDK-based adapter for serverless environments
       const isClaudeCodeSdk = provider === "claude-code-sdk";
       // opencode-sdk is the SDK-based adapter for connecting to remote OpenCode server
@@ -388,6 +395,7 @@ export async function POST(request: NextRequest) {
         modeId,
         model,
         specialistId: specialistId ?? undefined,
+        sandboxId,
         acpStatus: "connecting",
         createdAt: now.toISOString(),
       });
@@ -444,8 +452,36 @@ export async function POST(request: NextRequest) {
       const creationPromise = (async () => {
         try {
           let acpSessionId: string;
+          let workspaceSessionAgentId: string | undefined;
 
-          if (isOpencodeSdk) {
+          if (isWorkspaceAgent) {
+            const system = getRoutaSystem();
+            const effectiveRole = (role ?? "DEVELOPER") as AgentRole;
+            const agentResult = await system.tools.createAgent({
+              name: `workspace-${effectiveRole.toLowerCase()}-${sessionId.slice(0, 8)}`,
+              role: effectiveRole,
+              workspaceId,
+            });
+            if (!agentResult.success || !agentResult.data) {
+              throw new Error(agentResult.error ?? "Failed to create workspace session agent");
+            }
+            workspaceSessionAgentId = (agentResult.data as { agentId: string }).agentId;
+          }
+
+          if (isWorkspaceAgent) {
+            const system = getRoutaSystem();
+            acpSessionId = await manager.createWorkspaceAgentSession(
+              sessionId,
+              cwd,
+              forwardSessionUpdate,
+              {
+                agentTools: system.tools,
+                workspaceId,
+                agentId: workspaceSessionAgentId,
+                sandboxId,
+              },
+            );
+          } else if (isOpencodeSdk) {
             acpSessionId = await manager.createOpencodeSdkSession(
               sessionId,
               forwardSessionUpdate
@@ -542,14 +578,22 @@ export async function POST(request: NextRequest) {
             });
 
             const system = getRoutaSystem();
-            const agentResult = await system.tools.createAgent({
-              name: `routa-coordinator-${sessionId.slice(0, 8)}`,
-              role: AgentRole.ROUTA,
-              workspaceId: (p.workspaceId as string) || "default",
-            });
+            if (workspaceSessionAgentId) {
+              routaAgentId = workspaceSessionAgentId;
+            } else {
+              const agentResult = await system.tools.createAgent({
+                name: `routa-coordinator-${sessionId.slice(0, 8)}`,
+                role: AgentRole.ROUTA,
+                workspaceId: (p.workspaceId as string) || "default",
+              });
 
-            if (agentResult.success && agentResult.data) {
-              routaAgentId = (agentResult.data as { agentId: string }).agentId;
+              if (agentResult.success && agentResult.data) {
+                routaAgentId = (agentResult.data as { agentId: string }).agentId;
+                orchestrator.registerAgentSession(routaAgentId, sessionId);
+              }
+            }
+
+            if (routaAgentId) {
               orchestrator.registerAgentSession(routaAgentId, sessionId);
 
               orchestrator.setNotificationHandler((targetSessionId, data) => {
@@ -621,14 +665,15 @@ export async function POST(request: NextRequest) {
             cwd,
             branch,
             workspaceId,
-            routaAgentId: routaAgentId ?? acpSessionId,
             provider,
             role: role ?? "CRAFTER",
             toolMode,
             parentSessionId,
             modeId,
             model,
+            routaAgentId: routaAgentId ?? workspaceSessionAgentId ?? acpSessionId,
             specialistId: specialistId ?? undefined,
+            sandboxId,
             specialistSystemPrompt,
             acpStatus: "ready",
             createdAt: now.toISOString(),
@@ -650,7 +695,7 @@ export async function POST(request: NextRequest) {
             cwd,
             branch,
             workspaceId,
-            routaAgentId: routaAgentId ?? acpSessionId,
+            routaAgentId: routaAgentId ?? workspaceSessionAgentId ?? acpSessionId,
             provider,
             role: role ?? "CRAFTER",
             parentSessionId,

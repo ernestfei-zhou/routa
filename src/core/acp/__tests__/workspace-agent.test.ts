@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { WorkspaceAgentStateMachine } from "../workspace-agent/workspace-agent-state";
 import { resolveWorkspaceAgentConfig } from "../workspace-agent/workspace-agent-config";
+import { createAgentManagementTools } from "../workspace-agent/workspace-agent-tools";
 import { getProviderAdapter, clearAdapterCache } from "../provider-adapter/index";
 import { AgentEventBridge } from "../agent-event-bridge/agent-event-bridge";
 import type { JsonRpcMessage } from "../processer";
@@ -199,6 +200,38 @@ describe("WorkspaceAgentProviderAdapter", () => {
     const update = Array.isArray(result) ? result[0] : result!;
     expect(update.eventType).toBe("turn_complete");
     expect(update.turnComplete?.stopReason).toBe("end_turn");
+  });
+});
+
+describe("createAgentManagementTools", () => {
+  it("uses the default sandbox id for permission requests when none is passed explicitly", async () => {
+    const requestPermission = vi.fn().mockResolvedValue({
+      data: { requestId: "req-1", decision: "pending" },
+    });
+    const tools = createAgentManagementTools(
+      {
+        requestPermission,
+      } as unknown as import("@/core/tools/agent-tools").AgentTools,
+      "ws-1",
+      "agent-1",
+      { defaultSandboxId: "sandbox-default" },
+    );
+
+    const result = await tools.request_permission.execute?.(
+      {
+        coordinatorAgentId: "coord-1",
+        type: "file_edit",
+        description: "Need to edit src/main.rs",
+      },
+      {} as never,
+    );
+
+    expect(result).toMatchObject({ requestId: "req-1", decision: "pending" });
+    expect(requestPermission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: { sandboxId: "sandbox-default" },
+      }),
+    );
   });
 });
 

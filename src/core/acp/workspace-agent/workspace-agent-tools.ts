@@ -280,6 +280,7 @@ export function createAgentManagementTools(
   agentTools: AgentTools,
   workspaceId: string,
   agentId: string,
+  context?: { defaultSandboxId?: string },
 ) {
   return {
     list_agents: tool({
@@ -345,6 +346,7 @@ export function createAgentManagementTools(
       description: "Request runtime permission from the coordinator agent before performing a sensitive operation (file edits outside scope, destructive commands, dependency installs, etc.).",
       inputSchema: requestPermissionParams,
       execute: async ({ coordinatorAgentId, type, description, tool: toolName, sandboxId, urgency }: z.infer<typeof requestPermissionParams>) => {
+        const effectiveSandboxId = sandboxId ?? context?.defaultSandboxId;
         const result = await agentTools.requestPermission({
           requestingAgentId: agentId,
           coordinatorAgentId,
@@ -352,7 +354,7 @@ export function createAgentManagementTools(
           type,
           description,
           tool: toolName,
-          options: sandboxId ? { sandboxId } : undefined,
+          options: effectiveSandboxId ? { sandboxId: effectiveSandboxId } : undefined,
           urgency,
         });
         return result.data ?? { error: result.error };

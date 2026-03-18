@@ -65,6 +65,8 @@ export interface BackgroundTask {
   priority: BackgroundTaskPriority;
   /** ACP session ID created when the task starts running */
   resultSessionId?: string;
+  /** Optional sandbox bound to this task's execution context */
+  sandboxId?: string;
   /** Error message when status === "FAILED" */
   errorMessage?: string;
   /** Number of times execution has been attempted (for future retry logic) */
@@ -111,6 +113,7 @@ export interface CreateBackgroundTaskInput {
   triggeredBy?: string;
   triggerSource?: BackgroundTaskTriggerSource;
   priority?: BackgroundTaskPriority;
+  sandboxId?: string;
   maxAttempts?: number;
   // Workflow orchestration
   workflowRunId?: string;
@@ -133,6 +136,7 @@ export function createBackgroundTask(
     triggeredBy: input.triggeredBy ?? "user",
     triggerSource: input.triggerSource ?? "manual",
     priority: input.priority ?? "NORMAL",
+    sandboxId: input.sandboxId,
     attempts: 0,
     maxAttempts: input.maxAttempts ?? 1,
     createdAt: now,

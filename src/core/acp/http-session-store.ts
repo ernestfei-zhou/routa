@@ -46,6 +46,8 @@ export interface RoutaSessionRecord {
   parentSessionId?: string;
   /** The custom specialist ID used for this session (if any) */
   specialistId?: string;
+  /** Sandbox session context used for permission delegation fallbacks. */
+  sandboxId?: string;
   /** Pre-built system prompt header for the specialist (systemPrompt + roleReminder) */
   specialistSystemPrompt?: string;
   /** ACP process lifecycle status: connecting → ready | error */

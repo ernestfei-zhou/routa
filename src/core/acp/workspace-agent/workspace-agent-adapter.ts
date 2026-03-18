@@ -30,6 +30,7 @@ export interface WorkspaceAgentAdapterOptions {
   agentTools?: AgentTools;
   workspaceId?: string;
   agentId?: string;
+  sandboxId?: string;
   config?: Partial<WorkspaceAgentConfig>;
   lifecycleNotifier?: LifecycleNotifier;
 }
@@ -44,6 +45,7 @@ export class WorkspaceAgentAdapter {
   private agentTools?: AgentTools;
   private workspaceId?: string;
   private agentId?: string;
+  private sandboxId?: string;
   private lifecycleNotifier?: LifecycleNotifier;
   /** Conversation history for multi-turn */
   private messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [];
@@ -58,6 +60,7 @@ export class WorkspaceAgentAdapter {
     this.agentTools = options?.agentTools;
     this.workspaceId = options?.workspaceId;
     this.agentId = options?.agentId;
+    this.sandboxId = options?.sandboxId;
     this.config = resolveWorkspaceAgentConfig(options?.config);
     this.lifecycleNotifier = options?.lifecycleNotifier;
   }
@@ -128,7 +131,9 @@ export class WorkspaceAgentAdapter {
     const codingTools = createCodingTools(this.cwd);
     const mgmtTools =
       this.agentTools && this.workspaceId && this.agentId
-        ? createAgentManagementTools(this.agentTools, this.workspaceId, this.agentId)
+        ? createAgentManagementTools(this.agentTools, this.workspaceId, this.agentId, {
+            defaultSandboxId: this.sandboxId,
+          })
         : {};
     const allTools = { ...codingTools, ...mgmtTools };
 
