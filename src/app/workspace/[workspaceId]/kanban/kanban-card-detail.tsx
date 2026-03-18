@@ -68,6 +68,19 @@ function getOrderedSessionIds(task: TaskInfo): string[] {
       ]));
 }
 
+function buildSessionDisplayLabel(
+  sessionId: string,
+  index: number,
+  sessionMap: Map<string, SessionInfo>,
+): string {
+  const session = sessionMap.get(sessionId);
+  const name = session?.name?.trim();
+  if (name) return name;
+  const provider = session?.provider?.trim();
+  if (provider) return provider;
+  return `Run ${index + 1}`;
+}
+
 export function KanbanCardDetail({
   task,
   boardColumns,
@@ -612,16 +625,19 @@ export function KanbanCardActivityPanel({
 
 export function KanbanCardActivityBar({
   task,
+  sessions = [],
   currentSessionId,
   onSelectSession,
 }: {
   task: TaskInfo;
+  sessions?: SessionInfo[];
   currentSessionId?: string;
   onSelectSession?: (sessionId: string) => void;
 }) {
   const orderedSessionIds = getOrderedSessionIds(task);
   const laneSessions = task.laneSessions ?? [];
   const laneSessionMap = new Map(laneSessions.map((entry) => [entry.sessionId, entry]));
+  const sessionMap = new Map(sessions.map((session) => [session.sessionId, session]));
   const selectedRunId = currentSessionId && orderedSessionIds.includes(currentSessionId)
     ? currentSessionId
     : orderedSessionIds[orderedSessionIds.length - 1];
@@ -642,6 +658,7 @@ export function KanbanCardActivityBar({
             const active = sessionId === selectedRunId;
             const laneSession = laneSessionMap.get(sessionId);
             const laneLabel = laneSession?.columnName ?? laneSession?.columnId;
+            const runLabel = buildSessionDisplayLabel(sessionId, index, sessionMap);
 
             return (
               <button
@@ -654,8 +671,9 @@ export function KanbanCardActivityBar({
                     : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-400 dark:hover:text-gray-200"
                 }`}
                 aria-pressed={active}
+                title={`${runLabel} (${sessionId.slice(0, 8)})`}
               >
-                <span>{`Run ${index + 1}`}</span>
+                <span className="max-w-36 truncate">{runLabel}</span>
                 {laneLabel && (
                   <span className={`max-w-24 truncate rounded-full px-1.5 py-0.5 text-[10px] ${
                     active
@@ -916,6 +934,7 @@ function RepositoriesWorktreeRow({
   const primaryCodebase = codebases.find((codebase) => codebase.id === currentCodebaseIds[0]);
   const worktree = task.worktreeId ? worktreeCache[task.worktreeId] : null;
   const expectedPath = worktree?.worktreePath ?? primaryCodebase?.repoPath ?? null;
+  const effectiveBranch = sessionInfo?.branch ?? worktree?.branch ?? primaryCodebase?.branch ?? null;
   const sessionRepoCodebase = sessionInfo ? codebases.find((codebase) => codebase.repoPath === sessionInfo.cwd) : undefined;
   const canAdoptSessionRepo = Boolean(
     sessionCwdMismatch
@@ -952,7 +971,7 @@ function RepositoriesWorktreeRow({
                 : worktree.status === "creating"
                   ? "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
                   : "bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300"
-            }`}>{worktree.branch}</span>
+            }`}>{effectiveBranch ?? worktree.branch}</span>
           )}
           <span className="ml-auto text-xs text-gray-400 transition-colors group-hover:text-gray-600 dark:group-hover:text-gray-300">
             Edit
@@ -991,6 +1010,16 @@ function RepositoriesWorktreeRow({
                 <div>
                   Active session: <span className="font-mono">{sessionInfo.cwd}</span>
                 </div>
+                {effectiveBranch && (
+                  <div>
+                    Active branch: <span className="font-mono">{effectiveBranch}</span>
+                    {worktree?.branch && sessionInfo?.branch && worktree.branch !== sessionInfo.branch && (
+                      <span className="ml-2 text-amber-600 dark:text-amber-300">
+                        worktree stored: {worktree.branch}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               {sessionCwdMismatch && (
                 <div className="mt-2 flex flex-wrap gap-2">

@@ -365,8 +365,8 @@ describe("KanbanTab card detail manual runs", () => {
       expect(acp.selectSession).toHaveBeenCalledWith("session-456");
     });
 
-    const runOne = await screen.findByRole("button", { name: /Run 1/i });
-    const runTwo = await screen.findByRole("button", { name: /Run 2/i });
+    const runOne = await screen.findByRole("button", { name: /Initial run/i });
+    const runTwo = await screen.findByRole("button", { name: /Verify run/i });
 
     expect(runOne.textContent).toContain("Dev");
     expect(runTwo.textContent).toContain("Review");
