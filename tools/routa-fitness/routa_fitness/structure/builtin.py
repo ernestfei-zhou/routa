@@ -60,7 +60,6 @@ _CODE_EXTENSIONS = {
     ".js",
     ".jsx",
 }
-_TEST_CALL_RE = re.compile(r"""\b(?:test|it)\s*\(\s*['"]([^'"]+)['"]""")
 _LANGUAGE_BY_SUFFIX = {
     ".py": "python",
     ".rs": "rust",
@@ -68,6 +67,13 @@ _LANGUAGE_BY_SUFFIX = {
     ".tsx": "tsx",
     ".js": "javascript",
     ".jsx": "javascript",
+}
+_CALL_NODE_TYPES = {
+    "python": {"call"},
+    "rust": {"call_expression", "macro_invocation"},
+    "typescript": {"call_expression", "new_expression"},
+    "tsx": {"call_expression", "new_expression"},
+    "javascript": {"call_expression", "new_expression"},
 }
 _SYMBOL_KINDS = {
     "python": {
@@ -382,8 +388,6 @@ class BuiltinGraphAdapter:
         imports: set[str] = set()
         symbols: list[dict[str, Any]] = []
         test_nodes: list[dict[str, Any]] = []
-        source_text = source.decode("utf-8", errors="replace")
-
         def visit(node, ancestors: list[Any]) -> None:
             node_type = node.type
             if node_type in {"import_statement", "import_from_statement", "use_declaration"}:
@@ -413,7 +417,7 @@ class BuiltinGraphAdapter:
         visit(tree.root_node, [])
 
         if language in {"typescript", "tsx", "javascript"} and is_test_file:
-            test_nodes.extend(self._extract_js_test_calls(rel_path, language, source_text))
+            test_nodes.extend(self._extract_js_test_calls(rel_path, language, tree.root_node, source))
 
         seen = set()
         ordered_symbols = []
@@ -504,9 +508,13 @@ class BuiltinGraphAdapter:
         for symbols in symbols_by_file_nodes.values():
             for symbol in symbols:
                 for reference in symbol.get("references", []):
-                    for candidate in symbols_by_name_nodes.get(reference, []):
-                        if candidate["qualified_name"] == symbol["qualified_name"]:
-                            continue
+                    for candidate in self._resolve_call_candidates(
+                        file_records,
+                        symbols_by_name_nodes,
+                        symbols_by_file_nodes,
+                        symbol,
+                        reference,
+                    ):
                         callees_by_source[symbol["qualified_name"]].add(
                             candidate["qualified_name"]
                         )
@@ -671,25 +679,41 @@ class BuiltinGraphAdapter:
         self,
         rel_path: str,
         language: str,
-        source_text: str,
+        root,
+        source: bytes,
     ) -> list[dict[str, Any]]:
         nodes: list[dict[str, Any]] = []
-        for index, line in enumerate(source_text.splitlines(), start=1):
-            match = _TEST_CALL_RE.search(line)
-            if not match:
+        for node in self._descendants(root, {"call_expression"}):
+            test_name = self._js_test_invocation_name(node, source)
+            if test_name not in {"test", "it"}:
                 continue
-            label = match.group(1).strip()
+            arguments = self._first_child(node, {"arguments"})
+            if not arguments:
+                continue
+            label = ""
+            references: set[str] = set()
+            for child in arguments.children:
+                if not child.is_named:
+                    continue
+                if not label and child.type == "string":
+                    label = self._strip_quotes(self._node_text(child, source))
+                    continue
+                if child.type in {"arrow_function", "function_expression"}:
+                    references.update(self._collect_call_references(language, child, source))
+            if not label:
+                continue
+            references.update(self._normalize_test_tokens(label))
             nodes.append(
                 {
-                    "qualified_name": f"{rel_path}:test:{index}",
+                    "qualified_name": f"{rel_path}:test:{node.start_point[0] + 1}",
                     "name": label,
                     "kind": "Test",
                     "file_path": rel_path,
-                    "line_start": index,
-                    "line_end": index,
+                    "line_start": node.start_point[0] + 1,
+                    "line_end": node.end_point[0] + 1,
                     "language": language,
                     "is_test": True,
-                    "references": sorted(self._normalize_test_tokens(label)),
+                    "references": sorted(references),
                     "extends": "",
                 }
             )
@@ -704,11 +728,8 @@ class BuiltinGraphAdapter:
         symbols_by_file: dict[str, list[dict[str, Any]]],
     ) -> list[dict[str, Any]]:
         targets: dict[str, dict[str, Any]] = {}
-
-        for imported in record.get("imports", []):
-            for symbol in symbols_by_file.get(imported, []):
-                if not symbol.get("is_test"):
-                    targets[symbol["qualified_name"]] = symbol
+        test_nodes = [node for node in symbols_by_file.get(rel_path, []) if node.get("is_test")]
+        candidate_files: set[str] = set(record.get("imports", []))
 
         basename = record.get("source_basename", "")
         if basename:
@@ -716,19 +737,27 @@ class BuiltinGraphAdapter:
                 if source_path == rel_path or source_record.get("is_test_file"):
                     continue
                 if source_record.get("source_basename") == basename:
-                    for symbol in symbols_by_file.get(source_path, []):
-                        if not symbol.get("is_test"):
-                            targets[symbol["qualified_name"]] = symbol
+                    candidate_files.add(source_path)
 
-        for test_node in symbols_by_file.get(rel_path, []):
-            if not test_node.get("is_test"):
-                continue
+        for source_path in sorted(candidate_files):
+            for symbol in symbols_by_file.get(source_path, []):
+                if symbol.get("is_test"):
+                    continue
+                if self._matches_test_target(symbol, test_nodes):
+                    targets[symbol["qualified_name"]] = symbol
+
+        for test_node in test_nodes:
             normalized = self._normalize_test_tokens(test_node["name"])
+            if not normalized:
+                continue
             for symbol_name, candidates in symbols_by_name.items():
                 symbol_tokens = self._normalize_test_tokens(symbol_name)
                 if symbol_tokens and symbol_tokens.issubset(normalized):
                     for candidate in candidates:
-                        if not candidate.get("is_test"):
+                        if not candidate.get("is_test") and (
+                            candidate["file_path"] in candidate_files
+                            or candidate["file_path"] == rel_path
+                        ):
                             targets[candidate["qualified_name"]] = candidate
 
         return sorted(targets.values(), key=lambda item: item["qualified_name"])
@@ -1072,7 +1101,7 @@ class BuiltinGraphAdapter:
         for ancestor in reversed(ancestors):
             if ancestor.type == "impl_item" and language == "rust":
                 return self._rust_impl_name(ancestor, source) or None
-            if ancestor.type in _SYMBOL_KINDS.get(language, {}):
+            if self._is_symbol_node(language, ancestor, source):
                 return self._symbol_name(language, ancestor, source) or None
         return None
 
@@ -1099,6 +1128,77 @@ class BuiltinGraphAdapter:
             ):
                 results[node["qualified_name"]] = node
         return sorted(results.values(), key=lambda item: item["qualified_name"])
+
+    def _matches_test_target(
+        self,
+        symbol: dict[str, Any],
+        test_nodes: list[dict[str, Any]],
+    ) -> bool:
+        symbol_name = symbol["name"]
+        symbol_tokens = self._normalize_test_tokens(symbol_name)
+        for test_node in test_nodes:
+            references = set(test_node.get("references", []))
+            if symbol_name in references:
+                return True
+            if symbol_tokens and symbol_tokens.issubset(references):
+                return True
+            test_tokens = self._normalize_test_tokens(test_node["name"])
+            if symbol_tokens and symbol_tokens.issubset(test_tokens):
+                return True
+        return False
+
+    def _resolve_call_candidates(
+        self,
+        file_records: dict[str, Any],
+        symbols_by_name: dict[str, list[dict[str, Any]]],
+        symbols_by_file: dict[str, list[dict[str, Any]]],
+        symbol: dict[str, Any],
+        reference: str,
+    ) -> list[dict[str, Any]]:
+        rel_path = symbol["file_path"]
+        candidates: dict[str, dict[str, Any]] = {}
+
+        for candidate in symbols_by_file.get(rel_path, []):
+            if candidate["qualified_name"] == symbol["qualified_name"] or candidate.get("is_test"):
+                continue
+            if candidate["name"] == reference:
+                candidates[candidate["qualified_name"]] = candidate
+
+        for imported in file_records.get(rel_path, {}).get("imports", []):
+            for candidate in symbols_by_file.get(imported, []):
+                if candidate.get("is_test"):
+                    continue
+                if candidate["name"] == reference:
+                    candidates[candidate["qualified_name"]] = candidate
+
+        if candidates:
+            return sorted(candidates.values(), key=lambda item: item["qualified_name"])
+
+        global_candidates = [
+            candidate
+            for candidate in symbols_by_name.get(reference, [])
+            if not candidate.get("is_test")
+        ]
+        if len(global_candidates) == 1 and not self._is_generic_symbol_name(reference):
+            return global_candidates
+        return []
+
+    def _is_generic_symbol_name(self, name: str) -> bool:
+        return name.lower() in {
+            "new",
+            "default",
+            "get",
+            "set",
+            "save",
+            "load",
+            "run",
+            "main",
+            "from",
+            "into",
+            "clone",
+            "update",
+            "create",
+        }
 
     def _load_ignore_patterns(self) -> list[str]:
         patterns = list(_DEFAULT_IGNORE_PATTERNS)
@@ -1163,6 +1263,13 @@ class BuiltinGraphAdapter:
             return self._node_text(identifier, source) if identifier else ""
         return ""
 
+    def _is_symbol_node(self, language: str, node, source: bytes) -> bool:
+        if node.type not in _SYMBOL_KINDS.get(language, {}):
+            return False
+        if node.type == "variable_declarator":
+            return self._looks_like_arrow_function(node, source)
+        return True
+
     def _symbol_references(
         self,
         language: str,
@@ -1170,13 +1277,67 @@ class BuiltinGraphAdapter:
         source: bytes,
         declared_name: str,
     ) -> set[str]:
+        return self._collect_call_references(
+            language,
+            node,
+            source,
+            declared_name=declared_name,
+        )
+
+    def _collect_call_references(
+        self,
+        language: str,
+        node,
+        source: bytes,
+        declared_name: str = "",
+    ) -> set[str]:
         refs: set[str] = set()
-        for child in node.children:
-            for identifier in self._descendants(child, {"identifier", "type_identifier"}):
-                text = self._node_text(identifier, source)
-                if text and text != declared_name and text != "self":
-                    refs.add(text)
+        call_types = _CALL_NODE_TYPES.get(language, set())
+        if not call_types:
+            return refs
+
+        def visit(current, *, is_root: bool = False) -> None:
+            for child in current.children:
+                if not child.is_named:
+                    continue
+                if self._is_symbol_node(language, child, source):
+                    continue
+                if child.type in call_types:
+                    text = self._call_target_name(language, child, source)
+                    if text and text != declared_name and text != "self":
+                        refs.add(text)
+                visit(child)
+
+        visit(node, is_root=True)
         return refs
+
+    def _call_target_name(self, language: str, node, source: bytes) -> str:
+        if not node.children:
+            return ""
+        first = node.children[0]
+        if language == "rust" and node.type == "macro_invocation":
+            identifier = self._first_child(node, {"identifier"})
+            return self._node_text(identifier, source) if identifier else ""
+        if first.type in {"identifier", "type_identifier"}:
+            return self._node_text(first, source)
+        if first.type in {
+            "attribute",
+            "member_expression",
+            "field_expression",
+            "scoped_identifier",
+            "qualified_name",
+        }:
+            for identifier in reversed(list(self._descendants(first, {"identifier", "property_identifier", "field_identifier", "type_identifier"}))):
+                return self._node_text(identifier, source)
+        return ""
+
+    def _js_test_invocation_name(self, node, source: bytes) -> str:
+        if not node.children:
+            return ""
+        callee = self._node_text(node.children[0], source)
+        if not callee:
+            return ""
+        return callee.split(".", 1)[0].strip()
 
     def _extract_extends(self, language: str, node, source: bytes) -> str:
         if language == "python":
@@ -1327,7 +1488,8 @@ class BuiltinGraphAdapter:
         return value.strip("\"'")
 
     def _normalize_test_tokens(self, value: str) -> set[str]:
-        normalized = re.sub(r"[^a-z0-9]+", " ", value.lower())
+        value = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", value)
+        normalized = re.sub(r"[^a-zA-Z0-9]+", " ", value.lower())
         return {part for part in normalized.split() if part and part != "test"}
 
     def _normalized_source_basename(self, rel_path: str) -> str:

@@ -148,6 +148,67 @@ def test_builtin_graph_qualifies_typescript_class_methods(tmp_path: Path):
     assert [item["qualified_name"] for item in callees["results"]] == ["src/runner.ts:helper"]
 
 
+def test_builtin_graph_limits_call_edges_to_local_or_imported_symbols(tmp_path: Path):
+    _write(
+        tmp_path / "src" / "dep.py",
+        "def run():\n    return 1\n",
+    )
+    _write(
+        tmp_path / "src" / "other.py",
+        "def run():\n    return 2\n",
+    )
+    _write(
+        tmp_path / "src" / "consumer.py",
+        "from .dep import run\n\n\ndef consume():\n    return run()\n",
+    )
+
+    adapter = BuiltinGraphAdapter(tmp_path)
+    adapter.build_or_update(full=True)
+    callees = adapter.query("callees_of", "src/consumer.py:consume")
+
+    assert [item["qualified_name"] for item in callees["results"]] == ["src/dep.py:run"]
+
+
+def test_builtin_graph_avoids_ambiguous_global_call_matches(tmp_path: Path):
+    _write(
+        tmp_path / "src" / "first.py",
+        "def run():\n    return 1\n",
+    )
+    _write(
+        tmp_path / "src" / "second.py",
+        "def run():\n    return 2\n",
+    )
+    _write(
+        tmp_path / "src" / "consumer.py",
+        "def consume():\n    return run()\n",
+    )
+
+    adapter = BuiltinGraphAdapter(tmp_path)
+    adapter.build_or_update(full=True)
+    callees = adapter.query("callees_of", "src/consumer.py:consume")
+
+    assert callees["results"] == []
+
+
+def test_builtin_graph_limits_tests_to_matching_symbols(tmp_path: Path):
+    _write(
+        tmp_path / "src" / "mod.ts",
+        "export function run() { return 1 }\nexport function helper() { return 2 }\n",
+    )
+    _write(
+        tmp_path / "src" / "mod.test.ts",
+        "import { run, helper } from './mod'\ntest('run works', () => run())\nvoid helper\n",
+    )
+
+    adapter = BuiltinGraphAdapter(tmp_path)
+    adapter.build_or_update(full=True)
+    run_tests = adapter.query("tests_for", "src/mod.ts:run")
+    helper_tests = adapter.query("tests_for", "src/mod.ts:helper")
+
+    assert [item["qualified_name"] for item in run_tests["results"]] == ["src/mod.test.ts:test:2"]
+    assert helper_tests["results"] == []
+
+
 def test_builtin_graph_queries_from_persisted_index_without_file_cache(tmp_path: Path):
     _write(
         tmp_path / "src" / "service.py",
