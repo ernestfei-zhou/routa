@@ -5,10 +5,27 @@ use serde::{Deserialize, Serialize};
 /// When a card is moved to this column, the automation can trigger an agent session.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
+pub struct KanbanAutomationStep {
+    pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub provider_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub specialist_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub specialist_name: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct KanbanColumnAutomation {
     /// Whether automation is enabled for this column
     #[serde(default)]
     pub enabled: bool,
+    /// Ordered automation steps to run within the same lane
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub steps: Option<Vec<KanbanAutomationStep>>,
     /// Provider ID to use for the automation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub provider_id: Option<String>,
@@ -30,6 +47,35 @@ pub struct KanbanColumnAutomation {
     /// Automatically advance card on session success
     #[serde(skip_serializing_if = "Option::is_none")]
     pub auto_advance_on_success: Option<bool>,
+}
+
+impl KanbanColumnAutomation {
+    pub fn primary_step(&self) -> Option<KanbanAutomationStep> {
+        if !self.enabled {
+            return None;
+        }
+
+        if let Some(step) = self
+            .steps
+            .as_ref()
+            .and_then(|steps| steps.iter().find(|step| {
+                step.provider_id.is_some()
+                    || step.role.is_some()
+                    || step.specialist_id.is_some()
+                    || step.specialist_name.is_some()
+            }))
+        {
+            return Some(step.clone());
+        }
+
+        Some(KanbanAutomationStep {
+            id: "step-1".to_string(),
+            provider_id: self.provider_id.clone(),
+            role: self.role.clone(),
+            specialist_id: self.specialist_id.clone(),
+            specialist_name: self.specialist_name.clone(),
+        })
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

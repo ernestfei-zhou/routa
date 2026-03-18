@@ -259,11 +259,30 @@ impl TaskApplicationService {
 
         // Apply automation provider/role if column automation is configured
         if let Some(ref automation) = column_automation {
+            let primary_step = automation.primary_step();
             if task.assigned_provider.is_none() {
-                task.assigned_provider = automation.provider_id.clone();
+                task.assigned_provider = primary_step
+                    .as_ref()
+                    .and_then(|step| step.provider_id.clone())
+                    .or_else(|| automation.provider_id.clone());
             }
             if task.assigned_role.is_none() {
-                task.assigned_role = automation.role.clone();
+                task.assigned_role = primary_step
+                    .as_ref()
+                    .and_then(|step| step.role.clone())
+                    .or_else(|| automation.role.clone());
+            }
+            if task.assigned_specialist_id.is_none() {
+                task.assigned_specialist_id = primary_step
+                    .as_ref()
+                    .and_then(|step| step.specialist_id.clone())
+                    .or_else(|| automation.specialist_id.clone());
+            }
+            if task.assigned_specialist_name.is_none() {
+                task.assigned_specialist_name = primary_step
+                    .as_ref()
+                    .and_then(|step| step.specialist_name.clone())
+                    .or_else(|| automation.specialist_name.clone());
             }
         }
 
