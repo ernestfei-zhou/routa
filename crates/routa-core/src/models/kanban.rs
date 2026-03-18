@@ -5,7 +5,7 @@ use crate::models::task::TaskStatus;
 
 /// Automation configuration for a Kanban column.
 /// When a card is moved to this column, the automation can trigger an agent session.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct KanbanAutomationStep {
     pub id: String,
@@ -19,7 +19,7 @@ pub struct KanbanAutomationStep {
     pub specialist_name: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct KanbanColumnAutomation {
     /// Whether automation is enabled for this column

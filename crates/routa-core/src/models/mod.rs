@@ -1,6 +1,7 @@
 pub mod agent;
 pub mod codebase;
 pub mod kanban;
+pub mod kanban_config;
 pub mod message;
 pub mod note;
 pub mod schedule;
