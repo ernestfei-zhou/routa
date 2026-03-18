@@ -1,6 +1,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::models::task::TaskStatus;
+
 /// Automation configuration for a Kanban column.
 /// When a card is moved to this column, the automation can trigger an agent session.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -168,5 +170,25 @@ pub fn default_kanban_board(workspace_id: String) -> KanbanBoard {
         columns: default_kanban_columns(),
         created_at: now,
         updated_at: now,
+    }
+}
+
+pub fn column_id_to_task_status(column_id: Option<&str>) -> TaskStatus {
+    match column_id.unwrap_or("backlog").to_ascii_lowercase().as_str() {
+        "dev" => TaskStatus::InProgress,
+        "review" => TaskStatus::ReviewRequired,
+        "blocked" => TaskStatus::Blocked,
+        "done" => TaskStatus::Completed,
+        _ => TaskStatus::Pending,
+    }
+}
+
+pub fn task_status_to_column_id(status: &TaskStatus) -> &'static str {
+    match status {
+        TaskStatus::InProgress => "dev",
+        TaskStatus::ReviewRequired => "review",
+        TaskStatus::Blocked => "blocked",
+        TaskStatus::Completed => "done",
+        _ => "backlog",
     }
 }
