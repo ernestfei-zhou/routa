@@ -35,6 +35,14 @@ components:
       type: string
       enum: [PENDING, IN_PROGRESS, REVIEW_REQUIRED, COMPLETED, NEEDS_FIX, BLOCKED, CANCELLED]
 
+    ArtifactType:
+      type: string
+      enum: [screenshot, test_results, code_diff, logs]
+
+    ArtifactStatus:
+      type: string
+      enum: [pending, provided, expired]
+
     VerificationVerdict:
       type: string
       enum: [APPROVED, NOT_APPROVED, BLOCKED]
@@ -285,6 +293,44 @@ components:
           $ref: "#/components/schemas/VerificationVerdict"
         verificationReport:
           type: string
+
+    Artifact:
+      type: object
+      required: [id, type, taskId, status, workspaceId, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        type:
+          $ref: "#/components/schemas/ArtifactType"
+        taskId:
+          type: string
+        providedByAgentId:
+          type: string
+        requestedByAgentId:
+          type: string
+        requestId:
+          type: string
+        content:
+          type: string
+        context:
+          type: string
+        status:
+          $ref: "#/components/schemas/ArtifactStatus"
+        workspaceId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
 
     KanbanColumnAutomation:
       type: object
@@ -1191,6 +1237,92 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Task"
+
+  /api/tasks/{id}/artifacts:
+    get:
+      operationId: listTaskArtifacts
+      summary: List all artifacts for a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The task ID
+          schema:
+            type: string
+        - name: artifact_type
+          in: query
+          description: Filter by artifact type
+          schema:
+            $ref: "#/components/schemas/ArtifactType"
+      responses:
+        "200":
+          description: List of artifacts
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [artifacts]
+                properties:
+                  artifacts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Artifact"
+        "404":
+          description: Task not found
+    post:
+      operationId: provideTaskArtifact
+      summary: Attach an artifact to a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The task ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [agentId, type, content]
+              properties:
+                agentId:
+                  type: string
+                  description: ID of the agent providing the artifact
+                type:
+                  $ref: "#/components/schemas/ArtifactType"
+                content:
+                  type: string
+                  description: Artifact content (base64 for images, text for others)
+                context:
+                  type: string
+                  description: Optional context or description
+                requestId:
+                  type: string
+                  description: Optional ID of the artifact request being fulfilled
+                metadata:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: Optional additional metadata
+      responses:
+        "201":
+          description: Artifact created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [artifact]
+                properties:
+                  artifact:
+                    $ref: "#/components/schemas/Artifact"
+        "400":
+          description: Bad request (invalid input)
+        "404":
+          description: Task not found
+        "500":
+          description: Internal server error
 
   /api/kanban/boards:
     get:
