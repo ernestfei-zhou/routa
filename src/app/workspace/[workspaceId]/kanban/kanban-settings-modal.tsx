@@ -3,6 +3,11 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import type { AcpProviderInfo } from "@/client/acp-client";
 import { formatArtifactSummary } from "@/core/kanban/transition-artifacts";
+import {
+  getKanbanAutomationSteps,
+  type KanbanAutomationStep,
+  type KanbanColumnAutomation,
+} from "@/core/models/kanban";
 import type { KanbanBoardInfo, KanbanDevSessionSupervisionInfo } from "../types";
 
 interface SpecialistOption {
@@ -11,16 +16,7 @@ interface SpecialistOption {
   role: string;
 }
 
-export interface ColumnAutomationConfig {
-  enabled: boolean;
-  providerId?: string;
-  role?: string;
-  specialistId?: string;
-  specialistName?: string;
-  transitionType?: "entry" | "exit" | "both";
-  requiredArtifacts?: ("screenshot" | "test_results" | "code_diff")[];
-  autoAdvanceOnSuccess?: boolean;
-}
+export type ColumnAutomationConfig = KanbanColumnAutomation;
 
 export interface KanbanSettingsModalProps {
   board: KanbanBoardInfo;
@@ -54,6 +50,61 @@ const ARTIFACT_OPTIONS = [
   label: string;
   hint: string;
 }>;
+
+function createEmptyAutomationStep(index: number): KanbanAutomationStep {
+  return {
+    id: `step-${index + 1}`,
+    role: "DEVELOPER",
+  };
+}
+
+function getEditableAutomationSteps(automation: ColumnAutomationConfig): KanbanAutomationStep[] {
+  if (automation.steps?.length) {
+    return automation.steps.map((step, index) => ({
+      ...step,
+      id: step.id?.trim() || `step-${index + 1}`,
+      role: step.role ?? "DEVELOPER",
+    }));
+  }
+
+  const fallbackSteps = getKanbanAutomationSteps({ ...automation, enabled: true });
+  if (fallbackSteps.length > 0) {
+    return fallbackSteps.map((step) => ({
+      ...step,
+      role: step.role ?? "DEVELOPER",
+    }));
+  }
+
+  return [createEmptyAutomationStep(0)];
+}
+
+function syncAutomationPrimaryStep(automation: ColumnAutomationConfig): ColumnAutomationConfig {
+  const steps = (automation.steps ?? []).map((step, index) => ({
+    ...step,
+    id: step.id?.trim() || `step-${index + 1}`,
+    role: step.role ?? "DEVELOPER",
+  }));
+  const primaryStep = steps[0];
+
+  return {
+    ...automation,
+    steps,
+    providerId: primaryStep?.providerId ?? automation.providerId,
+    role: primaryStep?.role ?? automation.role,
+    specialistId: primaryStep?.specialistId ?? automation.specialistId,
+    specialistName: primaryStep?.specialistName ?? automation.specialistName,
+  };
+}
+
+function updateAutomationSteps(
+  automation: ColumnAutomationConfig,
+  updater: (steps: KanbanAutomationStep[]) => KanbanAutomationStep[],
+): ColumnAutomationConfig {
+  return syncAutomationPrimaryStep({
+    ...automation,
+    steps: updater(getEditableAutomationSteps(automation)),
+  });
+}
 
 export function KanbanSettingsModal({
   board,
@@ -384,7 +435,12 @@ function ColumnAutomationWorkspace({
   specialists: SpecialistOption[];
   onUpdate: (automation: ColumnAutomationConfig) => void;
 }) {
-  const selectedSpecialist = specialists.find((specialist) => specialist.id === automation.specialistId) ?? null;
+  const automationSteps = useMemo(
+    () => getEditableAutomationSteps(automation),
+    [automation],
+  );
+  const firstStep = automationSteps[0];
+  const selectedSpecialist = specialists.find((specialist) => specialist.id === firstStep?.specialistId) ?? null;
 
   return (
     <div className="space-y-4">
@@ -438,63 +494,151 @@ function ColumnAutomationWorkspace({
             <SectionCard
               eyebrow="Routing"
               title="Who gets triggered"
-              description="Provider, role, and specialist selection define which execution lane this stage pushes work into."
+              description="Each lane can run an ordered list of specialists. Steps execute sequentially within the same column."
             >
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <ConfigField label="Provider" hint="Leave blank to use the workspace default provider.">
-                  <select
-                    aria-label="Provider"
-                    value={automation.providerId ?? ""}
-                    onChange={(event) => onUpdate({ ...automation, providerId: event.target.value || undefined })}
-                    className={SELECT_CLASS}
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-[#111722]">
+                  <div>
+                    <div className="text-sm font-medium text-slate-900 dark:text-slate-100">Automation steps</div>
+                    <div className="text-sm leading-5 text-slate-500 dark:text-slate-400">
+                      The next step starts only after the previous session succeeds.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onUpdate(updateAutomationSteps(automation, (steps) => [...steps, createEmptyAutomationStep(steps.length)]))}
+                    className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-[#0b1119]"
                   >
-                    <option value="">Default provider</option>
-                    {availableProviders.map((provider) => (
-                      <option key={`${provider.id}-${provider.name}`} value={provider.id}>
-                        {provider.name}
-                      </option>
-                    ))}
-                  </select>
-                </ConfigField>
+                    Add step
+                  </button>
+                </div>
 
-                <ConfigField label="Role" hint="Choose the orchestration behavior for the triggered agent.">
-                  <select
-                    aria-label="Role"
-                    value={automation.role ?? "DEVELOPER"}
-                    onChange={(event) => onUpdate({ ...automation, role: event.target.value })}
-                    className={SELECT_CLASS}
-                  >
-                    {ROLE_OPTIONS.map((role) => (
-                      <option key={role} value={role}>
-                        {role}
-                      </option>
-                    ))}
-                  </select>
-                </ConfigField>
+                {automationSteps.map((step, index) => {
+                  const stepSpecialist = specialists.find((specialist) => specialist.id === step.specialistId) ?? null;
+                  return (
+                    <div key={step.id} className="rounded-[20px] border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-[#111722]">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
+                            Step {index + 1}
+                          </div>
+                          <div className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">
+                            {stepSpecialist?.name ?? step.specialistName ?? step.role ?? "DEVELOPER"}
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            aria-label={`Move step ${index + 1} up`}
+                            disabled={index === 0}
+                            onClick={() => onUpdate(updateAutomationSteps(automation, (steps) => {
+                              const nextSteps = [...steps];
+                              [nextSteps[index - 1], nextSteps[index]] = [nextSteps[index], nextSteps[index - 1]];
+                              return nextSteps;
+                            }))}
+                            className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-[#0b1119]"
+                          >
+                            Up
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Move step ${index + 1} down`}
+                            disabled={index === automationSteps.length - 1}
+                            onClick={() => onUpdate(updateAutomationSteps(automation, (steps) => {
+                              const nextSteps = [...steps];
+                              [nextSteps[index], nextSteps[index + 1]] = [nextSteps[index + 1], nextSteps[index]];
+                              return nextSteps;
+                            }))}
+                            className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-[#0b1119]"
+                          >
+                            Down
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Remove step ${index + 1}`}
+                            disabled={automationSteps.length === 1}
+                            onClick={() => onUpdate(updateAutomationSteps(automation, (steps) => {
+                              const nextSteps = steps.filter((_, stepIndex) => stepIndex !== index);
+                              return nextSteps.length > 0 ? nextSteps : [createEmptyAutomationStep(0)];
+                            }))}
+                            className="rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-medium text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
 
-                <ConfigField label="Specialist" hint="Pin a named specialist when this stage should use a curated implementation pattern.">
-                  <select
-                    aria-label="Specialist"
-                    value={automation.specialistId ?? ""}
-                    onChange={(event) => {
-                      const specialist = specialists.find((item) => item.id === event.target.value);
-                      onUpdate({
-                        ...automation,
-                        specialistId: event.target.value || undefined,
-                        specialistName: specialist?.name,
-                        role: specialist?.role ?? automation.role,
-                      });
-                    }}
-                    className={SELECT_CLASS}
-                  >
-                    <option value="">No specialist</option>
-                    {specialists.map((specialist) => (
-                      <option key={specialist.id} value={specialist.id}>
-                        {specialist.name}
-                      </option>
-                    ))}
-                  </select>
-                </ConfigField>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                        <ConfigField label={`Provider ${index + 1}`} hint="Leave blank to use the workspace default provider.">
+                          <select
+                            aria-label={index === 0 ? "Provider" : `Provider ${index + 1}`}
+                            value={step.providerId ?? ""}
+                            onChange={(event) => onUpdate(updateAutomationSteps(automation, (steps) => steps.map((currentStep, stepIndex) => (
+                              stepIndex === index
+                                ? { ...currentStep, providerId: event.target.value || undefined }
+                                : currentStep
+                            ))))}
+                            className={SELECT_CLASS}
+                          >
+                            <option value="">Default provider</option>
+                            {availableProviders.map((provider) => (
+                              <option key={`${provider.id}-${provider.name}`} value={provider.id}>
+                                {provider.name}
+                              </option>
+                            ))}
+                          </select>
+                        </ConfigField>
+
+                        <ConfigField label={`Role ${index + 1}`} hint="Choose the orchestration behavior for this step.">
+                          <select
+                            aria-label={index === 0 ? "Role" : `Role ${index + 1}`}
+                            value={step.role ?? "DEVELOPER"}
+                            onChange={(event) => onUpdate(updateAutomationSteps(automation, (steps) => steps.map((currentStep, stepIndex) => (
+                              stepIndex === index
+                                ? { ...currentStep, role: event.target.value }
+                                : currentStep
+                            ))))}
+                            className={SELECT_CLASS}
+                          >
+                            {ROLE_OPTIONS.map((role) => (
+                              <option key={role} value={role}>
+                                {role}
+                              </option>
+                            ))}
+                          </select>
+                        </ConfigField>
+
+                        <ConfigField label={`Specialist ${index + 1}`} hint="Pin a named specialist when this step should use a curated pattern.">
+                          <select
+                            aria-label={index === 0 ? "Specialist" : `Specialist ${index + 1}`}
+                            value={step.specialistId ?? ""}
+                            onChange={(event) => {
+                              const specialist = specialists.find((item) => item.id === event.target.value);
+                              onUpdate(updateAutomationSteps(automation, (steps) => steps.map((currentStep, stepIndex) => (
+                                stepIndex === index
+                                  ? {
+                                    ...currentStep,
+                                    specialistId: event.target.value || undefined,
+                                    specialistName: specialist?.name,
+                                    role: specialist?.role ?? currentStep.role,
+                                  }
+                                  : currentStep
+                              ))));
+                            }}
+                            className={SELECT_CLASS}
+                          >
+                            <option value="">No specialist</option>
+                            {specialists.map((specialist) => (
+                              <option key={specialist.id} value={specialist.id}>
+                                {specialist.name}
+                              </option>
+                            ))}
+                          </select>
+                        </ConfigField>
+                      </div>
+                    </div>
+                  );
+                })}
 
                 <ConfigField label="Trigger moment" hint="Control whether the automation fires when a card enters, exits, or does either.">
                   <select
@@ -584,9 +728,10 @@ function ColumnAutomationWorkspace({
               description="A quick readout of the workflow this column will launch."
             >
               <dl className="space-y-3">
-                <SummaryRow label="Provider" value={resolveProviderName(automation.providerId, availableProviders) ?? "Workspace default"} />
-                <SummaryRow label="Role" value={selectedSpecialist?.role ?? automation.role ?? "DEVELOPER"} />
-                <SummaryRow label="Specialist" value={selectedSpecialist?.name ?? automation.specialistName ?? "None"} />
+                <SummaryRow label="Steps" value={automationSteps.map((step, index) => formatAutomationStepSummary(step, index, availableProviders, specialists)).join(" -> ")} />
+                <SummaryRow label="Provider" value={resolveProviderName(firstStep?.providerId, availableProviders) ?? "Workspace default"} />
+                <SummaryRow label="Role" value={selectedSpecialist?.role ?? firstStep?.role ?? "DEVELOPER"} />
+                <SummaryRow label="Specialist" value={selectedSpecialist?.name ?? firstStep?.specialistName ?? "None"} />
                 <SummaryRow label="Trigger" value={formatTriggerLabel(automation.transitionType)} />
                 <SummaryRow label="Artifacts" value={formatArtifactSummary(automation.requiredArtifacts)} />
                 <SummaryRow label="Auto-advance" value={automation.autoAdvanceOnSuccess ? "Enabled" : "Disabled"} />
@@ -697,14 +842,27 @@ function resolveProviderName(providerId: string | undefined, providers: AcpProvi
   return providers.find((provider) => provider.id === providerId)?.name ?? providerId;
 }
 
+function formatAutomationStepSummary(
+  step: KanbanAutomationStep,
+  index: number,
+  providers: AcpProviderInfo[],
+  specialists: SpecialistOption[],
+): string {
+  const provider = resolveProviderName(step.providerId, providers) ?? "Default";
+  const specialist = specialists.find((item) => item.id === step.specialistId)?.name ?? step.specialistName;
+  return [provider, specialist ?? step.role ?? `Step ${index + 1}`].filter(Boolean).join(" • ");
+}
+
 function getAutomationSummary(
   automation: ColumnAutomationConfig,
   providers: AcpProviderInfo[],
   specialists: SpecialistOption[],
 ): string {
-  const provider = resolveProviderName(automation.providerId, providers) ?? "Default";
-  const specialist = specialists.find((item) => item.id === automation.specialistId)?.name ?? automation.specialistName;
-  return [provider, specialist ?? automation.role ?? "DEVELOPER", formatTriggerLabel(automation.transitionType)].join(" • ");
+  const steps = getEditableAutomationSteps(automation);
+  return [
+    steps.map((step, index) => formatAutomationStepSummary(step, index, providers, specialists)).join(" -> "),
+    formatTriggerLabel(automation.transitionType),
+  ].join(" • ");
 }
 
 const SELECT_CLASS = "h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-amber-400 dark:border-slate-700 dark:bg-[#0b1119] dark:text-slate-100";

@@ -60,6 +60,12 @@ describe("KanbanSettingsModal", () => {
         {
           review: expect.objectContaining({
             enabled: true,
+            steps: [expect.objectContaining({
+              providerId: "claude",
+              specialistId: "verify",
+              specialistName: "Verifier",
+              role: "GATE",
+            })],
             providerId: "claude",
             specialistId: "verify",
             specialistName: "Verifier",

@@ -11,6 +11,7 @@ import { KanbanSettingsModal, type ColumnAutomationConfig } from "./kanban-setti
 import { KanbanCardActivityBar, KanbanCardDetail } from "./kanban-card-detail";
 import { buildKanbanTaskAgentPrompt, scheduleKanbanRefreshBurst } from "./kanban-agent-input";
 import { KanbanBgAgentPanel } from "./kanban-bg-agent-panel";
+import { getKanbanAutomationSteps, normalizeKanbanAutomation } from "@/core/models/kanban";
 import { ChatPanel } from "@/client/components/chat-panel";
 import { RepoPicker, type RepoSelection } from "@/client/components/repo-picker";
 
@@ -86,31 +87,21 @@ function QueueStatusBadge({
   );
 }
 
-function resolveAutomationProviderName(
-  automation: ColumnAutomationConfig | undefined,
-  providers: AcpProviderInfo[],
-): string {
-  if (!automation?.providerId) return "Default";
-  return providers.find((provider) => provider.id === automation.providerId)?.name ?? automation.providerId;
-}
-
-function resolveAutomationSpecialistName(
-  automation: ColumnAutomationConfig | undefined,
-  specialists: SpecialistOption[],
-): string | null {
-  if (!automation?.specialistId && !automation?.specialistName) return null;
-  return specialists.find((specialist) => specialist.id === automation.specialistId)?.name ?? automation.specialistName ?? null;
-}
-
 function formatLaneAutomationSummary(
   automation: ColumnAutomationConfig | undefined,
   providers: AcpProviderInfo[],
   specialists: SpecialistOption[],
 ): string {
-  const provider = resolveAutomationProviderName(automation, providers);
-  const role = automation?.role ?? "DEVELOPER";
-  const specialist = resolveAutomationSpecialistName(automation, specialists);
-  const core = [provider, role, specialist].filter(Boolean).join(" · ");
+  const steps = getKanbanAutomationSteps(automation);
+  const core = steps.map((step) => {
+    const provider = step.providerId
+      ? (providers.find((provider) => provider.id === step.providerId)?.name ?? step.providerId)
+      : "Default";
+    const specialist = step.specialistId || step.specialistName
+      ? (specialists.find((specialist) => specialist.id === step.specialistId)?.name ?? step.specialistName)
+      : null;
+    return [provider, step.role ?? "DEVELOPER", specialist].filter(Boolean).join(" · ");
+  }).join(" -> ");
   if (automation?.transitionType === "exit") return `${core} ->`;
   if (automation?.transitionType === "both") return `-> ${core} ->`;
   return `-> ${core}`;
@@ -1480,7 +1471,7 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
               ...col,
               visible: newVisibleColumns.includes(col.id),
               automation: newColumnAutomation[col.id]?.enabled
-                ? newColumnAutomation[col.id]
+                ? normalizeKanbanAutomation(newColumnAutomation[col.id])
                 : undefined,
             }));
 
