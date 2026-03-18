@@ -102,6 +102,7 @@ export function KanbanCardDetail({
 }: KanbanCardDetailProps) {
   const [editTitle, setEditTitle] = useState(task.title);
   const [editObjective, setEditObjective] = useState(task.objective ?? "");
+  const [editTestCases, setEditTestCases] = useState((task.testCases ?? []).join("\n"));
   const [editPriority, setEditPriority] = useState(task.priority ?? "medium");
   const [updateError, setUpdateError] = useState<string | null>(null);
 
@@ -198,6 +199,29 @@ export function KanbanCardDetail({
                   onRefresh();
                 }
               }}
+            />
+          </DetailSection>
+
+          <DetailSection
+            title="Test Cases"
+            description={compactMode ? undefined : "Keep one human-readable test scenario per line."}
+            compact={compactMode}
+          >
+            <textarea
+              value={editTestCases}
+              onChange={(event) => setEditTestCases(event.target.value)}
+              onBlur={async () => {
+                const normalizedCurrent = (task.testCases ?? []).join("\n");
+                if (editTestCases !== normalizedCurrent) {
+                  await onPatchTask(task.id, {
+                    testCases: editTestCases.split("\n").map((item) => item.trim()).filter(Boolean),
+                  });
+                  onRefresh();
+                }
+              }}
+              rows={compactMode ? 4 : 5}
+              placeholder={"One test case per line\nExample: User can reopen the session from the run history"}
+              className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-amber-400 dark:border-gray-700 dark:bg-[#0f141d] dark:text-gray-100"
             />
           </DetailSection>
 

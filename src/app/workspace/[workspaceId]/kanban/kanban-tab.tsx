@@ -871,6 +871,7 @@ export function KanbanTab({ workspaceId, boards, tasks, sessions, providers, spe
         boardId: selectedBoardId ?? defaultBoardId,
         title: draft.title,
         objective: draft.objectiveHtml.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(),
+        testCases: draft.testCases.split("\n").map((item) => item.trim()).filter(Boolean),
         priority: draft.priority,
         labels: draft.labels.split(",").map((label) => label.trim()).filter(Boolean),
         createGitHubIssue: draft.createGitHubIssue,

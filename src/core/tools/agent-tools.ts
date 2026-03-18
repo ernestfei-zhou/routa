@@ -89,6 +89,7 @@ export class AgentTools {
     scope?: string;
     acceptanceCriteria?: string[];
     verificationCommands?: string[];
+    testCases?: string[];
     dependencies?: string[];
     parallelGroup?: string;
   }): Promise<ToolResult> {
@@ -100,6 +101,7 @@ export class AgentTools {
       scope: params.scope,
       acceptanceCriteria: params.acceptanceCriteria,
       verificationCommands: params.verificationCommands,
+      testCases: params.testCases,
       dependencies: params.dependencies,
       parallelGroup: params.parallelGroup,
     });
@@ -716,6 +718,7 @@ export class AgentTools {
       verificationReport?: string;
       assignedTo?: string;
       acceptanceCriteria?: string[];
+      testCases?: string[];
     };
     agentId: string;
   }): Promise<ToolResult> {
@@ -752,6 +755,7 @@ export class AgentTools {
     if (updates.verificationReport !== undefined) task.verificationReport = updates.verificationReport;
     if (updates.assignedTo !== undefined) task.assignedTo = updates.assignedTo;
     if (updates.acceptanceCriteria !== undefined) task.acceptanceCriteria = updates.acceptanceCriteria;
+    if (updates.testCases !== undefined) task.testCases = updates.testCases;
     task.updatedAt = new Date();
 
     await this.taskStore.save(task);

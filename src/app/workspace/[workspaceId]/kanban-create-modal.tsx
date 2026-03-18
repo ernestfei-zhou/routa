@@ -9,6 +9,7 @@ import type { CodebaseData } from "@/client/hooks/use-workspaces";
 export type DraftIssue = {
   title: string;
   objectiveHtml: string;
+  testCases: string;
   priority: string;
   labels: string;
   createGitHubIssue: boolean;
@@ -18,6 +19,7 @@ export type DraftIssue = {
 export const EMPTY_DRAFT: DraftIssue = {
   title: "",
   objectiveHtml: "",
+  testCases: "",
   priority: "medium",
   labels: "",
   createGitHubIssue: false,
@@ -150,6 +152,20 @@ export function KanbanCreateModal({
               value={draft.objectiveHtml}
               onChange={(html) => setDraft((d) => ({ ...d, objectiveHtml: html }))}
             />
+          </div>
+
+          <div>
+            <div className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">Test Cases</div>
+            <textarea
+              value={draft.testCases}
+              onChange={(e) => setDraft((d) => ({ ...d, testCases: e.target.value }))}
+              placeholder={"One test case per line\nExample: User can submit the form successfully"}
+              rows={4}
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400/40 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-100"
+            />
+            <div className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              Use this for human-readable scenarios. Keep executable commands in verification separately.
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

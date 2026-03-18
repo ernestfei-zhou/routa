@@ -332,6 +332,9 @@ export class RoutaOrchestrator {
         (task.acceptanceCriteria
           ? `\n## Definition of Done\n${task.acceptanceCriteria.map((c) => `- ${c}`).join("\n")}\n`
           : "") +
+        (task.testCases
+          ? `\n## Test Cases\n${task.testCases.map((c) => `- ${c}`).join("\n")}\n`
+          : "") +
         (task.verificationCommands
           ? `\n## Verification\n${task.verificationCommands.map((c) => `- \`${c}\``).join("\n")}\n`
           : ""),

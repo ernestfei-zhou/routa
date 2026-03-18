@@ -52,6 +52,27 @@ export function parseGitHubRepo(sourceUrl?: string): string | undefined {
   return parsed ? `${parsed.owner}/${parsed.repo}` : undefined;
 }
 
+export function buildTaskGitHubIssueBody(objective: string, testCases?: string[]): string {
+  const sections: string[] = [];
+  const normalizedObjective = objective.trim();
+  const normalizedTestCases = (testCases ?? [])
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  if (normalizedObjective) {
+    sections.push(normalizedObjective);
+  }
+
+  if (normalizedTestCases.length > 0) {
+    sections.push([
+      "## Test Cases",
+      ...normalizedTestCases.map((value) => `- ${value}`),
+    ].join("\n"));
+  }
+
+  return sections.join("\n\n");
+}
+
 export async function createGitHubIssue(repo: string, payload: GitHubIssuePayload): Promise<GitHubIssueRef> {
   const token = getGitHubToken();
   if (!token) {

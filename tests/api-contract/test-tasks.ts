@@ -32,6 +32,7 @@ export async function testTasks(): Promise<TestResult[]> {
         workspaceId: "default",
         scope: "tests/api-contract",
         acceptanceCriteria: ["Tests pass on both backends"],
+        testCases: ["Create task with explicit test cases", "Read task and preserve test cases"],
         dependencies: [],
       });
       assertStatus(status, 201);
@@ -121,6 +122,9 @@ function validateTaskShape(task: Record<string, unknown>) {
   assertEnum(task.status as string, TASK_STATUSES, "task.status");
   assert(typeof task.workspaceId === "string", "task.workspaceId should be string");
   assert(Array.isArray(task.dependencies), "task.dependencies should be array");
+  if (task.testCases !== undefined) {
+    assert(Array.isArray(task.testCases), "task.testCases should be array when present");
+  }
 }
 
 async function runTest(

@@ -200,6 +200,7 @@ export class RoutaMcpToolManager {
         workspaceId: z.string().optional().describe("Workspace ID (uses default if omitted)"),
         scope: z.string().optional().describe("What files/areas are in scope"),
         acceptanceCriteria: z.array(z.string()).optional().describe("List of acceptance criteria / definition of done"),
+        testCases: z.array(z.string()).optional().describe("Human-readable test cases to create or verify"),
         verificationCommands: z.array(z.string()).optional().describe("Commands to run for verification"),
         dependencies: z.array(z.string()).optional().describe("Task IDs that must complete first"),
         parallelGroup: z.string().optional().describe("Group ID for parallel execution"),
@@ -263,6 +264,7 @@ export class RoutaMcpToolManager {
         verificationReport: z.string().optional().describe("Set verification report"),
         assignedTo: z.string().optional().describe("Assign to agent ID"),
         acceptanceCriteria: z.array(z.string()).optional().describe("Update acceptance criteria"),
+        testCases: z.array(z.string()).optional().describe("Update test cases"),
       },
       async (params) => {
         const { taskId, expectedVersion, agentId, ...updates } = params;

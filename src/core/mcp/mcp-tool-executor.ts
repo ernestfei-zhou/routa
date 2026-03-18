@@ -116,6 +116,7 @@ export async function executeMcpTool(
           workspaceId: (args.workspaceId as string) ?? workspace,
           scope: args.scope as string | undefined,
           acceptanceCriteria: args.acceptanceCriteria as string[] | undefined,
+          testCases: args.testCases as string[] | undefined,
           verificationCommands: args.verificationCommands as string[] | undefined,
           dependencies: args.dependencies as string[] | undefined,
           parallelGroup: args.parallelGroup as string | undefined,
@@ -150,6 +151,7 @@ export async function executeMcpTool(
             verificationReport: args.verificationReport as string | undefined,
             assignedTo: args.assignedTo as string | undefined,
             acceptanceCriteria: args.acceptanceCriteria as string[] | undefined,
+            testCases: args.testCases as string[] | undefined,
           },
         })
       );
@@ -528,6 +530,7 @@ export function getMcpToolDefinitions(toolMode: ToolMode = "essential") {
           workspaceId: { type: "string", description: "Workspace ID" },
           scope: { type: "string", description: "What files/areas are in scope" },
           acceptanceCriteria: { type: "array", items: { type: "string" }, description: "Definition of done items" },
+          testCases: { type: "array", items: { type: "string" }, description: "Human-readable test cases" },
           verificationCommands: { type: "array", items: { type: "string" }, description: "Commands to verify completion" },
           dependencies: { type: "array", items: { type: "string" }, description: "Task IDs that must complete first" },
           parallelGroup: { type: "string", description: "Group for parallel execution" },
@@ -853,6 +856,7 @@ export function getMcpToolDefinitions(toolMode: ToolMode = "essential") {
           verificationReport: { type: "string" },
           assignedTo: { type: "string" },
           acceptanceCriteria: { type: "array", items: { type: "string" } },
+          testCases: { type: "array", items: { type: "string" } },
         },
         required: ["taskId", "agentId"],
       },

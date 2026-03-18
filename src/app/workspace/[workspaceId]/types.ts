@@ -30,6 +30,7 @@ export interface TaskInfo {
   id: string;
   title: string;
   objective?: string;
+  testCases?: string[];
   status: string;
   boardId?: string;
   columnId?: string;
