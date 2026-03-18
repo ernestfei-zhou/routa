@@ -12,10 +12,13 @@ describe("resolveEffectiveTaskAutomation", () => {
           id: "backlog",
           automation: {
             enabled: true,
-            providerId: "claude",
-            role: "ROUTA",
-            specialistId: "backlog-refiner",
-            specialistName: "Backlog Refiner",
+            steps: [{
+              id: "refine",
+              providerId: "claude",
+              role: "ROUTA",
+              specialistId: "backlog-refiner",
+              specialistName: "Backlog Refiner",
+            }],
           },
         },
       ],
@@ -27,6 +30,9 @@ describe("resolveEffectiveTaskAutomation", () => {
     expect(resolved.role).toBe("ROUTA");
     expect(resolved.specialistId).toBe("backlog-refiner");
     expect(resolved.specialistName).toBe("Backlog Refiner");
+    expect(resolved.steps).toHaveLength(1);
+    expect(resolved.stepIndex).toBe(0);
+    expect(resolved.step?.id).toBe("refine");
   });
 
   it("prefers explicit card overrides over lane defaults", () => {

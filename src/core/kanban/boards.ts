@@ -3,7 +3,10 @@ import {
   createKanbanBoard,
   DEFAULT_KANBAN_COLUMNS,
   type KanbanColumn,
+  getKanbanAutomationSteps,
   type KanbanColumnAutomation,
+  getPrimaryKanbanAutomationStep,
+  normalizeKanbanAutomation,
   type KanbanColumnStage,
 } from "../models/kanban";
 import type { RoutaSystem } from "../routa-system";
@@ -13,49 +16,67 @@ const RECOMMENDED_AUTOMATION_BY_STAGE: Partial<Record<KanbanColumnStage, KanbanC
   // coordinator prompt injection overrides the lane specialist on first prompt.
   backlog: {
     enabled: true,
-    role: "CRAFTER",
-    specialistId: "kanban-backlog-refiner",
-    specialistName: "Backlog Refiner",
+    steps: [{
+      id: "backlog-refiner",
+      role: "CRAFTER",
+      specialistId: "kanban-backlog-refiner",
+      specialistName: "Backlog Refiner",
+    }],
     transitionType: "entry",
     autoAdvanceOnSuccess: false,
   },
   todo: {
     enabled: true,
-    role: "CRAFTER",
-    specialistId: "kanban-todo-orchestrator",
-    specialistName: "Todo Orchestrator",
+    steps: [{
+      id: "todo-orchestrator",
+      role: "CRAFTER",
+      specialistId: "kanban-todo-orchestrator",
+      specialistName: "Todo Orchestrator",
+    }],
     transitionType: "entry",
     autoAdvanceOnSuccess: false,
   },
   dev: {
     enabled: true,
-    role: "CRAFTER",
-    specialistId: "kanban-dev-executor",
-    specialistName: "Dev Crafter",
+    steps: [{
+      id: "dev-executor",
+      role: "CRAFTER",
+      specialistId: "kanban-dev-executor",
+      specialistName: "Dev Crafter",
+    }],
     transitionType: "entry",
     autoAdvanceOnSuccess: false,
   },
   review: {
     enabled: true,
-    role: "GATE",
-    specialistId: "kanban-review-guard",
-    specialistName: "Review Guard",
+    steps: [{
+      id: "review-guard",
+      role: "GATE",
+      specialistId: "kanban-review-guard",
+      specialistName: "Review Guard",
+    }],
     transitionType: "entry",
     autoAdvanceOnSuccess: false,
   },
   blocked: {
     enabled: true,
-    role: "CRAFTER",
-    specialistId: "kanban-blocked-resolver",
-    specialistName: "Blocked Resolver",
+    steps: [{
+      id: "blocked-resolver",
+      role: "CRAFTER",
+      specialistId: "kanban-blocked-resolver",
+      specialistName: "Blocked Resolver",
+    }],
     transitionType: "entry",
     autoAdvanceOnSuccess: false,
   },
   done: {
     enabled: true,
-    role: "GATE",
-    specialistId: "kanban-done-reporter",
-    specialistName: "Done Reporter",
+    steps: [{
+      id: "done-reporter",
+      role: "GATE",
+      specialistId: "kanban-done-reporter",
+      specialistName: "Done Reporter",
+    }],
     transitionType: "entry",
     autoAdvanceOnSuccess: false,
   },
@@ -78,38 +99,47 @@ export function applyRecommendedAutomationToColumns(columns: KanbanColumn[]): Ka
       return { ...column };
     }
 
+    const recommendedPrimaryStep = getPrimaryKanbanAutomationStep(recommended);
+
     if (!column.automation) {
       return {
         ...column,
-        automation: { ...recommended },
+        automation: normalizeKanbanAutomation(recommended),
       };
     }
 
+    const currentAutomation = normalizeKanbanAutomation(column.automation) ?? column.automation;
+    const customStepSpecialistIds = getKanbanAutomationSteps(currentAutomation)
+      .map((step) => step.specialistId)
+      .filter((value): value is string => Boolean(value));
+    const legacySpecialistId = currentAutomation.specialistId;
+    const hasCustomSteps = customStepSpecialistIds.some((specialistId) => !legacySpecialists.includes(specialistId));
     const shouldMigrateLegacySpecialist = Boolean(
-      column.automation.specialistId && legacySpecialists.includes(column.automation.specialistId),
+      legacySpecialistId && legacySpecialists.includes(legacySpecialistId),
     );
 
-    if ((column.automation.specialistId || column.automation.specialistName) && !shouldMigrateLegacySpecialist) {
+    if (hasCustomSteps || ((currentAutomation.specialistId || currentAutomation.specialistName) && !shouldMigrateLegacySpecialist)) {
       return {
         ...column,
-        automation: { ...column.automation },
+        automation: currentAutomation,
       };
     }
 
     return {
       ...column,
-      automation: {
+      automation: normalizeKanbanAutomation({
         ...recommended,
-        ...column.automation,
-        enabled: column.automation.enabled ?? recommended.enabled,
-        providerId: column.automation.providerId ?? recommended.providerId,
-        role: column.automation.role ?? recommended.role,
-        specialistId: recommended.specialistId,
-        specialistName: recommended.specialistName,
-        transitionType: column.automation.transitionType ?? recommended.transitionType,
-        requiredArtifacts: column.automation.requiredArtifacts,
+        ...currentAutomation,
+        enabled: currentAutomation.enabled ?? recommended.enabled,
+        steps: recommended.steps,
+        providerId: currentAutomation.providerId ?? recommendedPrimaryStep?.providerId,
+        role: currentAutomation.role ?? recommendedPrimaryStep?.role,
+        specialistId: recommendedPrimaryStep?.specialistId,
+        specialistName: recommendedPrimaryStep?.specialistName,
+        transitionType: currentAutomation.transitionType ?? recommended.transitionType,
+        requiredArtifacts: currentAutomation.requiredArtifacts,
         autoAdvanceOnSuccess: recommended.autoAdvanceOnSuccess,
-      },
+      }),
     };
   });
 }

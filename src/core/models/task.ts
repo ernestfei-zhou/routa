@@ -62,6 +62,9 @@ export interface TaskLaneSession {
   routaAgentId?: string;
   columnId?: string;
   columnName?: string;
+  stepId?: string;
+  stepIndex?: number;
+  stepName?: string;
   provider?: string;
   role?: string;
   specialistId?: string;

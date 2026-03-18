@@ -7,6 +7,14 @@ export type KanbanDevSessionCompletionRequirement =
   | "completion_summary"
   | "verification_report";
 
+export interface KanbanAutomationStep {
+  id: string;
+  providerId?: string;
+  role?: string;
+  specialistId?: string;
+  specialistName?: string;
+}
+
 export interface KanbanDevSessionSupervision {
   /** Whether dev-lane ACP sessions should be supervised and automatically recovered. */
   mode: KanbanDevSessionSupervisionMode;
@@ -25,6 +33,8 @@ export interface KanbanDevSessionSupervision {
 export interface KanbanColumnAutomation {
   /** Whether automation is enabled for this column */
   enabled: boolean;
+  /** Ordered automation steps to run within the same lane */
+  steps?: KanbanAutomationStep[];
   /** Provider ID to use for the automation */
   providerId?: string;
   /** Role for the agent (CRAFTER, ROUTA, GATE, DEVELOPER) */
@@ -71,7 +81,73 @@ export const DEFAULT_KANBAN_COLUMNS: KanbanColumn[] = [
 ];
 
 export function cloneKanbanColumns(columns: KanbanColumn[]): KanbanColumn[] {
-  return columns.map((column) => ({ ...column }));
+  return columns.map((column) => ({
+    ...column,
+    automation: column.automation
+      ? {
+        ...column.automation,
+        steps: column.automation.steps?.map((step) => ({ ...step })),
+      }
+      : undefined,
+  }));
+}
+
+function createFallbackAutomationStep(automation: KanbanColumnAutomation): KanbanAutomationStep {
+  return {
+    id: "step-1",
+    providerId: automation.providerId,
+    role: automation.role,
+    specialistId: automation.specialistId,
+    specialistName: automation.specialistName,
+  };
+}
+
+export function getKanbanAutomationSteps(automation?: KanbanColumnAutomation): KanbanAutomationStep[] {
+  if (!automation?.enabled) {
+    return [];
+  }
+
+  const normalizedSteps = (automation.steps ?? [])
+    .map((step, index) => ({
+      ...step,
+      id: step.id?.trim() || `step-${index + 1}`,
+    }))
+    .filter((step) => (
+      Boolean(step.providerId)
+      || Boolean(step.role)
+      || Boolean(step.specialistId)
+      || Boolean(step.specialistName)
+    ));
+
+  if (normalizedSteps.length > 0) {
+    return normalizedSteps;
+  }
+
+  return [createFallbackAutomationStep(automation)];
+}
+
+export function getPrimaryKanbanAutomationStep(
+  automation?: KanbanColumnAutomation,
+): KanbanAutomationStep | undefined {
+  return getKanbanAutomationSteps(automation)[0];
+}
+
+export function normalizeKanbanAutomation(
+  automation?: KanbanColumnAutomation,
+): KanbanColumnAutomation | undefined {
+  if (!automation) return undefined;
+
+  const steps = getKanbanAutomationSteps(automation);
+  const primaryStep = steps[0];
+
+  return {
+    ...automation,
+    steps,
+    providerId: primaryStep?.providerId,
+    role: primaryStep?.role,
+    specialistId: primaryStep?.specialistId,
+    specialistName: primaryStep?.specialistName,
+  };
 }
 
 export function createKanbanBoard(params: {

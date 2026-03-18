@@ -1,4 +1,8 @@
-import type { KanbanColumnAutomation } from "../models/kanban";
+import {
+  getKanbanAutomationSteps,
+  type KanbanAutomationStep,
+  type KanbanColumnAutomation,
+} from "../models/kanban";
 
 type TaskAutomationFields = {
   columnId?: string;
@@ -17,6 +21,9 @@ export interface EffectiveTaskAutomation {
   canRun: boolean;
   source: "card" | "lane" | "none";
   laneAutomation?: KanbanColumnAutomation;
+  steps: KanbanAutomationStep[];
+  stepIndex?: number;
+  step?: KanbanAutomationStep;
   providerId?: string;
   role?: string;
   specialistId?: string;
@@ -37,14 +44,27 @@ export function resolveEffectiveTaskAutomation(
       || task.assignedSpecialistName,
   );
   const canRun = hasCardOverride || Boolean(enabledLaneAutomation);
+  const steps = hasCardOverride
+    ? [{
+      id: "card-override",
+      providerId: task.assignedProvider,
+      role: task.assignedRole ?? "DEVELOPER",
+      specialistId: task.assignedSpecialistId,
+      specialistName: task.assignedSpecialistName,
+    }]
+    : getKanbanAutomationSteps(enabledLaneAutomation);
+  const step = steps[0];
 
   return {
     canRun,
     source: hasCardOverride ? "card" : enabledLaneAutomation ? "lane" : "none",
     laneAutomation: enabledLaneAutomation,
-    providerId: task.assignedProvider ?? enabledLaneAutomation?.providerId,
-    role: task.assignedRole ?? enabledLaneAutomation?.role ?? (canRun ? "DEVELOPER" : undefined),
-    specialistId: task.assignedSpecialistId ?? enabledLaneAutomation?.specialistId,
-    specialistName: task.assignedSpecialistName ?? enabledLaneAutomation?.specialistName,
+    steps,
+    stepIndex: step ? 0 : undefined,
+    step,
+    providerId: task.assignedProvider ?? step?.providerId,
+    role: task.assignedRole ?? step?.role ?? (canRun ? "DEVELOPER" : undefined),
+    specialistId: task.assignedSpecialistId ?? step?.specialistId,
+    specialistName: task.assignedSpecialistName ?? step?.specialistName,
   };
 }

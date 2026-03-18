@@ -51,6 +51,9 @@ export interface TaskInfo {
     routaAgentId?: string;
     columnId?: string;
     columnName?: string;
+    stepId?: string;
+    stepIndex?: number;
+    stepName?: string;
     provider?: string;
     role?: string;
     specialistId?: string;
@@ -96,6 +99,13 @@ export interface TaskInfo {
 
 export interface KanbanColumnAutomationInfo {
   enabled: boolean;
+  steps?: Array<{
+    id: string;
+    providerId?: string;
+    role?: string;
+    specialistId?: string;
+    specialistName?: string;
+  }>;
   providerId?: string;
   role?: string;
   specialistId?: string;
