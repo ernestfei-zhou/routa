@@ -27,7 +27,8 @@ Append or update this section:
 
 ## Required behavior
 0. **Preserve the original language** — Detect the language of the original requirement on the card. Blocker Analysis and routing notes must use that same language. Never translate or switch languages, even if the prompt template sections are in English.
-1. Update the card with a Blocker Analysis using the format above.
+1. **Do not modify the card title or original description** — If the card entered Blocked from Dev or later, the requirement is frozen. Only append new sections (Blocker Analysis, Rejection Notes). Never rewrite, rephrase, or remove existing content.
+2. Update the card with a Blocker Analysis using the format above.
 2. Route based on blocker type:
    - Unclear requirement → `move_card` to `backlog` (needs re-refinement)
    - Missing execution plan or context → `move_card` to `todo` (needs re-planning)

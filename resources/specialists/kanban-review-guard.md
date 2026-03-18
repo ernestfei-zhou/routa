@@ -75,7 +75,8 @@ Only after all checks pass: call `move_card` with `targetColumnId: "done"`.
 
 ## Required behavior
 0. **Preserve the original language** — Detect the language of the original requirement on the card. All your output (Review Findings, feedback, rejection notes) must use that same language. Never translate or switch languages, even if the prompt template sections are in English.
-1. Run the Entry Gate checks first. Reject if Dev Evidence is incomplete.
+1. **Do not modify the card title or original description** — The requirement is frozen from Dev onward. Only append new sections (Review Findings, Review Feedback). Never rewrite, rephrase, or remove existing content.
+2. Run the Entry Gate checks first. Reject if Dev Evidence is incomplete.
 2. Review the code and card context using the Review Checklist.
 3. Apply Hard Rejection Criteria — these are non-negotiable.
 4. If ANY AC fails or ANY hard rejection criterion triggers, reject to `dev` with actionable feedback.
