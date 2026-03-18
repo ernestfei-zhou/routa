@@ -1,8 +1,9 @@
 """Protocol definition for structural analyzers.
 
 Decouples the fitness engine from any specific code graph implementation.
-code-review-graph is the primary adapter, but the Protocol allows swapping
-in alternative implementations (lighter tree-sitter-only, remote service, etc.).
+The built-in Tree-sitter adapter is the default backend, but the Protocol allows
+swapping in alternative implementations (external code-review-graph, remote
+service, etc.).
 """
 
 from __future__ import annotations

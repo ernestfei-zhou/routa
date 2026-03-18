@@ -1,8 +1,8 @@
 """Structural analyzer adapters.
 
 Supports:
-- external `code-review-graph` when available
-- built-in lightweight analyzer as a zero-dependency fallback
+- built-in Tree-sitter analyzer
+- external `code-review-graph` as an optional compatibility backend
 
 The external adapter handles:
 - Lazy import (only when actually used)
@@ -78,13 +78,17 @@ def try_create_adapter(repo_root: Path):
 
     Backend selection can be forced via `ROUTA_FITNESS_GRAPH_BACKEND`:
     - `external`: require code-review-graph
-    - `builtin`: always use the local lightweight analyzer
-    - `auto` (default): prefer external, then fall back to builtin
+    - `builtin`: always use the local Tree-sitter analyzer
+    - `auto` (default): prefer builtin, then fall back to external
     """
     backend = os.environ.get("ROUTA_FITNESS_GRAPH_BACKEND", "auto").strip().lower() or "auto"
 
-    if backend == "builtin":
-        return BuiltinGraphAdapter(repo_root)
+    if backend in {"auto", "builtin"}:
+        try:
+            return BuiltinGraphAdapter(repo_root)
+        except ImportError:
+            if backend == "builtin":
+                return None
 
     if backend in {"auto", "external"}:
         adapter = CodeReviewGraphAdapter(repo_root)
@@ -95,7 +99,4 @@ def try_create_adapter(repo_root: Path):
             if backend == "external":
                 return None
 
-    if backend in {"auto", "builtin"}:
-        return BuiltinGraphAdapter(repo_root)
-
-    return BuiltinGraphAdapter(repo_root)
+    return None

@@ -113,7 +113,7 @@ def create_server(project_root: Path | None = None):
     ) -> dict:
         """Analyze blast radius of changes using the code graph.
 
-        Requires the [graph] optional dependency.
+        Requires an available graph backend.
 
         Args:
             changed_files: Explicit list of files, or None to auto-detect via git.
@@ -124,7 +124,7 @@ def create_server(project_root: Path | None = None):
 
         runner = GraphRunner(project_root)
         if not runner.available:
-            return {"status": "unavailable", "reason": "code-review-graph not installed"}
+            return {"status": "unavailable", "reason": "graph backend unavailable"}
 
         result = runner.probe_impact(base=base, max_depth=depth)
         return {

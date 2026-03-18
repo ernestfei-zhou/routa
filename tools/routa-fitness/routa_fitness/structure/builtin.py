@@ -1,18 +1,4 @@
-"""Built-in structural analyzer with lightweight source scanning.
-
-This backend intentionally favors zero external dependencies over perfect
-precision. It builds a small persistent graph from repository source files,
-tracking:
-
-- file nodes
-- top-level symbols (functions, classes, interfaces, enums)
-- relative import relationships
-- containment relationships
-- heuristic test-to-code links
-
-The result is good enough for blast-radius and test-radius estimation when
-`code-review-graph` is unavailable.
-"""
+"""Built-in Tree-sitter structural analyzer."""
 
 from __future__ import annotations
 
@@ -23,182 +9,85 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from routa_fitness.structure.impact import (
-    classify_test_file,
-    filter_code_files,
-    git_changed_files,
-)
+from routa_fitness.structure.impact import classify_test_file, filter_code_files, git_changed_files
+
+try:
+    from tree_sitter_language_pack import get_parser
+except ImportError:  # pragma: no cover - exercised via adapter selection
+    get_parser = None
 
 
-_CACHE_VERSION = 1
+_CACHE_VERSION = 2
 _CACHE_DIR = ".routa-fitness"
 _CACHE_FILE = "graph.json"
 _SCAN_ROOTS = ("src", "apps", "crates")
 _CODE_EXTENSIONS = {
+    ".py",
+    ".rs",
     ".ts",
     ".tsx",
     ".js",
     ".jsx",
-    ".rs",
-    ".py",
-    ".go",
-    ".java",
-    ".kt",
-    ".swift",
-    ".php",
-    ".c",
-    ".cpp",
 }
-_IDENTIFIER_RE = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]{2,}\b")
 _TEST_CALL_RE = re.compile(r"""\b(?:test|it)\s*\(\s*['"]([^'"]+)['"]""")
-_PY_TEST_DECORATOR_RE = re.compile(r"^\s*@pytest\.mark")
-
+_IDENTIFIER_RE = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]{2,}\b")
 _LANGUAGE_BY_SUFFIX = {
+    ".py": "python",
+    ".rs": "rust",
     ".ts": "typescript",
     ".tsx": "tsx",
     ".js": "javascript",
     ".jsx": "javascript",
-    ".rs": "rust",
-    ".py": "python",
-    ".go": "go",
-    ".java": "java",
-    ".kt": "kotlin",
-    ".swift": "swift",
-    ".php": "php",
-    ".c": "c",
-    ".cpp": "cpp",
 }
-
-_DECLARATION_PATTERNS = {
-    "typescript": [
-        ("Class", re.compile(r"^\s*(?:export\s+)?(?:default\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        ("Interface", re.compile(r"^\s*(?:export\s+)?interface\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        ("Enum", re.compile(r"^\s*(?:export\s+)?enum\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        ("Function", re.compile(r"^\s*(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        (
-            "Function",
-            re.compile(
-                r"^\s*(?:export\s+)?const\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_][A-Za-z0-9_]*)\s*=>"
-            ),
-        ),
-    ],
-    "tsx": [
-        ("Class", re.compile(r"^\s*(?:export\s+)?(?:default\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        ("Interface", re.compile(r"^\s*(?:export\s+)?interface\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        ("Enum", re.compile(r"^\s*(?:export\s+)?enum\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        ("Function", re.compile(r"^\s*(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        (
-            "Function",
-            re.compile(
-                r"^\s*(?:export\s+)?const\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_][A-Za-z0-9_]*)\s*=>"
-            ),
-        ),
-    ],
-    "javascript": [
-        ("Class", re.compile(r"^\s*(?:export\s+)?(?:default\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        ("Function", re.compile(r"^\s*(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        (
-            "Function",
-            re.compile(
-                r"^\s*(?:export\s+)?const\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_][A-Za-z0-9_]*)\s*=>"
-            ),
-        ),
-    ],
-    "python": [
-        ("Class", re.compile(r"^\s*class\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        ("Function", re.compile(r"^\s*(?:async\s+)?def\s+([A-Za-z_][A-Za-z0-9_]*)")),
-    ],
-    "rust": [
-        ("Struct", re.compile(r"^\s*(?:pub\s+)?struct\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        ("Enum", re.compile(r"^\s*(?:pub\s+)?enum\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        ("Trait", re.compile(r"^\s*(?:pub\s+)?trait\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        ("Function", re.compile(r"^\s*(?:pub\s+)?(?:async\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)")),
-    ],
-    "go": [
-        ("Struct", re.compile(r"^\s*type\s+([A-Za-z_][A-Za-z0-9_]*)\s+struct\b")),
-        ("Interface", re.compile(r"^\s*type\s+([A-Za-z_][A-Za-z0-9_]*)\s+interface\b")),
-        ("Function", re.compile(r"^\s*func\s+(?:\([^)]*\)\s*)?([A-Za-z_][A-Za-z0-9_]*)\s*\(")),
-    ],
-    "java": [
-        ("Class", re.compile(r"^\s*(?:public\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        ("Interface", re.compile(r"^\s*(?:public\s+)?interface\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        ("Enum", re.compile(r"^\s*(?:public\s+)?enum\s+([A-Za-z_][A-Za-z0-9_]*)")),
-    ],
-    "kotlin": [
-        ("Class", re.compile(r"^\s*(?:data\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        ("Interface", re.compile(r"^\s*interface\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        ("Enum", re.compile(r"^\s*enum\s+class\s+([A-Za-z_][A-Za-z0-9_]*)")),
-        ("Function", re.compile(r"^\s*fun\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(")),
-    ],
+_SYMBOL_KINDS = {
+    "python": {
+        "class_definition": "Class",
+        "function_definition": "Function",
+    },
+    "rust": {
+        "struct_item": "Struct",
+        "enum_item": "Enum",
+        "trait_item": "Trait",
+        "function_item": "Function",
+    },
+    "typescript": {
+        "class_declaration": "Class",
+        "interface_declaration": "Interface",
+        "enum_declaration": "Enum",
+        "function_declaration": "Function",
+        "variable_declarator": "Function",
+    },
+    "tsx": {
+        "class_declaration": "Class",
+        "interface_declaration": "Interface",
+        "enum_declaration": "Enum",
+        "function_declaration": "Function",
+        "variable_declarator": "Function",
+    },
+    "javascript": {
+        "class_declaration": "Class",
+        "function_declaration": "Function",
+        "variable_declarator": "Function",
+    },
 }
-
-_IMPORT_PATTERNS = {
-    "typescript": [
-        re.compile(r"""from\s+['"]([^'"]+)['"]"""),
-        re.compile(r"""import\s+['"]([^'"]+)['"]"""),
-    ],
-    "tsx": [
-        re.compile(r"""from\s+['"]([^'"]+)['"]"""),
-        re.compile(r"""import\s+['"]([^'"]+)['"]"""),
-    ],
-    "javascript": [
-        re.compile(r"""from\s+['"]([^'"]+)['"]"""),
-        re.compile(r"""import\s+['"]([^'"]+)['"]"""),
-    ],
-    "python": [
-        re.compile(r"^\s*from\s+(\.[A-Za-z0-9_\.]+)\s+import\b", re.MULTILINE),
-    ],
-}
-
-_EXTENDS_PATTERNS = {
-    "typescript": re.compile(r"\bextends\s+([A-Za-z_][A-Za-z0-9_]*)"),
-    "tsx": re.compile(r"\bextends\s+([A-Za-z_][A-Za-z0-9_]*)"),
-    "javascript": re.compile(r"\bextends\s+([A-Za-z_][A-Za-z0-9_]*)"),
-    "python": re.compile(r"^\s*class\s+[A-Za-z_][A-Za-z0-9_]*\(([^)]*)\)", re.MULTILINE),
-    "java": re.compile(r"\bextends\s+([A-Za-z_][A-Za-z0-9_]*)"),
-    "kotlin": re.compile(r":\s*([A-Za-z_][A-Za-z0-9_]*)"),
-}
-
-_KEYWORDS = {
-    "return",
-    "const",
-    "class",
-    "function",
-    "export",
-    "import",
-    "from",
-    "async",
-    "await",
-    "public",
-    "private",
-    "protected",
-    "struct",
-    "enum",
-    "trait",
-    "impl",
-    "let",
-    "var",
-    "type",
-    "interface",
-    "package",
-    "new",
-    "this",
-    "self",
-    "super",
-    "true",
-    "false",
-    "null",
-    "None",
-    "Some",
-    "Ok",
-    "Err",
+_SUPPORTED_QUERY_TYPES = {
+    "tests_for",
+    "callers_of",
+    "callees_of",
+    "imports_of",
+    "importers_of",
+    "children_of",
+    "inheritors_of",
+    "file_summary",
 }
 
 
 class BuiltinGraphAdapter:
-    """Zero-dependency structural analyzer backed by a JSON cache."""
+    """Tree-sitter backed structural analyzer with a JSON cache."""
 
     def __init__(self, repo_root: Path):
+        if get_parser is None:
+            raise ImportError("tree-sitter-language-pack is not installed")
         self.repo_root = repo_root
         self.cache_dir = repo_root / _CACHE_DIR
         self.cache_path = self.cache_dir / _CACHE_FILE
@@ -206,7 +95,6 @@ class BuiltinGraphAdapter:
         self._graph: dict[str, Any] | None = None
 
     def build_or_update(self, *, full: bool = False, base: str = "HEAD~1") -> dict:
-        """Build or incrementally update the lightweight graph cache."""
         existing = self._load_data()
         current_files = self._collect_source_files()
         current_set = set(current_files)
@@ -231,7 +119,7 @@ class BuiltinGraphAdapter:
             if not abs_path.exists():
                 files_map.pop(rel_path, None)
                 continue
-            files_map[rel_path] = self._parse_file(rel_path, abs_path.read_text(encoding="utf-8", errors="replace"))
+            files_map[rel_path] = self._parse_file(rel_path, abs_path.read_bytes())
             parsed += 1
 
         data = {
@@ -244,27 +132,25 @@ class BuiltinGraphAdapter:
             },
         }
         self._persist_data(data)
-        graph = self._build_graph(data)
-        self._graph = graph
+        self._graph = self._build_graph(data)
 
         return {
             "status": "ok",
+            "backend": "builtin-tree-sitter",
             "build_type": build_type,
             "summary": (
                 f"{build_type.capitalize()} build: parsed {parsed} file(s), "
-                f"{graph['stats']['total_nodes']} nodes, {graph['stats']['total_edges']} edges."
+                f"{self._graph['stats']['total_nodes']} nodes, {self._graph['stats']['total_edges']} edges."
             ),
-            "files_parsed": parsed if build_type == "full" else len(current_files),
             "files_updated": parsed,
             "changed_files": changed_files,
             "stale_files": stale_files,
-            "total_nodes": graph["stats"]["total_nodes"],
-            "total_edges": graph["stats"]["total_edges"],
-            "languages": graph["stats"]["languages"],
+            "total_nodes": self._graph["stats"]["total_nodes"],
+            "total_edges": self._graph["stats"]["total_edges"],
+            "languages": self._graph["stats"]["languages"],
         }
 
     def impact_radius(self, files: list[str], *, depth: int = 2) -> dict:
-        """Compute blast radius using file dependency neighborhoods."""
         graph = self._ensure_graph()
         changed_files = [path for path in files if path in graph["file_nodes"]]
         if not changed_files:
@@ -300,7 +186,7 @@ class BuiltinGraphAdapter:
             "status": "ok",
             "summary": (
                 f"Blast radius for {len(changed_files)} changed file(s): "
-                f"{len(changed_files)} changed file node(s), "
+                f"{len(self._nodes_for_files(graph, changed_files))} changed node(s), "
                 f"{len(impacted_files)} additional file(s)."
             ),
             "changed_nodes": self._nodes_for_files(graph, changed_files),
@@ -310,9 +196,9 @@ class BuiltinGraphAdapter:
         }
 
     def query(self, query_type: str, target: str) -> dict:
-        """Run a structural query against the lightweight graph."""
         graph = self._ensure_graph()
-        node = self._resolve_target(graph, target)
+        if query_type not in _SUPPORTED_QUERY_TYPES:
+            return {"status": "error", "summary": f"Unknown query type '{query_type}'."}
 
         if query_type == "file_summary":
             rel_path = self._resolve_file_target(graph, target)
@@ -321,35 +207,28 @@ class BuiltinGraphAdapter:
             results = [graph["file_nodes"][rel_path], *graph["symbols_by_file"].get(rel_path, [])]
             return self._query_result(query_type, target, results, [])
 
+        node = self._resolve_target(graph, target)
         if not node:
             return {"status": "not_found", "summary": f"No node found matching '{target}'."}
 
         if query_type == "tests_for":
-            test_nodes, edges = self._tests_for(graph, node)
-            return self._query_result(query_type, target, test_nodes, edges)
-        if query_type == "callers_of":
+            results, edges = self._tests_for(graph, node)
+        elif query_type == "callers_of":
             results, edges = self._callers_of(graph, node)
-            return self._query_result(query_type, target, results, edges)
-        if query_type == "callees_of":
+        elif query_type == "callees_of":
             results, edges = self._callees_of(graph, node)
-            return self._query_result(query_type, target, results, edges)
-        if query_type == "imports_of":
+        elif query_type == "imports_of":
             results, edges = self._imports_of(graph, node)
-            return self._query_result(query_type, target, results, edges)
-        if query_type == "importers_of":
+        elif query_type == "importers_of":
             results, edges = self._importers_of(graph, node)
-            return self._query_result(query_type, target, results, edges)
-        if query_type == "children_of":
+        elif query_type == "children_of":
             results, edges = self._children_of(graph, node)
-            return self._query_result(query_type, target, results, edges)
-        if query_type == "inheritors_of":
+        else:
             results, edges = self._inheritors_of(graph, node)
-            return self._query_result(query_type, target, results, edges)
 
-        return {"status": "error", "summary": f"Unknown query type '{query_type}'."}
+        return self._query_result(query_type, target, results, edges)
 
     def stats(self) -> dict:
-        """Return aggregate graph statistics."""
         graph = self._ensure_graph()
         return {
             "status": "ok",
@@ -358,7 +237,7 @@ class BuiltinGraphAdapter:
             "files": graph["stats"]["files_count"],
             "languages": graph["stats"]["languages"],
             "last_updated": graph["stats"]["last_updated"],
-            "backend": "builtin",
+            "backend": "builtin-tree-sitter",
         }
 
     def _load_data(self) -> dict[str, Any]:
@@ -390,155 +269,141 @@ class BuiltinGraphAdapter:
             if not root.exists():
                 continue
             for path in root.rglob("*"):
-                if not path.is_file():
-                    continue
-                if path.suffix.lower() not in _CODE_EXTENSIONS:
-                    continue
-                files.append(path.relative_to(self.repo_root).as_posix())
+                if path.is_file() and path.suffix.lower() in _CODE_EXTENSIONS:
+                    files.append(path.relative_to(self.repo_root).as_posix())
         return sorted(files)
 
-    def _parse_file(self, rel_path: str, source: str) -> dict[str, Any]:
+    def _parse_file(self, rel_path: str, source: bytes) -> dict[str, Any]:
         language = _LANGUAGE_BY_SUFFIX.get(Path(rel_path).suffix.lower(), "unknown")
+        parser = get_parser(language)
+        tree = parser.parse(source)
         is_test_file = classify_test_file(rel_path)
-        lines = source.splitlines()
-        imports = self._resolve_imports(rel_path, source, language)
-        symbols = self._extract_symbols(rel_path, lines, language, is_test_file)
+        imports: set[str] = set()
+        symbols: list[dict[str, Any]] = []
+        test_nodes: list[dict[str, Any]] = []
+        source_text = source.decode("utf-8", errors="replace")
+
+        def visit(node, ancestors: list[Any]) -> None:
+            node_type = node.type
+            if node_type in {"import_statement", "import_from_statement", "use_declaration"}:
+                resolved = self._extract_import(rel_path, language, node, source)
+                if resolved:
+                    imports.add(resolved)
+
+            kind = _SYMBOL_KINDS.get(language, {}).get(node_type)
+            if kind:
+                symbol = self._extract_symbol(rel_path, language, node, source, ancestors, is_test_file)
+                if symbol:
+                    symbols.append(symbol)
+                    if symbol["is_test"]:
+                        test_nodes.append(symbol)
+
+            for child in node.children:
+                if child.is_named:
+                    visit(child, [*ancestors, node])
+
+        visit(tree.root_node, [])
+
+        if language in {"typescript", "tsx", "javascript"} and is_test_file:
+            test_nodes.extend(self._extract_js_test_calls(rel_path, language, source_text))
+
+        seen = set()
+        ordered_symbols = []
+        for symbol in [*symbols, *test_nodes]:
+            key = symbol["qualified_name"]
+            if key in seen:
+                continue
+            seen.add(key)
+            ordered_symbols.append(symbol)
 
         return {
             "language": language,
             "is_test_file": is_test_file,
-            "imports": imports,
-            "symbols": symbols,
-            "references": self._extract_identifiers(source),
+            "imports": sorted(imports),
+            "symbols": ordered_symbols,
             "source_basename": self._normalized_source_basename(rel_path),
         }
 
-    def _extract_symbols(
-        self, rel_path: str, lines: list[str], language: str, is_test_file: bool
-    ) -> list[dict[str, Any]]:
-        patterns = _DECLARATION_PATTERNS.get(language, [])
-        symbols: list[dict[str, Any]] = []
-
-        pending_test_attr = False
-        for index, line in enumerate(lines):
-            if language == "rust" and line.strip().startswith("#[test]"):
-                pending_test_attr = True
-                continue
-            if language == "python" and _PY_TEST_DECORATOR_RE.match(line):
-                pending_test_attr = True
-                continue
-
-            for kind, pattern in patterns:
-                match = pattern.search(line)
-                if not match:
-                    continue
-                name = match.group(1)
-                line_end = self._find_block_end(lines, index, language)
-                body = "\n".join(lines[index:line_end])
-                is_test = is_test_file or pending_test_attr or self._looks_like_test_name(name)
-                symbol = {
-                    "qualified_name": f"{rel_path}:{name}",
-                    "name": name,
-                    "kind": kind,
-                    "file_path": rel_path,
-                    "line_start": index + 1,
-                    "line_end": line_end,
-                    "language": language,
-                    "is_test": is_test,
-                    "references": self._extract_identifiers(body),
-                    "extends": self._extract_extends(language, line),
-                }
-                symbols.append(symbol)
-                pending_test_attr = False
-                break
-            else:
-                pending_test_attr = False
-
-            if is_test_file:
-                test_match = _TEST_CALL_RE.search(line)
-                if not test_match:
-                    continue
-                label = test_match.group(1).strip()
-                symbols.append(
-                    {
-                        "qualified_name": f"{rel_path}:test:{index + 1}",
-                        "name": label,
-                        "kind": "Test",
-                        "file_path": rel_path,
-                        "line_start": index + 1,
-                        "line_end": index + 1,
-                        "language": language,
-                        "is_test": True,
-                        "references": self._extract_identifiers(label),
-                        "extends": "",
-                    }
-                )
-
-        return symbols
-
-    def _find_block_end(self, lines: list[str], start: int, language: str) -> int:
-        if language == "python":
-            start_indent = self._indent(lines[start])
-            for idx in range(start + 1, len(lines)):
-                text = lines[idx]
-                if not text.strip():
-                    continue
-                if self._indent(text) <= start_indent and not text.lstrip().startswith(("#", "@")):
-                    return idx
-            return len(lines)
-
-        brace_depth = 0
-        opened = False
-        for idx in range(start, len(lines)):
-            text = lines[idx]
-            brace_depth += text.count("{")
-            if text.count("{") > 0:
-                opened = True
-            brace_depth -= text.count("}")
-            if opened and brace_depth <= 0:
-                return idx + 1
-        return min(len(lines), start + 1)
-
-    def _resolve_imports(self, rel_path: str, source: str, language: str) -> list[str]:
-        patterns = _IMPORT_PATTERNS.get(language, [])
-        imports: set[str] = set()
-        for pattern in patterns:
-            for match in pattern.findall(source):
-                import_path = match if isinstance(match, str) else match[0]
-                resolved = self._resolve_import_path(rel_path, import_path)
-                if resolved:
-                    imports.add(resolved)
-        return sorted(imports)
-
-    def _resolve_import_path(self, rel_path: str, import_path: str) -> str | None:
-        if not import_path.startswith("."):
+    def _extract_import(self, rel_path: str, language: str, node, source: bytes) -> str | None:
+        text = self._node_text(node, source)
+        if language in {"typescript", "tsx", "javascript"}:
+            for child in node.children:
+                if child.type == "string":
+                    return self._resolve_relative_import(rel_path, self._strip_quotes(self._node_text(child, source)))
             return None
-        base_dir = (self.repo_root / rel_path).parent
-        leading_dots = len(import_path) - len(import_path.lstrip("."))
-        relative_part = import_path.lstrip(".").replace(".", "/")
-        anchor = base_dir
-        for _ in range(max(leading_dots - 1, 0)):
-            anchor = anchor.parent
-        candidate = (anchor / relative_part).resolve() if relative_part else anchor.resolve()
-        suffix = Path(rel_path).suffix.lower()
-        extensions = [suffix] if suffix else []
-        extensions.extend([".ts", ".tsx", ".js", ".jsx", ".py", ".rs"])
 
-        candidates = [candidate]
-        if candidate.suffix:
-            candidates = [candidate]
-        else:
-            candidates.extend(candidate.with_suffix(ext) for ext in extensions)
-            candidates.extend(candidate / f"index{ext}" for ext in extensions)
+        if language == "python" and node.type == "import_from_statement":
+            relative = None
+            for child in node.children:
+                if child.type == "relative_import":
+                    relative = self._node_text(child, source)
+                    break
+            if relative:
+                return self._resolve_python_import(rel_path, relative)
+            return None
 
-        for path in candidates:
-            try:
-                relative = path.relative_to(self.repo_root).as_posix()
-            except ValueError:
-                continue
-            if path.exists() and path.is_file():
-                return relative
+        if language == "rust":
+            return self._resolve_rust_import(rel_path, text)
+
         return None
+
+    def _extract_symbol(
+        self,
+        rel_path: str,
+        language: str,
+        node,
+        source: bytes,
+        ancestors: list[Any],
+        is_test_file: bool,
+    ) -> dict[str, Any] | None:
+        name = self._symbol_name(language, node, source)
+        if not name:
+            return None
+
+        if node.type == "variable_declarator" and not self._looks_like_arrow_function(node, source):
+            return None
+
+        text = self._node_text(node, source)
+        kind = _SYMBOL_KINDS[language][node.type]
+        is_test = is_test_file or self._is_test_symbol(language, node, name, text, source, ancestors)
+        references = self._symbol_references(language, node, source, name)
+        extends = self._extract_extends(language, node, source)
+
+        return {
+            "qualified_name": f"{rel_path}:{name}",
+            "name": name,
+            "kind": kind,
+            "file_path": rel_path,
+            "line_start": node.start_point[0] + 1,
+            "line_end": node.end_point[0] + 1,
+            "language": language,
+            "is_test": is_test,
+            "references": sorted(references),
+            "extends": extends,
+        }
+
+    def _extract_js_test_calls(self, rel_path: str, language: str, source_text: str) -> list[dict[str, Any]]:
+        nodes = []
+        for index, line in enumerate(source_text.splitlines(), start=1):
+            match = _TEST_CALL_RE.search(line)
+            if not match:
+                continue
+            label = match.group(1).strip()
+            nodes.append(
+                {
+                    "qualified_name": f"{rel_path}:test:{index}",
+                    "name": label,
+                    "kind": "Test",
+                    "file_path": rel_path,
+                    "line_start": index,
+                    "line_end": index,
+                    "language": language,
+                    "is_test": True,
+                    "references": sorted(self._normalize_test_tokens(label)),
+                    "extends": "",
+                }
+            )
+        return nodes
 
     def _build_graph(self, data: dict[str, Any]) -> dict[str, Any]:
         file_records = data.get("files", {})
@@ -548,7 +413,6 @@ class BuiltinGraphAdapter:
         symbols_by_name: dict[str, list[dict[str, Any]]] = defaultdict(list)
         edges: list[dict[str, Any]] = []
         file_neighbors: dict[str, set[str]] = defaultdict(set)
-        tests_for_target: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
         for rel_path, record in file_records.items():
             file_node = {
@@ -561,55 +425,37 @@ class BuiltinGraphAdapter:
             }
             file_nodes[rel_path] = file_node
             nodes_by_qn[rel_path] = file_node
-
             symbols = []
             for symbol in record.get("symbols", []):
                 normalized = dict(symbol)
                 symbols.append(normalized)
                 nodes_by_qn[normalized["qualified_name"]] = normalized
                 symbols_by_name[normalized["name"]].append(normalized)
-                edges.append(
-                    self._edge(
-                        "CONTAINS",
-                        source=file_node["qualified_name"],
-                        target=normalized["qualified_name"],
-                        source_file=rel_path,
-                        target_file=rel_path,
-                    )
-                )
+                edges.append(self._edge("CONTAINS", file_node["qualified_name"], normalized["qualified_name"], rel_path, rel_path))
             symbols_by_file[rel_path] = symbols
 
         for rel_path, record in file_records.items():
-            for target_file in record.get("imports", []):
-                if target_file not in file_nodes:
+            for imported in record.get("imports", []):
+                if imported not in file_nodes:
                     continue
-                edges.append(
-                    self._edge(
-                        "IMPORTS_FROM",
-                        source=rel_path,
-                        target=target_file,
-                        source_file=rel_path,
-                        target_file=target_file,
-                    )
-                )
-                file_neighbors[rel_path].add(target_file)
-                file_neighbors[target_file].add(rel_path)
+                edges.append(self._edge("IMPORTS_FROM", rel_path, imported, rel_path, imported))
+                file_neighbors[rel_path].add(imported)
+                file_neighbors[imported].add(rel_path)
 
         for rel_path, symbols in symbols_by_file.items():
             for symbol in symbols:
-                parent = symbol.get("extends")
-                if not parent:
+                if not symbol.get("extends"):
                     continue
-                for candidate in symbols_by_name.get(parent, []):
+                for candidate in symbols_by_name.get(symbol["extends"], []):
                     if candidate["qualified_name"] == symbol["qualified_name"]:
                         continue
                     edges.append(
                         self._edge(
                             "INHERITS",
-                            source=symbol["qualified_name"],
-                            target=candidate["qualified_name"],
-                            source_file=rel_path,
-                            target_file=candidate["file_path"],
+                            symbol["qualified_name"],
+                            candidate["qualified_name"],
+                            rel_path,
+                            candidate["file_path"],
                         )
                     )
                     file_neighbors[rel_path].add(candidate["file_path"])
@@ -619,19 +465,19 @@ class BuiltinGraphAdapter:
             record = file_records[rel_path]
             if not record.get("is_test_file") and not any(node.get("is_test") for node in symbols):
                 continue
-            linked_targets = self._target_nodes_for_test_file(rel_path, record, file_records, symbols_by_name, symbols_by_file)
+            targets = self._target_nodes_for_test_file(rel_path, record, file_records, symbols_by_name, symbols_by_file)
             test_nodes = [node for node in symbols if node.get("is_test")] or [file_nodes[rel_path]]
-            for target in linked_targets:
+            for target in targets:
                 for test_node in test_nodes:
-                    edge = self._edge(
-                        "TESTED_BY",
-                        source=test_node["qualified_name"],
-                        target=target["qualified_name"],
-                        source_file=rel_path,
-                        target_file=target["file_path"],
+                    edges.append(
+                        self._edge(
+                            "TESTED_BY",
+                            test_node["qualified_name"],
+                            target["qualified_name"],
+                            rel_path,
+                            target["file_path"],
+                        )
                     )
-                    edges.append(edge)
-                    tests_for_target[target["qualified_name"]].append(test_node)
                     file_neighbors[rel_path].add(target["file_path"])
                     file_neighbors[target["file_path"]].add(rel_path)
 
@@ -642,7 +488,6 @@ class BuiltinGraphAdapter:
             "symbols_by_name": symbols_by_name,
             "edges": edges,
             "file_neighbors": file_neighbors,
-            "tests_for_target": tests_for_target,
             "stats": {
                 "total_nodes": len(file_nodes) + sum(len(symbols) for symbols in symbols_by_file.values()),
                 "total_edges": len(edges),
@@ -675,14 +520,16 @@ class BuiltinGraphAdapter:
                     continue
                 if source_record.get("source_basename") == basename:
                     for symbol in symbols_by_file.get(source_path, []):
-                        targets[symbol["qualified_name"]] = symbol
+                        if not symbol.get("is_test"):
+                            targets[symbol["qualified_name"]] = symbol
 
         for test_node in symbols_by_file.get(rel_path, []):
             if not test_node.get("is_test"):
                 continue
-            normalized = self._normalize_test_name(test_node["name"])
+            normalized = self._normalize_test_tokens(test_node["name"])
             for symbol_name, candidates in symbols_by_name.items():
-                if self._normalized_symbol_name(symbol_name) and self._normalized_symbol_name(symbol_name) in normalized:
+                symbol_tokens = self._normalize_test_tokens(symbol_name)
+                if symbol_tokens and symbol_tokens.issubset(normalized):
                     for candidate in candidates:
                         if not candidate.get("is_test"):
                             targets[candidate["qualified_name"]] = candidate
@@ -690,63 +537,42 @@ class BuiltinGraphAdapter:
         return sorted(targets.values(), key=lambda item: item["qualified_name"])
 
     def _tests_for(self, graph: dict[str, Any], node: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-        targets = []
+        targets = [node["qualified_name"]]
         if node["kind"] == "File":
-            for symbol in graph["symbols_by_file"].get(node["file_path"], []):
-                targets.append(symbol["qualified_name"])
-        else:
-            targets.append(node["qualified_name"])
+            targets = [item["qualified_name"] for item in graph["symbols_by_file"].get(node["file_path"], [])]
 
-        results: dict[str, dict[str, Any]] = {}
-        result_edges: list[dict[str, Any]] = []
+        results = {}
+        edges = []
         for edge in graph["edges"]:
             if edge["kind"] != "TESTED_BY" or edge["target_qualified"] not in targets:
                 continue
             test_node = graph["nodes_by_qn"].get(edge["source_qualified"])
             if test_node:
                 results[test_node["qualified_name"]] = test_node
-                result_edges.append(edge)
-        return sorted(results.values(), key=lambda item: item["qualified_name"]), result_edges
+                edges.append(edge)
+        return sorted(results.values(), key=lambda item: item["qualified_name"]), edges
 
     def _callers_of(self, graph: dict[str, Any], node: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-        symbol_name = node["name"]
         results = {}
         edges = []
         for file_path, symbols in graph["symbols_by_file"].items():
             for symbol in symbols:
                 if symbol["qualified_name"] == node["qualified_name"]:
                     continue
-                if symbol_name in symbol.get("references", []):
+                if node["name"] in symbol.get("references", []):
                     results[symbol["qualified_name"]] = symbol
-                    edges.append(
-                        self._edge(
-                            "CALLS",
-                            source=symbol["qualified_name"],
-                            target=node["qualified_name"],
-                            source_file=file_path,
-                            target_file=node["file_path"],
-                        )
-                    )
+                    edges.append(self._edge("CALLS", symbol["qualified_name"], node["qualified_name"], file_path, node["file_path"]))
         return sorted(results.values(), key=lambda item: item["qualified_name"]), edges
 
     def _callees_of(self, graph: dict[str, Any], node: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-        references = set(node.get("references", []))
         results = {}
         edges = []
-        for name in references:
+        for name in node.get("references", []):
             for candidate in graph["symbols_by_name"].get(name, []):
                 if candidate["qualified_name"] == node["qualified_name"]:
                     continue
                 results[candidate["qualified_name"]] = candidate
-                edges.append(
-                    self._edge(
-                        "CALLS",
-                        source=node["qualified_name"],
-                        target=candidate["qualified_name"],
-                        source_file=node["file_path"],
-                        target_file=candidate["file_path"],
-                    )
-                )
+                edges.append(self._edge("CALLS", node["qualified_name"], candidate["qualified_name"], node["file_path"], candidate["file_path"]))
         return sorted(results.values(), key=lambda item: item["qualified_name"]), edges
 
     def _imports_of(self, graph: dict[str, Any], node: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -776,11 +602,7 @@ class BuiltinGraphAdapter:
     def _children_of(self, graph: dict[str, Any], node: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         file_path = node["file_path"]
         results = list(graph["symbols_by_file"].get(file_path, []))
-        edges = [
-            edge
-            for edge in graph["edges"]
-            if edge["kind"] == "CONTAINS" and edge["source_qualified"] == file_path
-        ]
+        edges = [edge for edge in graph["edges"] if edge["kind"] == "CONTAINS" and edge["source_qualified"] == file_path]
         return results, edges
 
     def _inheritors_of(self, graph: dict[str, Any], node: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -795,7 +617,7 @@ class BuiltinGraphAdapter:
         return results, edges
 
     def _nodes_for_files(self, graph: dict[str, Any], files: list[str]) -> list[dict[str, Any]]:
-        nodes: list[dict[str, Any]] = []
+        nodes = []
         for file_path in files:
             nodes.extend(graph["symbols_by_file"].get(file_path, []))
         return nodes
@@ -803,9 +625,9 @@ class BuiltinGraphAdapter:
     def _resolve_target(self, graph: dict[str, Any], target: str) -> dict[str, Any] | None:
         if target in graph["nodes_by_qn"]:
             return graph["nodes_by_qn"][target]
-        rel_file = self._resolve_file_target(graph, target)
-        if rel_file:
-            return graph["file_nodes"][rel_file]
+        rel_path = self._resolve_file_target(graph, target)
+        if rel_path:
+            return graph["file_nodes"][rel_path]
         candidates = graph["symbols_by_name"].get(target, [])
         if len(candidates) == 1:
             return candidates[0]
@@ -835,15 +657,7 @@ class BuiltinGraphAdapter:
             "edges": edges,
         }
 
-    def _edge(
-        self,
-        kind: str,
-        *,
-        source: str,
-        target: str,
-        source_file: str,
-        target_file: str,
-    ) -> dict[str, Any]:
+    def _edge(self, kind: str, source: str, target: str, source_file: str, target_file: str) -> dict[str, Any]:
         return {
             "kind": kind,
             "source_qualified": source,
@@ -853,33 +667,174 @@ class BuiltinGraphAdapter:
             "target_file": target_file,
         }
 
-    def _extract_identifiers(self, source: str) -> list[str]:
-        identifiers = {token for token in _IDENTIFIER_RE.findall(source) if token not in _KEYWORDS}
-        return sorted(identifiers)
+    def _symbol_name(self, language: str, node, source: bytes) -> str:
+        if language == "python":
+            identifier = self._first_child(node, {"identifier"})
+            return self._node_text(identifier, source) if identifier else ""
+        if language == "rust":
+            identifier = self._first_child(node, {"identifier", "type_identifier"})
+            return self._node_text(identifier, source) if identifier else ""
+        if language in {"typescript", "tsx", "javascript"}:
+            if node.type == "variable_declarator":
+                identifier = self._first_child(node, {"identifier"})
+                return self._node_text(identifier, source) if identifier else ""
+            identifier = self._first_child(node, {"identifier", "type_identifier"})
+            return self._node_text(identifier, source) if identifier else ""
+        return ""
 
-    def _extract_extends(self, language: str, line: str) -> str:
-        pattern = _EXTENDS_PATTERNS.get(language)
-        if not pattern:
+    def _symbol_references(self, language: str, node, source: bytes, declared_name: str) -> set[str]:
+        refs: set[str] = set()
+        for child in node.children:
+            for identifier in self._descendants(child, {"identifier", "type_identifier"}):
+                text = self._node_text(identifier, source)
+                if text and text != declared_name and text != "self":
+                    refs.add(text)
+        return refs
+
+    def _extract_extends(self, language: str, node, source: bytes) -> str:
+        if language == "python":
+            for identifier in self._descendants(node, {"identifier"}):
+                text = self._node_text(identifier, source)
+                if text != self._symbol_name(language, node, source):
+                    return text
             return ""
-        match = pattern.search(line)
-        if not match:
-            return ""
-        text = match.group(1).split(",")[0].strip()
-        return text.split(".")[-1]
+        if language in {"typescript", "tsx", "javascript"}:
+            heritage = self._first_child(node, {"class_heritage"})
+            if not heritage:
+                return ""
+            for identifier in self._descendants(heritage, {"identifier", "type_identifier"}):
+                return self._node_text(identifier, source)
+        return ""
 
-    def _looks_like_test_name(self, name: str) -> bool:
+    def _is_test_symbol(
+        self,
+        language: str,
+        node,
+        name: str,
+        text: str,
+        source: bytes,
+        ancestors: list[Any],
+    ) -> bool:
         lowered = name.lower()
-        return lowered.startswith("test") or lowered.endswith("test")
+        if lowered.startswith("test"):
+            return True
+        if language == "rust":
+            prefix = text[: max(text.find("{"), 0)] if "{" in text else text
+            if "#[test]" in prefix:
+                return True
+            for ancestor in ancestors:
+                if ancestor.type == "mod_item" and "tests" in self._node_text(ancestor, source):
+                    return True
+        return False
 
-    def _normalize_test_name(self, name: str) -> str:
-        lowered = name.lower()
-        lowered = re.sub(r"[^a-z0-9]+", " ", lowered)
-        lowered = lowered.replace("test", " ")
-        return " ".join(part for part in lowered.split() if part)
+    def _looks_like_arrow_function(self, node, source: bytes) -> bool:
+        return "=>" in self._node_text(node, source)
 
-    def _normalized_symbol_name(self, name: str) -> str:
-        lowered = re.sub(r"[^a-z0-9]+", " ", name.lower())
-        return " ".join(part for part in lowered.split() if part)
+    def _resolve_relative_import(self, rel_path: str, import_path: str) -> str | None:
+        if not import_path.startswith("."):
+            return None
+        base_dir = (self.repo_root / rel_path).parent
+        candidate = (base_dir / import_path).resolve()
+        suffix = Path(rel_path).suffix.lower()
+        extensions = [suffix] if suffix else []
+        extensions.extend([".ts", ".tsx", ".js", ".jsx", ".py", ".rs"])
+
+        candidates = [candidate]
+        if not candidate.suffix:
+            candidates.extend(candidate.with_suffix(ext) for ext in extensions)
+            candidates.extend(candidate / f"index{ext}" for ext in extensions)
+
+        for path in candidates:
+            try:
+                relative = path.relative_to(self.repo_root).as_posix()
+            except ValueError:
+                continue
+            if path.exists() and path.is_file():
+                return relative
+        return None
+
+    def _resolve_python_import(self, rel_path: str, import_path: str) -> str | None:
+        leading_dots = len(import_path) - len(import_path.lstrip("."))
+        relative_part = import_path.lstrip(".").replace(".", "/")
+        anchor = (self.repo_root / rel_path).parent
+        for _ in range(max(leading_dots - 1, 0)):
+            anchor = anchor.parent
+        candidate = (anchor / relative_part).resolve() if relative_part else anchor.resolve()
+        for path in [candidate.with_suffix(".py"), candidate / "__init__.py"]:
+            try:
+                relative = path.relative_to(self.repo_root).as_posix()
+            except ValueError:
+                continue
+            if path.exists() and path.is_file():
+                return relative
+        return None
+
+    def _resolve_rust_import(self, rel_path: str, import_text: str) -> str | None:
+        path_text = import_text.removeprefix("use").strip().rstrip(";")
+        if "::" not in path_text:
+            return None
+        parts = [part for part in path_text.split("::") if part and part not in {"crate", "self", "super"}]
+        if not parts:
+            return None
+
+        crate_root = self._rust_crate_root(rel_path)
+        if not crate_root:
+            return None
+
+        current_dir = (self.repo_root / rel_path).parent
+        anchors = []
+        if path_text.startswith("crate::"):
+            anchors.append(crate_root)
+        elif path_text.startswith("super::"):
+            anchors.append(current_dir.parent)
+        elif path_text.startswith("self::"):
+            anchors.append(current_dir)
+        else:
+            anchors.append(crate_root)
+
+        module_parts = parts[:-1] or parts
+        for anchor in anchors:
+            module_base = anchor.joinpath(*module_parts)
+            for path in [module_base.with_suffix(".rs"), module_base / "mod.rs"]:
+                try:
+                    relative = path.relative_to(self.repo_root).as_posix()
+                except ValueError:
+                    continue
+                if path.exists() and path.is_file():
+                    return relative
+        return None
+
+    def _rust_crate_root(self, rel_path: str) -> Path | None:
+        path = self.repo_root / rel_path
+        parts = list(path.parts)
+        if "src" not in parts:
+            return None
+        src_index = parts.index("src")
+        return Path(*parts[: src_index + 1])
+
+    def _node_text(self, node, source: bytes) -> str:
+        return source[node.start_byte:node.end_byte].decode("utf-8", errors="replace")
+
+    def _first_child(self, node, types: set[str]):
+        for child in node.children:
+            if child.is_named and child.type in types:
+                return child
+        return None
+
+    def _descendants(self, node, types: set[str]):
+        for child in node.children:
+            if not child.is_named:
+                continue
+            if child.type in types:
+                yield child
+            yield from self._descendants(child, types)
+
+    def _strip_quotes(self, value: str) -> str:
+        return value.strip("\"'")
+
+    def _normalize_test_tokens(self, value: str) -> set[str]:
+        normalized = re.sub(r"[^a-z0-9]+", " ", value.lower())
+        return {part for part in normalized.split() if part and part != "test"}
 
     def _normalized_source_basename(self, rel_path: str) -> str:
         name = Path(rel_path).name
@@ -888,9 +843,6 @@ class BuiltinGraphAdapter:
             if name.endswith(suffix):
                 name = name[: -len(suffix)]
         return name
-
-    def _indent(self, line: str) -> int:
-        return len(line) - len(line.lstrip(" "))
 
     def _timestamp(self) -> str:
         return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
