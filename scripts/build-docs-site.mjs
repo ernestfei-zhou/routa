@@ -276,7 +276,7 @@ function sectionItems(dirName) {
       relPath: `${dirName}/${item.relPath}`,
       fullPath: item.fullPath,
       updatedTs: getUpdatedTs(item.fullPath),
-      label: normalizeLabel(item.relPath),
+      label: extractTitle(readFile(item.fullPath), normalizeLabel(item.relPath)),
     }))
     .sort((a, b) => b.updatedTs - a.updatedTs);
 }
