@@ -1,4 +1,5 @@
 ---
+id: "issue-refiner"
 name: "Issue Refiner"
 description: "Analyzes and refines requirements from issues into actionable tasks"
 role: "DEVELOPER"

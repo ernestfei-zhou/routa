@@ -1,14 +1,14 @@
 ---
 title: "[Feature] 支持从 YAML 配置初始化/加载 Kanban（便于 CLI 一键恢复和批量同步）"
 date: 2026-03-18
-status: open
+status: closed
 severity: medium
 area: kanban
 tags: ["enhancement", "cli", "kanban", "yaml", "automation", "bootstrap"]
 reported_by: "agent"
 related_issues: []
 github_issue: 193
-github_state: "open"
+github_state: "closed"
 github_url: "https://github.com/phodal/routa/issues/193"
 ---
 
@@ -237,3 +237,20 @@ sequenceDiagram
 
 - `docs/issues/2026-03-11-card-detail-rerun-mechanism-issues.md`
 - `docs/issues/2026-03-12-gh-132-feature-design-and-develop-ai-security-scanning-tool-based-on-routa-js-s.md`
+
+## Resolution Notes
+
+- GitHub issue 193 is implemented in the current codebase.
+- CLI commands now exist under `routa kanban board`:
+  - `validate --file`
+  - `apply --file [--dry-run] [--workspace-id] [--continue-on-error]`
+  - `export --workspace-id [--output]`
+- YAML parsing, serialization, and semantic validation are implemented in `crates/routa-core/src/models/kanban_config.rs`.
+- Apply reuses existing RPC methods with the expected create-then-update workaround for full column metadata.
+- Export round-trip is covered by tests.
+
+### Verification
+
+- Date: 2026-03-19
+- Command: `cargo test -p routa-cli test_kanban_ -- --nocapture`
+- Result: 8 passed, 0 failed

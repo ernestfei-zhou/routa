@@ -732,7 +732,6 @@ markdown prompt
             bundled_root.join("zh-CN").display()
         );
         assert_eq!(english_overlay_ids, runtime_ids);
-        assert!(!chinese_overlay_ids.is_empty());
-        assert!(chinese_overlay_ids.is_subset(&runtime_ids));
+        assert_eq!(chinese_overlay_ids, runtime_ids);
     }
 }
