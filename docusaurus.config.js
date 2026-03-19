@@ -3,9 +3,9 @@ module.exports = {
   title: "Routa Docs",
   tagline: "Routa.js documentation and team learning notes",
   url: "https://phodal.github.io",
-  baseUrl: "/routa-js/",
+  baseUrl: "/routa/",
   organizationName: "phodal",
-  projectName: "routa-js",
+  projectName: "routa",
   trailingSlash: false,
   onBrokenLinks: "warn",
   markdown: {
