@@ -142,7 +142,7 @@ export class SharedSessionService {
     const mode = input.mode ?? "prompt_with_approval";
     const session: SharedSession = {
       id: sessionId,
-      workspaceId: input.workspaceId ?? hostSession.workspaceId ?? "default",
+      workspaceId: input.workspaceId ?? hostSession.workspaceId,
       hostUserId: input.hostUserId.trim(),
       hostSessionId: input.hostSessionId,
       mode,

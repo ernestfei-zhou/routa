@@ -480,13 +480,17 @@ export class RoutaOrchestrator {
 
     // Build a LifecycleNotifier so the child auto-notifies its parent on session end
     const agent = await this.system.agentStore.get(agentId);
+    const effectiveWorkspaceId = workspaceId ?? agent?.workspaceId;
+    if (!effectiveWorkspaceId) {
+      throw new Error(`workspaceId is required to spawn child agent ${agentId}`);
+    }
     const lifecycleNotifier = new LifecycleNotifier(
       this.system.eventBus,
       this.system.agentStore,
       this.system.conversationStore,
       {
         agentId,
-        workspaceId: workspaceId ?? "default",
+        workspaceId: effectiveWorkspaceId,
         parentId: agent?.parentId,
         agentName: agent?.name,
       }
@@ -540,7 +544,7 @@ export class RoutaOrchestrator {
     // Embed workspaceId (?wsId=) and parentSessionId (?sid=) so the MCP server
     // can scope tool calls (e.g. create_note) to the correct session.
     const mcpUrlObj = new URL(baseMcpUrl);
-    if (workspaceId && workspaceId !== "default") mcpUrlObj.searchParams.set("wsId", workspaceId);
+    mcpUrlObj.searchParams.set("wsId", effectiveWorkspaceId);
     mcpUrlObj.searchParams.set("sid", parentSessionId);
     const mcpUrl = mcpUrlObj.toString();
 
@@ -549,7 +553,7 @@ export class RoutaOrchestrator {
 
     if (isNativeWorkspaceAgent) {
       sandboxId = (await createWorkspaceSessionSandbox({
-        workspaceId,
+        workspaceId: effectiveWorkspaceId,
         workdir: cwd,
       }))?.id;
 
@@ -559,7 +563,7 @@ export class RoutaOrchestrator {
         notificationHandler,
         {
           agentTools: this.system.tools,
-          workspaceId,
+          workspaceId: effectiveWorkspaceId,
           agentId,
           sandboxId,
           lifecycleNotifier,

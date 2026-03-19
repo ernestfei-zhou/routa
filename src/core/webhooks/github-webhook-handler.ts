@@ -366,7 +366,7 @@ export async function handleGitHubWebhook(
     webhookStore,
     backgroundTaskStore,
     workflowRunStore,
-    workspaceId = "default",
+    workspaceId,
   } = opts;
 
   const logs: WebhookTriggerLog[] = [];
@@ -408,6 +408,20 @@ export async function handleGitHubWebhook(
     // 3. Dispatch: workflow trigger or single background task
     try {
       const configWorkspaceId = config.workspaceId ?? workspaceId;
+      if (!configWorkspaceId) {
+        const log = await webhookStore.appendLog({
+          configId: config.id,
+          eventType,
+          eventAction: payload.action,
+          payload,
+          signatureValid: true,
+          outcome: "error",
+          errorMessage: "No workspaceId configured for webhook dispatch",
+        });
+        logs.push(log);
+        skipped++;
+        continue;
+      }
       let taskId: string | undefined;
       let workflowRunId: string | undefined;
 

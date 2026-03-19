@@ -84,7 +84,7 @@ export class GitHubPollingAdapter {
   constructor(
     private webhookStore: GitHubWebhookStore,
     private backgroundTaskStore: BackgroundTaskStore,
-    private workspaceId: string = "default"
+    private workspaceId?: string
   ) {
     // Initialize from environment variables
     this.initFromEnv();
@@ -261,12 +261,19 @@ export class GitHubPollingAdapter {
       try {
         const prompt = buildPrompt(config, webhookEventType, payload);
         const taskTitle = `[GitHub ${webhookEventType}] ${event.repo.name} — ${payload.action ?? "event"} (polled)`;
+        const workspaceId = config.workspaceId ?? this.workspaceId;
+        if (!workspaceId) {
+          console.warn(
+            `[GitHubPolling] Skipping config ${config.id} because no workspaceId is available`,
+          );
+          continue;
+        }
 
         const task = createBackgroundTask({
           id: uuidv4(),
           prompt,
           agentId: config.triggerAgentId,
-          workspaceId: config.workspaceId ?? this.workspaceId,
+          workspaceId,
           title: taskTitle,
           triggerSource: "polling",
           triggeredBy: `github:${webhookEventType}`,
@@ -385,4 +392,3 @@ export function resetPollingAdapter(): void {
     pollingAdapterInstance = null;
   }
 }
-
