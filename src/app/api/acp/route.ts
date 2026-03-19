@@ -651,7 +651,7 @@ export async function POST(request: NextRequest) {
               const agentResult = await system.tools.createAgent({
                 name: `routa-coordinator-${sessionId.slice(0, 8)}`,
                 role: AgentRole.ROUTA,
-                workspaceId: (p.workspaceId as string) || "default",
+                workspaceId,
               });
 
               if (agentResult.success && agentResult.data) {
@@ -853,7 +853,13 @@ export async function POST(request: NextRequest) {
         const defaultProvider = isServerlessEnvironment() ? "claude-code-sdk" : "opencode";
         // Prefer the provider stored in the session record (handles restarts for claude sessions)
         const provider = (p.provider as string | undefined) ?? storedSession?.provider ?? defaultProvider;
-        const workspaceId = (p.workspaceId as string) || storedSession?.workspaceId || "default";
+        const workspaceId = requireWorkspaceId(p.workspaceId) ?? storedSession?.workspaceId;
+        if (!workspaceId) {
+          return jsonrpcResponse(id ?? null, null, {
+            code: -32602,
+            message: "workspaceId is required to recreate the session",
+          });
+        }
         const role = storedSession?.role ?? "CRAFTER"; // Prefer stored role for restarts
         const toolMode = storedSession?.toolMode;
         const mcpProfile = storedSession?.mcpProfile;
@@ -1008,7 +1014,7 @@ export async function POST(request: NextRequest) {
             if (isFirstPrompt) {
               promptText = buildCoordinatorPrompt({
                 agentId: agent.id,
-                workspaceId: sessionRecord.workspaceId || "default",
+                workspaceId: sessionRecord.workspaceId,
                 userRequest: promptText,
               });
               store.markFirstPromptSent(sessionId);
@@ -1268,7 +1274,13 @@ export async function POST(request: NextRequest) {
             });
           }
           const restartCwd = sessionRecord.cwd ?? process.cwd();
-          const restartWorkspaceId = sessionRecord.workspaceId ?? "default";
+          const restartWorkspaceId = sessionRecord.workspaceId;
+          if (!restartWorkspaceId) {
+            return jsonrpcResponse(id ?? null, null, {
+              code: -32602,
+              message: "workspaceId is missing for session restart",
+            });
+          }
           const restartRole = sessionRecord.role ?? "CRAFTER";
           const restartToolMode = sessionRecord.toolMode;
           const restartMcpProfile = sessionRecord.mcpProfile;
