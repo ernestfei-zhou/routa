@@ -58,6 +58,33 @@ function extractSandboxId(options?: PermissionRequestOptions): string | undefine
     : undefined;
 }
 
+function stripAnsiEscapeCodes(value?: string): string {
+  if (!value) return "";
+  let result = "";
+  for (let index = 0; index < value.length; index += 1) {
+    const charCode = value.charCodeAt(index);
+    const nextChar = value[index + 1];
+    if (charCode === 27 && nextChar === "[") {
+      index += 2;
+      while (index < value.length) {
+        const commandCode = value.charCodeAt(index);
+        if (commandCode >= 64 && commandCode <= 126) {
+          break;
+        }
+        index += 1;
+      }
+      continue;
+    }
+    result += value[index];
+  }
+  return result;
+}
+
+function extractScreenshotPath(output: string): string | undefined {
+  const pathMatch = output.match(/((?:[A-Za-z]:)?(?:[\\/]|~\/)[^\s"]+?\.png)\b/i);
+  return pathMatch?.[1];
+}
+
 function notifyKanbanArtifactChanged(workspaceId: string, taskId: string): void {
   getKanbanEventBroadcaster().notify({
     workspaceId,
@@ -1085,8 +1112,8 @@ export class AgentTools {
       });
 
       // Parse output to get screenshot path
-      const output = result.stdout.trim();
-      const stderrOutput = result.stderr?.trim();
+      const output = stripAnsiEscapeCodes(result.stdout).trim();
+      const stderrOutput = stripAnsiEscapeCodes(result.stderr).trim();
 
       // Read the screenshot file if path is available
       let screenshotContent = "";
@@ -1094,10 +1121,7 @@ export class AgentTools {
 
       // Try to extract path from output if not specified
       if (!screenshotPath) {
-        const pathMatch = output.match(/(?:Saved|Screenshot).*?([/\w.-]+\.png)/i);
-        if (pathMatch) {
-          screenshotPath = pathMatch[1];
-        }
+        screenshotPath = extractScreenshotPath(output);
       }
 
       // Read file and convert to base64 if we have a path
@@ -1107,9 +1131,25 @@ export class AgentTools {
           const buffer = await fs.readFile(screenshotPath);
           screenshotContent = buffer.toString("base64");
         } catch {
-          // File might not exist or be readable
-          screenshotContent = `Screenshot captured at: ${screenshotPath}`;
+          screenshotContent = "";
         }
+      }
+
+      const artifactContent = screenshotContent
+        || stderrOutput
+        || output
+        || (screenshotPath ? `Screenshot captured at: ${screenshotPath}` : "");
+
+      const metadata: Record<string, string> = {
+        url: url || "",
+        fullPage: String(fullPage ?? false),
+        annotate: String(annotate ?? false),
+        path: screenshotPath || "",
+      };
+      if (screenshotContent) {
+        metadata.mediaType = "image/png";
+      } else if (screenshotPath) {
+        metadata.captureError = "screenshot_file_unreadable";
       }
 
       // Store as artifact
@@ -1119,15 +1159,10 @@ export class AgentTools {
         taskId,
         workspaceId,
         providedByAgentId: agentId,
-        content: screenshotContent || output,
+        content: artifactContent,
         context: context || `Screenshot${url ? ` of ${url}` : ""}${fullPage ? " (full page)" : ""}`,
         status: "provided",
-        metadata: {
-          url: url || "",
-          fullPage: String(fullPage ?? false),
-          annotate: String(annotate ?? false),
-          path: screenshotPath || "",
-        },
+        metadata,
       });
 
       await this.artifactStore.saveArtifact(artifact);
@@ -1153,7 +1188,7 @@ export class AgentTools {
         taskId,
         path: screenshotPath,
         output,
-        stderr: stderrOutput,
+        stderr: stderrOutput || undefined,
       });
     } catch (err) {
       const error = err as Error;

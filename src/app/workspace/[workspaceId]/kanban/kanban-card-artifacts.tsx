@@ -38,6 +38,23 @@ interface DiffChunk {
   deletions: number;
 }
 
+function isValidBase64Content(value: string): boolean {
+  const normalized = value.replace(/\s+/g, "");
+  if (!normalized || normalized.length % 4 !== 0) return false;
+  return /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(normalized);
+}
+
+function getScreenshotSrc(artifact: ArtifactInfo): string | null {
+  if (artifact.type !== "screenshot" || !artifact.content) return null;
+  const mediaType = artifact.metadata?.mediaType || "image/png";
+  if (!mediaType.startsWith("image/")) return null;
+
+  const normalized = artifact.content.replace(/\s+/g, "");
+  if (!isValidBase64Content(normalized)) return null;
+
+  return `data:${mediaType};base64,${normalized}`;
+}
+
 function parseUnifiedDiff(content: string, fallbackFilename?: string): DiffChunk[] {
   const lines = content.split("\n");
   const chunks: DiffChunk[] = [];
@@ -212,10 +229,7 @@ export function KanbanCardArtifacts({
         ) : (
           <div className="space-y-3">
             {artifacts.map((artifact) => {
-              const mediaType = artifact.metadata?.mediaType || "image/png";
-              const screenshotSrc = artifact.type === "screenshot" && artifact.content
-                ? `data:${mediaType};base64,${artifact.content}`
-                : null;
+              const screenshotSrc = getScreenshotSrc(artifact);
               const diffChunks = artifact.type === "code_diff" && artifact.content
                 ? parseUnifiedDiff(artifact.content, artifact.metadata?.filename)
                 : [];

@@ -39,7 +39,7 @@ describe("KanbanCardArtifacts", () => {
                 taskId: "task-1",
                 workspaceId: "workspace-1",
                 providedByAgentId: "agent-1",
-                content: "encoded-image",
+                content: "aW1hZ2U=",
                 context: "Review proof",
                 status: "provided",
                 createdAt: "2025-01-01T00:00:00.000Z",
@@ -85,6 +85,45 @@ describe("KanbanCardArtifacts", () => {
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it("falls back to text when a screenshot artifact does not contain valid base64", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === "/api/tasks/task-bad/artifacts" && (!init?.method || init.method === "GET")) {
+        return {
+          ok: true,
+          json: async () => ({
+            artifacts: [{
+              id: "artifact-bad-1",
+              type: "screenshot",
+              taskId: "task-bad",
+              workspaceId: "workspace-1",
+              providedByAgentId: "agent-1",
+              content: "Screenshot captured at: /tmp/bad.png",
+              context: "Broken screenshot",
+              status: "provided",
+              createdAt: "2025-01-01T00:00:00.000Z",
+              updatedAt: "2025-01-01T00:00:00.000Z",
+              metadata: {
+                mediaType: "image/png",
+                path: "/tmp/bad.png",
+              },
+            }],
+          }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${init?.method ?? "GET"} ${url}`);
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<KanbanCardArtifacts taskId="task-bad" refreshSignal={0} />);
+
+    expect(await screen.findByText("Broken screenshot")).toBeTruthy();
+    expect(screen.getByText("Screenshot captured at: /tmp/bad.png")).toBeTruthy();
+    expect(screen.queryByAltText("Broken screenshot")).toBeNull();
   });
 
   it("renders code diff artifacts as per-file expandable code viewers", async () => {
