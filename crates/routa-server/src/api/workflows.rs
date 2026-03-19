@@ -1,4 +1,10 @@
-use axum::{extract::Path, routing::get, Json, Router};
+use crate::application::tasks::{CreateTaskCommand, TaskApplicationService};
+use axum::{
+    extract::{Path, State},
+    routing::get,
+    Json, Router,
+};
+use routa_core::workflow::schema::{WorkflowDefinition, WorkflowStep};
 use serde::Deserialize;
 use std::path::PathBuf;
 
@@ -16,6 +22,7 @@ pub fn router() -> Router<AppState> {
                 .put(update_workflow)
                 .delete(delete_workflow),
         )
+        .route("/{id}/trigger", axum::routing::post(trigger_workflow))
 }
 
 fn flows_dir() -> Result<PathBuf, ServerError> {
@@ -58,6 +65,86 @@ fn parse_workflow(id: &str, content: &str) -> serde_json::Value {
         "steps": steps,
         "yamlContent": content,
     })
+}
+
+fn workflow_file_path(id: &str) -> Result<PathBuf, ServerError> {
+    Ok(flows_dir()?.join(format!("{}.yaml", id)))
+}
+
+fn load_workflow_definition(id: &str) -> Result<WorkflowDefinition, ServerError> {
+    let file_path = workflow_file_path(id)?;
+    if !file_path.exists() {
+        return Err(ServerError::NotFound("Workflow not found".to_string()));
+    }
+
+    let content = std::fs::read_to_string(&file_path)
+        .map_err(|e| ServerError::Internal(format!("Failed to read workflow: {}", e)))?;
+
+    serde_yaml::from_str(&content)
+        .map_err(|e| ServerError::BadRequest(format!("Invalid workflow YAML: {}", e)))
+}
+
+fn require_workspace_id(value: &str) -> Result<String, ServerError> {
+    let normalized = value.trim();
+    if normalized.is_empty() {
+        return Err(ServerError::BadRequest(
+            "workspaceId is required".to_string(),
+        ));
+    }
+    Ok(normalized.to_string())
+}
+
+fn group_steps_by_parallel(steps: &[WorkflowStep]) -> Vec<Vec<WorkflowStep>> {
+    let mut groups: Vec<Vec<WorkflowStep>> = Vec::new();
+    let mut current_group: Vec<WorkflowStep> = Vec::new();
+    let mut current_parallel_group: Option<String> = None;
+
+    for step in steps {
+        if let Some(parallel_group) = &step.parallel_group {
+            if current_parallel_group.as_deref() == Some(parallel_group.as_str()) {
+                current_group.push(step.clone());
+            } else {
+                if !current_group.is_empty() {
+                    groups.push(current_group);
+                }
+                current_group = vec![step.clone()];
+                current_parallel_group = Some(parallel_group.clone());
+            }
+        } else {
+            if !current_group.is_empty() {
+                groups.push(current_group);
+                current_group = Vec::new();
+            }
+            groups.push(vec![step.clone()]);
+            current_parallel_group = None;
+        }
+    }
+
+    if !current_group.is_empty() {
+        groups.push(current_group);
+    }
+
+    groups
+}
+
+fn build_step_prompt(
+    step: &WorkflowStep,
+    definition: &WorkflowDefinition,
+    trigger_payload: Option<&str>,
+) -> String {
+    let mut prompt = step.input.clone().unwrap_or_default();
+    prompt = prompt.replace("${trigger.payload}", trigger_payload.unwrap_or_default());
+
+    for (key, value) in &definition.variables {
+        prompt = prompt.replace(&format!("${{variables.{}}}", key), value);
+        prompt = prompt.replace(&format!("${{{}}}", key), value);
+    }
+
+    if prompt.trim().is_empty() {
+        format!("Execute step: {}", step.name)
+    } else {
+        prompt
+    }
 }
 
 /// GET /api/workflows — List all workflow YAML definitions.
@@ -149,13 +236,7 @@ async fn create_workflow(
 
 /// GET /api/workflows/{id} — Get a specific workflow.
 async fn get_workflow(Path(id): Path<String>) -> Result<Json<serde_json::Value>, ServerError> {
-    let dir = flows_dir()?;
-    let file_path = dir.join(format!("{}.yaml", id));
-
-    if !file_path.exists() {
-        return Err(ServerError::NotFound("Workflow not found".to_string()));
-    }
-
+    let file_path = workflow_file_path(&id)?;
     let content = std::fs::read_to_string(&file_path)
         .map_err(|e| ServerError::Internal(format!("Failed to read workflow: {}", e)))?;
 
@@ -220,4 +301,84 @@ async fn delete_workflow(Path(id): Path<String>) -> Result<Json<serde_json::Valu
         .map_err(|e| ServerError::Internal(format!("Failed to delete workflow: {}", e)))?;
 
     Ok(Json(serde_json::json!({ "success": true })))
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TriggerWorkflowInput {
+    workspace_id: String,
+    trigger_payload: Option<String>,
+}
+
+/// POST /api/workflows/{id}/trigger — start a workflow run inside a workspace.
+async fn trigger_workflow(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(body): Json<TriggerWorkflowInput>,
+) -> Result<(axum::http::StatusCode, Json<serde_json::Value>), ServerError> {
+    let workspace_id = require_workspace_id(&body.workspace_id)?;
+    let Some(_) = state.workspace_store.get(&workspace_id).await? else {
+        return Err(ServerError::NotFound("Workspace not found".to_string()));
+    };
+
+    let definition = load_workflow_definition(&id)?;
+    let workflow_run_id = uuid::Uuid::new_v4().to_string();
+    let task_service = TaskApplicationService::new(state.clone());
+    let mut task_ids = Vec::new();
+
+    for group in group_steps_by_parallel(&definition.steps) {
+        let dependencies = if task_ids.is_empty() {
+            None
+        } else {
+            Some(task_ids.clone())
+        };
+
+        for step in group {
+            let plan = task_service
+                .create_task(CreateTaskCommand {
+                    title: format!("[{}] {}", definition.name, step.name),
+                    objective: build_step_prompt(
+                        &step,
+                        &definition,
+                        body.trigger_payload.as_deref(),
+                    ),
+                    workspace_id: Some(workspace_id.clone()),
+                    session_id: None,
+                    scope: None,
+                    acceptance_criteria: None,
+                    verification_commands: None,
+                    test_cases: None,
+                    dependencies: dependencies.clone(),
+                    parallel_group: step.parallel_group.clone(),
+                    board_id: None,
+                    column_id: None,
+                    position: None,
+                    priority: None,
+                    labels: Some(vec![
+                        "workflow".to_string(),
+                        id.clone(),
+                        workflow_run_id.clone(),
+                    ]),
+                    assignee: None,
+                    assigned_provider: None,
+                    assigned_role: None,
+                    assigned_specialist_id: Some(step.specialist.clone()),
+                    assigned_specialist_name: Some(step.specialist.clone()),
+                    create_github_issue: Some(false),
+                    repo_path: None,
+                })
+                .await?;
+
+            state.task_store.save(&plan.task).await?;
+            task_ids.push(plan.task.id);
+        }
+    }
+
+    Ok((
+        axum::http::StatusCode::CREATED,
+        Json(serde_json::json!({
+            "workflowRunId": workflow_run_id,
+            "taskIds": task_ids,
+        })),
+    ))
 }

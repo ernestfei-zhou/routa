@@ -5032,6 +5032,48 @@ paths:
         "404":
           description: Workflow not found
 
+  /api/workflows/{id}/trigger:
+    post:
+      operationId: triggerWorkflow
+      summary: Trigger a workflow run inside a workspace
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [workspaceId]
+              properties:
+                workspaceId:
+                  type: string
+                triggerPayload:
+                  type: string
+      responses:
+        "201":
+          description: Workflow run created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [workflowRunId, taskIds]
+                properties:
+                  workflowRunId:
+                    type: string
+                  taskIds:
+                    type: array
+                    items:
+                      type: string
+        "400":
+          description: Invalid input
+        "404":
+          description: Workflow or workspace not found
+
   # ── Debug (Rust desktop only) ──
   /api/debug/path:
     get:
