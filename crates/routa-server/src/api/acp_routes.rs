@@ -225,6 +225,14 @@ async fn acp_rpc(
                 .get("parentSessionId")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
+            let tool_mode = params
+                .get("toolMode")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let mcp_profile = params
+                .get("mcpProfile")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             let worktree_id = params
                 .get("worktreeId")
                 .and_then(|v| v.as_str())
@@ -293,6 +301,8 @@ async fn acp_rpc(
                     role.clone(),
                     model.clone(),
                     parent_session_id.clone(),
+                    tool_mode.clone(),
+                    mcp_profile.clone(),
                 )
                 .await
             {
@@ -419,6 +429,14 @@ async fn acp_rpc(
                     .and_then(|v| v.as_str())
                     .unwrap_or("default")
                     .to_string();
+                let tool_mode = params
+                    .get("toolMode")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                let mcp_profile = params
+                    .get("mcpProfile")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
                 let role = Some("CRAFTER".to_string()); // Default role for auto-created sessions
 
                 // Create the session
@@ -432,6 +450,8 @@ async fn acp_rpc(
                         role.clone(),
                         None, // model
                         None, // parent_session_id
+                        tool_mode,
+                        mcp_profile,
                     )
                     .await
                 {

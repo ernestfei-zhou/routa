@@ -101,7 +101,10 @@ pub async fn list_boards(
         .kanban_store
         .ensure_default_board(&params.workspace_id)
         .await?;
-    let boards = state.kanban_store.list_by_workspace(&params.workspace_id).await?;
+    let boards = state
+        .kanban_store
+        .list_by_workspace(&params.workspace_id)
+        .await?;
     Ok(ListBoardsResult {
         boards: boards
             .into_iter()
@@ -138,12 +141,16 @@ pub async fn create_board(
     ensure_workspace_exists(state, &params.workspace_id).await?;
     let name = params.name.trim();
     if name.is_empty() {
-        return Err(RpcError::BadRequest("board name cannot be blank".to_string()));
+        return Err(RpcError::BadRequest(
+            "board name cannot be blank".to_string(),
+        ));
     }
 
     let want_default = params.is_default.unwrap_or(false);
     let mut board = default_kanban_board(params.workspace_id.clone());
-    board.id = params.id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    board.id = params
+        .id
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     board.name = name.to_string();
     // Always insert with is_default=false to avoid the unique partial index
     // violation when another default board already exists in the workspace.
@@ -194,7 +201,10 @@ pub struct GetBoardResult {
     pub updated_at: chrono::DateTime<Utc>,
 }
 
-pub async fn get_board(state: &AppState, params: GetBoardParams) -> Result<GetBoardResult, RpcError> {
+pub async fn get_board(
+    state: &AppState,
+    params: GetBoardParams,
+) -> Result<GetBoardResult, RpcError> {
     let board = state
         .kanban_store
         .get(&params.board_id)
@@ -230,7 +240,9 @@ pub async fn update_board(
     if let Some(name) = params.name {
         let trimmed = name.trim();
         if trimmed.is_empty() {
-            return Err(RpcError::BadRequest("board name cannot be blank".to_string()));
+            return Err(RpcError::BadRequest(
+                "board name cannot be blank".to_string(),
+            ));
         }
         board.name = trimmed.to_string();
     }
@@ -250,11 +262,10 @@ pub async fn update_board(
             .kanban_store
             .set_default_for_workspace(&board.workspace_id, &board.id)
             .await?;
-        board = state
-            .kanban_store
-            .get(&board.id)
-            .await?
-            .ok_or_else(|| RpcError::NotFound(format!("Board {} not found", params.board_id)))?;
+        board =
+            state.kanban_store.get(&board.id).await?.ok_or_else(|| {
+                RpcError::NotFound(format!("Board {} not found", params.board_id))
+            })?;
     }
     emit_kanban_workspace_event(
         state,
@@ -302,11 +313,13 @@ pub async fn create_card(
 
     let title = params.title.trim();
     if title.is_empty() {
-        return Err(RpcError::BadRequest("card title cannot be blank".to_string()));
+        return Err(RpcError::BadRequest(
+            "card title cannot be blank".to_string(),
+        ));
     }
 
-    let position = next_position_in_column(state, &board.workspace_id, &board.id, &target_column_id)
-        .await?;
+    let position =
+        next_position_in_column(state, &board.workspace_id, &board.id, &target_column_id).await?;
     let mut task = Task::new(
         uuid::Uuid::new_v4().to_string(),
         title.to_string(),
@@ -359,16 +372,21 @@ pub struct MoveCardResult {
     pub card: KanbanCard,
 }
 
-pub async fn move_card(state: &AppState, params: MoveCardParams) -> Result<MoveCardResult, RpcError> {
+pub async fn move_card(
+    state: &AppState,
+    params: MoveCardParams,
+) -> Result<MoveCardResult, RpcError> {
     let mut task = state
         .task_store
         .get(&params.card_id)
         .await?
         .ok_or_else(|| RpcError::NotFound(format!("Card {} not found", params.card_id)))?;
-    let board_id = task
-        .board_id
-        .clone()
-        .ok_or_else(|| RpcError::BadRequest(format!("Card {} is not associated with a board", params.card_id)))?;
+    let board_id = task.board_id.clone().ok_or_else(|| {
+        RpcError::BadRequest(format!(
+            "Card {} is not associated with a board",
+            params.card_id
+        ))
+    })?;
     let board = state
         .kanban_store
         .get(&board_id)
@@ -380,7 +398,9 @@ pub async fn move_card(state: &AppState, params: MoveCardParams) -> Result<MoveC
         .iter()
         .find(|column| column.id == params.target_column_id)
         .cloned()
-        .ok_or_else(|| RpcError::NotFound(format!("Column {} not found", params.target_column_id)))?;
+        .ok_or_else(|| {
+            RpcError::NotFound(format!("Column {} not found", params.target_column_id))
+        })?;
     let previous_column_id = task.column_id.clone();
     let source_column = previous_column_id
         .as_deref()
@@ -398,20 +418,20 @@ pub async fn move_card(state: &AppState, params: MoveCardParams) -> Result<MoveC
                 "position must be greater than or equal to zero".to_string(),
             ))
         }
-        None => next_position_in_column(
-            state,
-            &board.workspace_id,
-            &board.id,
-            &params.target_column_id,
-        )
-        .await?,
+        None => {
+            next_position_in_column(
+                state,
+                &board.workspace_id,
+                &board.id,
+                &params.target_column_id,
+            )
+            .await?
+        }
     };
     sync_task_status_from_column(&mut task);
     if previous_column_id.as_deref() != Some(params.target_column_id.as_str()) {
-        let transition_column = resolve_transition_automation_column(
-            source_column.as_ref(),
-            Some(&target_column),
-        );
+        let transition_column =
+            resolve_transition_automation_column(source_column.as_ref(), Some(&target_column));
         maybe_apply_lane_automation_defaults(&mut task, transition_column);
         task.trigger_session_id = None;
     }
@@ -419,10 +439,8 @@ pub async fn move_card(state: &AppState, params: MoveCardParams) -> Result<MoveC
 
     state.task_store.save(&task).await?;
     if previous_column_id.as_deref() != Some(params.target_column_id.as_str()) {
-        let transition_column = resolve_transition_automation_column(
-            source_column.as_ref(),
-            Some(&target_column),
-        );
+        let transition_column =
+            resolve_transition_automation_column(source_column.as_ref(), Some(&target_column));
         maybe_trigger_lane_automation(state, &mut task, transition_column).await;
         state.task_store.save(&task).await?;
     }
@@ -661,6 +679,8 @@ async fn trigger_assigned_task_agent(state: &AppState, task: &Task) -> Result<St
             Some(role.clone()),
             None,
             None,
+            Some("full".to_string()),
+            Some("kanban-planning".to_string()),
         )
         .await
         .map_err(|error| format!("Failed to create ACP session: {}", error))?;
@@ -736,7 +756,9 @@ pub async fn update_card(
     if let Some(title) = params.title {
         let trimmed = title.trim();
         if trimmed.is_empty() {
-            return Err(RpcError::BadRequest("card title cannot be blank".to_string()));
+            return Err(RpcError::BadRequest(
+                "card title cannot be blank".to_string(),
+            ));
         }
         task.title = trimmed.to_string();
     }
@@ -827,7 +849,9 @@ pub async fn create_column(
         .ok_or_else(|| RpcError::NotFound(format!("Board {} not found", params.board_id)))?;
     let name = params.name.trim();
     if name.is_empty() {
-        return Err(RpcError::BadRequest("column name cannot be blank".to_string()));
+        return Err(RpcError::BadRequest(
+            "column name cannot be blank".to_string(),
+        ));
     }
 
     let column_id = slugify(name);
@@ -900,7 +924,10 @@ pub async fn delete_column(
         .position(|column| column.id == params.column_id)
         .ok_or_else(|| RpcError::NotFound(format!("Column {} not found", params.column_id)))?;
 
-    let tasks = state.task_store.list_by_workspace(&board.workspace_id).await?;
+    let tasks = state
+        .task_store
+        .list_by_workspace(&board.workspace_id)
+        .await?;
     let column_tasks: Vec<Task> = tasks
         .into_iter()
         .filter(|task| {
@@ -919,8 +946,8 @@ pub async fn delete_column(
             cards_deleted += 1;
         } else {
             set_task_column(&mut task, "backlog");
-            task.position = next_position_in_column(state, &board.workspace_id, &board.id, "backlog")
-                .await?;
+            task.position =
+                next_position_in_column(state, &board.workspace_id, &board.id, "backlog").await?;
             task.updated_at = Utc::now();
             state.task_store.save(&task).await?;
             cards_moved += 1;
@@ -976,7 +1003,10 @@ pub async fn search_cards(
         return Err(RpcError::BadRequest("query cannot be blank".to_string()));
     }
 
-    let tasks = state.task_store.list_by_workspace(&params.workspace_id).await?;
+    let tasks = state
+        .task_store
+        .list_by_workspace(&params.workspace_id)
+        .await?;
     let cards = tasks
         .into_iter()
         .filter(|task| {
@@ -987,7 +1017,10 @@ pub async fn search_cards(
             }
             task.board_id.is_some()
                 && (task.title.to_ascii_lowercase().contains(&query)
-                    || task.labels.iter().any(|label| label.to_ascii_lowercase().contains(&query))
+                    || task
+                        .labels
+                        .iter()
+                        .any(|label| label.to_ascii_lowercase().contains(&query))
                     || task
                         .assignee
                         .as_ref()
@@ -1071,7 +1104,9 @@ pub async fn decompose_tasks(
     params: DecomposeTasksParams,
 ) -> Result<DecomposeTasksResult, RpcError> {
     if params.tasks.is_empty() {
-        return Err(RpcError::BadRequest("tasks array cannot be empty".to_string()));
+        return Err(RpcError::BadRequest(
+            "tasks array cannot be empty".to_string(),
+        ));
     }
     let board = resolve_board(state, &params.workspace_id, params.board_id.as_deref()).await?;
     let target_column_id = params.column_id.unwrap_or_else(|| "backlog".to_string());
@@ -1112,8 +1147,15 @@ pub async fn decompose_tasks(
         created_cards.push(task_to_card(&task));
         position += 1;
     }
-    emit_kanban_workspace_event(state, &board.workspace_id, "task", "created", None, "system")
-        .await;
+    emit_kanban_workspace_event(
+        state,
+        &board.workspace_id,
+        "task",
+        "created",
+        None,
+        "system",
+    )
+    .await;
 
     Ok(DecomposeTasksResult {
         count: created_cards.len(),
@@ -1187,7 +1229,10 @@ async fn next_position_in_column(
     Ok(count as i64)
 }
 
-async fn build_board_result(state: &AppState, board: KanbanBoard) -> Result<GetBoardResult, RpcError> {
+async fn build_board_result(
+    state: &AppState,
+    board: KanbanBoard,
+) -> Result<GetBoardResult, RpcError> {
     let mut tasks = tasks_for_board(state, &board).await?;
     tasks.sort_by_key(|task| task.position);
 
@@ -1228,7 +1273,10 @@ fn ensure_column_exists(board: &KanbanBoard, column_id: &str) -> Result<(), RpcE
     if board.columns.iter().any(|column| column.id == column_id) {
         Ok(())
     } else {
-        Err(RpcError::NotFound(format!("Column {} not found", column_id)))
+        Err(RpcError::NotFound(format!(
+            "Column {} not found",
+            column_id
+        )))
     }
 }
 
@@ -1588,7 +1636,9 @@ mod tests {
         .await
         .expect_err("transition should be blocked");
 
-        assert!(matches!(err, RpcError::BadRequest(message) if message.contains("missing required artifacts: screenshot")));
+        assert!(
+            matches!(err, RpcError::BadRequest(message) if message.contains("missing required artifacts: screenshot"))
+        );
     }
 
     #[tokio::test]
@@ -1633,7 +1683,11 @@ mod tests {
         assert!(result.deleted);
         assert_eq!(result.cards_moved, 1);
         assert_eq!(result.cards_deleted, 0);
-        assert!(!result.board.columns.iter().any(|column| column.id == "todo"));
+        assert!(!result
+            .board
+            .columns
+            .iter()
+            .any(|column| column.id == "todo"));
 
         let task = state
             .task_store

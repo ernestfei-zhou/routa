@@ -483,6 +483,8 @@ impl RoutaOrchestrator {
                 Some(specialist_config.role.as_str().to_string()),
                 None,
                 Some(params.caller_session_id.clone()), // parent_session_id
+                None,
+                None,
             )
             .await;
 

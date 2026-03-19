@@ -20,6 +20,7 @@ pub mod binary_manager;
 pub mod claude_code_process;
 pub mod docker;
 pub mod installation_state;
+pub mod mcp_setup;
 pub mod paths;
 pub mod process;
 pub mod provider_adapter;
@@ -228,6 +229,8 @@ impl AcpManager {
         role: Option<String>,
         model: Option<String>,
         parent_session_id: Option<String>,
+        tool_mode: Option<String>,
+        mcp_profile: Option<String>,
     ) -> Result<(String, String), String> {
         let provider_name = provider.as_deref().unwrap_or("opencode");
 
@@ -258,6 +261,18 @@ impl AcpManager {
         } else {
             // Use standard ACP protocol
             let preset = get_preset_by_id_with_registry(provider_name).await?;
+
+            if let Some(summary) = mcp_setup::ensure_mcp_for_provider(
+                provider_name,
+                &workspace_id,
+                &session_id,
+                tool_mode.as_deref(),
+                mcp_profile.as_deref(),
+            )
+            .await?
+            {
+                tracing::info!("[AcpManager] {}", summary);
+            }
 
             // Build args: preset args + optional model flag
             let mut extra_args: Vec<String> = preset.args.clone();

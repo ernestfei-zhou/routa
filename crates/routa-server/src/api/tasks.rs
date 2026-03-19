@@ -544,7 +544,11 @@ async fn ensure_transition_artifacts(
     let Some(board) = state.kanban_store.get(board_id).await? else {
         return Ok(());
     };
-    let Some(target_column) = board.columns.iter().find(|column| column.id == target_column_id) else {
+    let Some(target_column) = board
+        .columns
+        .iter()
+        .find(|column| column.id == target_column_id)
+    else {
         return Ok(());
     };
     let Some(required_artifacts) = target_column
@@ -1036,6 +1040,8 @@ async fn trigger_assigned_task_agent(
             Some(role.clone()),
             None,
             None,
+            Some("full".to_string()),
+            Some("kanban-planning".to_string()),
         )
         .await
         .map_err(|error| format!("Failed to create ACP session: {}", error))?;

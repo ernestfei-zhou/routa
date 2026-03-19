@@ -121,6 +121,11 @@ pub async fn start_server(config: ServerConfig) -> Result<SocketAddr, String> {
         config.port
     );
 
+    std::env::set_var(
+        "ROUTA_SERVER_URL",
+        format!("http://{}:{}", config.host, config.port),
+    );
+
     let state = create_app_state(&config.db_path).await?;
 
     start_server_with_state(config, state).await
@@ -134,6 +139,11 @@ pub async fn start_server_with_state(
     config: ServerConfig,
     state: state::AppState,
 ) -> Result<SocketAddr, String> {
+    std::env::set_var(
+        "ROUTA_SERVER_URL",
+        format!("http://{}:{}", config.host, config.port),
+    );
+
     // Build router
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -271,15 +281,16 @@ pub async fn start_server_with_state(
                             .split('/')
                             .filter(|segment| !segment.is_empty())
                             .collect();
-                        let should_rewrite_workspace_placeholder =
-                            path.starts_with("/workspace/")
-                                && !workspace_segments.is_empty()
-                                && workspace_segments
-                                    .get(1)
-                                    .map(|segment| *segment != "sessions")
-                                    .unwrap_or(true);
-                        let actual_workspace_id =
-                            workspace_segments.first().copied().unwrap_or("__placeholder__");
+                        let should_rewrite_workspace_placeholder = path.starts_with("/workspace/")
+                            && !workspace_segments.is_empty()
+                            && workspace_segments
+                                .get(1)
+                                .map(|segment| *segment != "sessions")
+                                .unwrap_or(true);
+                        let actual_workspace_id = workspace_segments
+                            .first()
+                            .copied()
+                            .unwrap_or("__placeholder__");
 
                         let response = match tokio::fs::read(&file_path).await {
                             Ok(contents) => {
