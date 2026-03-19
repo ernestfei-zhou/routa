@@ -2,6 +2,8 @@
 @import "tailwindcss";
 @import "./styles/desktop-theme.css";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #fafafa;
   --foreground: #171717;
@@ -13,15 +15,13 @@
   --accent-hover: #d97706;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0c12;
-    --foreground: #ededed;
-    --surface: #12141c;
-    --border: #1c1f2e;
-    --accent: #f59e0b;
-    --accent-hover: #fbbf24;
-  }
+html.dark {
+  --background: #0a0c12;
+  --foreground: #ededed;
+  --surface: #12141c;
+  --border: #1c1f2e;
+  --accent: #f59e0b;
+  --accent-hover: #fbbf24;
 }
 
 html,
@@ -100,7 +100,7 @@ body {
   color: #9ca3af;
 }
 
-@media (prefers-color-scheme: dark) {
+html.dark {
   .tiptap-chat-input p.is-editor-empty:first-child::before {
     color: #6b7280;
   }
@@ -173,7 +173,7 @@ body {
 }
 
 /* Lowlight / hljs code block theme for dark mode */
-@media (prefers-color-scheme: dark) {
+html.dark {
   .hljs {
     color: #c9d1d9;
     background: #0d1117;
@@ -252,7 +252,7 @@ body {
   white-space: nowrap;
 }
 
-@media (prefers-color-scheme: dark) {
+html.dark {
   .file-mention {
     background: rgba(20, 184, 166, 0.2);
     color: #2dd4bf;
@@ -474,7 +474,7 @@ body {
 }
 
 /* Dark mode */
-@media (prefers-color-scheme: dark) {
+html.dark {
   .markdown-viewer code:not(.code-block code) {
     background: rgba(255, 255, 255, 0.06);
   }
@@ -600,7 +600,7 @@ body {
   background: #f8f9fa;
 }
 
-@media (prefers-color-scheme: dark) {
+html.dark {
   .code-block-simple {
     border-color: rgba(255, 255, 255, 0.06);
     background: rgba(0, 0, 0, 0.3);
@@ -616,7 +616,7 @@ body {
   border-bottom: 1px solid #d1d5db;
 }
 
-@media (prefers-color-scheme: dark) {
+html.dark {
   .code-block-header {
     background: rgba(0, 0, 0, 0.4);
     border-bottom-color: rgba(255, 255, 255, 0.08);
@@ -630,7 +630,7 @@ body {
   color: #374151;
 }
 
-@media (prefers-color-scheme: dark) {
+html.dark {
   .code-block-filename {
     color: #d1d5db;
   }
@@ -656,7 +656,7 @@ body {
   color: #374151;
 }
 
-@media (prefers-color-scheme: dark) {
+html.dark {
   .code-block-copy-btn {
     color: #9ca3af;
   }
@@ -753,7 +753,7 @@ body {
   color: #6f42c1;
 }
 
-@media (prefers-color-scheme: dark) {
+html.dark {
   /* Dark theme syntax highlighting */
   .code-block-simple .hljs-keyword {
     color: #ff7b72;

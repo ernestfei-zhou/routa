@@ -1,6 +1,25 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+const THEME_INIT_SCRIPT = `
+(() => {
+  try {
+    const stored = window.localStorage.getItem("routa.theme");
+    const theme = stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const resolvedTheme = theme === "system" ? (prefersDark ? "dark" : "light") : theme;
+    const root = document.documentElement;
+    root.classList.remove("light", "dark");
+    root.classList.add(resolvedTheme);
+    root.dataset.themePreference = theme;
+    root.style.colorScheme = resolvedTheme;
+  } catch {
+    document.documentElement.classList.add("light");
+    document.documentElement.style.colorScheme = "light";
+  }
+})();
+`;
+
 export const metadata: Metadata = {
   title: "Routa - Multi-Agent Coordinator",
   description:
@@ -17,8 +36,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="antialiased">{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className="antialiased">
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {children}
+      </body>
     </html>
   );
 }

@@ -14,6 +14,14 @@ import {
   saveDisabledProviders,
   type CustomAcpProvider,
 } from "../utils/custom-acp-providers";
+import {
+  getStoredThemePreference,
+  resolveThemePreference,
+  setThemePreference,
+  subscribeToThemePreference,
+  type ResolvedTheme,
+  type ThemePreference,
+} from "../utils/theme";
 
 /**
  * Agent roles that can have default providers configured.
@@ -1737,7 +1745,18 @@ function SettingsPanelContent({ onClose, providers, initialTab }: Omit<SettingsP
   const [settings, setSettings] = useState<DefaultProviderSettings>(() => loadDefaultProviders());
   const [modelDefs, setModelDefs] = useState<ModelDefinition[]>(() => loadModelDefinitions());
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => initialTab ?? "providers");
+  const [themePreference, setThemePreferenceState] = useState<ThemePreference>(() => getStoredThemePreference());
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() =>
+    resolveThemePreference(getStoredThemePreference()),
+  );
   const datalistId = useId();
+
+  useEffect(() => {
+    return subscribeToThemePreference((nextThemePreference, nextResolvedTheme) => {
+      setThemePreferenceState(nextThemePreference);
+      setResolvedTheme(nextResolvedTheme);
+    });
+  }, []);
 
   const handleChange = useCallback(
     (role: AgentRoleKey, field: "provider" | "model", value: string) => {
@@ -1752,6 +1771,11 @@ function SettingsPanelContent({ onClose, providers, initialTab }: Omit<SettingsP
   );
 
   const availableProviders = providers.filter((p) => p.status === "available");
+  const handleThemeModeChange = (nextTheme: Exclude<ThemePreference, "system">) => {
+    const nextResolvedTheme = setThemePreference(nextTheme);
+    setThemePreferenceState(nextTheme);
+    setResolvedTheme(nextResolvedTheme);
+  };
   const handleTabChange = (tab: SettingsTab) => {
     setActiveTab(tab);
     if (tab === "models") {
@@ -1787,12 +1811,45 @@ function SettingsPanelContent({ onClose, providers, initialTab }: Omit<SettingsP
             </svg>
             <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Settings</h2>
           </div>
-          <button onClick={onClose}
-            className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-[#111423]">
+              <span className="px-1.5 text-[10px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                Theme
+              </span>
+              <button
+                type="button"
+                onClick={() => handleThemeModeChange("light")}
+                className={`rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
+                  resolvedTheme === "light"
+                    ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-gray-100"
+                    : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                }`}
+                aria-pressed={resolvedTheme === "light"}
+                title={themePreference === "system" ? "Following system theme" : "Switch to light theme"}
+              >
+                Day
+              </button>
+              <button
+                type="button"
+                onClick={() => handleThemeModeChange("dark")}
+                className={`rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
+                  resolvedTheme === "dark"
+                    ? "bg-gray-900 text-white shadow-sm dark:bg-gray-800"
+                    : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                }`}
+                aria-pressed={resolvedTheme === "dark"}
+                title={themePreference === "system" ? "Following system theme" : "Switch to dark theme"}
+              >
+                Night
+              </button>
+            </div>
+            <button onClick={onClose}
+              className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}

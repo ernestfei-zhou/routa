@@ -34,6 +34,7 @@ import { common, createLowlight } from "lowlight";
 import type { SkillSummary } from "../skill-client";
 import { RepoPicker, type RepoSelection } from "./repo-picker";
 import type { FileMatch } from "../hooks/use-file-search";
+import { isDarkThemeActive } from "../utils/theme";
 
 const lowlight = createLowlight(common);
 
@@ -170,10 +171,7 @@ function createSuggestionDropdown(triggerChar?: string) {
         border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.3);
       `;
       // Light mode detection
-      if (
-        typeof window !== "undefined" &&
-        !window.matchMedia("(prefers-color-scheme: dark)").matches
-      ) {
+      if (!isDarkThemeActive()) {
         popup.style.background = "#fff";
         popup.style.color = "#1f2937";
         popup.style.border = "1px solid #e5e7eb";

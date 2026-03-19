@@ -61,7 +61,7 @@
   --dt-badge-success-bg: #3fb950;
 }
 
-@media (prefers-color-scheme: dark) {
+html.dark {
   .desktop-theme {
     --dt-bg-primary: #1e1e1e;
     --dt-bg-secondary: #252526;

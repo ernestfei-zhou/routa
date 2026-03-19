@@ -8,7 +8,7 @@
   background: #f8f9fa;
 }
 
-@media (prefers-color-scheme: dark) {
+html.dark {
   .code-viewer-wrapper {
     border-color: rgba(255, 255, 255, 0.06);
     background: rgba(0, 0, 0, 0.3);
@@ -25,7 +25,7 @@
   border-bottom: 1px solid #d1d5db;
 }
 
-@media (prefers-color-scheme: dark) {
+html.dark {
   .cm-header {
     background: rgba(0, 0, 0, 0.4);
     border-bottom-color: rgba(255, 255, 255, 0.08);
@@ -59,7 +59,7 @@
   text-overflow: ellipsis;
 }
 
-@media (prefers-color-scheme: dark) {
+html.dark {
   .cm-filename {
     color: #d1d5db;
   }
@@ -77,7 +77,7 @@
   color: #4b5563;
 }
 
-@media (prefers-color-scheme: dark) {
+html.dark {
   .cm-language-badge {
     background: rgba(255, 255, 255, 0.08);
     color: #9ca3af;
@@ -90,7 +90,7 @@
   color: #6b7280;
 }
 
-@media (prefers-color-scheme: dark) {
+html.dark {
   .cm-line-count {
     color: #6b7280;
   }
@@ -117,7 +117,7 @@
   color: #374151;
 }
 
-@media (prefers-color-scheme: dark) {
+html.dark {
   .cm-collapse-btn:hover {
     background: rgba(255, 255, 255, 0.08);
     color: #d1d5db;
@@ -149,7 +149,7 @@
   background: rgba(0, 0, 0, 0.1);
 }
 
-@media (prefers-color-scheme: dark) {
+html.dark {
   .cm-copy-button {
     color: #9ca3af;
   }
@@ -197,7 +197,7 @@
   background: rgba(0, 0, 0, 0.04);
 }
 
-@media (prefers-color-scheme: dark) {
+html.dark {
   .cm-collapsed-preview {
     background: rgba(0, 0, 0, 0.2);
     border-top-color: rgba(255, 255, 255, 0.06);
@@ -229,7 +229,7 @@
   background: rgba(0, 0, 0, 0.2);
 }
 
-@media (prefers-color-scheme: dark) {
+html.dark {
   .cm-container ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.1);
   }

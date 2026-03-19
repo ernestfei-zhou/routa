@@ -27,6 +27,11 @@ import { html } from "@codemirror/lang-html";
 import { css } from "@codemirror/lang-css";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { lineNumbers } from "@codemirror/view";
+import {
+  isDarkThemeActive,
+  subscribeToThemePreference,
+  type ResolvedTheme,
+} from "@/client/utils/theme";
 
 // ─── Language Support ───────────────────────────────────────────────────────
 
@@ -175,8 +180,17 @@ export function CodeViewer({
   const [copied, setCopied] = useState(false);
   const [collapsed, setCollapsed] = useState(initiallyCollapsed);
   const [lines, setLines] = useState(0);
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() =>
+    isDarkThemeActive() ? "dark" : "light",
+  );
 
   const langInfo = detectLanguage(filename, language);
+
+  useEffect(() => {
+    return subscribeToThemePreference((_, nextResolvedTheme) => {
+      setResolvedTheme(nextResolvedTheme);
+    });
+  }, []);
 
   // Count lines
   useEffect(() => {
@@ -213,9 +227,7 @@ export function CodeViewer({
       extensions.push(lineNumbersExtension);
     }
 
-    // Apply dark theme if system prefers dark
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    if (prefersDark) {
+    if (resolvedTheme === "dark") {
       extensions.push(oneDark);
     }
 
@@ -235,7 +247,7 @@ export function CodeViewer({
       view.destroy();
       editorRef.current = null;
     };
-  }, [code, langInfo.extensions, maxHeight, showLineNumbers, wordWrap]);
+  }, [code, langInfo.extensions, maxHeight, resolvedTheme, showLineNumbers, wordWrap]);
 
   // Update code content when it changes
   useEffect(() => {
@@ -373,6 +385,15 @@ export function CodeEditor({
   // Keep onChange in a ref so update listener doesn't go stale
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() =>
+    isDarkThemeActive() ? "dark" : "light",
+  );
+
+  useEffect(() => {
+    return subscribeToThemePreference((_, nextResolvedTheme) => {
+      setResolvedTheme(nextResolvedTheme);
+    });
+  }, []);
 
   // Mount editor once
   useEffect(() => {
@@ -390,8 +411,7 @@ export function CodeEditor({
         }
       }),
     ];
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    if (prefersDark) extensions.push(oneDark);
+    if (resolvedTheme === "dark") extensions.push(oneDark);
 
     const state = EditorState.create({ doc: value, extensions });
     const view = new EditorView({ state, parent: containerRef.current });
@@ -401,7 +421,7 @@ export function CodeEditor({
       editorRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [language, maxHeight, resolvedTheme]);
 
   // Sync external value changes (e.g. reset)
   useEffect(() => {
