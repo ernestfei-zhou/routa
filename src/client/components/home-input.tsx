@@ -23,7 +23,13 @@ import { desktopAwareFetch } from "../utils/diagnostics";
 
 type AgentRole = "ROUTA" | "DEVELOPER";
 
-interface SpecialistSummary { id: string; name: string; description?: string; role?: string; }
+interface SpecialistSummary {
+  id: string;
+  name: string;
+  description?: string;
+  role?: string;
+  defaultProvider?: string;
+}
 
 interface HomeInputProps {
   /** Initial workspace ID (optional) */
@@ -302,6 +308,7 @@ export function HomeInput({
                               }`}>
                               <div className="font-medium truncate">{s.name}</div>
                               {s.description && <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate mt-0.5">{s.description}</div>}
+                              {s.defaultProvider && <div className="text-[10px] text-gray-300 dark:text-gray-600 mt-0.5 font-mono">provider:{s.defaultProvider}</div>}
                             </button>
                           ))}
                         </div>
@@ -365,6 +372,7 @@ export function HomeInput({
                                 <div className="font-medium truncate">{s.name}</div>
                                 {s.description && <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate mt-0.5">{s.description}</div>}
                                 {s.role && <div className="text-[10px] text-gray-300 dark:text-gray-600 mt-0.5 font-mono">{s.role}</div>}
+                                {s.defaultProvider && <div className="text-[10px] text-gray-300 dark:text-gray-600 mt-0.5 font-mono">provider:{s.defaultProvider}</div>}
                               </button>
                             ))}
                           </div>

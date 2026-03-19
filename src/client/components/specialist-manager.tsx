@@ -15,6 +15,8 @@ export interface SpecialistConfig {
   roleReminder: string;
   source: "user" | "bundled" | "hardcoded";
   enabled?: boolean;
+  defaultProvider?: string;
+  defaultAdapter?: string;
   model?: string;
 }
 
@@ -288,9 +290,16 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
                         {specialist.description && (
                           <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{specialist.description}</p>
                         )}
-                        <p className="text-xs text-gray-500 dark:text-gray-500">
-                          Tier: {TIER_LABELS[specialist.defaultModelTier]}
-                        </p>
+                        <div className="space-y-1">
+                          <p className="text-xs text-gray-500 dark:text-gray-500">
+                            Tier: {TIER_LABELS[specialist.defaultModelTier]}
+                          </p>
+                          {specialist.defaultProvider ? (
+                            <p className="text-xs text-gray-500 dark:text-gray-500">
+                              Provider: <span className="font-mono">{specialist.defaultProvider}</span>
+                            </p>
+                          ) : null}
+                        </div>
                       </div>
                       <div className="flex gap-2 ml-4">
                         {specialist.source === "user" && (
