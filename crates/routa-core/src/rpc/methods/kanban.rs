@@ -626,8 +626,10 @@ fn build_task_prompt(task: &Task) -> String {
         String::new(),
         "## Context".to_string(),
         String::new(),
-        "**IMPORTANT**: You are working in Kanban context. Use MCP tools (update_card, move_card, etc.) to manage this card.".to_string(),
-        "Do NOT use `gh issue create` or other GitHub CLI commands.".to_string(),
+        "**IMPORTANT**: You are working in Kanban lane automation for exactly one existing card.".to_string(),
+        "Only operate on the current card. Do not create a new task, do not switch to a different card, and do not broaden scope.".to_string(),
+        "Use the exact MCP tool names exposed by the provider. In OpenCode, prefer `routa-coordination_update_card` and `routa-coordination_move_card`.".to_string(),
+        "Do NOT use `gh issue create`, browser automation, Playwright, repo-wide debugging, API exploration, or unrelated codebase research unless the card objective explicitly requires it.".to_string(),
         String::new(),
         "## Task Details".to_string(),
         String::new(),
@@ -645,12 +647,22 @@ fn build_task_prompt(task: &Task) -> String {
         String::new(),
         task.objective.clone(),
         String::new(),
+        "## Allowed Actions".to_string(),
+        String::new(),
+        format!(
+            "1. Update progress on this card with `routa-coordination_update_card` for card `{}`.",
+            task.id
+        ),
+        "2. When the current lane is complete, advance the same card with `routa-coordination_move_card`.".to_string(),
+        "3. If you are blocked, update this same card with the blocking reason instead of exploring side quests.".to_string(),
+        String::new(),
         "## Instructions".to_string(),
         String::new(),
         "1. Start work for this lane immediately.".to_string(),
-        "2. Use `update_card` to record progress.".to_string(),
-        "3. Use `move_card` when this lane is complete.".to_string(),
-        "4. Keep work scoped to this card.".to_string(),
+        "2. Keep work scoped to this card only.".to_string(),
+        "3. Record progress with the exact tool name `routa-coordination_update_card`.".to_string(),
+        "4. Move the same card forward with the exact tool name `routa-coordination_move_card` when this lane is complete.".to_string(),
+        "5. Do not run browser tests or environment diagnostics unless the card explicitly asks for them.".to_string(),
     ]
     .join("\n")
 }
