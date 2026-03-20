@@ -145,15 +145,44 @@ impl AcpAgentCaller {
     }
 
     fn mock_security_specialist_response(prompt: &str) -> String {
-        if prompt.contains("security-authentication-reviewer") {
+        let specialist_id = Self::mock_dispatch_specialist_id(prompt);
+        if specialist_id == Some("security-authentication-reviewer") {
             return r#"{\n  \"specialist_id\": \"security-authentication-reviewer\",\n  \"category\": \"authentication\",\n  \"findings\": [\n    {\n      \"title\": \"Missing authentication for privileged route\",\n      \"severity\": \"HIGH\",\n      \"root_cause\": \"privileged endpoint lacks auth\",\n      \"affected_locations\": [\"app.js\"],\n      \"attack_path\": \"Unauthenticated route handler reads protected data\",\n      \"why_it_matters\": \"Any caller can access protected functionality\",\n      \"guardrails_present\": [\"No auth checks observed\"],\n      \"recommended_fix\": \"Add robust auth checks and enforce role checks\",\n      \"related_variants\": [\"role header spoofing\"],\n      \"confidence\": \"MEDIUM\"\n    }\n  ]\n}"#.to_string();
         }
 
-        if prompt.contains("security-command-injection-reviewer") {
+        if specialist_id == Some("security-command-injection-reviewer") {
             return r#"{\n  \"specialist_id\": \"security-command-injection-reviewer\",\n  \"category\": \"command-injection\",\n  \"findings\": [\n    {\n      \"title\": \"Command injection via shell execution\",\n      \"severity\": \"CRITICAL\",\n      \"root_cause\": \"untrusted input reaches cp.exec\",\n      \"affected_locations\": [\"app.js\"],\n      \"attack_path\": \"Request parameter -> command interpolation -> cp.exec\",\n      \"why_it_matters\": \"Remote code execution under process privileges\",\n      \"guardrails_present\": [\"No input validation\"],\n      \"recommended_fix\": \"Use allowlist command builder or avoid shell\",\n      \"related_variants\": [\"special chars\"],\n      \"confidence\": \"HIGH\"\n    }\n  ]\n}"#.to_string();
         }
 
+        if specialist_id == Some("security-ssrf-reviewer") {
+            return r#"{\n  \"specialist_id\": \"security-ssrf-reviewer\",\n  \"category\": \"ssrf\",\n  \"findings\": [\n    {\n      \"title\": \"Potential SSRF in webhook callback path\",\n      \"severity\": \"MEDIUM\",\n      \"root_cause\": \"user controlled URL is requested without allowlist\",\n      \"affected_locations\": [\"app.js\"],\n      \"attack_path\": \"Untrusted URL reaches outbound fetch helper\",\n      \"why_it_matters\": \"Internal metadata and services may become reachable\",\n      \"guardrails_present\": [\"No network allowlist observed\"],\n      \"recommended_fix\": \"Validate outbound URLs with allowlist and deny private CIDR ranges\",\n      \"related_variants\": [\"open redirect chain\"],\n      \"confidence\": \"MEDIUM\"\n    }\n  ]\n}"#.to_string();
+        }
+
         "{\"specialist_id\":\"mock\",\"findings\":[]}".to_string()
+    }
+
+    fn mock_dispatch_specialist_id(prompt: &str) -> Option<&'static str> {
+        let start = prompt.find('{')?;
+        let end = prompt.rfind('}')?;
+        let payload = &prompt[start..=end];
+        let top_level = serde_json::from_str::<serde_json::Value>(payload).ok()?;
+        if top_level.get("specialist_id").is_none() {
+            return None;
+        }
+
+        let specialist_id = top_level.get("specialist_id")?.as_str()?;
+
+        if specialist_id == "security-authentication-reviewer" {
+            return Some("security-authentication-reviewer");
+        }
+        if specialist_id == "security-command-injection-reviewer" {
+            return Some("security-command-injection-reviewer");
+        }
+        if specialist_id == "security-ssrf-reviewer" {
+            return Some("security-ssrf-reviewer");
+        }
+
+        None
     }
 
     /// Call the Anthropic-compatible Messages API (also used by GLM/BigModel).
@@ -416,5 +445,29 @@ mod tests {
         );
         assert_eq!(resolve_env_vars("${NONEXISTENT_VAR:-fallback}"), "fallback");
         std::env::remove_var("TEST_WORKFLOW_VAR");
+    }
+
+    #[test]
+    fn test_mock_dispatch_specialist_id_from_scoped_prompt() {
+        let prompt = [
+            "You are a scoped security specialist.",
+            r#"{"specialist_id":"security-authentication-reviewer","categories":[],"candidates":[]}"#,
+        ]
+        .join("\n\n");
+
+        let specialist_id = AcpAgentCaller::mock_dispatch_specialist_id(&prompt);
+        assert_eq!(specialist_id, Some("security-authentication-reviewer"));
+    }
+
+    #[test]
+    fn test_mock_dispatch_specialist_id_ignores_payload_text() {
+        let prompt = [
+            "You are running a tool-driven security review.",
+            r#"{"repo_path":"/repo","changed_files":["resources/specialists/locales/en/review/security-authentication-reviewer.yaml"],"diff":"@@ -1,3 +1,3 @@\n+You are a scoped security specialist.","heuristic_candidates":[]}"#,
+        ]
+        .join("\n\n");
+
+        let specialist_id = AcpAgentCaller::mock_dispatch_specialist_id(&prompt);
+        assert_eq!(specialist_id, None);
     }
 }

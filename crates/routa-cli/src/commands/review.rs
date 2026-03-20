@@ -72,7 +72,7 @@ struct ConfigSnippet {
     content: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 struct SecurityEvidencePack {
     total_candidates: usize,
     buckets: Vec<SecurityCandidateBucket>,
@@ -100,14 +100,14 @@ struct SecurityReviewPayload {
     fitness_review_context: Option<Value>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 struct SecurityCandidateBucket {
     category: String,
     candidate_count: usize,
     candidates: Vec<SecurityCandidate>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 struct ToolTrace {
     tool: String,
     status: String,
@@ -148,7 +148,7 @@ struct SecurityRootFinding {
     confidence: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 struct SecuritySpecialistDispatch {
     specialist_id: String,
     categories: Vec<String>,
@@ -156,7 +156,7 @@ struct SecuritySpecialistDispatch {
     reason: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 struct SecuritySpecialistReport {
     specialist_id: String,
     status: String,
@@ -171,11 +171,13 @@ struct SecuritySpecialistReport {
 struct SecurityDispatchInput {
     specialist_id: String,
     categories: Vec<String>,
+    evidence_pack: SecurityEvidencePack,
     repo_path: String,
     base: String,
     head: String,
     diff: String,
     changed_files: Vec<String>,
+    tool_trace: Vec<ToolTrace>,
     security_guidance: Option<String>,
     candidates: Vec<SecurityCandidate>,
 }
@@ -293,7 +295,8 @@ pub async fn security(_state: &AppState, options: ReviewAnalyzeOptions<'_>) -> R
     let (dispatch_plan, specialist_reports) =
         dispatch_security_specialists(&caller, options.specialist_dir, &payload, options.verbose)
             .await?;
-    let pre_merged_findings = merge_specialist_findings(&specialist_reports);
+    let pre_merged_findings =
+        merge_specialist_findings(&payload.pre_merged_findings, &specialist_reports);
 
     let mut final_payload = payload;
     final_payload.specialist_dispatch_plan = dispatch_plan;
@@ -542,11 +545,13 @@ async fn dispatch_security_specialists(
         let task = SecurityDispatchInput {
             specialist_id: specialist.id.clone(),
             categories: workload.categories.clone(),
+            evidence_pack: payload.evidence_pack.clone(),
             repo_path: payload.repo_path.clone(),
             base: payload.base.clone(),
             head: payload.head.clone(),
             diff: truncate(&payload.diff, 12_000),
             changed_files: payload.changed_files.clone(),
+            tool_trace: payload.tool_trace.clone(),
             security_guidance: payload.security_guidance.clone(),
             candidates: workload.candidates.clone(),
         };
@@ -657,10 +662,18 @@ fn parse_specialist_output(raw_output: &str) -> Option<SecuritySpecialistOutput>
     serde_json::from_str(candidate).ok()
 }
 
-fn merge_specialist_findings(reports: &[SecuritySpecialistReport]) -> Vec<SecurityRootFinding> {
+fn merge_specialist_findings(
+    pre_merged_findings: &[SecurityRootFinding],
+    specialist_reports: &[SecuritySpecialistReport],
+) -> Vec<SecurityRootFinding> {
     let mut merged: HashMap<String, SecurityRootFinding> = HashMap::new();
 
-    for report in reports {
+    for finding in pre_merged_findings {
+        let key = finding.root_cause.to_lowercase();
+        merged.insert(key, finding.clone());
+    }
+
+    for report in specialist_reports {
         for finding in &report.findings {
             let key = finding.root_cause.to_lowercase();
             match merged.get_mut(&key) {
@@ -972,6 +985,8 @@ fn build_security_review_payload(
     let semgrep_candidates =
         collect_semgrep_candidates(repo_root, &review_payload.changed_files, &mut tool_trace);
     let evidence_pack = build_security_evidence_pack(&heuristic_candidates, &semgrep_candidates);
+    let pre_merged_findings =
+        build_pre_merged_findings_from_evidence(&security_guidance, &evidence_pack);
     let fitness_review_context = collect_fitness_review_context(
         repo_root,
         &review_payload.changed_files,
@@ -993,7 +1008,7 @@ fn build_security_review_payload(
         evidence_pack,
         specialist_dispatch_plan: Vec::new(),
         specialist_reports: Vec::new(),
-        pre_merged_findings: Vec::new(),
+        pre_merged_findings,
         tool_trace,
         heuristic_candidates,
         semgrep_candidates,
@@ -1027,6 +1042,52 @@ fn build_security_evidence_pack(
         total_candidates: merged.len(),
         buckets: group_candidates_by_category(merged),
     }
+}
+
+fn build_pre_merged_findings_from_evidence(
+    security_guidance: &Option<String>,
+    evidence_pack: &SecurityEvidencePack,
+) -> Vec<SecurityRootFinding> {
+    let mut findings = Vec::new();
+
+    for bucket in &evidence_pack.buckets {
+        for candidate in &bucket.candidates {
+            findings.push(SecurityRootFinding {
+                title: format!("{}: {}", bucket.category, candidate.rule_id),
+                severity: candidate.severity.clone(),
+                root_cause: if bucket.category.is_empty() {
+                    candidate.summary.clone()
+                } else {
+                    format!("{} in changed code path", bucket.category)
+                },
+                affected_locations: candidate.locations.clone(),
+                attack_path: candidate.summary.clone(),
+                why_it_matters: candidate.summary.clone(),
+                guardrails_present: Vec::new(),
+                recommended_fix: "Validate with a scoped specialist before finalizing".to_string(),
+                related_variants: Vec::new(),
+                confidence: Some("LOW".to_string()),
+            });
+        }
+    }
+
+    if security_guidance.is_some() {
+        findings.push(SecurityRootFinding {
+            title: "Security guidance loaded".to_string(),
+            severity: "LOW".to_string(),
+            root_cause: "Security guidance was loaded and treated as a workflow hint".to_string(),
+            affected_locations: Vec::new(),
+            attack_path: "Security policy and guidance were included in payload".to_string(),
+            why_it_matters: "Policy references can change review confidence and required depth"
+                .to_string(),
+            guardrails_present: Vec::new(),
+            recommended_fix: "Keep guidance aligned with current security policy".to_string(),
+            related_variants: Vec::new(),
+            confidence: Some("LOW".to_string()),
+        });
+    }
+
+    findings
 }
 
 fn note_ast_grep_availability(tool_trace: &mut Vec<ToolTrace>) {
@@ -2094,5 +2155,86 @@ mod tests {
         assigned.sort();
         assert!(assigned.contains(&"security-authentication-reviewer"));
         assert!(assigned.contains(&"security-command-injection-reviewer"));
+    }
+
+    #[test]
+    fn build_pre_merged_findings_from_evidence_adds_hints() {
+        let pack = SecurityEvidencePack {
+            total_candidates: 1,
+            buckets: vec![SecurityCandidateBucket {
+                category: "command-injection".to_string(),
+                candidate_count: 1,
+                candidates: vec![SecurityCandidate {
+                    rule_id: "command-execution".to_string(),
+                    category: "command-injection".to_string(),
+                    severity: "HIGH".to_string(),
+                    summary: "exec path".to_string(),
+                    locations: vec!["src/app.rs:10".to_string()],
+                    evidence: vec!["exec('id')".to_string()],
+                }],
+            }],
+        };
+
+        let findings = build_pre_merged_findings_from_evidence(&Some("policy".to_string()), &pack);
+
+        assert!(!findings.is_empty());
+        let base_finding = findings
+            .iter()
+            .find(|finding| finding.title == "command-injection: command-execution")
+            .expect("command injection hint should be present");
+        assert_eq!(base_finding.affected_locations, vec!["src/app.rs:10"]);
+        assert_eq!(findings.len(), 2);
+    }
+
+    #[test]
+    fn merge_specialist_findings_prefers_stronger_signals() {
+        let pre_merged = vec![SecurityRootFinding {
+            title: "Base finding".to_string(),
+            severity: "MEDIUM".to_string(),
+            root_cause: "privileged command path".to_string(),
+            affected_locations: vec!["src/app.rs:1".to_string()],
+            attack_path: "path-a".to_string(),
+            why_it_matters: "impact".to_string(),
+            guardrails_present: vec!["check".to_string()],
+            recommended_fix: "baseline".to_string(),
+            related_variants: vec!["a".to_string()],
+            confidence: Some("LOW".to_string()),
+        }];
+
+        let reports = vec![SecuritySpecialistReport {
+            specialist_id: "security-command-injection-reviewer".to_string(),
+            status: "ok".to_string(),
+            categories: vec!["command-injection".to_string()],
+            findings: vec![SecurityRootFinding {
+                title: "Specialist finding".to_string(),
+                severity: "CRITICAL".to_string(),
+                root_cause: "privileged command path".to_string(),
+                affected_locations: vec!["src/app.rs:2".to_string()],
+                attack_path: "path-a + tainted input".to_string(),
+                why_it_matters: "critical".to_string(),
+                guardrails_present: vec!["no guard".to_string()],
+                recommended_fix: "sanitize input".to_string(),
+                related_variants: vec!["variant-1".to_string()],
+                confidence: Some("HIGH".to_string()),
+            }],
+            trace: vec!["ok".to_string()],
+            parse_error: None,
+            output_preview: String::new(),
+        }];
+
+        let merged = merge_specialist_findings(&pre_merged, &reports);
+        assert_eq!(merged.len(), 1);
+        let final_finding = &merged[0];
+        assert_eq!(final_finding.severity, "CRITICAL");
+        assert_eq!(final_finding.confidence, Some("HIGH".to_string()));
+        assert!(final_finding
+            .affected_locations
+            .contains(&"src/app.rs:1".to_string()));
+        assert!(final_finding
+            .affected_locations
+            .contains(&"src/app.rs:2".to_string()));
+        assert!(final_finding
+            .related_variants
+            .contains(&"variant-1".to_string()));
     }
 }
