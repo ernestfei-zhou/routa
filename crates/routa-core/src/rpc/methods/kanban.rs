@@ -714,6 +714,27 @@ async fn trigger_assigned_task_agent(state: &AppState, task: &Task) -> Result<St
     let workspace_id = task.workspace_id.clone();
     let provider_clone = provider.clone();
     let cwd_clone = cwd.clone();
+    if let Err(error) = state
+        .acp_session_store
+        .set_first_prompt_sent(&session_id)
+        .await
+    {
+        tracing::error!(
+            target: "routa_kanban_prompt",
+            session_id = %session_id,
+            workspace_id = %task.workspace_id,
+            error = %error,
+            "kanban lane prompt failed to mark prompt dispatched"
+        );
+    } else {
+        tracing::info!(
+            target: "routa_kanban_prompt",
+            session_id = %session_id,
+            workspace_id = %task.workspace_id,
+            provider = %provider,
+            "kanban lane prompt marked prompt dispatched"
+        );
+    }
     tracing::info!(
         target: "routa_kanban_prompt",
         session_id = %session_id_clone,
@@ -754,27 +775,6 @@ async fn trigger_assigned_task_agent(state: &AppState, task: &Task) -> Result<St
             provider = %provider_clone,
             "kanban lane prompt success"
         );
-
-        if let Err(error) = state_clone
-            .acp_session_store
-            .set_first_prompt_sent(&session_id_clone)
-            .await
-        {
-            tracing::error!(
-                target: "routa_kanban_prompt",
-                session_id = %session_id_clone,
-                workspace_id = %workspace_id,
-                error = %error,
-                "kanban lane prompt failed to persist first_prompt_sent"
-            );
-        } else {
-            tracing::info!(
-                target: "routa_kanban_prompt",
-                session_id = %session_id_clone,
-                workspace_id = %workspace_id,
-                "kanban lane prompt persisted first_prompt_sent"
-            );
-        }
 
         if let Some(history) = state_clone
             .acp_manager

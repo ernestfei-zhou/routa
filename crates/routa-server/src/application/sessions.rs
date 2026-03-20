@@ -1,5 +1,5 @@
 use std::cmp::Reverse;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -35,16 +35,19 @@ impl SessionApplicationService {
     }
 
     pub async fn get_session(&self, session_id: &str) -> Result<Value, ServerError> {
+        let db_session = self.state.acp_session_store.get(session_id).await?;
+
         if let Some(session) = self.state.acp_manager.get_session(session_id).await {
-            return Ok(SessionEntry::from_in_memory(session).to_detail_value());
+            let entry = SessionEntry::from_in_memory(session);
+            let entry = match db_session.as_ref() {
+                Some(db_session) => entry.merge_db_state(db_session),
+                None => entry,
+            };
+            return Ok(entry.to_detail_value());
         }
 
-        let db_session = self
-            .state
-            .acp_session_store
-            .get(session_id)
-            .await?
-            .ok_or_else(|| ServerError::NotFound("Session not found".to_string()))?;
+        let db_session =
+            db_session.ok_or_else(|| ServerError::NotFound("Session not found".to_string()))?;
 
         Ok(SessionEntry::from_db(db_session).to_detail_value())
     }
@@ -138,6 +141,7 @@ struct SessionEntry {
     mode_id: Option<String>,
     model: Option<String>,
     created_at: Value,
+    updated_at: Option<Value>,
     parent_session_id: Option<String>,
     first_prompt_sent: bool,
 }
@@ -155,8 +159,9 @@ impl SessionEntry {
             mode_id: session.mode_id,
             model: session.model,
             created_at: Value::String(session.created_at),
+            updated_at: None,
             parent_session_id: session.parent_session_id,
-            first_prompt_sent: true,
+            first_prompt_sent: false,
         }
     }
 
@@ -172,9 +177,34 @@ impl SessionEntry {
             mode_id: session.mode_id,
             model: None,
             created_at: Value::Number(session.created_at.into()),
+            updated_at: Some(Value::Number(session.updated_at.into())),
             parent_session_id: session.parent_session_id,
             first_prompt_sent: session.first_prompt_sent,
         }
+    }
+
+    fn merge_db_state(mut self, db: &AcpSessionRow) -> Self {
+        if self.name.is_none() {
+            self.name = db.name.clone();
+        }
+        if self.provider.is_none() {
+            self.provider = db.provider.clone();
+        }
+        if self.role.is_none() {
+            self.role = db.role.clone();
+        }
+        if self.mode_id.is_none() {
+            self.mode_id = db.mode_id.clone();
+        }
+        if self.parent_session_id.is_none() {
+            self.parent_session_id = db.parent_session_id.clone();
+        }
+        if self.routa_agent_id.is_none() {
+            self.routa_agent_id = db.routa_agent_id.clone();
+        }
+        self.first_prompt_sent = db.first_prompt_sent;
+        self.updated_at = Some(Value::Number(db.updated_at.into()));
+        self
     }
 
     fn timestamp_millis(&self) -> i64 {
@@ -197,6 +227,8 @@ impl SessionEntry {
             "modeId": self.mode_id,
             "model": self.model,
             "createdAt": self.created_at,
+            "updatedAt": self.updated_at,
+            "firstPromptSent": self.first_prompt_sent,
             "parentSessionId": self.parent_session_id,
         })
     }
@@ -213,6 +245,9 @@ impl SessionEntry {
             "modeId": self.mode_id,
             "model": self.model,
             "createdAt": self.created_at,
+            "updatedAt": self.updated_at,
+            "parentSessionId": self.parent_session_id,
+            "firstPromptSent": self.first_prompt_sent,
         })
     }
 
@@ -228,6 +263,7 @@ impl SessionEntry {
             "modeId": self.mode_id,
             "model": self.model,
             "createdAt": self.created_at,
+            "updatedAt": self.updated_at,
             "parentSessionId": self.parent_session_id,
             "firstPromptSent": self.first_prompt_sent,
         })
@@ -239,9 +275,10 @@ fn merge_session_entries(
     db_sessions: Vec<AcpSessionRow>,
     query: &ListSessionsQuery,
 ) -> Vec<SessionEntry> {
-    let in_memory_ids: HashSet<String> = in_memory_sessions
+    let db_sessions_by_id: HashMap<String, AcpSessionRow> = db_sessions
         .iter()
-        .map(|session| session.session_id.clone())
+        .cloned()
+        .map(|session| (session.id.clone(), session))
         .collect();
 
     let mut sessions: Vec<SessionEntry> = in_memory_sessions
@@ -253,7 +290,19 @@ fn merge_session_entries(
                 query,
             )
         })
-        .map(SessionEntry::from_in_memory)
+        .map(|session| {
+            let session_id = session.session_id.clone();
+            let entry = SessionEntry::from_in_memory(session);
+            match db_sessions_by_id.get(&session_id) {
+                Some(db_session) => entry.merge_db_state(db_session),
+                None => entry,
+            }
+        })
+        .collect();
+
+    let in_memory_ids: HashSet<String> = sessions
+        .iter()
+        .map(|session| session.session_id.clone())
         .collect();
 
     for db_session in db_sessions {
@@ -544,6 +593,24 @@ mod tests {
     }
 
     #[test]
+    fn merge_session_entries_enriches_in_memory_with_db_state() {
+        let sessions = merge_session_entries(
+            vec![in_memory_session(
+                "session-1",
+                "ws-1",
+                "2026-03-19T10:00:00Z",
+                None,
+            )],
+            vec![db_session("session-1", "ws-1", 5, None, true)],
+            &ListSessionsQuery::default(),
+        );
+
+        assert_eq!(sessions.len(), 1);
+        assert!(sessions[0].first_prompt_sent);
+        assert_eq!(sessions[0].updated_at, Some(Value::Number(5.into())));
+    }
+
+    #[test]
     fn build_session_context_excludes_empty_relatives_and_limits_recent() {
         let context = build_session_context(
             merge_session_entries(
@@ -552,6 +619,8 @@ mod tests {
                     in_memory_session("sibling", "ws-1", "2026-03-19T09:00:00Z", Some("parent")),
                 ],
                 vec![
+                    db_session("current", "ws-1", 11, Some("parent"), true),
+                    db_session("sibling", "ws-1", 4, Some("parent"), true),
                     db_session("parent", "ws-1", 1, None, true),
                     db_session("child", "ws-1", 2, Some("current"), true),
                     db_session("empty-child", "ws-1", 3, Some("current"), false),
@@ -683,5 +752,6 @@ mod tests {
             value["createdAt"],
             Value::String("2026-03-19T10:00:00Z".to_string())
         );
+        assert_eq!(value["firstPromptSent"], Value::Bool(false));
     }
 }
