@@ -11,7 +11,7 @@ import { useNotes } from "@/client/hooks/use-notes";
 import { consumePendingPrompt } from "@/client/utils/pending-prompt";
 import { useWorkspaces } from "@/client/hooks/use-workspaces";
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
-import { formatRelativeTime } from "../../ui-components";
+import { formatRelativeTime, OverlayModal } from "../../ui-components";
 import type { SessionInfo } from "../../types";
 
 interface SpecialistSummary {
@@ -38,6 +38,16 @@ interface TeamActivityItem {
   details?: string;
 }
 
+interface SessionStreamSummary {
+  session: SessionInfo;
+  actor: string;
+  badge: string;
+  preview?: string;
+  eventCount: number;
+  lastUpdatedLabel: string;
+  lastUpdatedAt: number;
+}
+
 interface DeliverableItem {
   id: string;
   name: string;
@@ -49,13 +59,18 @@ interface SessionHistoryEntry {
   sessionId: string;
   update?: {
     sessionUpdate?: string;
-    content?: { type?: string; text?: string };
+    content?:
+      | { type?: string; text?: string }
+      | Array<{ type?: string; text?: string; content?: { type?: string; text?: string } }>;
     status?: string;
     title?: string;
     taskStatus?: string;
     completionSummary?: string;
     name?: string;
     error?: string;
+    toolCallId?: string;
+    rawInput?: Record<string, unknown>;
+    rawOutput?: { output?: string };
   };
 }
 
@@ -110,6 +125,75 @@ function summarizeText(text?: string, max = 180): string | undefined {
   return normalized.length > max ? `${normalized.slice(0, max - 3)}...` : normalized;
 }
 
+function extractHistoryText(update?: SessionHistoryEntry["update"]): string | undefined {
+  if (!update?.content) return undefined;
+  if (!Array.isArray(update.content)) {
+    return summarizeText(update.content.text);
+  }
+
+  const joined = update.content
+    .map((item) => item.text ?? item.content?.text ?? "")
+    .join(" ")
+    .trim();
+  return summarizeText(joined || undefined);
+}
+
+function resolveDelegationTarget(update?: SessionHistoryEntry["update"]): string | undefined {
+  const rawInput = update?.rawInput;
+  if (!rawInput) return undefined;
+
+  const instructions = typeof rawInput.additionalInstructions === "string" ? rawInput.additionalInstructions : "";
+  const emphasizedRole = instructions.match(/\*\*([^*]+)\*\*/)?.[1]?.trim();
+  if (emphasizedRole) return emphasizedRole;
+
+  const specialist = typeof rawInput.specialist === "string" ? rawInput.specialist : undefined;
+  if (!specialist) return undefined;
+
+  switch (specialist.toLowerCase()) {
+    case "crafter":
+      return "Implementor";
+    case "gate":
+      return "Verifier";
+    case "developer":
+      return "Developer";
+    default:
+      return specialist;
+  }
+}
+
+function sessionBadge(session: SessionInfo): string {
+  if (!session.parentSessionId) return "lead";
+  return session.specialistId ?? session.role ?? session.provider ?? "session";
+}
+
+function transcriptEventLabel(update?: SessionHistoryEntry["update"]): string {
+  const updateType = update?.sessionUpdate;
+  switch (updateType) {
+    case "user_message":
+      return "User request";
+    case "agent_message":
+      return "Agent message";
+    case "agent_thought":
+      return "Agent thought";
+    case "tool_call":
+      return getToolEventLabel(update as Record<string, unknown>);
+    case "tool_call_update":
+      return `${getToolEventLabel(update as Record<string, unknown>)} · ${update?.status ?? "update"}`;
+    case "task_completion":
+      return "Task completion";
+    case "session_renamed":
+      return "Session renamed";
+    case "acp_status":
+      return `ACP ${update?.status ?? "status"}`;
+    case "completed":
+    case "ended":
+    case "turn_complete":
+      return "Turn complete";
+    default:
+      return updateType ?? "Update";
+  }
+}
+
 export function TeamRunPageClient() {
   const params = useParams();
   const router = useRouter();
@@ -140,6 +224,7 @@ export function TeamRunPageClient() {
   const [specialists, setSpecialists] = useState<SpecialistSummary[]>([]);
   const [historiesBySessionId, setHistoriesBySessionId] = useState<Record<string, SessionHistoryEntry[]>>({});
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedSessionForModal, setSelectedSessionForModal] = useState<string | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastUpdateIndexRef = useRef(0);
   const pendingPromptSentRef = useRef<Set<string>>(new Set());
@@ -335,15 +420,51 @@ export function TeamRunPageClient() {
       .filter((node): node is TeamTaskNode => Boolean(node));
   }, [notesHook.notes]);
 
-  const activityItems = useMemo<TeamActivityItem[]>(() => {
+  const allRunSessions = useMemo(() => (session ? [session, ...descendantSessions] : descendantSessions), [descendantSessions, session]);
+
+  const sessionStreams = useMemo<SessionStreamSummary[]>(() => {
+    return allRunSessions
+      .map((entry) => {
+        const history = historiesBySessionId[entry.sessionId] ?? [];
+        const latestMeaningful = [...history]
+          .reverse()
+          .find((historyEntry) => {
+            const updateType = historyEntry.update?.sessionUpdate;
+            return updateType && updateType !== "agent_message_chunk" && updateType !== "agent_thought_chunk";
+          });
+        const preview =
+          extractHistoryText(latestMeaningful?.update) ??
+          summarizeText(latestMeaningful?.update?.rawOutput?.output) ??
+          summarizeText(latestMeaningful?.update?.error);
+        const lastUpdatedAt = latestMeaningful
+          ? new Date(entry.createdAt).getTime() + history.indexOf(latestMeaningful) / 1000
+          : new Date(entry.createdAt).getTime();
+
+        return {
+          session: entry,
+          actor: getActorLabel(entry, specialistsById),
+          badge: sessionBadge(entry),
+          preview,
+          eventCount: history.length,
+          lastUpdatedLabel: formatRelativeTime(new Date(lastUpdatedAt).toISOString()),
+          lastUpdatedAt,
+        };
+      })
+      .sort((a, b) => {
+        if (a.session.sessionId === sessionId) return -1;
+        if (b.session.sessionId === sessionId) return 1;
+        return b.lastUpdatedAt - a.lastUpdatedAt;
+      });
+  }, [allRunSessions, historiesBySessionId, sessionId, specialistsById]);
+
+  const coordinationItems = useMemo<TeamActivityItem[]>(() => {
     const items: Array<TeamActivityItem & { sortKey: number }> = [];
     const sessionStart = session?.createdAt ? new Date(session.createdAt).getTime() : 0;
-    const timelineSessions = session ? [session, ...descendantSessions] : descendantSessions;
 
     if (session) {
       items.push({
         id: `${session.sessionId}-start`,
-        type: "plan",
+        type: "assign",
         actor: specialistsById.get(TEAM_LEAD_SPECIALIST_ID)?.name ?? "Team Lead",
         message: "Started the coordination run",
         timestamp: formatRelativeTime(session.createdAt),
@@ -352,104 +473,88 @@ export function TeamRunPageClient() {
       });
     }
 
-    for (const timelineSession of timelineSessions) {
-      const history = historiesBySessionId[timelineSession.sessionId] ?? [];
-      const baseTime = new Date(timelineSession.createdAt).getTime();
-      const actor = getActorLabel(timelineSession, specialistsById);
+    const rootHistory = historiesBySessionId[sessionId] ?? [];
+    rootHistory.forEach((entry, index) => {
+      const update = entry.update;
+      const updateType = update?.sessionUpdate;
+      if (!updateType) return;
+      const sortKey = sessionStart + index / 1000;
 
+      if (updateType === "user_message") {
+        items.push({
+          id: `${sessionId}-user-${index}`,
+          type: "plan",
+          actor: "User",
+          message: "Submitted requirement",
+          timestamp: formatRelativeTime(session?.createdAt ?? new Date().toISOString()),
+          details: extractHistoryText(update),
+          sortKey,
+        });
+        return;
+      }
+
+      if (updateType === "tool_call_update" && getToolEventLabel(update as Record<string, unknown>).includes("delegate_task")) {
+        const target = resolveDelegationTarget(update) ?? "specialist";
+        items.push({
+          id: `${sessionId}-delegate-${index}`,
+          type: update.status === "failed" ? "blocked" : "assign",
+          actor: specialistsById.get(TEAM_LEAD_SPECIALIST_ID)?.name ?? "Team Lead",
+          message: update.status === "failed" ? `Failed to dispatch ${target}` : `Dispatched ${target}`,
+          timestamp: formatRelativeTime(session?.createdAt ?? new Date().toISOString()),
+          details: summarizeText(
+            typeof update.rawOutput?.output === "string"
+              ? update.rawOutput.output
+              : typeof update.rawInput?.additionalInstructions === "string"
+                ? update.rawInput.additionalInstructions
+                : undefined,
+          ),
+          sortKey,
+        });
+      }
+    });
+
+    for (const child of descendantSessions) {
+      const childStart = new Date(child.createdAt).getTime();
+      const actor = getActorLabel(child, specialistsById);
+      items.push({
+        id: `${child.sessionId}-created`,
+        type: "assign",
+        actor: specialistsById.get(TEAM_LEAD_SPECIALIST_ID)?.name ?? "Team Lead",
+        message: `Opened session for ${actor}`,
+        timestamp: formatRelativeTime(child.createdAt),
+        details: child.name ?? child.specialistId ?? child.role ?? child.provider,
+        sortKey: childStart,
+      });
+
+      const history = historiesBySessionId[child.sessionId] ?? [];
       history.forEach((entry, index) => {
         const update = entry.update;
         const updateType = update?.sessionUpdate;
         if (!updateType) return;
-
-        const text = summarizeText(update.content?.text);
-        const sortKey = baseTime + index / 1000;
+        const sortKey = childStart + index / 1000;
 
         switch (updateType) {
-          case "user_message":
-            if (timelineSession.sessionId === sessionId && text) {
-              items.push({
-                id: `${timelineSession.sessionId}-user-${index}`,
-                type: "plan",
-                actor: "User",
-                message: "Submitted requirement",
-                timestamp: formatRelativeTime(timelineSession.createdAt),
-                details: text,
-                sortKey,
-              });
-            }
-            break;
-          case "agent_message":
-          case "agent_message_chunk":
-          case "agent_thought":
-          case "agent_thought_chunk":
-            if (text) {
-              items.push({
-                id: `${timelineSession.sessionId}-${updateType}-${index}`,
-                type: timelineSession.sessionId === sessionId ? "plan" : "finding",
-                actor,
-                message: timelineSession.sessionId === sessionId ? "Published coordination update" : "Shared progress update",
-                timestamp: formatRelativeTime(timelineSession.createdAt),
-                details: text,
-                sortKey,
-              });
-            }
-            break;
-          case "tool_call":
-            items.push({
-              id: `${timelineSession.sessionId}-tool-${index}`,
-              type: timelineSession.sessionId === sessionId ? "assign" : "revision",
-              actor,
-              message: getToolEventLabel(update as Record<string, unknown>),
-              timestamp: formatRelativeTime(timelineSession.createdAt),
-              details: update.status,
-              sortKey,
-            });
-            break;
-          case "tool_call_update":
-            items.push({
-              id: `${timelineSession.sessionId}-tool-update-${index}`,
-              type: update.status === "failed" ? "blocked" : "revision",
-              actor,
-              message: getToolEventLabel(update as Record<string, unknown>),
-              timestamp: formatRelativeTime(timelineSession.createdAt),
-              details: update.status,
-              sortKey,
-            });
-            break;
           case "task_completion": {
             const normalizedStatus = normalizeTaskStatus(update.taskStatus);
             items.push({
-              id: `${timelineSession.sessionId}-completion-${index}`,
+              id: `${child.sessionId}-completion-${index}`,
               type: normalizedStatus === "blocked" ? "blocked" : "complete",
               actor,
-              message: normalizedStatus === "blocked" ? "Reported a blocked task" : "Completed a task",
-              timestamp: formatRelativeTime(timelineSession.createdAt),
-              details: summarizeText(update.completionSummary ?? update.content?.text),
+              message: normalizedStatus === "blocked" ? "Reported a blocked result" : "Reported completion",
+              timestamp: formatRelativeTime(child.createdAt),
+              details: summarizeText(update.completionSummary ?? extractHistoryText(update)),
               sortKey,
             });
             break;
           }
-          case "session_renamed":
-            if (update.name) {
-              items.push({
-                id: `${timelineSession.sessionId}-rename-${index}`,
-                type: "revision",
-                actor,
-                message: `Renamed session to '${update.name}'`,
-                timestamp: formatRelativeTime(timelineSession.createdAt),
-                sortKey,
-              });
-            }
-            break;
           case "acp_status":
             if (update.status === "error") {
               items.push({
-                id: `${timelineSession.sessionId}-status-${index}`,
+                id: `${child.sessionId}-status-${index}`,
                 type: "blocked",
                 actor,
                 message: "Hit a runtime error",
-                timestamp: formatRelativeTime(timelineSession.createdAt),
+                timestamp: formatRelativeTime(child.createdAt),
                 details: summarizeText(update.error),
                 sortKey,
               });
@@ -458,16 +563,15 @@ export function TeamRunPageClient() {
           case "completed":
           case "ended":
           case "turn_complete":
-            if (timelineSession.sessionId !== sessionId) {
-              items.push({
-                id: `${timelineSession.sessionId}-${updateType}-${index}`,
-                type: "complete",
-                actor,
-                message: "Finished the current turn",
-                timestamp: formatRelativeTime(timelineSession.createdAt),
-                sortKey,
-              });
-            }
+            items.push({
+              id: `${child.sessionId}-${updateType}-${index}`,
+              type: "complete",
+              actor,
+              message: "Finished the current turn",
+              timestamp: formatRelativeTime(child.createdAt),
+              details: extractHistoryText(update),
+              sortKey,
+            });
             break;
           default:
             break;
@@ -475,42 +579,11 @@ export function TeamRunPageClient() {
       });
     }
 
-    for (const child of descendantSessions) {
-      const childTime = new Date(child.createdAt).getTime();
-      if ((historiesBySessionId[child.sessionId] ?? []).length > 0) {
-        continue;
-      }
-      items.push({
-        id: `${child.sessionId}-assign`,
-        type: child.acpStatus === "error" ? "blocked" : "assign",
-        actor: specialistsById.get(TEAM_LEAD_SPECIALIST_ID)?.name ?? "Team Lead",
-        message: `Assigned ${getActorLabel(child, specialistsById)}`,
-        timestamp: formatRelativeTime(child.createdAt),
-        details: child.specialistId ?? child.role ?? child.provider ?? undefined,
-        sortKey: childTime,
-      });
-    }
-
-    for (const note of notesHook.notes) {
-      const noteTime = new Date(note.updatedAt).getTime();
-      if (note.metadata.type === "spec") {
-        items.push({
-          id: `${note.id}-spec`,
-          type: "plan",
-          actor: specialistsById.get(TEAM_LEAD_SPECIALIST_ID)?.name ?? "Team Lead",
-          message: `Updated spec note '${note.title}'`,
-          timestamp: formatRelativeTime(note.updatedAt),
-          details: summarizeText(note.content),
-          sortKey: noteTime,
-        });
-      }
-    }
-
     return items
       .sort((a, b) => b.sortKey - a.sortKey)
       .slice(0, 18)
       .map(({ sortKey: _sortKey, ...item }) => item);
-  }, [descendantSessions, historiesBySessionId, notesHook.notes, session, sessionId, specialistsById]);
+  }, [descendantSessions, historiesBySessionId, session, sessionId, specialistsById]);
 
   const teamMembers = useMemo(() => {
     const teamSpecialists = specialists.filter((specialist) => specialist.id.startsWith("team-"));
@@ -559,6 +632,19 @@ export function TeamRunPageClient() {
                 : "draft",
       }));
   }, [notesHook.notes]);
+
+  const selectedSessionStream = useMemo(
+    () => sessionStreams.find((item) => item.session.sessionId === selectedSessionForModal) ?? null,
+    [selectedSessionForModal, sessionStreams],
+  );
+
+  const selectedTranscriptEntries = useMemo(() => {
+    if (!selectedSessionStream) return [];
+    return (historiesBySessionId[selectedSessionStream.session.sessionId] ?? []).filter((entry) => {
+      const updateType = entry.update?.sessionUpdate;
+      return updateType && updateType !== "agent_message_chunk" && updateType !== "agent_thought_chunk";
+    });
+  }, [historiesBySessionId, selectedSessionStream]);
 
   if (!session) {
     return (
@@ -657,40 +743,81 @@ export function TeamRunPageClient() {
           <section className="min-h-0 overflow-hidden bg-desktop-bg-primary">
             <div className="border-b border-desktop-border px-4 py-3">
               <h2 className="text-sm font-semibold text-desktop-text-primary">Coordination Feed</h2>
-              <p className="mt-1 text-xs text-desktop-text-secondary">Live root-session updates, child-session progress, and planning context.</p>
+              <p className="mt-1 text-xs text-desktop-text-secondary">Delegation, handoffs, completions, and failures between agents.</p>
             </div>
-            <div className="h-[calc(100%-57px)] overflow-y-auto px-4 py-4">
-              <div className="space-y-4">
-                {activityItems.length === 0 ? (
-                  <EmptyPanel message="No coordination events yet." />
-                ) : (
-                  activityItems.map((item, index) => (
-                    <div key={item.id} className="relative">
-                      {index < activityItems.length - 1 && (
-                        <div className="absolute left-[11px] top-8 bottom-0 w-px bg-desktop-border" />
-                      )}
-                      <div className="flex gap-3">
-                        <div className={`relative z-10 flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold ${activityTone(item.type)}`}>
-                          {item.type[0].toUpperCase()}
+            <div className="grid h-[calc(100%-57px)] grid-rows-[220px_minmax(0,1fr)]">
+              <div className="border-b border-desktop-border px-4 py-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-desktop-text-primary">Session Streams</h3>
+                    <p className="mt-1 text-xs text-desktop-text-secondary">Each agent session lives here. Click to inspect transcript in a popup.</p>
+                  </div>
+                  <span className="rounded-full border border-desktop-border bg-desktop-bg-secondary px-2.5 py-1 text-[11px] text-desktop-text-secondary">
+                    {sessionStreams.length} sessions
+                  </span>
+                </div>
+                <div className="flex gap-3 overflow-x-auto pb-1">
+                  {sessionStreams.map((stream) => (
+                    <button
+                      key={stream.session.sessionId}
+                      type="button"
+                      onClick={() => setSelectedSessionForModal(stream.session.sessionId)}
+                      className="min-w-[260px] max-w-[280px] rounded-2xl border border-desktop-border bg-desktop-bg-secondary p-3 text-left transition hover:border-cyan-300 hover:bg-desktop-bg-active/80"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-semibold text-desktop-text-primary">{stream.actor}</div>
+                          <div className="mt-1 truncate text-[11px] text-desktop-text-secondary">{stream.session.name ?? stream.session.sessionId}</div>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline justify-between gap-3">
-                            <div className="min-w-0">
-                              <span className="text-sm font-medium text-desktop-text-primary">{item.actor}</span>
-                              <span className="ml-2 text-sm text-desktop-text-secondary">{item.message}</span>
-                            </div>
-                            <span className="shrink-0 text-xs text-desktop-text-muted">{item.timestamp}</span>
+                        <span className="shrink-0 rounded-full border border-desktop-border px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-desktop-text-secondary">
+                          {stream.badge}
+                        </span>
+                      </div>
+                      <div className="mt-3 line-clamp-3 min-h-[54px] text-xs leading-5 text-desktop-text-secondary">
+                        {stream.preview ?? "No transcript content yet."}
+                      </div>
+                      <div className="mt-3 flex items-center justify-between text-[11px] text-desktop-text-muted">
+                        <span>{stream.eventCount} events</span>
+                        <span>{stream.lastUpdatedLabel}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="overflow-y-auto px-4 py-4">
+                <div className="space-y-4">
+                  {coordinationItems.length === 0 ? (
+                    <EmptyPanel message="No coordination events yet." />
+                  ) : (
+                    coordinationItems.map((item, index) => (
+                      <div key={item.id} className="relative">
+                        {index < coordinationItems.length - 1 && (
+                          <div className="absolute left-[11px] top-8 bottom-0 w-px bg-desktop-border" />
+                        )}
+                        <div className="flex gap-3">
+                          <div className={`relative z-10 flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold ${activityTone(item.type)}`}>
+                            {item.type[0].toUpperCase()}
                           </div>
-                          {item.details && (
-                            <div className="mt-2 rounded-xl border border-desktop-border bg-desktop-bg-secondary px-3 py-2 text-sm leading-6 text-desktop-text-secondary">
-                              {item.details}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline justify-between gap-3">
+                              <div className="min-w-0">
+                                <span className="text-sm font-medium text-desktop-text-primary">{item.actor}</span>
+                                <span className="ml-2 text-sm text-desktop-text-secondary">{item.message}</span>
+                              </div>
+                              <span className="shrink-0 text-xs text-desktop-text-muted">{item.timestamp}</span>
                             </div>
-                          )}
+                            {item.details && (
+                              <div className="mt-2 rounded-xl border border-desktop-border bg-desktop-bg-secondary px-3 py-2 text-sm leading-6 text-desktop-text-secondary">
+                                {item.details}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
-                )}
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           </section>
@@ -775,6 +902,58 @@ export function TeamRunPageClient() {
           </section>
         </div>
       </div>
+
+      {selectedSessionStream && (
+        <OverlayModal
+          onClose={() => setSelectedSessionForModal(null)}
+          title={`${selectedSessionStream.actor} Session`}
+        >
+          <div className="flex h-full flex-col bg-desktop-bg-primary">
+            <div className="border-b border-desktop-border px-4 py-3">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] text-desktop-text-secondary">
+                <span>{selectedSessionStream.session.name ?? selectedSessionStream.session.sessionId}</span>
+                <span className="opacity-40">/</span>
+                <span>{selectedSessionStream.badge}</span>
+                <span className="opacity-40">/</span>
+                <span>{selectedSessionStream.lastUpdatedLabel}</span>
+                <span className="opacity-40">/</span>
+                <Link
+                  href={`/workspace/${workspaceId}/sessions/${selectedSessionStream.session.sessionId}`}
+                  className="text-cyan-600 transition hover:text-cyan-500"
+                >
+                  Open raw session
+                </Link>
+              </div>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+              <div className="space-y-3">
+                {selectedTranscriptEntries.length === 0 ? (
+                  <EmptyPanel message="No transcript events yet." />
+                ) : (
+                  selectedTranscriptEntries.map((entry, index) => (
+                    <div key={`${selectedSessionStream.session.sessionId}-${index}`} className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-desktop-text-muted">
+                          {transcriptEventLabel(entry.update)}
+                        </div>
+                        <div className="text-[11px] text-desktop-text-muted">
+                          {selectedSessionStream.lastUpdatedLabel}
+                        </div>
+                      </div>
+                      <div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-desktop-text-secondary">
+                        {extractHistoryText(entry.update) ??
+                          summarizeText(entry.update?.rawOutput?.output, 800) ??
+                          summarizeText(entry.update?.error, 800) ??
+                          "No textual payload."}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </OverlayModal>
+      )}
     </DesktopAppShell>
   );
 }

@@ -679,6 +679,7 @@ export async function POST(request: NextRequest) {
                   routaAgentId: childSession.routaAgentId,
                   provider: childSession.provider,
                   role: childSession.role,
+                  specialistId: childSession.specialistId,
                   parentSessionId: childSession.parentSessionId,
                   sandboxId: childSession.sandboxId,
                   createdAt: new Date().toISOString(),
@@ -1012,11 +1013,21 @@ export async function POST(request: NextRequest) {
             // First prompt for this coordinator - wrap with coordinator context
             const isFirstPrompt = !sessionRecord.firstPromptSent;
             if (isFirstPrompt) {
-              promptText = buildCoordinatorPrompt({
-                agentId: agent.id,
-                workspaceId: sessionRecord.workspaceId,
-                userRequest: promptText,
-              });
+              if (sessionRecord.specialistSystemPrompt) {
+                promptText = `${sessionRecord.specialistSystemPrompt}\n\n---\n\n` +
+                  `**Your Agent ID:** ${agent.id}\n` +
+                  `**Workspace ID:** ${sessionRecord.workspaceId}\n\n` +
+                  `## User Request\n\n${promptText}\n`;
+                console.log(
+                  `[ACP Route] Injected specialist coordinator prompt for ${sessionRecord.specialistId} into session ${sessionId}`
+                );
+              } else {
+                promptText = buildCoordinatorPrompt({
+                  agentId: agent.id,
+                  workspaceId: sessionRecord.workspaceId,
+                  userRequest: promptText,
+                });
+              }
               store.markFirstPromptSent(sessionId);
             }
           }

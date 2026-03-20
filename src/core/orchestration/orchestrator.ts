@@ -134,6 +134,7 @@ export class RoutaOrchestrator {
     routaAgentId: string;
     provider: string;
     role: string;
+    specialistId?: string;
     parentSessionId?: string;
     sandboxId?: string;
   }) => void;
@@ -231,6 +232,7 @@ export class RoutaOrchestrator {
       routaAgentId: string;
       provider: string;
       role: string;
+      specialistId?: string;
       parentSessionId?: string;
       sandboxId?: string;
     }) => void
@@ -398,6 +400,7 @@ export class RoutaOrchestrator {
         routaAgentId: agentId,
         provider,
         role: specialistConfig.role,
+        specialistId: specialistConfig.id,
         parentSessionId: callerSessionId,
         sandboxId: childSandboxId,
       });
