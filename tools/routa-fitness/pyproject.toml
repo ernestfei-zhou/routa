@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "routa-fitness"
 version = "0.1.1"
-description = "Architecture fitness engine with tiered checks, change-aware execution, and review triggers"
+description = "Routa guardrails for architecture fitness, change-aware checks, and human review triggers"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"

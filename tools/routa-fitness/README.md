@@ -1,22 +1,76 @@
-# routa-fitness
+# Routa
 
-`routa-fitness` is a Python CLI and library for running architecture fitness checks.
+**Guardrails Embedded in the Change Lifecycle**
 
-It started inside Routa, but the package is being shaped as a reusable fitness engine:
+`routa-fitness` is the Python package behind Routa's fitness and review-trigger workflow.
+It is designed to keep architectural checks close to the change lifecycle instead of treating them as an afterthought at the end of CI.
 
-- run shell-based quality gates
-- group checks by architectural dimension
-- support fast/normal/deep execution tiers
-- run change-aware checks for the current git diff
-- detect risky changes that should trigger human review
+## The Idea
+
+Routa treats quality control as a staged guardrail flow:
+
+```text
+The further to the right, the higher the fix cost,
+the lower the certainty of automation,
+and the more human judgment is required.
+
+[Requirements / AI-generated change]
+        |
+        v
+[Rule Definition] -> [Baseline Quality Gates] -> [Risk Identification & Routing] -> [Deep Validation] -> [Release & Feedback]
+     |                      |                           |                             |                        |
+     |                      |                           |                             |                        |
+     |- metrics?            |- compile?                |- API/schema?                |- API parity?          |- merge / release
+     |- thresholds?         |- lint?                   |- impact radius?             |- E2E / visual?        |- write back rules
+     |- hard gates?         |- tests?                  |- suspicious expansion?      |- semgrep / audit?     |- adjust thresholds
+     |- evidence?           |- coverage?               |- missing evidence?          |- need human review?   |- close the loop
+```
+
+Outcomes:
+
+- Pass: continue to review, PR, merge, and release
+- Warn: strengthen evidence or escalate review depth
+- Block: do not merge
+
+Under the flow:
+
+```text
+docs/fitness  ->  routa-fitness orchestration  ->  hard gates + weighted score + review triggers
+```
+
+Feedback loop:
+
+```text
+Production issue / missed detection
+    -> update docs/fitness
+    -> tune thresholds
+    -> add or refine verification templates
+```
+
+## What the Package Does
+
+Today the package provides:
+
+- architecture fitness checks grouped by dimension
+- fast / normal / deep execution tiers
+- change-aware execution for the current git diff
+- hard-gate and weighted-score orchestration
+- review triggers that explicitly ask for human intervention on risky changes
+
+This makes Routa useful both as:
+
+- a repository-local fitness runner
+- a reusable base for a more general fitness engine
 
 ## Install
+
+Install from PyPI:
 
 ```bash
 pip install routa-fitness
 ```
 
-For local development inside this repository:
+For development inside the Routa repository:
 
 ```bash
 pip install -e tools/routa-fitness
@@ -31,15 +85,15 @@ routa-fitness validate
 routa-fitness review-trigger --base HEAD~1
 ```
 
-## Expected Project Layout
+## Fitness Specs
 
-By default, `routa-fitness run` looks for fitness specs under:
+By default, `routa-fitness run` loads executable fitness specs from:
 
 ```text
 docs/fitness/*.md
 ```
 
-Each spec file uses YAML frontmatter to declare executable metrics.
+Each spec file uses YAML frontmatter to declare a dimension and its metrics.
 
 Minimal example:
 
@@ -58,7 +112,14 @@ metrics:
 ---
 ```
 
-`review-trigger` uses a YAML config file, by default:
+## Review Triggers
+
+`review-trigger` is intentionally different from score-based fitness metrics.
+
+- a normal metric answers: "did the automated check pass?"
+- a review trigger answers: "is this change still safe to trust to automation alone?"
+
+By default, review triggers are loaded from:
 
 ```text
 docs/fitness/review-triggers.yaml
@@ -74,6 +135,23 @@ review_triggers:
       - src/core/acp/**
     severity: high
     action: require_human_review
+```
+
+Example output:
+
+```json
+{
+  "human_review_required": true,
+  "triggers": [
+    {
+      "name": "high_risk_directory_change",
+      "severity": "high",
+      "reasons": [
+        "changed path: src/core/acp/..."
+      ]
+    }
+  ]
+}
 ```
 
 ## Python API
@@ -98,8 +176,8 @@ print(report.to_dict())
 
 ## Status
 
-Current package status:
+Current status:
 
 - stable for Routa-internal usage
-- usable as a standalone CLI for markdown-frontmatter fitness specs
-- still evolving toward a more reusable core/adapter/preset architecture
+- ready to publish as a standalone PyPI package
+- evolving toward a reusable core / adapter / preset architecture
