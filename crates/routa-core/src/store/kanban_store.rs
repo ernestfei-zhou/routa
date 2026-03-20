@@ -15,6 +15,21 @@ impl KanbanStore {
         Self { db }
     }
 
+    pub async fn list_all(&self) -> Result<Vec<KanbanBoard>, ServerError> {
+        self.db
+            .with_conn_async(move |conn| {
+                let mut stmt = conn.prepare(
+                    "SELECT id, workspace_id, name, is_default, columns, created_at, updated_at \
+                     FROM kanban_boards ORDER BY created_at ASC",
+                )?;
+                let rows = stmt
+                    .query_map([], |row| Ok(row_to_board(row)))?
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(rows)
+            })
+            .await
+    }
+
     pub async fn list_by_workspace(
         &self,
         workspace_id: &str,

@@ -17,6 +17,50 @@ use crate::error::ServerError;
 use crate::rpc::RpcRouter;
 use crate::state::AppState;
 
+fn automation_has_effective_config(
+    automation: &routa_core::models::kanban::KanbanColumnAutomation,
+) -> bool {
+    automation.provider_id.is_some()
+        || automation.role.is_some()
+        || automation.specialist_id.is_some()
+        || automation.specialist_name.is_some()
+        || automation
+            .steps
+            .as_ref()
+            .is_some_and(|steps| !steps.is_empty())
+}
+
+fn normalize_column_automation(column: &mut KanbanColumn) {
+    if let Some(automation) = column.automation.as_mut() {
+        if !automation.enabled && automation_has_effective_config(automation) {
+            automation.enabled = true;
+        }
+    }
+}
+
+fn imported_board_id(workspace_id: &str, board_id: &str, conflicting_ids: &HashSet<String>) -> String {
+    if !conflicting_ids.contains(board_id) {
+        return board_id.to_string();
+    }
+
+    let workspace_prefix = workspace_id
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+                ch
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>();
+    let scoped_id = format!("{}--{}", workspace_prefix, board_id);
+    if !conflicting_ids.contains(&scoped_id) {
+        return scoped_id;
+    }
+
+    format!("{}--{}", scoped_id, uuid::Uuid::new_v4())
+}
+
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/boards", get(list_boards).post(create_board))
@@ -382,29 +426,47 @@ async fn import_config(
     }
 
     let board_ids = existing_board_ids(&state, &config.workspace_id).await?;
+    let mut global_board_ids = state
+        .kanban_store
+        .list_all()
+        .await?
+        .into_iter()
+        .map(|board| board.id)
+        .collect::<HashSet<_>>();
     let mut applied = Vec::new();
 
     for board in &config.boards {
+        let board_id = if board_ids.contains(&board.id) {
+            board.id.clone()
+        } else {
+            imported_board_id(&config.workspace_id, &board.id, &global_board_ids)
+        };
+        global_board_ids.insert(board_id.clone());
+
         let columns: Vec<KanbanColumn> = board
             .columns
             .iter()
             .enumerate()
-            .map(|(idx, col)| KanbanColumn {
-                id: col.id.clone(),
-                name: col.name.clone(),
-                color: col.color.clone(),
-                position: idx as i64,
-                stage: col.stage.clone(),
-                automation: col.automation.clone(),
+            .map(|(idx, col)| {
+                let mut column = KanbanColumn {
+                    id: col.id.clone(),
+                    name: col.name.clone(),
+                    color: col.color.clone(),
+                    position: idx as i64,
+                    stage: col.stage.clone(),
+                    automation: col.automation.clone(),
+                };
+                normalize_column_automation(&mut column);
+                column
             })
             .collect();
 
-        let action = if board_ids.contains(&board.id) {
+        let action = if board_ids.contains(&board_id) {
             rpc_result(
                 &state,
                 "kanban.updateBoard",
                 serde_json::json!({
-                    "boardId": board.id,
+                    "boardId": board_id,
                     "name": board.name,
                     "isDefault": board.is_default,
                     "columns": columns,
@@ -418,7 +480,7 @@ async fn import_config(
                 "kanban.createBoard",
                 serde_json::json!({
                     "workspaceId": config.workspace_id,
-                    "id": board.id,
+                    "id": board_id,
                     "name": board.name,
                     "isDefault": board.is_default,
                     "columns": board.columns.iter().map(|col| col.name.clone()).collect::<Vec<_>>(),
@@ -429,7 +491,7 @@ async fn import_config(
                 &state,
                 "kanban.updateBoard",
                 serde_json::json!({
-                    "boardId": board.id,
+                    "boardId": board_id,
                     "columns": columns,
                 }),
             )
@@ -438,7 +500,8 @@ async fn import_config(
         };
 
         applied.push(serde_json::json!({
-            "boardId": board.id,
+            "boardId": board_id,
+            "requestedBoardId": board.id,
             "boardName": board.name,
             "action": action,
             "columns": board.columns.len(),

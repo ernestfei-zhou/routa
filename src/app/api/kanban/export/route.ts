@@ -28,6 +28,25 @@ interface ExportKanbanColumn {
   automation?: Record<string, unknown>;
 }
 
+function normalizeAutomation(automation: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  if (!automation) {
+    return undefined;
+  }
+  const normalized = { ...automation };
+  const steps = Array.isArray(normalized.steps) ? normalized.steps : [];
+  const hasEffectiveConfig = Boolean(
+    normalized.providerId
+    || normalized.role
+    || normalized.specialistId
+    || normalized.specialistName
+    || steps.length > 0,
+  );
+  if (hasEffectiveConfig && normalized.enabled !== true) {
+    normalized.enabled = true;
+  }
+  return normalized;
+}
+
 function requireWorkspaceId(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const normalized = value.trim();
@@ -62,7 +81,7 @@ function toExportConfig(workspaceId: string, workspaceTitle: string | undefined,
           name: column.name,
           color: column.color ?? undefined,
           stage: column.stage,
-          automation: column.automation,
+          automation: normalizeAutomation(column.automation),
         })),
     })),
   };
