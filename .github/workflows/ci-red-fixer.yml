@@ -99,9 +99,11 @@ jobs:
       - name: Skip repair (No API Key)
         if: env.ANTHROPIC_API_KEY == '' && github.event.inputs.dry_run != 'true'
         run: |
-          echo "## ⚠️ Repair Skipped" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "No ANTHROPIC_AUTH_TOKEN secret configured. Set it in repository secrets to enable automated CI repair." >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## ⚠️ Repair Skipped"
+            echo ""
+            echo "No ANTHROPIC_AUTH_TOKEN secret configured. Set it in repository secrets to enable automated CI repair."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run repair
         if: env.ANTHROPIC_API_KEY != '' || github.event.inputs.dry_run == 'true'
@@ -110,11 +112,13 @@ jobs:
           INPUT_RUN_ID: ${{ github.event.inputs.run_id || '' }}
           INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: |
-          echo "## 🔧 CI Red Fixer" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Branch: ${TARGET_BRANCH}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Trigger: ${EVENT_NAME_SAFE}" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "## 🔧 CI Red Fixer"
+            echo ""
+            echo "- Branch: ${TARGET_BRANCH}"
+            echo "- Trigger: ${EVENT_NAME_SAFE}"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
 
           args=(--branch "$TARGET_BRANCH" --report-file /tmp/ci-red-fixer-report.json)
           if [ -n "$INPUT_RUN_ID" ]; then
@@ -134,32 +138,38 @@ jobs:
             RUN_URL=$(jq -r '.targetRun.htmlUrl // "n/a"' /tmp/ci-red-fixer-report.json)
             VALIDATION=$(jq -r '(.validationCommands // []) | if length == 0 then "n/a" else join(", ") end' /tmp/ci-red-fixer-report.json)
 
-            echo "### Target Run" >> $GITHUB_STEP_SUMMARY
-            echo "- Status: ${RUN_STATUS}" >> $GITHUB_STEP_SUMMARY
-            echo "- Run URL: ${RUN_URL}" >> $GITHUB_STEP_SUMMARY
-            echo "- Validation: ${VALIDATION}" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
+            {
+              echo "### Target Run"
+              echo "- Status: ${RUN_STATUS}"
+              echo "- Run URL: ${RUN_URL}"
+              echo "- Validation: ${VALIDATION}"
+              echo ""
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-          echo "### Output" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          head -200 /tmp/ci-red-fixer-output.txt >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          {
+            echo "### Output"
+            echo '```'
+            head -200 /tmp/ci-red-fixer-output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Check for changes
         id: changes
         if: env.ANTHROPIC_API_KEY != '' || github.event.inputs.dry_run == 'true'
         run: |
           if git diff --quiet; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
           else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "## 📝 Changes Made" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo '```diff' >> $GITHUB_STEP_SUMMARY
-            git diff >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            {
+              echo ""
+              echo "## 📝 Changes Made"
+              echo ""
+              echo '```diff'
+              git diff
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Commit and push changes
@@ -179,4 +189,4 @@ jobs:
           - Repair run: ${REPAIR_RUN_URL}
 
           Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
-          git push origin HEAD:${TARGET_BRANCH}
+          git push origin "HEAD:${TARGET_BRANCH}"

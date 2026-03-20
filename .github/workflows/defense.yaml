@@ -99,27 +99,15 @@ jobs:
       - name: Summary
         if: always()
         run: |
-          echo "## Fitness Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Gate | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Fitness CI | ${{ steps.fitness.outcome == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## Fitness Report"
+            echo ""
+            echo "| Gate | Status |"
+            echo "|------|--------|"
+            echo "| Fitness CI | ${{ steps.fitness.outcome == 'success' && '✅' || '❌' }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
           if [ -f .artifacts/fitness-report.json ]; then
-            python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
-import json
-from pathlib import Path
-
-payload = json.loads(Path(".artifacts/fitness-report.json").read_text(encoding="utf-8"))
-print("")
-print(f"- Final score: {payload.get('final_score', 0):.1f}")
-print(f"- Hard gate blocked: {payload.get('hard_gate_blocked', False)}")
-print(f"- Score blocked: {payload.get('score_blocked', False)}")
-for dimension in payload.get("dimensions", []):
-    print(
-        f"- {dimension['name']}: score={dimension['score']:.1f} "
-        f"passed={dimension['passed']}/{dimension['total']}"
-    )
-PY
+            python3 -c 'import json; from pathlib import Path; payload=json.loads(Path(".artifacts/fitness-report.json").read_text(encoding="utf-8")); print(""); print(f"- Final score: {payload.get(\"final_score\", 0):.1f}"); print(f"- Hard gate blocked: {payload.get(\"hard_gate_blocked\", False)}"); print(f"- Score blocked: {payload.get(\"score_blocked\", False)}"); [print(f"- {dimension[\"name\"]}: score={dimension[\"score\"]:.1f} passed={dimension[\"passed\"]}/{dimension[\"total\"]}") for dimension in payload.get("dimensions", [])]' >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload fitness artifact
@@ -262,11 +250,13 @@ PY
     steps:
       - name: Summary
         run: |
-          echo "## Defense / Security Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Dependency Scan | ${{ needs.dependency-scan.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Semgrep SAST | ${{ needs.semgrep.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Trivy | ${{ needs.trivy.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Hadolint | ${{ needs.hadolint.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## Defense / Security Summary"
+            echo ""
+            echo "| Check | Status |"
+            echo "|-------|--------|"
+            echo "| Dependency Scan | ${{ needs.dependency-scan.result == 'success' && '✅' || '❌' }} |"
+            echo "| Semgrep SAST | ${{ needs.semgrep.result == 'success' && '✅' || '❌' }} |"
+            echo "| Trivy | ${{ needs.trivy.result == 'success' && '✅' || '❌' }} |"
+            echo "| Hadolint | ${{ needs.hadolint.result == 'success' && '✅' || '❌' }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
