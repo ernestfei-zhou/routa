@@ -437,11 +437,8 @@ pub async fn move_card(
     }
     task.updated_at = Utc::now();
 
-    if previous_column_id.as_deref() != Some(params.target_column_id.as_str()) {
-        let transition_column =
-            resolve_transition_automation_column(source_column.as_ref(), Some(&target_column));
-        maybe_trigger_lane_automation(state, &mut task, transition_column).await;
-    }
+    let transition_column =
+        resolve_transition_automation_column(source_column.as_ref(), Some(&target_column)).cloned();
     tracing::info!(
         target: "routa_kanban_move",
         task_id = %task.id,
@@ -454,6 +451,9 @@ pub async fn move_card(
         "kanban.move_card before save"
     );
     state.task_store.save(&task).await?;
+    if previous_column_id.as_deref() != Some(params.target_column_id.as_str()) {
+        schedule_lane_automation_trigger(state.clone(), task.clone(), transition_column);
+    }
     emit_kanban_workspace_event(
         state,
         &board.workspace_id,
@@ -612,6 +612,33 @@ async fn maybe_trigger_lane_automation(
             task.last_sync_error = Some(error);
         }
     }
+}
+
+fn schedule_lane_automation_trigger(
+    state: AppState,
+    task: Task,
+    target_column: Option<KanbanColumn>,
+) {
+    tokio::spawn(async move {
+        let mut task = task;
+        maybe_trigger_lane_automation(&state, &mut task, target_column.as_ref()).await;
+        tracing::info!(
+            target: "routa_kanban_move",
+            task_id = %task.id,
+            column_id = ?task.column_id,
+            trigger_session_id = ?task.trigger_session_id,
+            last_sync_error = ?task.last_sync_error,
+            "kanban.move_card async automation result"
+        );
+        if let Err(error) = state.task_store.save(&task).await {
+            tracing::error!(
+                target: "routa_kanban_move",
+                task_id = %task.id,
+                error = %error,
+                "kanban.move_card failed to persist async automation result"
+            );
+        }
+    });
 }
 
 fn build_task_prompt(
