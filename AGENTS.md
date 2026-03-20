@@ -56,6 +56,9 @@
 
 Before any PR, verify fitness using [docs/fitness/README.md](docs/fitness/README.md):
 
+`tools/fitness-function` has been replaced by `entrix`.
+`entrix` is the repository governance tool that executes fitness rules, review triggers, and validation orchestration from `docs/fitness/`.
+
 ```bash
 entrix run --dry-run
 entrix run
