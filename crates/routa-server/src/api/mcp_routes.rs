@@ -32,17 +32,14 @@ type McpSessions = Arc<RwLock<HashMap<String, McpSessionData>>>;
 #[derive(Clone)]
 struct McpSessionData {
     workspace_id: String,
-    tool_mode: Option<String>,
     mcp_profile: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 struct McpRequestQuery {
-    session_id: Option<String>,
     #[serde(rename = "wsId")]
     ws_id: Option<String>,
-    tool_mode: Option<String>,
     mcp_profile: Option<String>,
 }
 
@@ -53,7 +50,7 @@ pub fn router() -> Router<AppState> {
         "/",
         get({
             let sessions = sessions.clone();
-            move |headers, state, query| mcp_get(headers, state, query, sessions)
+            move |headers, state| mcp_get(headers, state, sessions)
         })
         .post({
             let sessions = sessions.clone();
@@ -109,7 +106,6 @@ async fn mcp_post(
                 new_session_id.clone(),
                 McpSessionData {
                     workspace_id: query.ws_id.unwrap_or_else(|| "default".to_string()),
-                    tool_mode: query.tool_mode,
                     mcp_profile: query.mcp_profile,
                 },
             );
@@ -228,16 +224,9 @@ async fn mcp_post(
 
 // ─── GET /api/mcp (SSE) ──────────────────────────────────────────────
 
-#[derive(Debug, Deserialize)]
-struct McpGetQuery {
-    #[serde(flatten)]
-    common: McpRequestQuery,
-}
-
 async fn mcp_get(
     headers: HeaderMap,
     State(_state): State<AppState>,
-    Query(_query): Query<McpGetQuery>,
     sessions: McpSessions,
 ) -> Result<
     Sse<impl tokio_stream::Stream<Item = Result<Event, Infallible>>>,
