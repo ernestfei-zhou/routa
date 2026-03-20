@@ -323,7 +323,11 @@ pub async fn run(
         // ── Send prompt ──────────────────────────────────────────────────
         match state.acp_manager.prompt(&session_id, &final_prompt).await {
             Ok(_) => {
-                if let Err(e) = state.acp_session_store.set_first_prompt_sent(&session_id).await {
+                if let Err(e) = state
+                    .acp_session_store
+                    .set_first_prompt_sent(&session_id)
+                    .await
+                {
                     eprintln!("Failed to mark first prompt sent: {}", e);
                 }
                 // Stream updates until idle / turn_complete
@@ -331,7 +335,10 @@ pub async fn run(
                     stream_until_idle(rx, state, &session_id).await;
                 }
                 if let Some(history) = state.acp_manager.get_session_history(&session_id).await {
-                    if let Err(e) = state.acp_session_store.save_history(&session_id, &history).await
+                    if let Err(e) = state
+                        .acp_session_store
+                        .save_history(&session_id, &history)
+                        .await
                     {
                         eprintln!("Failed to persist session history: {}", e);
                     }

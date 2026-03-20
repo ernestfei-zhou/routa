@@ -39,7 +39,8 @@ async fn ensure_mcp_for_opencode(
     tool_mode: Option<&str>,
     mcp_profile: Option<&str>,
 ) -> Result<String, String> {
-    let home_dir = dirs::home_dir().ok_or_else(|| "Failed to resolve home directory".to_string())?;
+    let home_dir =
+        dirs::home_dir().ok_or_else(|| "Failed to resolve home directory".to_string())?;
     let config_dir = home_dir.join(".config").join("opencode");
     let config_file = config_dir.join("opencode.json");
 

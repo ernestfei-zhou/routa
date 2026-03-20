@@ -38,7 +38,11 @@ fn normalize_column_automation(column: &mut KanbanColumn) {
     }
 }
 
-fn imported_board_id(workspace_id: &str, board_id: &str, conflicting_ids: &HashSet<String>) -> String {
+fn imported_board_id(
+    workspace_id: &str,
+    board_id: &str,
+    conflicting_ids: &HashSet<String>,
+) -> String {
     if !conflicting_ids.contains(board_id) {
         return board_id.to_string();
     }
@@ -400,8 +404,8 @@ async fn import_config(
         ));
     }
 
-    let mut config = KanbanConfig::from_yaml(&body.yaml_content)
-        .map_err(ServerError::BadRequest)?;
+    let mut config =
+        KanbanConfig::from_yaml(&body.yaml_content).map_err(ServerError::BadRequest)?;
     if let Some(workspace_id) = body.workspace_id.filter(|value| !value.trim().is_empty()) {
         config.workspace_id = workspace_id;
     }
@@ -412,7 +416,12 @@ async fn import_config(
         )));
     }
 
-    if state.workspace_store.get(&config.workspace_id).await?.is_none() {
+    if state
+        .workspace_store
+        .get(&config.workspace_id)
+        .await?
+        .is_none()
+    {
         let workspace = Workspace::new(
             config.workspace_id.clone(),
             config

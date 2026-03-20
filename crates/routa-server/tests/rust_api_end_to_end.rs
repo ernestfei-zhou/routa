@@ -1028,7 +1028,10 @@ async fn api_mcp_tools_accept_prefixed_tool_name() {
         .expect("call prefixed tool");
     assert_eq!(response.status(), StatusCode::OK);
 
-    let body: Value = response.json().await.expect("decode prefixed tool response");
+    let body: Value = response
+        .json()
+        .await
+        .expect("decode prefixed tool response");
     let content = body
         .get("content")
         .and_then(Value::as_array)
@@ -1038,5 +1041,8 @@ async fn api_mcp_tools_accept_prefixed_tool_name() {
         .expect("tool response should include text content");
 
     let agents = serde_json::from_str::<Value>(content).expect("decode agents list");
-    assert!(agents.as_array().is_some(), "expected agents array, got {agents}");
+    assert!(
+        agents.as_array().is_some(),
+        "expected agents array, got {agents}"
+    );
 }

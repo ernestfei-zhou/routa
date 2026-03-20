@@ -120,8 +120,13 @@ async fn test_rust_backend_api() {
 
     // ── Test 6: Get Agent by query param (Next.js compatible) ───────
     println!("=== Test 6: Get Agent by ?id= ===");
-    let (status, body) =
-        request_json(&app, Method::GET, &format!("/api/agents?id={}", agent_id), None).await;
+    let (status, body) = request_json(
+        &app,
+        Method::GET,
+        &format!("/api/agents?id={}", agent_id),
+        None,
+    )
+    .await;
     assert_eq!(status, 200);
     assert_eq!(body["name"], "Test ROUTA");
     println!("  PASS: got agent by ?id=");
@@ -224,26 +229,34 @@ async fn test_rust_backend_api() {
 
     // ── Test 15: ACP JSON-RPC ───────────────────────────────────────
     println!("=== Test 15: ACP JSON-RPC ===");
-    let (status, body) = post_json(&app, "/api/acp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/acp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 1,
             "method": "initialize",
             "params": {}
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     assert_eq!(body["result"]["agentInfo"]["name"], "routa-acp");
     println!("  PASS: ACP initialize works");
 
     // ── Test 16: ACP providers list ─────────────────────────────────
     println!("=== Test 16: ACP Providers List ===");
-    let (status, body) = post_json(&app, "/api/acp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/acp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 2,
             "method": "_providers/list",
             "params": {}
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     let providers = body["result"]["providers"].as_array().unwrap();
     assert!(providers.len() >= 4);
@@ -251,13 +264,17 @@ async fn test_rust_backend_api() {
 
     // ── Test 17: ACP session/new ──────────────────────────────────
     println!("=== Test 17: ACP session/new ===");
-    let (status, body) = post_json(&app, "/api/acp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/acp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 3,
             "method": "session/new",
             "params": { "cwd": ".", "provider": "opencode" }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     let acp_session_id = body["result"]["sessionId"].as_str().map(str::to_string);
     if let Some(acp_session_id) = acp_session_id {
@@ -266,56 +283,75 @@ async fn test_rust_backend_api() {
 
         // ── Test 18: ACP session/cancel ───────────────────────────────
         println!("=== Test 18: ACP session/cancel ===");
-        let (status, body) = post_json(&app, "/api/acp", serde_json::json!({
+        let (status, body) = post_json(
+            &app,
+            "/api/acp",
+            serde_json::json!({
                 "jsonrpc": "2.0",
                 "id": 4,
                 "method": "session/cancel",
                 "params": { "sessionId": acp_session_id }
-            }))
-            .await;
+            }),
+        )
+        .await;
         assert_eq!(status, 200);
         assert_eq!(body["result"]["cancelled"], true);
         println!("  PASS: cancelled session");
     } else {
-        assert!(body["error"].is_object(), "session/new should return result or error");
+        assert!(
+            body["error"].is_object(),
+            "session/new should return result or error"
+        );
         println!("  PASS: session/new returned environment-dependent error");
     }
 
     // ── Test 19: ACP session/load (unsupported) ───────────────────
     println!("=== Test 19: ACP session/load ===");
-    let (status, body) = post_json(&app, "/api/acp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/acp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 5,
             "method": "session/load",
             "params": {}
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     assert!(body["error"].is_object());
     println!("  PASS: session/load correctly returns error");
 
     // ── Test 20: MCP Streamable HTTP initialize ──────────────────
     println!("=== Test 20: MCP initialize ===");
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 1,
             "method": "initialize",
             "params": { "protocolVersion": "2024-11-05" }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     assert_eq!(body["result"]["serverInfo"]["name"], "routa-mcp");
     println!("  PASS: MCP initialized");
 
     // ── Test 21: MCP tools/list ──────────────────────────────────
     println!("=== Test 21: MCP tools/list ===");
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 2,
             "method": "tools/list",
             "params": {}
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     let tools = body["result"]["tools"].as_array().unwrap();
     assert!(tools.len() >= 5, "Should have at least 5 tools");
@@ -323,7 +359,10 @@ async fn test_rust_backend_api() {
 
     // ── Test 22: MCP tools/call ──────────────────────────────────
     println!("=== Test 22: MCP tools/call (list_workspaces) ===");
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 3,
             "method": "tools/call",
@@ -331,8 +370,9 @@ async fn test_rust_backend_api() {
                 "name": "list_workspaces",
                 "arguments": {}
             }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     assert!(body["result"]["content"].as_array().is_some());
     println!("  PASS: MCP tools/call returned content");
@@ -349,11 +389,15 @@ async fn test_rust_backend_api() {
 
     // ── Test 24: /api/mcp/tools POST ─────────────────────────────
     println!("=== Test 24: /api/mcp/tools POST ===");
-    let (status, body) = post_json(&app, "/api/mcp/tools", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp/tools",
+        serde_json::json!({
             "name": "list_agents",
             "args": { "workspaceId": "default" }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     assert!(body["content"].as_array().is_some());
     println!("  PASS: executed tool via /api/mcp/tools");
@@ -402,26 +446,34 @@ async fn test_rust_backend_api() {
 
     // ── Test 30: A2A RPC ─────────────────────────────────────────
     println!("=== Test 30: /api/a2a/rpc POST ===");
-    let (status, body) = post_json(&app, "/api/a2a/rpc", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/a2a/rpc",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 1,
             "method": "initialize",
             "params": {}
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     assert_eq!(body["result"]["agentInfo"]["name"], "routa-a2a-bridge");
     println!("  PASS: A2A RPC initialize");
 
     // ── Test 31: A2A RPC method_list ─────────────────────────────
     println!("=== Test 31: /api/a2a/rpc method_list ===");
-    let (status, body) = post_json(&app, "/api/a2a/rpc", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/a2a/rpc",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 2,
             "method": "method_list",
             "params": {}
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     let methods = body["result"]["methods"].as_array().unwrap();
     assert!(methods.len() >= 5);
@@ -433,7 +485,10 @@ async fn test_rust_backend_api() {
 
     // ── Test 32: MCP tools/call (get_agent_status) ────────────────────
     println!("=== Test 32: MCP tools/call (get_agent_status) ===");
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 32,
             "method": "tools/call",
@@ -441,8 +496,9 @@ async fn test_rust_backend_api() {
                 "name": "get_agent_status",
                 "arguments": { "agentId": agent_id }
             }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     let content = body["result"]["content"].as_array().unwrap();
     assert!(!content.is_empty());
@@ -452,7 +508,10 @@ async fn test_rust_backend_api() {
 
     // ── Test 33: MCP tools/call (get_agent_summary) ───────────────────
     println!("=== Test 33: MCP tools/call (get_agent_summary) ===");
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 33,
             "method": "tools/call",
@@ -460,15 +519,19 @@ async fn test_rust_backend_api() {
                 "name": "get_agent_summary",
                 "arguments": { "agentId": agent_id }
             }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     assert!(body["result"]["content"].as_array().is_some());
     println!("  PASS: get_agent_summary tool works");
 
     // ── Test 34: MCP tools/call (list_specialists) ────────────────────
     println!("=== Test 34: MCP tools/call (list_specialists) ===");
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 34,
             "method": "tools/call",
@@ -476,8 +539,9 @@ async fn test_rust_backend_api() {
                 "name": "list_specialists",
                 "arguments": {}
             }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     let content = body["result"]["content"].as_array().unwrap();
     assert!(!content.is_empty());
@@ -487,7 +551,10 @@ async fn test_rust_backend_api() {
 
     // ── Test 35: MCP tools/call (get_workspace_info) ──────────────────
     println!("=== Test 35: MCP tools/call (get_workspace_info) ===");
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 35,
             "method": "tools/call",
@@ -495,8 +562,9 @@ async fn test_rust_backend_api() {
                 "name": "get_workspace_info",
                 "arguments": { "workspaceId": "default" }
             }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     let content = body["result"]["content"].as_array().unwrap();
     assert!(!content.is_empty());
@@ -511,7 +579,10 @@ async fn test_rust_backend_api() {
 
     // ── Test 36: MCP tools/call (subscribe_to_events) ─────────────────
     println!("=== Test 36: MCP tools/call (subscribe_to_events) ===");
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 36,
             "method": "tools/call",
@@ -523,8 +594,9 @@ async fn test_rust_backend_api() {
                     "eventTypes": ["TASK_STATUS_CHANGED", "AGENT_COMPLETED"]
                 }
             }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     let content = body["result"]["content"].as_array().unwrap();
     assert!(!content.is_empty());
@@ -543,7 +615,10 @@ async fn test_rust_backend_api() {
 
     // ── Test 37: MCP tools/call (unsubscribe_from_events) ─────────────
     println!("=== Test 37: MCP tools/call (unsubscribe_from_events) ===");
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 37,
             "method": "tools/call",
@@ -551,15 +626,19 @@ async fn test_rust_backend_api() {
                 "name": "unsubscribe_from_events",
                 "arguments": { "subscriptionId": subscription_id }
             }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     assert!(body["result"]["content"].as_array().is_some());
     println!("  PASS: unsubscribe_from_events tool works");
 
     // ── Test 38: MCP tools/call (delegate_task_to_agent) ──────────────
     println!("=== Test 38: MCP tools/call (delegate_task_to_agent) ===");
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 38,
             "method": "tools/call",
@@ -573,8 +652,9 @@ async fn test_rust_backend_api() {
                     "waitMode": "after_all"
                 }
             }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     let content = body["result"]["content"].as_array().unwrap();
     assert!(!content.is_empty());
@@ -606,19 +686,26 @@ async fn test_rust_backend_api() {
     // ── Test 39: MCP tools/call (report_to_parent) ────────────────────
     println!("=== Test 39: MCP tools/call (report_to_parent) ===");
     // First create a task to report on
-    let (status, task_body) = post_json(&app, "/api/tasks", serde_json::json!({
+    let (status, task_body) = post_json(
+        &app,
+        "/api/tasks",
+        serde_json::json!({
             "title": "Report Test Task",
             "objective": "Test reporting",
             "workspaceId": "default"
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 201);
     let report_task_id = task_body["task"]["id"]
         .as_str()
         .unwrap_or("test-task")
         .to_string();
 
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 39,
             "method": "tools/call",
@@ -631,8 +718,9 @@ async fn test_rust_backend_api() {
                     "success": true
                 }
             }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     let content = body["result"]["content"].as_array().unwrap();
     assert!(!content.is_empty());
@@ -641,18 +729,25 @@ async fn test_rust_backend_api() {
     // ── Test 40: MCP tools/call (send_message_to_agent) ───────────────
     println!("=== Test 40: MCP tools/call (send_message_to_agent) ===");
     // Create a second agent to send message to
-    let (status, agent2_body) = post_json(&app, "/api/agents", serde_json::json!({
+    let (status, agent2_body) = post_json(
+        &app,
+        "/api/agents",
+        serde_json::json!({
             "name": "Test CRAFTER",
             "role": "CRAFTER"
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     let agent2_id = agent2_body["agentId"]
         .as_str()
         .unwrap_or("agent2")
         .to_string();
 
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 40,
             "method": "tools/call",
@@ -664,8 +759,9 @@ async fn test_rust_backend_api() {
                     "message": "Hello from ROUTA!"
                 }
             }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     let content = body["result"]["content"].as_array().unwrap();
     assert!(!content.is_empty());
@@ -675,7 +771,10 @@ async fn test_rust_backend_api() {
 
     // ── Test 41: MCP tools/call (read_agent_conversation) ─────────────
     println!("=== Test 41: MCP tools/call (read_agent_conversation) ===");
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 41,
             "method": "tools/call",
@@ -686,8 +785,9 @@ async fn test_rust_backend_api() {
                     "limit": 10
                 }
             }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     let content = body["result"]["content"].as_array().unwrap();
     assert!(!content.is_empty());
@@ -695,7 +795,10 @@ async fn test_rust_backend_api() {
 
     // ── Test 42: MCP tools/call (get_my_task) ─────────────────────────
     println!("=== Test 42: MCP tools/call (get_my_task) ===");
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 42,
             "method": "tools/call",
@@ -703,8 +806,9 @@ async fn test_rust_backend_api() {
                 "name": "get_my_task",
                 "arguments": { "agentId": agent_id }
             }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     assert!(body["result"]["content"].as_array().is_some());
     println!("  PASS: get_my_task tool works");
@@ -712,17 +816,24 @@ async fn test_rust_backend_api() {
     // ── Test 43: MCP tools/call (set_note_content) ────────────────────
     println!("=== Test 43: MCP tools/call (set_note_content) ===");
     // First create a note
-    let (status, _) = post_json(&app, "/api/notes", serde_json::json!({
+    let (status, _) = post_json(
+        &app,
+        "/api/notes",
+        serde_json::json!({
             "noteId": "test-note-set",
             "title": "Set Content Test",
             "content": "Initial content",
             "workspaceId": "default",
             "source": "user"
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
 
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 43,
             "method": "tools/call",
@@ -733,8 +844,9 @@ async fn test_rust_backend_api() {
                     "content": "Updated content via MCP tool"
                 }
             }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     let content = body["result"]["content"].as_array().unwrap();
     assert!(!content.is_empty());
@@ -744,7 +856,10 @@ async fn test_rust_backend_api() {
 
     // ── Test 44: MCP tools/call (append_to_note) ──────────────────────
     println!("=== Test 44: MCP tools/call (append_to_note) ===");
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 44,
             "method": "tools/call",
@@ -755,8 +870,9 @@ async fn test_rust_backend_api() {
                     "content": "\nAppended content"
                 }
             }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     let content = body["result"]["content"].as_array().unwrap();
     assert!(!content.is_empty());
@@ -766,7 +882,10 @@ async fn test_rust_backend_api() {
 
     // ── Test 45: MCP tools/call (update_task_status) ──────────────────
     println!("=== Test 45: MCP tools/call (update_task_status) ===");
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 45,
             "method": "tools/call",
@@ -779,8 +898,9 @@ async fn test_rust_backend_api() {
                     "reason": "Starting work on task"
                 }
             }
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     let content = body["result"]["content"].as_array().unwrap();
     assert!(!content.is_empty());
@@ -788,13 +908,17 @@ async fn test_rust_backend_api() {
 
     // ── Test 46: Verify MCP tools count increased ─────────────────────
     println!("=== Test 46: Verify MCP tools count ===");
-    let (status, body) = post_json(&app, "/api/mcp", serde_json::json!({
+    let (status, body) = post_json(
+        &app,
+        "/api/mcp",
+        serde_json::json!({
             "jsonrpc": "2.0",
             "id": 46,
             "method": "tools/list",
             "params": {}
-        }))
-        .await;
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
     let tools = body["result"]["tools"].as_array().unwrap();
     // We added 14 new tools, so should have at least 20+ tools now

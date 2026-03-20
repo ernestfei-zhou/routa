@@ -106,7 +106,8 @@ pub async fn run(
 
         let (prompt_specialist, prompt_remainder) = parse_prompt_mention(prompt);
         let selected = if let Some(id) = specialist.or(prompt_specialist.as_deref()) {
-            find_specialist(&specialists, id).ok_or_else(|| format!("Unknown specialist: {}", id))?
+            find_specialist(&specialists, id)
+                .ok_or_else(|| format!("Unknown specialist: {}", id))?
         } else {
             select_specialist(&specialists)?
         };

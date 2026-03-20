@@ -157,8 +157,13 @@ pub async fn run(
         .ok_or("Failed to subscribe to session updates")?;
 
     // ── 9. Build and send team lead prompt ───────────────────────────────
-    let coordinator_prompt =
-        build_team_prompt(&specialist, &agent_id, &workspace_id, task_prompt, &team_roster);
+    let coordinator_prompt = build_team_prompt(
+        &specialist,
+        &agent_id,
+        &workspace_id,
+        task_prompt,
+        &team_roster,
+    );
 
     println!("🚀 Sending requirement to team lead...");
     println!();

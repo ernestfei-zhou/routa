@@ -11,5 +11,14 @@ pub async fn run(
     workspace_id: &str,
     provider: Option<&str>,
 ) -> Result<(), String> {
-    agent::run(state, None, Some(file), prompt, workspace_id, provider, None).await
+    agent::run(
+        state,
+        None,
+        Some(file),
+        prompt,
+        workspace_id,
+        provider,
+        None,
+    )
+    .await
 }

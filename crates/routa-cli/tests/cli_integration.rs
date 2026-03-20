@@ -12,7 +12,6 @@ use routa_core::rpc::RpcRouter;
 use routa_core::state::{AppState, AppStateInner};
 use routa_core::Database;
 
-
 /// Create an in-memory AppState for testing.
 async fn test_state() -> AppState {
     let db = Database::open(":memory:").expect("Failed to open in-memory database");
@@ -356,7 +355,9 @@ fn test_kanban_yaml_roundtrip() {
     let config = KanbanConfig::from_yaml(SAMPLE_YAML).unwrap();
     let yaml = config.to_yaml().expect("serialisation should succeed");
     let reparsed = KanbanConfig::from_yaml(&yaml).expect("reparsed config should be valid YAML");
-    reparsed.validate().expect("round-tripped config should be valid");
+    reparsed
+        .validate()
+        .expect("round-tripped config should be valid");
     assert_eq!(config.boards[0].id, reparsed.boards[0].id);
     assert_eq!(config.boards[0].columns, reparsed.boards[0].columns);
 }

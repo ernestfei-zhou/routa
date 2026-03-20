@@ -296,8 +296,7 @@ async fn create_task(
                     }
                     Err(err) => {
                         set_task_column(&mut task, "blocked");
-                        task.last_sync_error =
-                            Some(format!("Worktree creation failed: {}", err));
+                        task.last_sync_error = Some(format!("Worktree creation failed: {}", err));
                     }
                 }
             }

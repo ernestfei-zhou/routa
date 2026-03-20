@@ -928,9 +928,7 @@ async fn main() {
                     SessionAction::List {
                         workspace_id,
                         limit,
-                    } => {
-                        commands::session::list(&state, workspace_id.as_deref(), limit).await
-                    }
+                    } => commands::session::list(&state, workspace_id.as_deref(), limit).await,
                     SessionAction::Get { id } => commands::session::get(&state, &id).await,
                     SessionAction::Pick {
                         workspace_id,
@@ -1205,8 +1203,14 @@ async fn main() {
                 session_id,
             } => {
                 let state = commands::init_state(&cli.db).await;
-                commands::chat::run(&state, &workspace_id, &provider, &role, session_id.as_deref())
-                    .await
+                commands::chat::run(
+                    &state,
+                    &workspace_id,
+                    &provider,
+                    &role,
+                    session_id.as_deref(),
+                )
+                .await
             }
 
             Commands::Scan {
