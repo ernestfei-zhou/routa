@@ -296,11 +296,14 @@ pub async fn security(state: &AppState, options: ReviewAnalyzeOptions<'_>) -> Re
         return Ok(());
     }
 
+    // Use a writable home directory for local ACP runtimes (avoids failures to write
+    // runtime config under restricted system HOME locations in CLI contexts).
+    let _acp_runtime_env = SecurityAcpRuntimeEnv::install(&repo_root)?;
+
     let specialist = load_specialist_by_id("security-reviewer", options.specialist_dir)?;
-    let caller = AcpAgentCaller::new();
 
     let (dispatch_plan, specialist_reports) =
-        dispatch_security_specialists(&caller, options.specialist_dir, &payload, options.verbose)
+        dispatch_security_specialists(state, options.specialist_dir, &payload, options.verbose)
             .await?;
     let pre_merged_findings =
         merge_specialist_findings(&payload.pre_merged_findings, &specialist_reports);
@@ -309,10 +312,6 @@ pub async fn security(state: &AppState, options: ReviewAnalyzeOptions<'_>) -> Re
     final_payload.specialist_dispatch_plan = dispatch_plan;
     final_payload.specialist_reports = specialist_reports;
     final_payload.pre_merged_findings = pre_merged_findings;
-
-    // Use a writable home directory for local ACP runtimes (avoids failures to write
-    // runtime config under restricted system HOME locations in CLI contexts).
-    let _acp_runtime_env = SecurityAcpRuntimeEnv::install(&repo_root)?;
 
     let prompt = build_security_specialist_prompt(&final_payload)?;
     let provider = resolve_security_provider(&specialist);
@@ -486,9 +485,23 @@ fn prepare_isolated_acp_runtime(
 
             let destination = acp_home.join(rel);
             if source.is_file() {
-                copy_file_with_parent(&source, &destination)?;
+                if let Err(err) = copy_file_with_parent(&source, &destination) {
+                    tracing::warn!(
+                        "Skip copying ACP runtime file {} -> {}: {}",
+                        source.display(),
+                        destination.display(),
+                        err
+                    );
+                }
             } else if source.is_dir() {
-                copy_dir_recursive(&source, &destination)?;
+                if let Err(err) = copy_dir_recursive(&source, &destination) {
+                    tracing::warn!(
+                        "Skip copying ACP runtime directory {} -> {}: {}",
+                        source.display(),
+                        destination.display(),
+                        err
+                    );
+                }
             }
         }
     }
@@ -655,6 +668,13 @@ async fn call_security_specialist_via_acp(
     }
 
     Ok(output)
+}
+
+fn resolve_security_specialist_provider(specialist: &SpecialistDef) -> String {
+    std::env::var("ROUTA_REVIEW_PROVIDER")
+        .ok()
+        .or_else(|| specialist.default_provider.clone())
+        .unwrap_or_else(|| "opencode".to_string())
 }
 
 fn build_security_final_prompt(specialist: &SpecialistDef, user_request: &str) -> String {
@@ -1088,7 +1108,7 @@ fn build_security_specialist_prompt(payload: &SecurityReviewPayload) -> Result<S
 }
 
 async fn dispatch_security_specialists(
-    caller: &AcpAgentCaller,
+    state: &AppState,
     specialist_dir: Option<&str>,
     payload: &SecurityReviewPayload,
     verbose: bool,
@@ -1108,6 +1128,7 @@ async fn dispatch_security_specialists(
     let mut reports = Vec::new();
     for workload in workloads {
         let specialist = load_specialist_by_id(&workload.specialist_id, specialist_dir)?;
+        let provider = resolve_security_specialist_provider(&specialist);
         let task = SecurityDispatchInput {
             specialist_id: specialist.id.clone(),
             categories: workload.categories.clone(),
@@ -1136,7 +1157,6 @@ async fn dispatch_security_specialists(
             &task_json,
         ]
         .join("\n\n");
-        let config = build_agent_call_config(&specialist)?;
         if verbose {
             println!(
                 "── Dispatch Specialist: {} ({} candidates) ──",
@@ -1145,7 +1165,15 @@ async fn dispatch_security_specialists(
             );
         }
 
-        let response = caller.call(&config, &prompt).await?;
+        let response = call_security_specialist_via_acp(
+            state,
+            &specialist,
+            &prompt,
+            false,
+            &provider,
+            &payload.repo_root,
+        )
+        .await?;
         plans.push(SecuritySpecialistDispatch {
             specialist_id: specialist.id.clone(),
             categories: workload.categories.clone(),
@@ -1153,31 +1181,7 @@ async fn dispatch_security_specialists(
             reason: workload.reason.clone(),
         });
 
-        if !response.success {
-            reports.push(SecuritySpecialistReport {
-                specialist_id: specialist.id.clone(),
-                status: "error".to_string(),
-                categories: workload.categories.clone(),
-                findings: Vec::new(),
-                trace: vec![format!(
-                    "assistant call failed: {}",
-                    response
-                        .error
-                        .clone()
-                        .unwrap_or_else(|| "unknown".to_string())
-                )],
-                parse_error: Some(
-                    response
-                        .error
-                        .clone()
-                        .unwrap_or_else(|| "unknown".to_string()),
-                ),
-                output_preview: truncate(&response.content, SECURITY_DISPATCH_OUTPUT_PREVIEW_CHARS),
-            });
-            continue;
-        }
-
-        let raw_output = response.content.trim().to_string();
+        let raw_output = response.trim().to_string();
         let parsed = parse_specialist_output(&raw_output);
         let status = if parsed.is_some() {
             "ok"
