@@ -560,17 +560,17 @@ export function TiptapInput({
   const [modelDropdownPos, setModelDropdownPos] = useState<{ left: number; bottom?: number; top?: number; maxHeight: number } | null>(null);
   const [modelFilter, setModelFilter] = useState("");
   const editorClass = isHero
-    ? "tiptap-chat-input outline-none min-h-[132px] max-h-[360px] overflow-y-auto text-base leading-8 text-slate-900 dark:text-slate-100"
+    ? "tiptap-chat-input outline-none min-h-[120px] max-h-[360px] overflow-y-auto text-base leading-8 text-slate-900 dark:text-slate-100"
     : "tiptap-chat-input outline-none min-h-[60px] max-h-[240px] overflow-y-auto text-sm text-gray-900 dark:text-gray-100";
   const wrapperClass = isHero
-    ? `tiptap-input-wrapper relative rounded-[22px] border border-[#d6e5fb] bg-white/88 px-5 py-4 shadow-[0_18px_48px_-36px_rgba(14,116,144,0.32)] transition-colors focus-within:ring-2 focus-within:ring-sky-500 focus-within:border-transparent dark:border-white/10 dark:bg-[#101a2d]/88 ${
+    ? `tiptap-input-wrapper relative rounded-[24px] border border-[#d6e5fb] bg-white/88 px-4 py-3 shadow-[0_18px_48px_-36px_rgba(14,116,144,0.32)] transition-colors focus-within:ring-2 focus-within:ring-sky-500 focus-within:border-transparent dark:border-white/10 dark:bg-[#101a2d]/88 ${
         disabled ? "opacity-40 cursor-not-allowed" : ""
       }`
     : `tiptap-input-wrapper relative px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#161922] transition-colors focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent ${
         disabled ? "opacity-40 cursor-not-allowed" : ""
       }`;
   const toolbarClass = isHero
-    ? "mt-3 flex min-w-0 items-center gap-2.5 overflow-hidden"
+    ? "mt-2.5 flex min-w-0 items-center gap-2.5 overflow-hidden"
     : "mt-1.5 -mb-0.5 flex min-w-0 items-center gap-2 overflow-hidden";
   const modelButtonClass = isHero
     ? "flex items-center gap-2 rounded-lg border border-[#d6e5fb] px-3 py-1.5 text-sm transition-colors hover:bg-sky-50 dark:border-white/10 dark:hover:bg-white/5"
@@ -582,10 +582,10 @@ export function TiptapInput({
     ? "rounded bg-sky-50 px-1.5 py-0.5 font-mono text-[11px] text-slate-500 dark:bg-white/8 dark:text-slate-400"
     : "px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 font-mono";
   const sendButtonClass = isHero
-    ? "shrink-0 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+    ? "shrink-0 flex h-11 w-11 items-center justify-center rounded-[18px] bg-blue-600 text-white shadow-[0_12px_26px_-14px_rgba(37,99,235,0.75)] transition-all hover:bg-blue-700 hover:shadow-[0_16px_30px_-16px_rgba(37,99,235,0.85)] disabled:opacity-40 disabled:cursor-not-allowed"
     : "shrink-0 w-7 h-7 flex items-center justify-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed";
   const stopButtonClass = isHero
-    ? "shrink-0 flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 text-white transition-colors hover:bg-red-700"
+    ? "shrink-0 flex h-11 w-11 items-center justify-center rounded-[18px] bg-red-600 text-white shadow-[0_12px_26px_-14px_rgba(220,38,38,0.7)] transition-all hover:bg-red-700 hover:shadow-[0_16px_30px_-16px_rgba(220,38,38,0.82)]"
     : "shrink-0 w-7 h-7 flex items-center justify-center rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors";
 
   // Keep mode chips aligned with the current session mode when switching sessions.

@@ -352,11 +352,11 @@ export function HomeInput({
             ) : (
               /* ── Built-in role mode: segmented toggle + optional specialist picker ── */
               <>
-                <div className="flex items-center rounded-lg bg-gray-100 dark:bg-[#1a1d2a] p-0.5 gap-0.5" role="group" aria-label="Agent mode">
+                <div className="flex items-center gap-0.5 rounded-[18px] border border-[#d6e5fb] bg-white/88 p-1 shadow-[0_10px_28px_-22px_rgba(14,116,144,0.5)] dark:border-white/10 dark:bg-[#1a1d2a]" role="group" aria-label="Agent mode">
                   <button type="button" onClick={() => setSelectedRole("ROUTA")}
                     title="Multi-agent orchestration — spawns specialized agents for complex multi-step tasks (Routa)"
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-                      selectedRole === "ROUTA" ? "bg-white dark:bg-[#1f2233] shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                    className={`flex items-center gap-1.5 rounded-[14px] px-3 py-1.5 text-xs font-medium transition-all ${
+                      selectedRole === "ROUTA" ? "bg-white text-gray-900 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.45)] dark:bg-[#1f2233] dark:text-gray-100" : "text-gray-500 hover:bg-sky-50/70 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
                     }`}>
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={selectedRole === "ROUTA" ? 2.5 : 2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1M4.22 4.22l.707.707m13.857 13.857l.707.707M1 12h1m20 0h1M4.22 19.78l.707-.707m13.857-13.857l.707-.707"/>
@@ -366,8 +366,8 @@ export function HomeInput({
                   </button>
                   <button type="button" onClick={() => setSelectedRole("DEVELOPER")}
                     title="Single-agent direct coding — best for focused, simple tasks (Developer)"
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-                      selectedRole === "DEVELOPER" ? "bg-white dark:bg-[#1f2233] shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                    className={`flex items-center gap-1.5 rounded-[14px] px-3 py-1.5 text-xs font-medium transition-all ${
+                      selectedRole === "DEVELOPER" ? "bg-white text-gray-900 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.45)] dark:bg-[#1f2233] dark:text-gray-100" : "text-gray-500 hover:bg-sky-50/70 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
                     }`}>
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={selectedRole === "DEVELOPER" ? 2.5 : 2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
