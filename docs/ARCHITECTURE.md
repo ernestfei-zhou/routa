@@ -263,3 +263,4 @@ Treat `"default"` as transition scaffolding, not as the target domain model.
 - Active workspace normalization plan: [docs/exec-plans/active/workspace-centric-normalization.md](./exec-plans/active/workspace-centric-normalization.md)
 - Fitness and verification guidance: `docs/fitness/README.md`
 - Repository operating contract: `AGENTS.md`
+- [MCP Spec](https://modelcontextprotocol.io/) · [ACP Spec](https://github.com/agentclientprotocol/typescript-sdk) · [A2A Spec](https://a2aprotocol.ai/)
