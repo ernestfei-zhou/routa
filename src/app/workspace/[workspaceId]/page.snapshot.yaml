@@ -1,9 +1,9 @@
 # page-id: workspace
 # route: /workspace/default
 # source-page: src/app/workspace/[workspaceId]/page.tsx
-# url: http://127.0.0.1:3000/workspace/default
+# url: http://127.0.0.1:3100/workspace/default
 # title: Routa - Multi-Agent Coordinator
-# generated-at: 2026-03-19T15:26:22.017Z
+# generated-at: 2026-03-21T01:30:48.470Z
 # generator: playwright
 # playwright-version: 1.58.2
 - banner:
@@ -24,6 +24,9 @@
     - link "Kanban":
       - /url: /workspace/default/kanban
       - img
+    - link "Team":
+      - /url: /workspace/default/team
+      - img
     - link "Traces":
       - /url: /traces
       - img
@@ -38,6 +41,7 @@
   - text: Workspace overview
   - heading "Default Workspace" [level=1]
   - paragraph: This page now stays focused on context and recovery. Use the dedicated Kanban route as the primary operating surface for active task execution.
+  - button "Open Team"
   - button "Open Kanban"
   - button "Open traces"
   - text: Primary surface Default Workspace Board Kanban is the canonical work surface for routing, queue supervision, and lane-based execution. 1 board 1 active tasks 0 background runs
