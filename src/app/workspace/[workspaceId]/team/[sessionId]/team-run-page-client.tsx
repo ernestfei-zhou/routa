@@ -14,7 +14,12 @@ import { useNotes } from "@/client/hooks/use-notes";
 import { consumePendingPrompt } from "@/client/utils/pending-prompt";
 import { useWorkspaces } from "@/client/hooks/use-workspaces";
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
-import { hydrateTranscriptMessages, type SessionTranscriptPayload } from "@/core/session-transcript";
+import type { AcpSessionNotification } from "@/core/store/acp-session-store";
+import {
+  historyNotificationsToMessages,
+  hydrateTranscriptMessages,
+  type SessionTranscriptPayload,
+} from "@/core/session-transcript";
 import { filterSpecialistsByCategory } from "@/client/utils/specialist-categories";
 import { formatRelativeTime, OverlayModal } from "../../ui-components";
 import type { SessionInfo } from "../../types";
@@ -156,15 +161,24 @@ export function TeamRunPageClient() {
   const [agents, setAgents] = useState<AgentSummary[]>([]);
   const [historiesBySessionId, setHistoriesBySessionId] = useState<Record<string, SessionHistoryEntry[]>>({});
   const [messagesBySessionId, setMessagesBySessionId] = useState<Record<string, ChatMessage[]>>({});
-  const [refreshKey, setRefreshKey] = useState(0);
   const [selectedSessionId, setSelectedSessionId] = useState<string>(sessionId);
   const [selectedSessionForModal, setSelectedSessionForModal] = useState<string | null>(null);
   const [timelineInputKey, setTimelineInputKey] = useState(0);
   const sessionBlockRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastUpdateIndexRef = useRef(0);
   const pendingPromptSentRef = useRef<Set<string>>(new Set());
   const pendingPromptTextRef = useRef<string | null>(null);
+  const contextKeyRef = useRef(`${workspaceId}:${sessionId}`);
+  const metadataRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const metadataRefreshInFlightRef = useRef(false);
+  const metadataRefreshQueuedRef = useRef(false);
+  const transcriptRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const transcriptRefreshInFlightRef = useRef(false);
+  const pendingTranscriptSessionIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    contextKeyRef.current = `${workspaceId}:${sessionId}`;
+  }, [sessionId, workspaceId]);
 
   useEffect(() => {
     if (!acpConnected && !acpLoading) {
@@ -192,6 +206,158 @@ export function TeamRunPageClient() {
   useEffect(() => {
     setSelectedSessionId(sessionId);
   }, [sessionId]);
+
+  const fetchSpecialists = useCallback(async () => {
+    const response = await desktopAwareFetch("/api/specialists", { cache: "no-store" });
+    const data = await response.json().catch(() => ({}));
+    if (contextKeyRef.current !== `${workspaceId}:${sessionId}`) return;
+    setSpecialists(Array.isArray(data?.specialists) ? data.specialists : []);
+  }, [sessionId, workspaceId]);
+
+  const fetchRunMetadata = useCallback(async () => {
+    const contextKey = `${workspaceId}:${sessionId}`;
+    const [sessionRes, sessionsRes, agentsRes] = await Promise.all([
+      desktopAwareFetch(`/api/sessions/${encodeURIComponent(sessionId)}`, { cache: "no-store" }),
+      desktopAwareFetch(`/api/sessions?workspaceId=${encodeURIComponent(workspaceId)}&limit=100`, { cache: "no-store" }),
+      desktopAwareFetch(`/api/agents?workspaceId=${encodeURIComponent(workspaceId)}`, { cache: "no-store" }),
+    ]);
+
+    const sessionData = await sessionRes.json().catch(() => ({}));
+    const sessionsData = await sessionsRes.json().catch(() => ({}));
+    const agentsData = await agentsRes.json().catch(() => ({}));
+
+    if (contextKeyRef.current !== contextKey) return;
+
+    setSession((sessionData?.session ?? null) as SessionInfo | null);
+    setWorkspaceSessions(Array.isArray(sessionsData?.sessions) ? sessionsData.sessions : []);
+    setAgents(Array.isArray(agentsData?.agents) ? agentsData.agents : []);
+  }, [sessionId, workspaceId]);
+
+  const fetchSessionTranscripts = useCallback(async (targetSessionIds: string[]) => {
+    const uniqueSessionIds = [...new Set(targetSessionIds.filter(Boolean))];
+    if (uniqueSessionIds.length === 0) return;
+
+    const contextKey = `${workspaceId}:${sessionId}`;
+    const transcriptEntries = await Promise.all(
+      uniqueSessionIds.map(async (targetSessionId) => {
+        const response = await desktopAwareFetch(
+          `/api/sessions/${encodeURIComponent(targetSessionId)}/transcript`,
+          { cache: "no-store" },
+        );
+        const data = await response.json().catch(() => ({})) as Partial<SessionTranscriptPayload>;
+        return {
+          sessionId: targetSessionId,
+          history: Array.isArray(data?.history) ? data.history as SessionHistoryEntry[] : [],
+          messages: hydrateTranscriptMessages(Array.isArray(data?.messages) ? data.messages : []),
+        };
+      }),
+    );
+
+    if (contextKeyRef.current !== contextKey) return;
+
+    setHistoriesBySessionId((prev) => ({
+      ...prev,
+      ...Object.fromEntries(transcriptEntries.map((entry) => [entry.sessionId, entry.history])),
+    }));
+    setMessagesBySessionId((prev) => ({
+      ...prev,
+      ...Object.fromEntries(transcriptEntries.map((entry) => [entry.sessionId, entry.messages])),
+    }));
+  }, [sessionId, workspaceId]);
+
+  const flushMetadataRefresh = useCallback(async () => {
+    if (metadataRefreshInFlightRef.current) {
+      metadataRefreshQueuedRef.current = true;
+      return;
+    }
+
+    metadataRefreshInFlightRef.current = true;
+    metadataRefreshQueuedRef.current = false;
+
+    try {
+      await fetchRunMetadata();
+    } catch {
+      if (contextKeyRef.current === `${workspaceId}:${sessionId}`) {
+        setSession(null);
+        setWorkspaceSessions([]);
+        setAgents([]);
+      }
+    } finally {
+      metadataRefreshInFlightRef.current = false;
+      if (metadataRefreshQueuedRef.current) {
+        metadataRefreshQueuedRef.current = false;
+        void flushMetadataRefresh();
+      }
+    }
+  }, [fetchRunMetadata, sessionId, workspaceId]);
+
+  const requestMetadataRefresh = useCallback((delayMs = 250) => {
+    if (metadataRefreshTimerRef.current) {
+      clearTimeout(metadataRefreshTimerRef.current);
+    }
+
+    metadataRefreshTimerRef.current = setTimeout(() => {
+      metadataRefreshTimerRef.current = null;
+      void flushMetadataRefresh();
+    }, delayMs);
+  }, [flushMetadataRefresh]);
+
+  const flushTranscriptRefresh = useCallback(async () => {
+    if (transcriptRefreshInFlightRef.current) {
+      return;
+    }
+
+    const targetSessionIds = [...pendingTranscriptSessionIdsRef.current];
+    if (targetSessionIds.length === 0) return;
+
+    pendingTranscriptSessionIdsRef.current.clear();
+    transcriptRefreshInFlightRef.current = true;
+
+    try {
+      await fetchSessionTranscripts(targetSessionIds);
+    } catch {
+      if (contextKeyRef.current === `${workspaceId}:${sessionId}`) {
+        setHistoriesBySessionId((prev) => {
+          const next = { ...prev };
+          for (const targetSessionId of targetSessionIds) {
+            delete next[targetSessionId];
+          }
+          return next;
+        });
+        setMessagesBySessionId((prev) => {
+          const next = { ...prev };
+          for (const targetSessionId of targetSessionIds) {
+            delete next[targetSessionId];
+          }
+          return next;
+        });
+      }
+    } finally {
+      transcriptRefreshInFlightRef.current = false;
+      if (pendingTranscriptSessionIdsRef.current.size > 0) {
+        void flushTranscriptRefresh();
+      }
+    }
+  }, [fetchSessionTranscripts, sessionId, workspaceId]);
+
+  const requestTranscriptRefresh = useCallback((targetSessionIds: string[], delayMs = 200) => {
+    for (const targetSessionId of targetSessionIds) {
+      if (targetSessionId) {
+        pendingTranscriptSessionIdsRef.current.add(targetSessionId);
+      }
+    }
+
+    if (pendingTranscriptSessionIdsRef.current.size === 0) return;
+
+    if (transcriptRefreshTimerRef.current) {
+      clearTimeout(transcriptRefreshTimerRef.current);
+    }
+
+    transcriptRefreshTimerRef.current = setTimeout(() => {
+      transcriptRefreshTimerRef.current = null;
+      void flushTranscriptRefresh();
+    }, delayMs);
+  }, [flushTranscriptRefresh]);
 
   const focusSessionBlock = useCallback((targetSessionId: string) => {
     setSelectedSessionId(targetSessionId);
@@ -246,73 +412,25 @@ export function TeamRunPageClient() {
   }, [sessionId, acpConnected, acpLoading, acpUpdates, acpPrompt]);
 
   useEffect(() => {
-    if (!acpUpdates.length) {
-      lastUpdateIndexRef.current = 0;
-      return;
-    }
+    lastUpdateIndexRef.current = 0;
+    const pendingTranscriptSessionIds = pendingTranscriptSessionIdsRef.current;
+    pendingTranscriptSessionIds.clear();
 
-    const startIndex = lastUpdateIndexRef.current > acpUpdates.length ? 0 : lastUpdateIndexRef.current;
-    const pending = acpUpdates.slice(startIndex);
-    if (!pending.length) return;
-    lastUpdateIndexRef.current = acpUpdates.length;
-
-    if (refreshTimerRef.current) {
-      clearTimeout(refreshTimerRef.current);
-    }
-
-    refreshTimerRef.current = setTimeout(() => {
-      setRefreshKey((current) => current + 1);
-      void notesHook.fetchNotes();
-    }, 350);
+    void fetchSpecialists();
+    void flushMetadataRefresh();
 
     return () => {
-      if (refreshTimerRef.current) {
-        clearTimeout(refreshTimerRef.current);
-        refreshTimerRef.current = null;
+      if (metadataRefreshTimerRef.current) {
+        clearTimeout(metadataRefreshTimerRef.current);
+        metadataRefreshTimerRef.current = null;
       }
+      if (transcriptRefreshTimerRef.current) {
+        clearTimeout(transcriptRefreshTimerRef.current);
+        transcriptRefreshTimerRef.current = null;
+      }
+      pendingTranscriptSessionIds.clear();
     };
-  }, [acpUpdates, notesHook]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const timer = window.setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      setRefreshKey((current) => current + 1);
-    }, 4000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    (async () => {
-      try {
-        const [sessionRes, sessionsRes, specialistsRes, agentsRes] = await Promise.all([
-          desktopAwareFetch(`/api/sessions/${encodeURIComponent(sessionId)}`, { cache: "no-store", signal: controller.signal }),
-          desktopAwareFetch(`/api/sessions?workspaceId=${encodeURIComponent(workspaceId)}&limit=100`, { cache: "no-store", signal: controller.signal }),
-          desktopAwareFetch("/api/specialists", { cache: "no-store", signal: controller.signal }),
-          desktopAwareFetch(`/api/agents?workspaceId=${encodeURIComponent(workspaceId)}`, { cache: "no-store", signal: controller.signal }),
-        ]);
-        const sessionData = await sessionRes.json().catch(() => ({}));
-        const sessionsData = await sessionsRes.json().catch(() => ({}));
-        const specialistsData = await specialistsRes.json().catch(() => ({}));
-        const agentsData = await agentsRes.json().catch(() => ({}));
-        if (controller.signal.aborted) return;
-        setSession((sessionData?.session ?? null) as SessionInfo | null);
-        setWorkspaceSessions(Array.isArray(sessionsData?.sessions) ? sessionsData.sessions : []);
-        setSpecialists(Array.isArray(specialistsData?.specialists) ? specialistsData.specialists : []);
-        setAgents(Array.isArray(agentsData?.agents) ? agentsData.agents : []);
-      } catch {
-        if (controller.signal.aborted) return;
-        setSession(null);
-        setWorkspaceSessions([]);
-        setSpecialists([]);
-        setAgents([]);
-      }
-    })();
-
-    return () => controller.abort();
-  }, [refreshKey, sessionId, workspaceId]);
+  }, [fetchSpecialists, flushMetadataRefresh]);
 
   const workspace = workspacesHook.workspaces.find((item) => item.id === workspaceId);
   const specialistsById = useMemo(
@@ -342,38 +460,65 @@ export function TeamRunPageClient() {
   }, [sessionId, workspaceSessions]);
 
   useEffect(() => {
-    if (!session) return;
-    const controller = new AbortController();
-    const sessionsToLoad = [session, ...descendantSessions];
+    const sessionIdsToLoad = session ? [session.sessionId, ...descendantSessions.map((entry) => entry.sessionId)] : [];
+    if (sessionIdsToLoad.length === 0) return;
+    requestTranscriptRefresh(sessionIdsToLoad, 0);
+  }, [descendantSessions, requestTranscriptRefresh, session]);
 
-    (async () => {
-      try {
-        const transcriptEntries = await Promise.all(
-          sessionsToLoad.map(async (entry) => {
-            const response = await desktopAwareFetch(
-              `/api/sessions/${encodeURIComponent(entry.sessionId)}/transcript`,
-              { cache: "no-store", signal: controller.signal },
-            );
-            const data = await response.json().catch(() => ({})) as Partial<SessionTranscriptPayload>;
-            return {
-              sessionId: entry.sessionId,
-              history: Array.isArray(data?.history) ? data.history as SessionHistoryEntry[] : [],
-              messages: hydrateTranscriptMessages(Array.isArray(data?.messages) ? data.messages : []),
-            };
-          }),
+  useEffect(() => {
+    if (!acpUpdates.length) {
+      lastUpdateIndexRef.current = 0;
+      return;
+    }
+
+    const startIndex = lastUpdateIndexRef.current > acpUpdates.length ? 0 : lastUpdateIndexRef.current;
+    const pending = acpUpdates.slice(startIndex);
+    if (!pending.length) return;
+    lastUpdateIndexRef.current = acpUpdates.length;
+
+    const normalizedPending = pending.map((entry) => ({
+      sessionId,
+      update: ((entry as Record<string, unknown>).update ?? entry) as SessionHistoryEntry["update"],
+    })) as SessionHistoryEntry[];
+
+    setHistoriesBySessionId((prev) => {
+      const existing = prev[sessionId] ?? [];
+      const merged = existing.concat(normalizedPending);
+      setMessagesBySessionId((prevMessages) => ({
+        ...prevMessages,
+        [sessionId]: historyNotificationsToMessages(merged as AcpSessionNotification[], sessionId),
+      }));
+      return {
+        ...prev,
+        [sessionId]: merged,
+      };
+    });
+
+    const shouldRefreshTeamStructure = normalizedPending.some((entry) => {
+      const update = entry.update;
+      const kind = update?.sessionUpdate;
+      if (!kind) return false;
+      if (kind === "tool_call" || kind === "tool_call_update") {
+        const toolLabel = getToolEventLabel(update as Record<string, unknown>);
+        return (
+          toolLabel.includes("create_agent")
+          || toolLabel.includes("delegate_task")
+          || toolLabel.includes("delegate_task_to_agent")
+          || toolLabel.includes("report_to_parent")
+          || toolLabel.includes("set_agent_name")
         );
-        if (controller.signal.aborted) return;
-        setHistoriesBySessionId(Object.fromEntries(transcriptEntries.map((entry) => [entry.sessionId, entry.history])));
-        setMessagesBySessionId(Object.fromEntries(transcriptEntries.map((entry) => [entry.sessionId, entry.messages])));
-      } catch {
-        if (controller.signal.aborted) return;
-        setHistoriesBySessionId({});
-        setMessagesBySessionId({});
       }
-    })();
+      return kind !== "agent_message_chunk" && kind !== "agent_thought_chunk";
+    });
 
-    return () => controller.abort();
-  }, [descendantSessions, refreshKey, session]);
+    if (shouldRefreshTeamStructure) {
+      requestMetadataRefresh();
+      const descendantSessionIds = descendantSessions.map((entry) => entry.sessionId);
+      if (descendantSessionIds.length > 0) {
+        requestTranscriptRefresh(descendantSessionIds);
+      }
+    }
+  }, [acpUpdates, descendantSessions, requestMetadataRefresh, requestTranscriptRefresh, sessionId]);
 
   const taskTree = useMemo<TeamTaskNode[]>(() => {
     const taskNotes = notesHook.notes.filter((note) => note.metadata.type === "task");
@@ -1139,7 +1284,10 @@ export function TeamRunPageClient() {
               </Link>
               <button
                 type="button"
-                onClick={() => setRefreshKey((current) => current + 1)}
+                onClick={() => {
+                  requestMetadataRefresh(0);
+                  requestTranscriptRefresh([sessionId, ...descendantSessions.map((entry) => entry.sessionId)], 0);
+                }}
                 className="rounded-md bg-desktop-bg-secondary px-2.5 py-1.5 text-[11px] font-medium text-desktop-text-secondary transition-colors hover:bg-desktop-bg-active/70 hover:text-desktop-text-primary"
               >
                 Refresh
