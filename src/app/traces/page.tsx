@@ -12,7 +12,7 @@
  * - Trace(AG-UI) (AG-UI protocol events)
  */
 
-import { useCallback, useEffect, useState, Suspense } from "react";
+import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { TracePanel } from "@/client/components/trace-panel";
@@ -49,17 +49,13 @@ function TracePageContent() {
   const [activeTab, setActiveTab] = useState<ViewTab>("chat");
   const [sessionTraces, setSessionTraces] = useState<TraceRecord[]>([]);
   const [_tracesLoading, setTracesLoading] = useState(false);
+  const selectedSessionIdRef = useRef<string | null>(null);
 
   const activeWorkspace = workspaces.find((workspace) => workspace.id === activeWorkspaceId);
 
   useEffect(() => {
-    if (workspacesLoading) return;
-    if (workspaces.length === 0) return;
-
-    if (!workspaces.some((workspace) => workspace.id === activeWorkspaceId)) {
-      setActiveWorkspaceId(workspaces[0].id);
-    }
-  }, [activeWorkspaceId, workspaces, workspacesLoading]);
+    selectedSessionIdRef.current = selectedSessionId;
+  }, [selectedSessionId]);
 
   const handleWorkspaceSelect = useCallback((workspaceId: string) => {
     setActiveWorkspaceId(workspaceId);
@@ -123,12 +119,18 @@ function TracePageContent() {
 
       setSessions(sessionList);
 
-      // Check URL parameter first, then keep current session if possible, finally fallback
+      // Keep "all workspaces" as the default view for traces. Auto-selecting the
+      // first workspace causes a second fetch after mount that can hide
+      // parent/child relationships when the tree spans workspace boundaries.
+      // Check URL parameter first, then keep current session if possible, finally fallback.
       const urlSessionId = searchParams.get("sessionId");
       if (urlSessionId && sessionList.some((s) => s.sessionId === urlSessionId)) {
         setSelectedSessionId(urlSessionId);
-      } else if (selectedSessionId && sessionList.some((s) => s.sessionId === selectedSessionId)) {
-        setSelectedSessionId(selectedSessionId);
+      } else if (
+        selectedSessionIdRef.current &&
+        sessionList.some((s) => s.sessionId === selectedSessionIdRef.current)
+      ) {
+        setSelectedSessionId(selectedSessionIdRef.current);
       } else if (sessionList.length > 0) {
         setSelectedSessionId(sessionList[0].sessionId);
       } else {
@@ -139,7 +141,7 @@ function TracePageContent() {
     } finally {
       setLoading(false);
     }
-  }, [selectedSessionId, searchParams, workspaceQuery]);
+  }, [searchParams, workspaceQuery]);
 
   // Fetch traces for the selected session (shared across all view tabs)
   const fetchSessionTraces = useCallback(async () => {
