@@ -67,6 +67,7 @@ interface SuggestionItem {
   description?: string;
   type?: string;
   disabled?: boolean;
+  path?: string;
 }
 
 function createSuggestionDropdown(triggerChar?: string) {
@@ -272,6 +273,7 @@ function createAtMention(
     suggestion: {
       char: "@",
       pluginKey: new PluginKey("atMention"),
+      allowedPrefixes: null,
       items: async ({ query }: { query: string }): Promise<SuggestionItem[]> => {
         const ctx = getFileSearchContext();
 
@@ -351,6 +353,7 @@ function createHashMention(
     suggestion: {
       char: "#",
       pluginKey: new PluginKey("hashMention"),
+      allowedPrefixes: null,
       items: ({ query }: { query: string }) => {
         const allItems = getAgentItems();
         if (!query) return allItems;
@@ -360,7 +363,7 @@ function createHashMention(
           (p.description ?? "").toLowerCase().includes(query.toLowerCase())
         );
       },
-      render: createSuggestionDropdown,
+      render: () => createSuggestionDropdown("#"),
     },
   });
 }
@@ -389,14 +392,16 @@ function createSkillMention(
     suggestion: {
       char: "/",
       pluginKey: new PluginKey("skillMention"),
+      allowedPrefixes: null,
       items: ({ query }: { query: string }) => {
         const skills = getSkills();
         if (!query) return skills;
         return skills.filter((s) =>
-          s.label.toLowerCase().includes(query.toLowerCase())
+          s.label.toLowerCase().includes(query.toLowerCase()) ||
+          (s.description ?? "").toLowerCase().includes(query.toLowerCase())
         );
       },
-      render: createSuggestionDropdown,
+      render: () => createSuggestionDropdown("/"),
     },
   });
 }
@@ -468,6 +473,11 @@ interface TiptapInputProps {
   activeSessionMode?: string;
   repoSelection: RepoSelection | null;
   onRepoChange: (selection: RepoSelection | null) => void;
+  additionalRepos?: Array<{
+    name: string;
+    path: string;
+    branch?: string;
+  }>;
   repoPathDisplay?: "inline" | "below-muted" | "hidden";
   /** Current agent role – ROUTA hides provider mode chips (Brave/Plan) */
   agentRole?: string;
@@ -503,6 +513,7 @@ export function TiptapInput({
   activeSessionMode,
   repoSelection,
   onRepoChange,
+  additionalRepos,
   repoPathDisplay = "hidden",
   usageInfo,
   onFetchModels,
@@ -609,10 +620,32 @@ export function TiptapInput({
     return [...providerItems, ...sessionItems];
   }, [providers, sessions]);
 
-  const fileSearchContext = useMemo<FileSearchContext>(() => ({
+  const agentItemsRef = useRef<SuggestionItem[]>(agentItems);
+  const mergedSkillItemsRef = useRef<SuggestionItem[]>(mergedSkillItems);
+  const fileSearchContextRef = useRef<FileSearchContext>({
     repoPath: repoSelection?.path ?? null,
     abortController: null,
-  }), [repoSelection?.path]);
+  });
+
+  useEffect(() => {
+    agentItemsRef.current = agentItems;
+  }, [agentItems]);
+
+  useEffect(() => {
+    mergedSkillItemsRef.current = mergedSkillItems;
+  }, [mergedSkillItems]);
+
+  useEffect(() => {
+    const nextRepoPath = repoSelection?.path ?? null;
+    if (
+      fileSearchContextRef.current.abortController &&
+      fileSearchContextRef.current.repoPath !== nextRepoPath
+    ) {
+      fileSearchContextRef.current.abortController.abort();
+      fileSearchContextRef.current.abortController = null;
+    }
+    fileSearchContextRef.current.repoPath = nextRepoPath;
+  }, [repoSelection?.path]);
 
   // Use a ref for the send handler so extensions always call the latest version
   const handleSendRef = useRef<() => void>(() => {});
@@ -671,9 +704,12 @@ export function TiptapInput({
         nested: true,
         HTMLAttributes: { class: "flex items-start gap-2" },
       }),
-      createAtMention(() => fileSearchContext),
-      createHashMention(() => agentItems),
-      createSkillMention(() => mergedSkillItems),
+      // eslint-disable-next-line react-hooks/refs -- Tiptap suggestions resolve these getters later during editor interaction, not during React render
+      createAtMention(() => fileSearchContextRef.current),
+      // eslint-disable-next-line react-hooks/refs -- Tiptap suggestions resolve these getters later during editor interaction, not during React render
+      createHashMention(() => agentItemsRef.current),
+      // eslint-disable-next-line react-hooks/refs -- Tiptap suggestions resolve these getters later during editor interaction, not during React render
+      createSkillMention(() => mergedSkillItemsRef.current),
       // eslint-disable-next-line react-hooks/refs -- EnterToSend intentionally calls the latest ref-backed send handler
       EnterToSend.configure({
         onSend: handleSendProxy,
@@ -790,6 +826,18 @@ export function TiptapInput({
     }
     if (skill) {
       cleanText = cleanText.replace(new RegExp(`/${skill}\\s*`, "g"), "").trim();
+    } else {
+      const textSkillMatch = cleanText.match(/^\/([^\s]+)\s*/);
+      if (textSkillMatch) {
+        const typedSkill = textSkillMatch[1].toLowerCase();
+        const matchedSkill = mergedSkillItems.find((item) =>
+          item.id.toLowerCase() === typedSkill || item.label.toLowerCase() === typedSkill
+        );
+        if (matchedSkill) {
+          skill = matchedSkill.id;
+          cleanText = cleanText.slice(textSkillMatch[0].length).trim();
+        }
+      }
     }
 
     // Fallback for plain-text session mentions like #session-46b5807d
@@ -827,7 +875,7 @@ export function TiptapInput({
       model: selectedModel || undefined,
     });
     editor.commands.clearContent();
-  }, [editor, onSend, disabled, loading, repoSelection, providers, selectedProvider, claudeMode, opencodeMode, sessions, agentRole, selectedModel]);
+  }, [editor, onSend, disabled, loading, repoSelection, providers, selectedProvider, claudeMode, opencodeMode, sessions, agentRole, selectedModel, mergedSkillItems]);
 
   // Keep ref updated so EnterToSend and external send button always call latest
   useEffect(() => {
@@ -870,6 +918,7 @@ export function TiptapInput({
             <RepoPicker
               value={repoSelection}
               onChange={onRepoChange}
+              additionalRepos={additionalRepos}
               pathDisplay={repoPathDisplay}
             />
           </div>

@@ -280,6 +280,11 @@ export function HomeInput({
             onProviderChange={acp.setProvider}
             repoSelection={repoSelection}
             onRepoChange={setRepoSelection}
+            additionalRepos={codebases.map((codebase) => ({
+              name: codebase.label ?? codebase.repoPath.split("/").pop() ?? codebase.repoPath,
+              path: codebase.repoPath,
+              branch: codebase.branch,
+            }))}
             repoPathDisplay="hidden"
             agentRole={selectedRole}
             onFetchModels={acp.listProviderModels}
