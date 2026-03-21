@@ -70,8 +70,17 @@ import {
   proxyRequestToRunner,
   runnerUnavailableResponse,
 } from "@/core/acp/runner-routing";
+import { loadSessionHistory } from "@/core/session-history";
 
 export const dynamic = "force-dynamic";
+
+function encodeSsePayload(payload: unknown): string {
+  const params = typeof payload === "object" && payload !== null
+    ? (payload as { params?: { eventId?: string } }).params
+    : undefined;
+  const eventId = typeof params?.eventId === "string" ? params.eventId : undefined;
+  return `${eventId ? `id: ${eventId}\n` : ""}data: ${JSON.stringify(payload)}\n\n`;
+}
 
 function isWorkspaceProvider(provider: string): boolean {
   const normalized = provider.toLowerCase();
@@ -363,8 +372,27 @@ export async function GET(request: NextRequest) {
   };
 
   const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      store.attachSse(sessionId, controller);
+    async start(controller) {
+      const lastEventId = request.headers.get("last-event-id")
+        ?? request.nextUrl.searchParams.get("lastEventId");
+      let replayedFromLastEventId = false;
+      if (lastEventId) {
+        const history = await loadSessionHistory(sessionId);
+        const replayIndex = history.findIndex((entry) => entry.eventId === lastEventId);
+        if (replayIndex >= 0) {
+          replayedFromLastEventId = true;
+          const encoder = new TextEncoder();
+          for (const entry of history.slice(replayIndex + 1)) {
+            controller.enqueue(encoder.encode(encodeSsePayload({
+              jsonrpc: "2.0",
+              method: "session/update",
+              params: entry,
+            })));
+          }
+        }
+      }
+
+      store.attachSse(sessionId, controller, { skipPending: replayedFromLastEventId });
       store.pushConnected(sessionId);
 
       // ─── Heartbeat mechanism ─────────────────────────────────────────────
@@ -1411,7 +1439,7 @@ export async function POST(request: NextRequest) {
                   error: { message },
                 },
               };
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorNotification)}\n\n`));
+              controller.enqueue(encoder.encode(encodeSsePayload(errorNotification)));
               controller.close();
             }
           },
@@ -1475,7 +1503,7 @@ export async function POST(request: NextRequest) {
                   error: { message },
                 },
               };
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorNotification)}\n\n`));
+              controller.enqueue(encoder.encode(encodeSsePayload(errorNotification)));
               controller.close();
             }
           },
@@ -1547,7 +1575,7 @@ export async function POST(request: NextRequest) {
                   error: { message },
                 },
               };
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorNotification)}\n\n`));
+              controller.enqueue(encoder.encode(encodeSsePayload(errorNotification)));
               controller.close();
             }
           },

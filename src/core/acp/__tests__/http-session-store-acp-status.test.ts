@@ -243,6 +243,35 @@ describe("HttpSessionStore — ACP status", () => {
     expect(history).toHaveLength(1);
     expect((history[0] as { message: SessionUpdateNotification }).message).toEqual(notification);
   });
+
+  it("assigns event ids and replays history after a known event", () => {
+    const store = getHttpSessionStore();
+    store.upsertSession({
+      sessionId: "test-replay",
+      cwd: "/tmp",
+      workspaceId: "ws-1",
+      provider: "opencode",
+      createdAt: new Date().toISOString(),
+    });
+
+    store.pushNotification({
+      sessionId: "test-replay",
+      update: { sessionUpdate: "user_message", content: { type: "text", text: "one" } },
+    });
+    store.pushNotification({
+      sessionId: "test-replay",
+      update: { sessionUpdate: "agent_message", content: { type: "text", text: "two" } },
+    });
+
+    const history = store.getHistory("test-replay");
+    expect(history).toHaveLength(2);
+    expect(history[0].eventId).toBeTruthy();
+    expect(history[1].eventId).toBeTruthy();
+
+    const replay = store.getHistorySinceEventId("test-replay", history[0].eventId!);
+    expect(replay).toHaveLength(1);
+    expect(replay[0].eventId).toBe(history[1].eventId);
+  });
 });
 
 describe("consolidateMessageHistory", () => {

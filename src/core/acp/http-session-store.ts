@@ -12,6 +12,7 @@
  * - Uses Provider Adapters to normalize different provider message formats
  */
 
+import { randomUUID } from "node:crypto";
 import { getProviderAdapter } from "./provider-adapter";
 import { TraceRecorder } from "./provider-adapter/trace-recorder";
 import { appendSessionNotificationEvent, hydrateSessionsFromDb } from "./session-db-persister";
@@ -65,6 +66,7 @@ type Controller = ReadableStreamDefaultController<Uint8Array>;
 
 export interface SessionUpdateNotification {
   sessionId: string;
+  eventId?: string;
   update?: Record<string, unknown>;
   [key: string]: unknown;
 }
@@ -133,6 +135,17 @@ export function consolidateMessageHistory(
   flushChunks();
 
   return result;
+}
+
+function ensureNotificationEventId(
+  notification: SessionUpdateNotification,
+): SessionUpdateNotification {
+  if (typeof notification.eventId === "string" && notification.eventId.length > 0) {
+    return notification;
+  }
+
+  notification.eventId = randomUUID();
+  return notification;
 }
 
 /**
@@ -382,9 +395,11 @@ class HttpSessionStore {
     } as SessionUpdateNotification);
   }
 
-  attachSse(sessionId: string, controller: Controller) {
+  attachSse(sessionId: string, controller: Controller, options?: { skipPending?: boolean }) {
     this.sseControllers.set(sessionId, controller);
-    this.flushPending(sessionId);
+    if (!options?.skipPending) {
+      this.flushPending(sessionId);
+    }
   }
 
   detachSse(sessionId: string) {
@@ -396,6 +411,7 @@ class HttpSessionStore {
    * Used when restoring history from DB on cold start.
    */
   pushNotificationToHistory(sessionId: string, notification: SessionUpdateNotification) {
+    ensureNotificationEventId(notification);
     const history = this.messageHistory.get(sessionId) ?? [];
     history.push(notification);
     this.messageHistory.set(sessionId, history);
@@ -442,7 +458,8 @@ class HttpSessionStore {
    * Uses Provider Adapters to normalize messages and handle provider-specific behaviors.
    */
   pushNotification(notification: SessionUpdateNotification) {
-    const sessionId = notification.sessionId;
+    const enriched = ensureNotificationEventId(notification);
+    const sessionId = enriched.sessionId;
     this.updateAccessTime(sessionId);
 
     // Child agent notifications (with childAgentId) are forwarded to the parent
@@ -455,10 +472,10 @@ class HttpSessionStore {
     if (!isChildAgentNotification) {
       // Only store non-child-agent notifications in history
       const history = this.messageHistory.get(sessionId) ?? [];
-      history.push(notification);
+      history.push(enriched);
       this.messageHistory.set(sessionId, history);
       this.limitHistorySize(sessionId); // Apply memory limit
-      void appendSessionNotificationEvent(sessionId, notification, this.sessions.get(sessionId)?.cwd);
+      void appendSessionNotificationEvent(sessionId, enriched, this.sessions.get(sessionId)?.cwd);
     }
 
     // ── Notify AG-UI interceptors (protocol bridging) ──
@@ -521,13 +538,13 @@ class HttpSessionStore {
       this.writeSse(controller, {
         jsonrpc: "2.0",
         method: "session/update",
-        params: notification,
+        params: enriched,
       });
       return;
     }
 
     const pending = this.pendingNotifications.get(sessionId) ?? [];
-    pending.push(notification);
+    pending.push(enriched);
     this.pendingNotifications.set(sessionId, pending);
     this.limitPendingSize(sessionId); // Apply memory limit
   }
@@ -547,6 +564,13 @@ class HttpSessionStore {
   getConsolidatedHistory(sessionId: string): SessionUpdateNotification[] {
     const history = this.messageHistory.get(sessionId) ?? [];
     return consolidateMessageHistory(history);
+  }
+
+  getHistorySinceEventId(sessionId: string, lastEventId: string): SessionUpdateNotification[] {
+    const history = this.messageHistory.get(sessionId) ?? [];
+    const index = history.findIndex((entry) => entry.eventId === lastEventId);
+    if (index < 0) return [];
+    return history.slice(index + 1);
   }
 
   /**
@@ -666,12 +690,19 @@ class HttpSessionStore {
 
   private writeSse(controller: Controller, payload: unknown) {
     const encoder = new TextEncoder();
-    const event = `data: ${JSON.stringify(payload)}\n\n`;
+    const id = this.extractSseEventId(payload);
+    const event = `${id ? `id: ${id}\n` : ""}data: ${JSON.stringify(payload)}\n\n`;
     try {
       controller.enqueue(encoder.encode(event));
     } catch {
       // controller closed - drop silently
     }
+  }
+
+  private extractSseEventId(payload: unknown): string | undefined {
+    if (typeof payload !== "object" || payload === null) return undefined;
+    const params = (payload as { params?: SessionUpdateNotification }).params;
+    return typeof params?.eventId === "string" ? params.eventId : undefined;
   }
 
   private recordSessionActivity(

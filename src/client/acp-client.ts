@@ -98,6 +98,7 @@ export class BrowserAcpClient {
   private updateHandlers: SessionUpdateHandler[] = [];
   private requestId = 0;
   private _sessionId: string | null = null;
+  private lastEventId: string | null = null;
 
   constructor(baseUrl: string = "") {
     this.baseUrl = baseUrl;
@@ -235,6 +236,9 @@ export class BrowserAcpClient {
    * Attach to an existing session ID (switch sessions).
    */
   attachSession(sessionId: string): void {
+    if (this._sessionId !== sessionId) {
+      this.lastEventId = null;
+    }
     this._sessionId = sessionId;
     this.connectSSE(sessionId);
   }
@@ -477,6 +481,7 @@ export class BrowserAcpClient {
       this.eventSource = null;
     }
     this._sessionId = null;
+    this.lastEventId = null;
     this.updateHandlers = [];
   }
 
@@ -487,12 +492,19 @@ export class BrowserAcpClient {
       this.eventSource.close();
     }
 
-    this.eventSource = new EventSource(
-      `${this.baseUrl}/api/acp?sessionId=${sessionId}`
-    );
+    const url = new URL(`${this.baseUrl || window.location.origin}/api/acp`);
+    url.searchParams.set("sessionId", sessionId);
+    if (this.lastEventId) {
+      url.searchParams.set("lastEventId", this.lastEventId);
+    }
+
+    this.eventSource = new EventSource(url.toString());
 
     this.eventSource.onmessage = (event) => {
       try {
+        if (event.lastEventId) {
+          this.lastEventId = event.lastEventId;
+        }
         const data = JSON.parse(event.data);
         if (data.method === "session/update" && data.params) {
           const notification = data.params as AcpSessionNotification;

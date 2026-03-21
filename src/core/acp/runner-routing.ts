@@ -62,6 +62,10 @@ export async function proxyRequestToRunner(
   const targetUrl = new URL(input.path, input.runnerUrl);
   const headers = new Headers();
   headers.set(ACP_FORWARDED_HEADER, "1");
+  const lastEventId = request.headers.get("last-event-id");
+  if (lastEventId) {
+    headers.set("last-event-id", lastEventId);
+  }
 
   const init: RequestInit = {
     method: input.method ?? request.method,
