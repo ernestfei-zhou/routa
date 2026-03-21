@@ -5,7 +5,11 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
+import * as fs from "node:fs/promises";
+import * as os from "node:os";
+import * as path from "node:path";
 import { EventBus, AgentEventType, type AgentEvent } from "../../events/event-bus";
+import { LocalSessionProvider } from "../../storage/local-session-provider";
 
 // We need to test the store in isolation. Import the class and types.
 // The singleton getter is module-scoped, so we test via the exported function.
@@ -13,6 +17,10 @@ import { getHttpSessionStore, consolidateMessageHistory } from "../http-session-
 import type { SessionUpdateNotification } from "../http-session-store";
 
 describe("HttpSessionStore — ACP status", () => {
+  beforeEach(async () => {
+    process.env.HOME = await fs.mkdtemp(path.join(os.tmpdir(), "http-session-store-"));
+  });
+
   beforeEach(() => {
     // Clean up sessions from previous tests
     const store = getHttpSessionStore();
@@ -203,6 +211,37 @@ describe("HttpSessionStore — ACP status", () => {
     );
     expect(statusNotification).toBeDefined();
     expect((statusNotification?.update as Record<string, unknown>)?.status).toBe("error");
+  });
+
+  it("appends pushed notifications to the local event log", async () => {
+    const store = getHttpSessionStore();
+    const projectPath = path.join(process.env.HOME!, "project");
+    store.upsertSession({
+      sessionId: "test-jsonl-log",
+      cwd: projectPath,
+      workspaceId: "ws-1",
+      provider: "opencode",
+      createdAt: new Date().toISOString(),
+    });
+
+    const notification: SessionUpdateNotification = {
+      sessionId: "test-jsonl-log",
+      update: {
+        sessionUpdate: "agent_message",
+        content: { type: "text", text: "persist me" },
+      },
+    };
+
+    store.pushNotification(notification);
+    const provider = new LocalSessionProvider(projectPath);
+    let history = await provider.getHistory("test-jsonl-log");
+    for (let attempt = 0; attempt < 10 && history.length === 0; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      history = await provider.getHistory("test-jsonl-log");
+    }
+
+    expect(history).toHaveLength(1);
+    expect((history[0] as { message: SessionUpdateNotification }).message).toEqual(notification);
   });
 });
 

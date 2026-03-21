@@ -5,10 +5,12 @@ import { NextRequest } from "next/server";
 import { GET as getAcp, POST as postAcp } from "@/app/api/acp/route";
 import { DELETE as deleteSession, GET as getSession, PATCH as patchSession } from "@/app/api/sessions/[sessionId]/route";
 import { POST as disconnectSession } from "@/app/api/sessions/[sessionId]/disconnect/route";
+import { GET as getSessionHistory } from "@/app/api/sessions/[sessionId]/history/route";
 
 type RouteMatch =
   | { kind: "acp" }
   | { kind: "session"; sessionId: string }
+  | { kind: "sessionHistory"; sessionId: string }
   | { kind: "sessionDisconnect"; sessionId: string }
   | null;
 
@@ -22,6 +24,14 @@ export function matchRunnerRoute(pathname: string): RouteMatch {
     return {
       kind: "sessionDisconnect",
       sessionId: decodeURIComponent(disconnectMatch[1]),
+    };
+  }
+
+  const historyMatch = pathname.match(/^\/api\/sessions\/([^/]+)\/history$/);
+  if (historyMatch) {
+    return {
+      kind: "sessionHistory",
+      sessionId: decodeURIComponent(historyMatch[1]),
     };
   }
 
@@ -110,6 +120,12 @@ export async function handleRunnerRequest(baseUrl: string, req: IncomingMessage)
     if (req.method === "GET") return getSession(nextRequest, { params });
     if (req.method === "PATCH") return patchSession(nextRequest, { params });
     if (req.method === "DELETE") return deleteSession(nextRequest, { params });
+  }
+
+  if (match.kind === "sessionHistory" && req.method === "GET") {
+    return getSessionHistory(nextRequest, {
+      params: Promise.resolve({ sessionId: match.sessionId }),
+    });
   }
 
   if (match.kind === "sessionDisconnect" && req.method === "POST") {

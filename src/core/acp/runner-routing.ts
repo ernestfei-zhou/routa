@@ -14,6 +14,31 @@ export async function getSessionRoutingRecord(sessionId: string) {
   return store.getSession(sessionId);
 }
 
+export async function proxyRunnerOwnedSessionRequest(
+  request: NextRequest,
+  input: {
+    sessionId: string;
+    path: string;
+    method?: string;
+    body?: Record<string, unknown>;
+  }
+): Promise<Response | null> {
+  if (isForwardedAcpRequest(request)) return null;
+
+  const session = await getSessionRoutingRecord(input.sessionId);
+  if (session?.executionMode !== "runner") return null;
+
+  const runnerUrl = getRequiredRunnerUrl();
+  if (!runnerUrl) return runnerUnavailableResponse();
+
+  return proxyRequestToRunner(request, {
+    runnerUrl,
+    path: input.path,
+    method: input.method,
+    body: input.body,
+  });
+}
+
 export function getRequiredRunnerUrl(): string | null {
   return getAcpRunnerUrl() ?? null;
 }

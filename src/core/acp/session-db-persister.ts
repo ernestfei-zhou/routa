@@ -314,6 +314,40 @@ export async function saveHistoryToDb(
   }
 }
 
+export async function appendSessionNotificationEvent(
+  sessionId: string,
+  notification: import("@/core/acp/http-session-store").SessionUpdateNotification,
+  cwdOverride?: string,
+): Promise<void> {
+  if (isServerless()) return;
+
+  try {
+    let cwd = cwdOverride;
+
+    if (!cwd) {
+      const { getHttpSessionStore } = await import("@/core/acp/http-session-store");
+      cwd = getHttpSessionStore().getSession(sessionId)?.cwd;
+    }
+
+    if (!cwd && getDatabaseDriver() === "sqlite") {
+      try {
+        const { getSqliteDatabase } = require("../db/sqlite") as typeof import("../db/sqlite");
+        const db = getSqliteDatabase();
+        cwd = (await new SqliteAcpSessionStore(db).get(sessionId))?.cwd;
+      } catch {
+        // ignore — cwd stays undefined
+      }
+    }
+
+    if (!cwd) return;
+
+    const local = new LocalSessionProvider(cwd);
+    await local.appendMessage(sessionId, toJsonlHistoryEntry(sessionId, notification));
+  } catch {
+    // Non-fatal — event log append is best-effort
+  }
+}
+
 export async function loadHistoryFromDb(
   sessionId: string,
   cwdOverride?: string,
@@ -375,16 +409,22 @@ function toJsonlHistoryEntries(
   sessionId: string,
   history: import("@/core/acp/http-session-store").SessionUpdateNotification[]
 ): SessionJsonlEntry[] {
-  return history.map((entry, index) => {
-    const raw = entry as Record<string, unknown>;
-    return {
-      uuid: raw.uuid as string ?? `${sessionId}-${index}`,
-      type: raw.type as string ?? ((raw.update as Record<string, unknown> | undefined)?.sessionUpdate as string | undefined) ?? "notification",
-      message: entry,
-      sessionId,
-      timestamp: new Date().toISOString(),
-    };
-  });
+  return history.map((entry, index) => toJsonlHistoryEntry(sessionId, entry, index));
+}
+
+function toJsonlHistoryEntry(
+  sessionId: string,
+  entry: import("@/core/acp/http-session-store").SessionUpdateNotification,
+  index = 0,
+): SessionJsonlEntry {
+  const raw = entry as Record<string, unknown>;
+  return {
+    uuid: raw.uuid as string ?? `${sessionId}-${index}`,
+    type: raw.type as string ?? ((raw.update as Record<string, unknown> | undefined)?.sessionUpdate as string | undefined) ?? "notification",
+    message: entry,
+    sessionId,
+    timestamp: new Date().toISOString(),
+  };
 }
 
 export function normalizeSessionHistory<T>(history: T[]): T[] {

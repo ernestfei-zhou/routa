@@ -12,6 +12,10 @@ describe("matchRunnerRoute", () => {
       kind: "session",
       sessionId: "session-123",
     });
+    expect(matchRunnerRoute("/api/sessions/session-123/history")).toEqual({
+      kind: "sessionHistory",
+      sessionId: "session-123",
+    });
     expect(matchRunnerRoute("/api/sessions/session-123/disconnect")).toEqual({
       kind: "sessionDisconnect",
       sessionId: "session-123",

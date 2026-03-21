@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { loadSessionHistory } from "@/core/session-history";
+import { proxyRunnerOwnedSessionRequest } from "@/core/acp/runner-routing";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,13 @@ export async function GET(
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
   const { sessionId } = await params;
+  const proxied = await proxyRunnerOwnedSessionRequest(request, {
+    sessionId,
+    path: `/api/sessions/${encodeURIComponent(sessionId)}/history`,
+    method: "GET",
+  });
+  if (proxied) return proxied;
+
   const consolidated = request.nextUrl.searchParams.get("consolidated") === "true";
   const result = await loadSessionHistory(sessionId, { consolidated });
 

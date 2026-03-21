@@ -14,7 +14,7 @@
 
 import { getProviderAdapter } from "./provider-adapter";
 import { TraceRecorder } from "./provider-adapter/trace-recorder";
-import { hydrateSessionsFromDb } from "./session-db-persister";
+import { appendSessionNotificationEvent, hydrateSessionsFromDb } from "./session-db-persister";
 import { AgentEventBridge, makeStartedEvent } from "./agent-event-bridge";
 import type { WorkspaceAgentEvent } from "./agent-event-bridge";
 import type { NormalizedSessionUpdate } from "./provider-adapter/types";
@@ -458,6 +458,7 @@ class HttpSessionStore {
       history.push(notification);
       this.messageHistory.set(sessionId, history);
       this.limitHistorySize(sessionId); // Apply memory limit
+      void appendSessionNotificationEvent(sessionId, notification, this.sessions.get(sessionId)?.cwd);
     }
 
     // ── Notify AG-UI interceptors (protocol bridging) ──
