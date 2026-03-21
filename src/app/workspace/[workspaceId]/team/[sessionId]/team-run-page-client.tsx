@@ -465,6 +465,7 @@ export function TeamRunPageClient() {
   const [specialists, setSpecialists] = useState<SpecialistSummary[]>([]);
   const [historiesBySessionId, setHistoriesBySessionId] = useState<Record<string, SessionHistoryEntry[]>>({});
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedSessionId, setSelectedSessionId] = useState<string>(sessionId);
   const [selectedSessionForModal, setSelectedSessionForModal] = useState<string | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastUpdateIndexRef = useRef(0);
@@ -493,6 +494,10 @@ export function TeamRunPageClient() {
     if (!selectedSessionForModal || !modalAcpConnected) return;
     selectModalSession(selectedSessionForModal);
   }, [modalAcpConnected, selectedSessionForModal, selectModalSession]);
+
+  useEffect(() => {
+    setSelectedSessionId(sessionId);
+  }, [sessionId]);
 
   useEffect(() => {
     if (!sessionId || !acpConnected || acpLoading) return;
@@ -729,8 +734,8 @@ export function TeamRunPageClient() {
   }, [allRunSessions, historiesBySessionId, sessionId, specialistsById]);
 
   const selectedSessionStream = useMemo(
-    () => sessionStreams.find((item) => item.session.sessionId === selectedSessionForModal) ?? null,
-    [selectedSessionForModal, sessionStreams],
+    () => sessionStreams.find((item) => item.session.sessionId === selectedSessionId) ?? sessionStreams[0] ?? null,
+    [selectedSessionId, sessionStreams],
   );
 
   const sessionStreamsBySessionId = useMemo(
@@ -966,6 +971,11 @@ export function TeamRunPageClient() {
     });
   }, [historiesBySessionId, latestSessionBySpecialistId, session, specialists]);
 
+  const actionableTeamMembers = useMemo(
+    () => teamMembers.filter((member) => Boolean(member.sessionId)),
+    [teamMembers],
+  );
+
   const deliverables = useMemo<DeliverableItem[]>(() => {
     const noteDeliverables = notesHook.notes.map((note) => {
       const sourceSession = note.sessionId ? allRunSessions.find((entry) => entry.sessionId === note.sessionId) : undefined;
@@ -1161,7 +1171,7 @@ export function TeamRunPageClient() {
                       key={item.id}
                       item={item}
                       isLast={index === coordinationItems.length - 1}
-                      onInspectSession={item.sessionId ? () => setSelectedSessionForModal(item.sessionId ?? null) : undefined}
+                      onInspectSession={item.sessionId ? () => setSelectedSessionId(item.sessionId ?? sessionId) : undefined}
                     />
                   ))}
                 </div>
@@ -1171,53 +1181,125 @@ export function TeamRunPageClient() {
 
           <aside className="min-h-0 overflow-hidden border-l border-desktop-border bg-desktop-bg-secondary">
             <div className="border-b border-desktop-border px-5 py-3">
-              <h2 className="text-base font-semibold text-desktop-text-primary">Team Panel</h2>
+              <h2 className="text-base font-semibold text-desktop-text-primary">Sessions</h2>
               <p className="mt-1 text-sm leading-5 text-desktop-text-secondary">
-                Team supervision, outputs, and live controls routed into shared session UI.
+                Switch sessions here, then inspect the selected run below.
               </p>
             </div>
 
             <div className="h-[calc(100%-81px)] overflow-y-auto p-4">
               <div className="space-y-4">
-                <PanelCard title="Team Members">
-                  <div className="space-y-2">
-                    {teamMembers.map((member) => (
-                      <button
-                        key={member.specialist.id}
-                        type="button"
-                        onClick={() => member.sessionId && setSelectedSessionForModal(member.sessionId)}
-                        disabled={!member.sessionId}
-                        className={`flex w-full items-start gap-3 rounded-[18px] px-3 py-3 text-left transition ${
-                          member.sessionId
-                            ? "hover:bg-desktop-bg-active/80"
-                            : "cursor-default opacity-80"
-                        }`}
-                      >
-                        <div className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${roleAvatarClass(member.specialist.id)}`}>
-                          {member.actor
-                            .split(" ")
-                            .map((part) => part.charAt(0))
-                            .join("")
-                            .slice(0, 2)
-                            .toUpperCase()}
-                          <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white dark:border-[#141821] ${statusDotClass(member.status)}`} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="truncate text-sm font-semibold text-desktop-text-primary">{member.actor}</div>
-                            <span className="shrink-0 text-[11px] capitalize text-desktop-text-secondary">{member.status}</span>
+                <PanelCard title="Session Rail">
+                  {sessionStreams.length <= 1 ? (
+                    <div className="rounded-[16px] border border-dashed border-desktop-border px-3 py-4 text-sm text-desktop-text-secondary">
+                      Only the lead session is active right now. New delegated sessions will appear here automatically.
+                    </div>
+                  ) : (
+                    <div className="max-h-[320px] space-y-2 overflow-y-auto pr-1">
+                      {sessionStreams.map((stream) => (
+                        <SessionRailItem
+                          key={stream.session.sessionId}
+                          stream={stream}
+                          active={stream.session.sessionId === selectedSessionStream?.session.sessionId}
+                          onSelect={() => setSelectedSessionId(stream.session.sessionId)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </PanelCard>
+
+                <PanelCard title="Session Details">
+                  {selectedSessionStream ? (
+                    <div className="space-y-3">
+                      <div className="rounded-[18px] border border-desktop-border bg-desktop-bg-secondary/70 px-3 py-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-semibold text-desktop-text-primary">
+                              {selectedSessionStream.actor}
+                            </div>
+                            <div className="mt-0.5 truncate text-xs text-desktop-text-secondary">
+                              {selectedSessionStream.session.name ?? selectedSessionStream.session.sessionId}
+                            </div>
                           </div>
-                          <div className="mt-0.5 truncate text-xs text-desktop-text-secondary">{member.specialist.id}</div>
-                          {member.preview && (
-                            <div className="mt-1.5 line-clamp-2 text-xs leading-5 text-desktop-text-muted">{member.preview}</div>
-                          )}
-                          {member.lastUpdatedLabel && (
-                            <div className="mt-1.5 text-[11px] text-desktop-text-muted">{member.lastUpdatedLabel}</div>
-                          )}
+                          <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] ${roleChipClass(resolveRosterSpecialistId(selectedSessionStream.session) ?? selectedSessionStream.session.specialistId, "soft")}`}>
+                            {selectedSessionStream.badge}
+                          </span>
                         </div>
-                      </button>
-                    ))}
-                  </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-desktop-text-muted">
+                          <span>{selectedSessionStream.lastUpdatedLabel}</span>
+                          <span className="opacity-40">/</span>
+                          <span>{selectedSessionStream.eventCount} updates</span>
+                          <span className="opacity-40">/</span>
+                          <span>{selectedSessionStream.session.provider ?? "auto"}</span>
+                        </div>
+                        <div className="mt-3 rounded-[14px] border border-desktop-border bg-desktop-bg-primary px-3 py-2.5 text-xs leading-5 text-desktop-text-secondary">
+                          {selectedSessionStream.preview ?? "No transcript content yet."}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSessionForModal(selectedSessionStream.session.sessionId)}
+                          className="rounded-[16px] border border-desktop-border bg-desktop-bg-primary px-3 py-2.5 text-sm font-medium text-desktop-text-secondary transition-colors hover:bg-desktop-bg-active hover:text-desktop-text-primary"
+                        >
+                          Open viewer
+                        </button>
+                        <Link
+                          href={`/workspace/${workspaceId}/sessions/${selectedSessionStream.session.sessionId}`}
+                          className="rounded-[16px] bg-desktop-accent px-3 py-2.5 text-center text-sm font-medium text-desktop-accent-text transition-colors hover:opacity-90"
+                        >
+                          Raw session
+                        </Link>
+                      </div>
+
+                      {actionableTeamMembers.length > 1 && (
+                        <div className="space-y-2">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-desktop-text-muted">
+                            Quick Switch
+                          </div>
+                          {actionableTeamMembers
+                            .filter((member) => member.sessionId !== selectedSessionStream.session.sessionId)
+                            .map((member) => {
+                          const active = member.sessionId === selectedSessionStream.session.sessionId;
+                          return (
+                            <button
+                              key={member.specialist.id}
+                              type="button"
+                              onClick={() => member.sessionId && setSelectedSessionId(member.sessionId)}
+                              disabled={!member.sessionId}
+                              className={`flex w-full items-start gap-3 rounded-[16px] px-3 py-2.5 text-left transition ${
+                                active
+                                  ? "border border-cyan-300 bg-cyan-50/80 dark:border-cyan-800 dark:bg-cyan-950/20"
+                                  : member.sessionId
+                                    ? "border border-transparent hover:bg-desktop-bg-active/80"
+                                    : "cursor-default opacity-70"
+                              }`}
+                            >
+                              <div className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${roleAvatarClass(member.specialist.id)}`}>
+                                {member.actor
+                                  .split(" ")
+                                  .map((part) => part.charAt(0))
+                                  .join("")
+                                  .slice(0, 2)
+                                  .toUpperCase()}
+                                <span className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-[#141821] ${statusDotClass(member.status)}`} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-xs font-medium text-desktop-text-primary">{member.actor}</div>
+                                <div className="mt-0.5 truncate text-[11px] text-desktop-text-muted">
+                                  {member.lastUpdatedLabel ?? member.specialist.id}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <EmptyPanel message="No selected session." />
+                  )}
                 </PanelCard>
 
                 <PanelCard title="Deliverables">
@@ -1229,7 +1311,7 @@ export function TeamRunPageClient() {
                         <button
                           key={item.id}
                           type="button"
-                          onClick={() => item.sessionId && setSelectedSessionForModal(item.sessionId)}
+                          onClick={() => item.sessionId && setSelectedSessionId(item.sessionId)}
                           disabled={!item.sessionId}
                           className={`flex w-full items-start gap-3 rounded-[18px] px-3 py-3 text-left transition ${
                             item.sessionId
@@ -1269,20 +1351,20 @@ export function TeamRunPageClient() {
                     <ControlButton
                       title="Ask lead to revise plan"
                       description="Open the lead session in the shared chat UI and send revision guidance."
-                      onClick={() => setSelectedSessionForModal(sessionId)}
+                      onClick={() => setSelectedSessionId(sessionId)}
                     />
                     <ControlButton
                       title="Add context"
                       description="Open the lead session and append missing requirements or repo context."
-                      onClick={() => setSelectedSessionForModal(sessionId)}
+                      onClick={() => setSelectedSessionId(sessionId)}
                     />
                     <ControlButton
                       title="Escalate review"
                       description="Jump to the current QA or review session when a phase needs scrutiny."
-                      onClick={() => setSelectedSessionForModal(reviewTargetSessionId)}
+                      onClick={() => setSelectedSessionId(reviewTargetSessionId)}
                     />
                     <Link
-                      href={`/workspace/${workspaceId}/sessions/${sessionId}`}
+                      href={`/workspace/${workspaceId}/sessions/${selectedSessionStream?.session.sessionId ?? sessionId}`}
                       className="mt-1 flex items-center gap-2 rounded-[18px] border border-desktop-border px-3 py-3 text-sm text-desktop-text-secondary transition-colors hover:bg-desktop-bg-active hover:text-desktop-text-primary"
                     >
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1298,7 +1380,7 @@ export function TeamRunPageClient() {
         </div>
       </div>
 
-      {selectedSessionStream && (
+      {selectedSessionForModal && selectedSessionStream && (
         <OverlayModal
           onClose={() => setSelectedSessionForModal(null)}
           title={`${selectedSessionStream.actor} Session`}
@@ -1519,7 +1601,20 @@ function CoordinationFeedItem({
         <div className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold ${activityTone(item.type)}`}>
           {item.type[0].toUpperCase()}
         </div>
-        <div className="min-w-0 flex-1 rounded-[20px] border border-desktop-border bg-desktop-bg-secondary p-4">
+        <div
+          role={onInspectSession ? "button" : undefined}
+          tabIndex={onInspectSession ? 0 : undefined}
+          onClick={onInspectSession}
+          onKeyDown={onInspectSession ? (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              onInspectSession();
+            }
+          } : undefined}
+          className={`min-w-0 flex-1 rounded-[20px] border border-desktop-border bg-desktop-bg-secondary p-4 text-left transition ${
+            onInspectSession ? "cursor-pointer hover:border-cyan-300 hover:bg-desktop-bg-active/50" : ""
+          }`}
+        >
           <div className="flex flex-wrap items-center justify-between gap-2.5">
             <div className="min-w-0">
               <div className="text-sm font-semibold text-desktop-text-primary">{item.title}</div>
@@ -1537,18 +1632,7 @@ function CoordinationFeedItem({
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {onInspectSession && (
-                <button
-                  type="button"
-                  onClick={onInspectSession}
-                  className="rounded-full border border-desktop-border px-2.5 py-1 text-[11px] font-medium text-desktop-text-secondary transition-colors hover:bg-desktop-bg-active hover:text-desktop-text-primary"
-                >
-                  Inspect session
-                </button>
-              )}
-              <span className="text-[11px] text-desktop-text-muted">{item.timestamp}</span>
-            </div>
+            <span className="text-[11px] text-desktop-text-muted">{item.timestamp}</span>
           </div>
           {item.summary && (
             <div className="mt-3 rounded-[16px] border border-desktop-border bg-desktop-bg-primary px-3 py-2.5 text-sm leading-6 text-desktop-text-secondary">
@@ -1586,6 +1670,48 @@ function CoordinationFeedItem({
         </div>
       </div>
     </div>
+  );
+}
+
+function SessionRailItem({
+  stream,
+  active,
+  onSelect,
+}: {
+  stream: SessionStreamSummary;
+  active: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`w-full rounded-[18px] border px-3 py-3 text-left transition ${
+        active
+          ? "border-cyan-300 bg-cyan-50/80 dark:border-cyan-800 dark:bg-cyan-950/20"
+          : "border-desktop-border bg-desktop-bg-primary hover:border-cyan-300 hover:bg-desktop-bg-active/80"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-semibold text-desktop-text-primary">{stream.actor}</div>
+          <div className="mt-0.5 truncate text-[11px] text-desktop-text-secondary">
+            {stream.session.name ?? stream.session.sessionId}
+          </div>
+        </div>
+        <span className="shrink-0 rounded-full border border-desktop-border px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-desktop-text-secondary">
+          {stream.badge}
+        </span>
+      </div>
+      <div className="mt-2 flex items-center gap-1.5 text-[10px] text-desktop-text-muted">
+        <span>{stream.lastUpdatedLabel}</span>
+        <span className="opacity-40">/</span>
+        <span>{stream.eventCount} updates</span>
+      </div>
+      <div className="mt-2 line-clamp-2 text-xs leading-5 text-desktop-text-secondary">
+        {stream.preview ?? "No transcript content yet."}
+      </div>
+    </button>
   );
 }
 
