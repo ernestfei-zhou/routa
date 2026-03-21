@@ -62,9 +62,10 @@ export function getCustomAcpProviderById(id: string): CustomAcpProvider | undefi
   return loadCustomAcpProviders().find((p) => p.id === id);
 }
 
-// ─── Disabled Providers Management ────────────────────────────────────────────
+// ─── Hidden Providers Management ─────────────────────────────────────────────
 
-const DISABLED_PROVIDERS_KEY = "routa.disabledProviders";
+const HIDDEN_PROVIDERS_KEY = "routa.hiddenProviders";
+const LEGACY_DISABLED_PROVIDERS_KEY = "routa.disabledProviders";
 const PROVIDER_DISPLAY_PREFERENCES_KEY = "routa.providerDisplayPreferences";
 export const PROVIDER_DISPLAY_PREFERENCES_CHANGED_EVENT = "routa:provider-display-preferences-changed";
 
@@ -72,12 +73,9 @@ export interface ProviderDisplayPreferences {
   visibleProviderIds: string[];
 }
 
-/** Load the list of disabled provider IDs from localStorage. */
-export function loadDisabledProviders(): string[] {
-  if (typeof window === "undefined") return [];
+function parseStoredProviderIds(raw: string | null): string[] {
+  if (!raw) return [];
   try {
-    const raw = localStorage.getItem(DISABLED_PROVIDERS_KEY);
-    if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed.filter((id): id is string => typeof id === "string");
@@ -86,45 +84,88 @@ export function loadDisabledProviders(): string[] {
   }
 }
 
-/** Save the list of disabled provider IDs to localStorage. */
-export function saveDisabledProviders(providerIds: string[]): void {
+/** Load the list of hidden provider IDs from localStorage, with legacy fallback. */
+export function loadHiddenProviders(): string[] {
+  if (typeof window === "undefined") return [];
+  const hiddenProviderIds = parseStoredProviderIds(localStorage.getItem(HIDDEN_PROVIDERS_KEY));
+  if (hiddenProviderIds.length > 0) {
+    return hiddenProviderIds;
+  }
+  return parseStoredProviderIds(localStorage.getItem(LEGACY_DISABLED_PROVIDERS_KEY));
+}
+
+/** Save the list of hidden provider IDs to localStorage and keep the legacy key in sync. */
+export function saveHiddenProviders(providerIds: string[]): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(DISABLED_PROVIDERS_KEY, JSON.stringify(providerIds));
+    const normalizedProviderIds = dedupeProviderIds(providerIds);
+    const serializedProviderIds = JSON.stringify(normalizedProviderIds);
+    localStorage.setItem(HIDDEN_PROVIDERS_KEY, serializedProviderIds);
+    localStorage.setItem(LEGACY_DISABLED_PROVIDERS_KEY, serializedProviderIds);
   } catch (err) {
-    console.warn("[custom-acp-providers] Failed to save disabled providers to localStorage:", err);
+    console.warn("[custom-acp-providers] Failed to save hidden providers to localStorage:", err);
   }
 }
 
-/** Check if a provider is disabled. */
-export function isProviderDisabled(providerId: string): boolean {
-  return loadDisabledProviders().includes(providerId);
+/** Check if a provider is hidden. */
+export function isProviderHidden(providerId: string): boolean {
+  return loadHiddenProviders().includes(providerId);
 }
 
-/** Disable a provider by adding it to the disabled list. */
-export function disableProvider(providerId: string): void {
-  const disabled = loadDisabledProviders();
-  if (!disabled.includes(providerId)) {
-    saveDisabledProviders([...disabled, providerId]);
+/** Hide a provider by adding it to the hidden list. */
+export function hideProvider(providerId: string): void {
+  const hiddenProviderIds = loadHiddenProviders();
+  if (!hiddenProviderIds.includes(providerId)) {
+    saveHiddenProviders([...hiddenProviderIds, providerId]);
   }
 }
 
-/** Enable a provider by removing it from the disabled list. */
-export function enableProvider(providerId: string): void {
-  const disabled = loadDisabledProviders();
-  saveDisabledProviders(disabled.filter((id) => id !== providerId));
+/** Show a provider by removing it from the hidden list. */
+export function showProvider(providerId: string): void {
+  const hiddenProviderIds = loadHiddenProviders();
+  saveHiddenProviders(hiddenProviderIds.filter((id) => id !== providerId));
 }
 
-/** Toggle a provider's disabled state. */
-export function toggleProviderDisabled(providerId: string): boolean {
-  const disabled = loadDisabledProviders();
-  const isDisabled = disabled.includes(providerId);
-  if (isDisabled) {
-    saveDisabledProviders(disabled.filter((id) => id !== providerId));
+/** Toggle a provider's hidden state. Returns true when the provider is now shown. */
+export function toggleProviderHidden(providerId: string): boolean {
+  const hiddenProviderIds = loadHiddenProviders();
+  const isHidden = hiddenProviderIds.includes(providerId);
+  if (isHidden) {
+    saveHiddenProviders(hiddenProviderIds.filter((id) => id !== providerId));
   } else {
-    saveDisabledProviders([...disabled, providerId]);
+    saveHiddenProviders([...hiddenProviderIds, providerId]);
   }
-  return !isDisabled; // Return new state
+  return isHidden;
+}
+
+/** @deprecated Use loadHiddenProviders instead. */
+export function loadDisabledProviders(): string[] {
+  return loadHiddenProviders();
+}
+
+/** @deprecated Use saveHiddenProviders instead. */
+export function saveDisabledProviders(providerIds: string[]): void {
+  saveHiddenProviders(providerIds);
+}
+
+/** @deprecated Use isProviderHidden instead. */
+export function isProviderDisabled(providerId: string): boolean {
+  return isProviderHidden(providerId);
+}
+
+/** @deprecated Use hideProvider instead. */
+export function disableProvider(providerId: string): void {
+  hideProvider(providerId);
+}
+
+/** @deprecated Use showProvider instead. */
+export function enableProvider(providerId: string): void {
+  showProvider(providerId);
+}
+
+/** @deprecated Use toggleProviderHidden instead. */
+export function toggleProviderDisabled(providerId: string): boolean {
+  return toggleProviderHidden(providerId);
 }
 
 /** Load provider display preferences from localStorage. */

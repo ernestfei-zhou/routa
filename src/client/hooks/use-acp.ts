@@ -27,7 +27,7 @@ import {
 } from "../utils/diagnostics";
 import {
   loadCustomAcpProviders,
-  loadDisabledProviders,
+  loadHiddenProviders,
   sortProviderIdsByPreference,
   type CustomAcpProvider,
 } from "../utils/custom-acp-providers";
@@ -207,7 +207,7 @@ export function useAcp(baseUrl: string = ""): UseAcpState & UseAcpActions {
       const customProviders = loadCustomAcpProviders().map(toAcpProviderInfo);
 
       // Filter out disabled providers
-      const disabledProviders = loadDisabledProviders();
+      const disabledProviders = loadHiddenProviders();
       const allLocalProviders = sortProvidersByPreference(
         [...localProviders, ...customProviders].filter(
           (p) => !disabledProviders.includes(p.id)
@@ -242,7 +242,7 @@ export function useAcp(baseUrl: string = ""): UseAcpState & UseAcpActions {
         const customProvs = loadCustomAcpProviders().map(toAcpProviderInfo);
 
         // Filter out disabled providers
-        const disabledProvs = loadDisabledProviders();
+        const disabledProvs = loadHiddenProviders();
         const filteredLocalProviders = sortProvidersByPreference(
           [...checkedLocalProviders, ...customProvs].filter(
             (p) => !disabledProvs.includes(p.id)
@@ -270,7 +270,7 @@ export function useAcp(baseUrl: string = ""): UseAcpState & UseAcpActions {
         if (tearingDownRef.current) return;
         // loadRegistryProviders returns ALL providers (local + registry)
         // Filter to get only registry providers to avoid duplicates
-        const disabledProvs = loadDisabledProviders();
+        const disabledProvs = loadHiddenProviders();
         const registryProviders = sortProvidersByPreference(
           allProviders
             .filter((p) => p.source === "registry")
@@ -290,7 +290,7 @@ export function useAcp(baseUrl: string = ""): UseAcpState & UseAcpActions {
           // This updates the status from "checking" to "available" or "unavailable"
           client.listProviders(true, true).then((checkedAllProviders) => {
             if (tearingDownRef.current) return;
-            const disabledProvs = loadDisabledProviders();
+            const disabledProvs = loadHiddenProviders();
             const checkedRegistry = sortProvidersByPreference(
               checkedAllProviders
                 .filter((p) => p.source === "registry")

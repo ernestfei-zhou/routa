@@ -15,8 +15,8 @@ import {
 import {
   loadCustomAcpProviders,
   saveCustomAcpProviders,
-  loadDisabledProviders,
-  saveDisabledProviders,
+  loadHiddenProviders,
+  saveHiddenProviders,
   type CustomAcpProvider,
 } from "../utils/custom-acp-providers";
 import {
@@ -1097,7 +1097,7 @@ interface ProviderCatalogSectionProps {
 }
 
 function ProviderCatalogSection({ allProviders }: ProviderCatalogSectionProps) {
-  const [hiddenProviderIds, setHiddenProviderIds] = useState<string[]>(() => loadDisabledProviders());
+  const [hiddenProviderIds, setHiddenProviderIds] = useState<string[]>(() => loadHiddenProviders());
 
   const handleToggle = (providerId: string) => {
     const nextHiddenProviderIds = hiddenProviderIds.includes(providerId)
@@ -1105,7 +1105,7 @@ function ProviderCatalogSection({ allProviders }: ProviderCatalogSectionProps) {
       : [...hiddenProviderIds, providerId];
 
     setHiddenProviderIds(nextHiddenProviderIds);
-    saveDisabledProviders(nextHiddenProviderIds);
+    saveHiddenProviders(nextHiddenProviderIds);
 
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("routa:providers-changed"));
