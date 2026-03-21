@@ -410,6 +410,16 @@ function extractFullHistoryText(update?: SessionHistoryEntry["update"]): string 
   return joined || undefined;
 }
 
+function isLowSignalLeadMessage(text?: string): boolean {
+  const normalized = text?.replace(/\s+/g, " ").trim().toLowerCase();
+  if (!normalized) return true;
+  return (
+    normalized.includes("已派发 researcher 任务。正在等待回报")
+    || normalized.includes("reported completion back to lead (auto-submitted by orchestrator)")
+    || normalized.includes("正在等待回报")
+  );
+}
+
 function resolveDelegationTarget(update?: SessionHistoryEntry["update"]): string | undefined {
   const rawInput = update?.rawInput;
   if (!rawInput) return undefined;
@@ -616,6 +626,7 @@ function buildLaneSnippets(history: SessionHistoryEntry[], maxSnippets = 5): Ses
         );
 
       if (!text) return null;
+      if (isLowSignalLeadMessage(text)) return null;
       return {
         id: `${entry.sessionId}-${index}`,
         label: laneSnippetLabel(update),
@@ -1499,7 +1510,7 @@ export function TeamRunPageClient() {
         const member = teamMembers.find((item) => item.sessionId === stream.session.sessionId);
         const completion = stream.session.routaAgentId ? completionByAgentId.get(stream.session.routaAgentId) : undefined;
         const snippets = buildLaneSnippets(history, 4);
-        if (completion?.completionSummary) {
+        if (completion?.completionSummary && !isLowSignalLeadMessage(completion.completionSummary)) {
           snippets.push({
             id: `${stream.session.sessionId}-report-back`,
             label: "Report back",
@@ -1561,7 +1572,7 @@ export function TeamRunPageClient() {
 
       if (updateType === "agent_message") {
         const text = extractFullHistoryText(update);
-        return text
+        return text && !isLowSignalLeadMessage(text)
           ? [{
             id: `${sessionId}-lead-message-${index}`,
             sessionId,
@@ -1577,6 +1588,10 @@ export function TeamRunPageClient() {
       if (updateType === "task_completion") {
         const linkedStream = typeof update.agentId === "string" ? sessionStreamByAgentId.get(update.agentId) : undefined;
         const actor = linkedStream?.actor ?? "Team member";
+        const summary = summarizeText(update.completionSummary ?? extractHistoryText(update), 260);
+        if (isLowSignalLeadMessage(summary)) {
+          return [];
+        }
         return [{
           id: `${sessionId}-report-${index}`,
           sessionId,
@@ -1586,7 +1601,7 @@ export function TeamRunPageClient() {
             ? (resolveRosterSpecialistId(linkedStream.session, agentsById) ?? linkedStream.session.specialistId)
             : undefined,
           timestamp,
-          summary: summarizeText(update.completionSummary ?? extractHistoryText(update), 260),
+          summary,
           tone: normalizeTaskStatus(update.taskStatus) === "blocked" ? "blocked" : "complete",
         } satisfies SessionTimelineItem];
       }
@@ -1840,7 +1855,6 @@ export function TeamRunPageClient() {
                       key={item.id}
                       item={item}
                       activeSessionId={selectedSessionId}
-                      workspaceId={workspaceId}
                       sessionBlockRef={item.memberLane ? (node) => {
                         sessionBlockRefs.current[item.memberLane!.sessionId] = node;
                       } : undefined}
@@ -2134,16 +2148,6 @@ function SessionStatusPill({ status }: { status: TeamMemberStatus }) {
   );
 }
 
-function snippetDotClass(snippet: SessionLaneSnippet): string {
-  if (snippet.kind === "report") {
-    return snippet.tone === "blocked" ? "bg-rose-500" : "bg-emerald-500";
-  }
-  if (snippet.kind === "tool") return "bg-cyan-500";
-  if (snippet.kind === "error") return "bg-rose-500";
-  if (snippet.kind === "user") return "bg-slate-500";
-  return "bg-slate-300";
-}
-
 function snippetBodyClass(snippet: SessionLaneSnippet): string {
   if (snippet.kind === "report") {
     return snippet.tone === "blocked"
@@ -2159,7 +2163,6 @@ function snippetBodyClass(snippet: SessionLaneSnippet): string {
 function SessionTimelineCard({
   item,
   activeSessionId,
-  workspaceId,
   sessionBlockRef,
   onSelectSession,
   onOpenViewer,
@@ -2167,7 +2170,6 @@ function SessionTimelineCard({
 }: {
   item: SessionTimelineItem;
   activeSessionId?: string;
-  workspaceId: string;
   sessionBlockRef?: (node: HTMLDivElement | null) => void;
   onSelectSession?: () => void;
   onOpenViewer: () => void;
@@ -2206,45 +2208,33 @@ function SessionTimelineCard({
   const wrapperClass = lane
     ? "rounded-[12px] border border-desktop-border bg-desktop-bg-secondary"
     : "px-1 py-1";
+  const showMeta = item.actorRoleId !== TEAM_LEAD_SPECIALIST_ID;
 
   return (
     <div className={wrapperClass}>
       <div className="flex items-start justify-between gap-2.5 px-3 py-2">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] ${roleChipClass(item.actorRoleId, item.actorRoleId === TEAM_LEAD_SPECIALIST_ID ? "strong" : "soft")}`}>
-              {item.actor}
-            </span>
-            <span className="text-[10px] text-desktop-text-muted">{item.timestamp}</span>
-          </div>
+          {showMeta ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] ${roleChipClass(item.actorRoleId, item.actorRoleId === TEAM_LEAD_SPECIALIST_ID ? "strong" : "soft")}`}>
+                {item.actor}
+              </span>
+              <span className="text-[10px] text-desktop-text-muted">{item.timestamp}</span>
+            </div>
+          ) : null}
           {item.summary && (
-            <div className={`mt-2 rounded-xl border px-3 py-2 ${bubbleToneClass}`}>
+            <div className={`${showMeta ? "mt-2" : ""} rounded-xl border px-3 py-2 ${bubbleToneClass}`}>
               {metaLabel && (
                 <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">
                   {metaLabel}
                 </div>
               )}
-              <MarkdownViewer content={item.summary} className="text-sm leading-6" />
+              <div className={lane ? "line-clamp-1" : ""}>
+                <MarkdownViewer content={item.summary} className="text-sm leading-6" />
+              </div>
             </div>
           )}
         </div>
-        {lane ? (
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={onOpenViewer}
-              className="rounded-[10px] border border-desktop-border bg-desktop-bg-primary px-2 py-1 text-[10px] font-medium text-desktop-text-secondary transition-colors hover:bg-desktop-bg-active hover:text-desktop-text-primary"
-            >
-              Open viewer
-            </button>
-            <Link
-              href={`/workspace/${workspaceId}/sessions/${item.sessionId}`}
-              className="rounded-[10px] bg-desktop-accent px-2 py-1 text-[10px] font-medium text-desktop-accent-text transition-colors hover:opacity-90"
-            >
-              Raw session
-            </Link>
-          </div>
-        ) : null}
       </div>
 
       {lane && (
@@ -2270,7 +2260,6 @@ function SessionTimelineCard({
                 <span className="text-[10px] text-desktop-text-muted opacity-40">/</span>
                 <span className="text-[10px] text-desktop-text-muted">{lane.eventCount} updates</span>
               </div>
-              <div className="mt-1 truncate text-[13px] font-semibold text-desktop-text-primary">{lane.sessionName}</div>
             </div>
             <div className="flex items-center gap-1.5">
               <button
@@ -2280,20 +2269,10 @@ function SessionTimelineCard({
               >
                 Open viewer
               </button>
-              <Link
-                href={`/workspace/${workspaceId}/sessions/${lane.sessionId}`}
-                className="rounded-[10px] bg-desktop-accent px-2 py-1 text-[10px] font-medium text-desktop-accent-text transition-colors hover:opacity-90"
-              >
-                Raw session
-              </Link>
             </div>
           </div>
 
           <div className="border-t border-desktop-border/80 px-3 py-2">
-            <div className="mb-1.5 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-desktop-text-muted">
-              <span>Recent transcript</span>
-              <span>{lane.snippets.length} items</span>
-            </div>
             {lane.snippets.length === 0 ? (
               <div className="rounded-[10px] border border-dashed border-desktop-border px-3 py-2 text-[11px] text-desktop-text-secondary">
                 No transcript content yet.
@@ -2301,24 +2280,8 @@ function SessionTimelineCard({
             ) : (
               <div className="h-[120px] space-y-1.5 overflow-y-auto pr-1">
                 {lane.snippets.map((snippet) => (
-                  <div
-                    key={snippet.id}
-                    className={`flex gap-2 ${snippet.kind === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    {snippet.kind !== "user" && (
-                      <div className="flex w-14 shrink-0 flex-col items-end pt-0.5 text-right">
-                        <span className={`h-2 w-2 rounded-full ${snippetDotClass(snippet)}`} />
-                        <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-desktop-text-muted">
-                          {snippet.label}
-                        </span>
-                      </div>
-                    )}
-                    <div className={`min-w-0 ${snippet.kind === "user" ? "max-w-[85%]" : "flex-1"}`}>
-                      {snippet.kind === "user" && (
-                        <div className="mb-0.5 text-right text-[9px] font-semibold uppercase tracking-[0.12em] text-desktop-text-muted">
-                          {snippet.label}
-                        </div>
-                      )}
+                  <div key={snippet.id} className={snippet.kind === "user" ? "flex justify-end" : ""}>
+                    <div className={`min-w-0 ${snippet.kind === "user" ? "max-w-[85%]" : "w-full"}`}>
                       <div className={`rounded-[10px] border px-2.5 py-1.5 ${snippetBodyClass(snippet)}`}>
                         <div className="line-clamp-1 text-[11px] leading-5 text-desktop-text-secondary">{snippet.text}</div>
                       </div>
