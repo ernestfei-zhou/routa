@@ -1,8 +1,9 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import type { AcpProviderInfo } from "@/client/acp-client";
 import { AcpProviderDropdown } from "@/client/components/acp-provider-dropdown";
+import { desktopAwareFetch } from "@/client/utils/diagnostics";
 import {
   getKanbanAutomationSteps,
   type KanbanAutomationStep,
@@ -58,6 +59,7 @@ const DEFAULT_DEV_SESSION_SUPERVISION: KanbanDevSessionSupervisionInfo = {
 };
 
 const ROLE_OPTIONS = ["CRAFTER", "ROUTA", "GATE", "DEVELOPER"];
+const KANBAN_EXPORT_WORKSPACE_KEY = "routa.kanbanExportWorkspaceId";
 const ARTIFACT_OPTIONS = [
   { id: "screenshot", label: "Screenshot", hint: "Require UI evidence before continuing." },
   { id: "test_results", label: "Test results", hint: "Ensure verification artifacts are attached." },
@@ -73,6 +75,20 @@ function createEmptyAutomationStep(index: number): KanbanAutomationStep {
     id: `step-${index + 1}`,
     role: "DEVELOPER",
   };
+}
+
+function loadKanbanExportWorkspaceId(defaultWorkspaceId: string): string {
+  if (typeof window === "undefined") return defaultWorkspaceId;
+  try {
+    return localStorage.getItem(KANBAN_EXPORT_WORKSPACE_KEY)?.trim() || defaultWorkspaceId;
+  } catch {
+    return defaultWorkspaceId;
+  }
+}
+
+function saveKanbanExportWorkspaceId(workspaceId: string): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(KANBAN_EXPORT_WORKSPACE_KEY, workspaceId);
 }
 
 function getDefaultAutomationForStage(stage: string): ColumnAutomationConfig {
@@ -282,6 +298,14 @@ export function KanbanSettingsModal({
   const [saving, setSaving] = useState(false);
   const [showRuntimeSettings, setShowRuntimeSettings] = useState(false);
   const [specialistCategory, setSpecialistCategory] = useState<SpecialistCategory>("kanban");
+  const [kanbanExportWorkspaceId, setKanbanExportWorkspaceId] = useState<string>(() =>
+    loadKanbanExportWorkspaceId(board.workspaceId || "default"),
+  );
+  const [isExportingKanbanYaml, setIsExportingKanbanYaml] = useState(false);
+  const [isImportingKanbanYaml, setIsImportingKanbanYaml] = useState(false);
+  const [kanbanYamlError, setKanbanYamlError] = useState("");
+  const [kanbanYamlResult, setKanbanYamlResult] = useState("");
+  const kanbanImportInputRef = useRef<HTMLInputElement>(null);
 
   const sortedColumns = useMemo(
     () => board.columns.slice().sort((a, b) => a.position - b.position),
@@ -294,6 +318,10 @@ export function KanbanSettingsModal({
       setSelectedColumnId(sortedColumns[0].id);
     }
   }, [selectedColumnId, sortedColumns]);
+
+  useEffect(() => {
+    setKanbanExportWorkspaceId((current) => current || board.workspaceId || "default");
+  }, [board.workspaceId]);
 
   useEffect(() => {
     setColumnAutomation((current) => Object.fromEntries(
@@ -374,19 +402,83 @@ export function KanbanSettingsModal({
     }
   };
 
+  const handleKanbanExportWorkspaceChange = (value: string) => {
+    setKanbanExportWorkspaceId(value);
+    saveKanbanExportWorkspaceId(value.trim() || board.workspaceId || "default");
+  };
+
+  const handleExportKanbanYaml = async () => {
+    const workspaceId = kanbanExportWorkspaceId.trim() || board.workspaceId || "default";
+    setKanbanYamlError("");
+    setKanbanYamlResult("");
+    setIsExportingKanbanYaml(true);
+    try {
+      saveKanbanExportWorkspaceId(workspaceId);
+      const response = await desktopAwareFetch(`/api/kanban/export?workspaceId=${encodeURIComponent(workspaceId)}`, {
+        method: "GET",
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error || "Export failed");
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = downloadUrl;
+      anchor.download = `kanban-${workspaceId.replace(/[^a-zA-Z0-9_-]+/g, "-") || "default"}.yaml`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+      setKanbanYamlResult(`Exported Kanban YAML for workspace ${workspaceId}.`);
+    } catch (error) {
+      setKanbanYamlError(error instanceof Error ? error.message : "Export failed");
+    } finally {
+      setIsExportingKanbanYaml(false);
+    }
+  };
+
+  const handleImportKanbanYaml = async (file: File) => {
+    const workspaceId = kanbanExportWorkspaceId.trim() || board.workspaceId || "default";
+    setKanbanYamlError("");
+    setKanbanYamlResult("");
+    setIsImportingKanbanYaml(true);
+    try {
+      const yamlContent = await file.text();
+      const response = await desktopAwareFetch("/api/kanban/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ yamlContent, workspaceId }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || "Import failed");
+      }
+      setKanbanYamlResult(`Imported ${payload?.importedBoards ?? 0} board(s) into workspace ${payload?.workspaceId ?? workspaceId}.`);
+    } catch (error) {
+      setKanbanYamlError(error instanceof Error ? error.message : "Import failed");
+    } finally {
+      if (kanbanImportInputRef.current) {
+        kanbanImportInputRef.current.value = "";
+      }
+      setIsImportingKanbanYaml(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm">
       <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
       <div className="relative flex h-full w-full items-center justify-center p-2 sm:p-4">
-        <div className="relative flex h-[94vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-[24px] border border-white/10 bg-white shadow-[0_30px_120px_rgba(15,23,42,0.32)] dark:bg-[#0d1118]">
-          <div className="relative overflow-hidden border-b border-slate-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.16),_transparent_30%),linear-gradient(135deg,_rgba(255,255,255,0.98),_rgba(248,250,252,0.94))] px-4 py-3 dark:border-slate-800 dark:bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.12),_transparent_28%),linear-gradient(135deg,_rgba(15,23,42,0.96),_rgba(13,17,24,0.98))] sm:px-5">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative flex h-[96vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-[22px] border border-white/10 bg-white shadow-[0_30px_120px_rgba(15,23,42,0.32)] dark:bg-[#0d1118]">
+          <div className="relative overflow-hidden border-b border-slate-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.12),_transparent_28%),linear-gradient(135deg,_rgba(255,255,255,0.98),_rgba(248,250,252,0.96))] px-3.5 py-2.5 dark:border-slate-800 dark:bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.1),_transparent_24%),linear-gradient(135deg,_rgba(15,23,42,0.96),_rgba(13,17,24,0.98))] sm:px-4">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="inline-flex items-center rounded-full border border-amber-300/70 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
                     Kanban
                   </div>
-                  <h2 className="truncate text-lg font-semibold tracking-tight text-slate-900 dark:text-white sm:text-xl">
+                  <h2 className="truncate text-base font-semibold tracking-tight text-slate-900 dark:text-white sm:text-lg">
                     {board.name}
                   </h2>
                 </div>
@@ -399,33 +491,33 @@ export function KanbanSettingsModal({
                 <button
                   type="button"
                   onClick={() => setShowRuntimeSettings((current) => !current)}
-                  className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-[#111722]"
+                  className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700 transition hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-[#111722]"
                 >
                   {showRuntimeSettings ? "Hide runtime" : "Runtime"}
                 </button>
               </div>
             </div>
             {showRuntimeSettings ? (
-              <div className="mt-2 rounded-xl border border-slate-200/80 bg-white/90 p-2.5 backdrop-blur dark:border-slate-800 dark:bg-slate-950/40">
-                <div className="grid gap-3 dark:border-slate-800 lg:grid-cols-2">
+              <div className="mt-2 rounded-lg border border-slate-200/80 bg-white/90 p-2 backdrop-blur dark:border-slate-800 dark:bg-slate-950/40">
+                <div className="grid gap-2.5 dark:border-slate-800 lg:grid-cols-[220px_minmax(0,1fr)]">
                       <div>
                         <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
                           Session queue
                         </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-2.5">
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
                           <label className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Max</span>
+                            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Max</span>
                             <input
                               type="number"
                               min={1}
                               max={20}
                               value={sessionConcurrencyLimit}
                               onChange={(event) => setSessionConcurrencyLimit(Math.max(1, Number.parseInt(event.target.value || "1", 10) || 1))}
-                              className="h-10 w-20 rounded-xl border border-slate-200 bg-slate-50 px-3 text-base font-semibold text-slate-900 outline-none transition focus:border-amber-400 dark:border-slate-700 dark:bg-[#0b1119] dark:text-slate-100"
+                              className="h-9 w-18 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-amber-400 dark:border-slate-700 dark:bg-[#0b1119] dark:text-slate-100"
                             />
                           </label>
                         </div>
-                        <p className="mt-2 max-w-[260px] text-sm leading-5 text-slate-500 dark:text-slate-400">
+                        <p className="mt-1.5 max-w-[240px] text-xs leading-5 text-slate-500 dark:text-slate-400">
                           Extra cards wait here until a running session completes.
                         </p>
                       </div>
@@ -433,7 +525,7 @@ export function KanbanSettingsModal({
                         <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
                           Dev supervision
                         </div>
-                        <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                        <div className="mt-1.5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                           <label className="space-y-1 text-xs font-medium text-slate-600 dark:text-slate-300">
                             <span>Mode</span>
                             <SelectControl
@@ -461,7 +553,7 @@ export function KanbanSettingsModal({
                                 ...current,
                                 inactivityTimeoutMinutes: Math.max(1, Number.parseInt(event.target.value || "10", 10) || 10),
                               }))}
-                              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-amber-400 dark:border-slate-700 dark:bg-[#0b1119] dark:text-slate-100"
+                              className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-amber-400 dark:border-slate-700 dark:bg-[#0b1119] dark:text-slate-100"
                             />
                           </label>
                           <label className="space-y-1 text-xs font-medium text-slate-600 dark:text-slate-300">
@@ -476,7 +568,7 @@ export function KanbanSettingsModal({
                                 ...current,
                                 maxRecoveryAttempts: Math.max(0, Number.parseInt(event.target.value || "0", 10) || 0),
                               }))}
-                              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-amber-400 dark:border-slate-700 dark:bg-[#0b1119] dark:text-slate-100"
+                              className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-amber-400 dark:border-slate-700 dark:bg-[#0b1119] dark:text-slate-100"
                             />
                           </label>
                           <label className="space-y-1 text-xs font-medium text-slate-600 dark:text-slate-300">
@@ -503,15 +595,15 @@ export function KanbanSettingsModal({
             ) : null}
           </div>
 
-          <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[272px_minmax(0,1fr)]">
-            <aside className="min-h-0 overflow-y-auto border-b border-slate-200/80 bg-slate-50/50 p-2.5 dark:border-slate-800 dark:bg-[#0a0f16] xl:border-b-0 xl:border-r xl:p-3">
-              <div className="space-y-3">
+          <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[304px_minmax(0,1fr)]">
+            <aside className="min-h-0 overflow-y-auto overflow-x-hidden border-b border-slate-200/80 bg-slate-50/40 p-2 dark:border-slate-800 dark:bg-[#0a0f16] lg:border-b-0 lg:border-r lg:p-2.5">
+              <div className="space-y-2.5">
                 <SectionCard
                   eyebrow="Stage map"
                   title="Stages"
                   description=""
                 >
-                  <div className="flex gap-2 overflow-x-auto pb-1 xl:block xl:space-y-1 xl:overflow-visible xl:pb-0">
+                  <div className="space-y-1">
                     {sortedColumns.map((column) => {
                       const automation = columnAutomation[column.id] ?? { enabled: false };
                       const active = selectedColumnId === column.id;
@@ -519,7 +611,7 @@ export function KanbanSettingsModal({
                       return (
                         <div
                           key={column.id}
-                          className={`min-w-[198px] rounded-[12px] border px-2 py-1.5 transition xl:min-w-0 ${
+                          className={`min-w-0 rounded-[10px] border px-2 py-1 transition ${
                             active
                               ? "border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-900/10 dark:border-amber-400/40 dark:bg-slate-900"
                               : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-[#111722] dark:hover:border-slate-700"
@@ -528,20 +620,17 @@ export function KanbanSettingsModal({
                           <button
                             type="button"
                             onClick={() => setSelectedColumnId(column.id)}
-                            className="min-w-0 flex-1 text-left"
+                            className="block w-full min-w-0 text-left"
                           >
-                            <div className="flex items-start justify-between gap-3">
+                            <div className="flex min-w-0 items-start justify-between gap-2">
                               <div className="min-w-0">
-                                <div className={`text-sm font-medium ${active ? "text-white" : "text-slate-900 dark:text-slate-100"}`}>{column.name}</div>
-                                <div className={`truncate text-[11px] uppercase tracking-[0.18em] ${active ? "text-slate-300" : "text-slate-400 dark:text-slate-500"}`}>
-                                  {column.id}
-                                </div>
-                                <div className={`mt-1 text-[10px] leading-4 ${active ? "text-slate-300" : "text-slate-500 dark:text-slate-400"}`}>
-                                  {automation.enabled ? getAutomationSummary(automation, availableProviders, specialists) : "Manual only"}
+                                <div className={`text-[12px] font-semibold ${active ? "text-white" : "text-slate-900 dark:text-slate-100"}`}>{column.name}</div>
+                                <div className={`mt-0.5 truncate text-[10px] leading-4 ${active ? "text-slate-300" : "text-slate-500 dark:text-slate-400"}`}>
+                                  {column.id} · {automation.enabled ? getAutomationSummary(automation, availableProviders, specialists) : "Manual only"}
                                 </div>
                               </div>
                               <div
-                                className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                                className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] ${
                                   active
                                     ? "bg-white/10 text-slate-200"
                                     : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
@@ -552,7 +641,7 @@ export function KanbanSettingsModal({
                             </div>
                           </button>
                           <div
-                            className={`mt-1.5 flex items-center justify-between rounded-lg border px-2 py-1 ${
+                            className={`mt-1 flex items-center justify-between rounded-md border px-2 py-0.5 ${
                               active
                                 ? "border-white/15 bg-white/5"
                                 : "border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-[#0b1119]"
@@ -560,7 +649,7 @@ export function KanbanSettingsModal({
                           >
                             <div className="flex items-center gap-3">
                               <label className="flex items-center gap-1.5">
-                                <span className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${active ? "text-slate-300" : "text-slate-500 dark:text-slate-400"}`}>
+                                <span className={`text-[9px] font-semibold uppercase tracking-[0.16em] ${active ? "text-slate-300" : "text-slate-500 dark:text-slate-400"}`}>
                                   Visible
                                 </span>
                                 <input
@@ -579,7 +668,7 @@ export function KanbanSettingsModal({
                                 />
                               </label>
                               <label className="flex items-center gap-1.5">
-                                <span className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${active ? "text-slate-300" : "text-slate-500 dark:text-slate-400"}`}>
+                                <span className={`text-[9px] font-semibold uppercase tracking-[0.16em] ${active ? "text-slate-300" : "text-slate-500 dark:text-slate-400"}`}>
                                   Auto
                                 </span>
                                 <input
@@ -625,25 +714,79 @@ export function KanbanSettingsModal({
             </main>
           </div>
 
-          <div className="flex flex-col gap-2 border-t border-slate-200/80 bg-slate-50/80 px-4 py-3 dark:border-slate-800 dark:bg-[#0a0f16] sm:flex-row sm:items-center sm:justify-between sm:px-5">
-            <p className="text-sm leading-5 text-slate-500 dark:text-slate-400">
-              Changes apply to this board only. Hidden columns stay in data; automation changes only affect future transitions.
-            </p>
-            <div className="flex items-center justify-end gap-2">
-              <button
-                onClick={onClose}
-                disabled={saving}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-white disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-[#111722]"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => void handleSave()}
-                disabled={saving}
-                className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50 dark:bg-amber-500 dark:text-slate-950 dark:hover:bg-amber-400"
-              >
-                {saving ? "Saving..." : "Save board settings"}
-              </button>
+          <div className="border-t border-slate-200/80 bg-slate-50/80 px-4 py-2.5 dark:border-slate-800 dark:bg-[#0a0f16] sm:px-5">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0 space-y-1">
+                <p className="text-xs leading-5 text-slate-500 dark:text-slate-400 lg:truncate">
+                  Changes apply to this board only. Hidden columns stay in data; automation changes only affect future transitions.
+                </p>
+                {kanbanYamlError ? (
+                  <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300">
+                    {kanbanYamlError}
+                  </div>
+                ) : null}
+                {kanbanYamlResult ? (
+                  <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-300">
+                    {kanbanYamlResult}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <input
+                  type="text"
+                  value={kanbanExportWorkspaceId}
+                  onChange={(event) => handleKanbanExportWorkspaceChange(event.target.value)}
+                  placeholder={board.workspaceId || "default"}
+                  className="h-8 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-amber-400 dark:border-slate-700 dark:bg-[#0b1119] dark:text-slate-100 sm:w-36"
+                  aria-label="Kanban YAML workspace ID"
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleExportKanbanYaml()}
+                  disabled={isExportingKanbanYaml}
+                  className="rounded-md border border-slate-300 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:bg-white disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-[#111722]"
+                >
+                  {isExportingKanbanYaml ? "Exporting…" : "Export YAML"}
+                </button>
+                <input
+                  ref={kanbanImportInputRef}
+                  type="file"
+                  accept=".yaml,.yml,text/yaml,application/yaml"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) {
+                      void handleImportKanbanYaml(file);
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => kanbanImportInputRef.current?.click()}
+                  disabled={isImportingKanbanYaml}
+                  className="rounded-md border border-slate-300 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:bg-white disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-[#111722]"
+                >
+                  {isImportingKanbanYaml ? "Importing…" : "Import YAML"}
+                </button>
+                <div className="w-full sm:hidden" />
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    onClick={onClose}
+                    disabled={saving}
+                    className="rounded-xl border border-slate-200 px-4 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-white disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-[#111722]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => void handleSave()}
+                    disabled={saving}
+                    className="rounded-xl bg-slate-900 px-5 py-1.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50 dark:bg-amber-500 dark:text-slate-950 dark:hover:bg-amber-400"
+                  >
+                    {saving ? "Saving..." : "Save board settings"}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -694,30 +837,30 @@ function ColumnAutomationWorkspace({
   };
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-2">
       {automation.enabled ? (
-        <div className="space-y-2.5">
+        <div className="space-y-2">
           <SectionCard eyebrow="Stage" title={column.name} description="">
-            <div className="space-y-2.5">
-              <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-2 dark:border-slate-800 dark:bg-[#111722] lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50/70 p-2 dark:border-slate-800 dark:bg-[#111722] lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:border-slate-700 dark:bg-[#111722] dark:text-slate-400">
                     {column.id}
                   </span>
-                  <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[13px] font-medium text-slate-500 dark:border-slate-700 dark:bg-[#0d1118]/90 dark:text-slate-300">
+                  <div className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-500 dark:border-slate-700 dark:bg-[#0d1118]/90 dark:text-slate-300">
                     Configure in stage map
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={applyDefaultAutomation}
-                  className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[13px] font-medium text-slate-700 transition hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-[#111722]"
+                  className="rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-[#111722]"
                 >
                   Defaults
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-4">
                 <ConfigField label="Provider">
                   <ProviderField
                     providers={availableProviders}
@@ -751,7 +894,7 @@ function ColumnAutomationWorkspace({
                 </ConfigField>
 
                 <ConfigField label="Specialist">
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <SelectControl
                       aria-label="Specialist"
                       value={getLanguageSpecificSpecialistId(firstStep?.specialistId, specialistLanguage) ?? ""}
@@ -804,22 +947,22 @@ function ColumnAutomationWorkspace({
             title="Advanced"
             description=""
           >
-            <div className="space-y-2.5">
+            <div className="space-y-2">
                     {automationSteps.map((step, index) => {
                       const stepSpecialist = findSpecialistById(specialists, step.specialistId) ?? null;
                       return (
-                        <div key={step.id} className="rounded-lg border border-slate-200 bg-slate-50/60 px-2.5 py-2 dark:border-slate-800 dark:bg-[#111722]">
-                          <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,160px)_minmax(0,1fr)_auto] md:items-start">
+                        <div key={step.id} className="rounded-md border border-slate-200 bg-slate-50/60 px-2 py-2 dark:border-slate-800 dark:bg-[#111722]">
+                          <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,132px)_minmax(0,1fr)_auto] md:items-start">
                             <div className="min-w-0">
                               <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
                                 Step {index + 1}
                               </div>
-                              <div className="mt-0.5 truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+                              <div className="mt-0.5 truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">
                                 {getSpecialistDisplayName(stepSpecialist) ?? step.specialistName ?? step.role ?? "DEVELOPER"}
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                            <div className="grid grid-cols-1 gap-2 xl:grid-cols-3">
                               <ConfigField label={`Provider ${index + 1}`}>
                                 <ProviderField
                                   providers={availableProviders}
@@ -926,33 +1069,33 @@ function ColumnAutomationWorkspace({
                       );
                     })}
 
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-[#111722]">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-2 dark:border-slate-800 dark:bg-[#111722]">
                       <div>
-                        <div className="text-sm font-medium text-slate-900 dark:text-slate-100">Automation steps</div>
+                        <div className="text-[13px] font-semibold text-slate-900 dark:text-slate-100">Automation steps</div>
                       </div>
                       <button
                         type="button"
                         onClick={() => onUpdate(updateAutomationSteps(automation, (steps) => [...steps, createEmptyAutomationStep(steps.length)]))}
-                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-[#0b1119]"
+                        className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:border-slate-400 hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-[#0b1119]"
                       >
                         Add step
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                       {ARTIFACT_OPTIONS.map((artifact) => {
                         const checked = automation.requiredArtifacts?.includes(artifact.id) ?? false;
                         return (
                           <label
                             key={artifact.id}
-                            className={`flex cursor-pointer flex-col gap-2 rounded-2xl border px-4 py-3 transition ${
+                            className={`flex cursor-pointer flex-col gap-1.5 rounded-lg border px-3 py-2.5 transition ${
                               checked
                                 ? "border-amber-300 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10"
                                 : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-[#111722] dark:hover:border-slate-700"
                             }`}
                           >
                             <div className="flex items-center justify-between gap-3">
-                              <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{artifact.label}</span>
+                              <span className="text-[13px] font-semibold text-slate-900 dark:text-slate-100">{artifact.label}</span>
                               <input
                                 type="checkbox"
                                 checked={checked}
@@ -971,13 +1114,13 @@ function ColumnAutomationWorkspace({
                                 className="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
                               />
                             </div>
-                            <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{artifact.hint}</p>
+                            <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{artifact.hint}</p>
                           </label>
                         );
                       })}
                     </div>
 
-                    <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 dark:border-slate-800 dark:bg-[#111722]">
+                    <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-3 dark:border-slate-800 dark:bg-[#111722]">
                       <input
                         type="checkbox"
                         checked={automation.autoAdvanceOnSuccess ?? false}
@@ -985,8 +1128,8 @@ function ColumnAutomationWorkspace({
                         className="mt-1 h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
                       />
                       <span>
-                        <span className="block text-sm font-medium text-slate-900 dark:text-slate-100">Auto-advance on success</span>
-                        <span className="mt-1 block text-sm leading-6 text-slate-500 dark:text-slate-400">
+                        <span className="block text-[13px] font-semibold text-slate-900 dark:text-slate-100">Auto-advance on success</span>
+                        <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">
                           When the automation finishes successfully, let the orchestrator move the card to the next stage automatically.
                         </span>
                       </span>
@@ -996,26 +1139,26 @@ function ColumnAutomationWorkspace({
         </div>
       ) : (
         <SectionCard eyebrow="Stage" title={column.name} description="">
-            <div className="space-y-4">
-              <div className="flex flex-col gap-3 rounded-[18px] border border-slate-200 bg-[linear-gradient(135deg,_rgba(251,191,36,0.08),_rgba(255,255,255,0.98)_38%,_rgba(255,255,255,1)_100%)] p-3 dark:border-slate-800 dark:bg-[linear-gradient(135deg,_rgba(245,158,11,0.08),_rgba(15,23,42,0.92)_38%,_rgba(13,17,24,0.98)_100%)] lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-[linear-gradient(135deg,_rgba(251,191,36,0.08),_rgba(255,255,255,0.98)_38%,_rgba(255,255,255,1)_100%)] p-2.5 dark:border-slate-800 dark:bg-[linear-gradient(135deg,_rgba(245,158,11,0.08),_rgba(15,23,42,0.92)_38%,_rgba(13,17,24,0.98)_100%)] lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:border-slate-700 dark:bg-[#111722] dark:text-slate-400">
                     {column.id}
                   </span>
-                  <div className="rounded-2xl border border-slate-200 bg-white/90 px-3 py-2 text-sm font-medium text-slate-500 dark:border-slate-700 dark:bg-[#0d1118]/90 dark:text-slate-300">
+                  <div className="rounded-md border border-slate-200 bg-white/90 px-2.5 py-1.5 text-xs font-medium text-slate-500 dark:border-slate-700 dark:bg-[#0d1118]/90 dark:text-slate-300">
                     Enable in stage map
                   </div>
                 </div>
                 <button
                   type="button"
                 onClick={applyDefaultAutomation}
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-[#111722]"
+                className="rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-[#111722]"
               >
                 Defaults
               </button>
             </div>
 
-            <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-6 text-sm leading-6 text-slate-500 dark:border-slate-700 dark:bg-[#111722] dark:text-slate-400">
+            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-xs leading-5 text-slate-500 dark:border-slate-700 dark:bg-[#111722] dark:text-slate-400">
               Enable automation to configure this stage.
             </div>
           </div>
@@ -1033,9 +1176,9 @@ function StatPill({ label, value, tone }: { label: string; value: string; tone: 
   }[tone];
 
   return (
-    <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 ${toneClass}`}>
+    <div className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 ${toneClass}`}>
       <span className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-80">{label}</span>
-      <span className="text-sm font-semibold tracking-tight">{value}</span>
+      <span className="text-[13px] font-semibold tracking-tight">{value}</span>
     </div>
   );
 }
@@ -1052,10 +1195,10 @@ function SectionCard({
   children: ReactNode;
 }) {
   return (
-    <section className="border-b border-slate-200/80 pb-3 last:border-b-0 dark:border-slate-800">
-      <div className="mb-2 space-y-0.5">
+    <section className="border-b border-slate-200/80 pb-2.5 last:border-b-0 dark:border-slate-800">
+      <div className="mb-1.5 space-y-0.5">
         <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">{eyebrow}</div>
-        <h4 className="text-[15px] font-semibold text-slate-900 dark:text-slate-100">{title}</h4>
+        <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</h4>
         {description ? <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{description}</p> : null}
       </div>
       {children}
@@ -1071,8 +1214,8 @@ function ConfigField({
   children: ReactNode;
 }) {
   return (
-    <label className="block min-w-0 space-y-1.5">
-      <span className="block text-[13px] font-medium text-slate-800 dark:text-slate-200">{label}</span>
+    <label className="block min-w-0 space-y-1">
+      <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">{label}</span>
       {children}
     </label>
   );
