@@ -62,11 +62,103 @@ is_ai_agent() {
 LINT_LOG=$(mktemp)
 TYPECHECK_LOG=$(mktemp)
 TEST_LOG=$(mktemp)
+MD_LINKS_LOG=$(mktemp)
 
 cleanup() {
-  rm -f "$LINT_LOG" "$TYPECHECK_LOG" "$TEST_LOG"
+  rm -f "$LINT_LOG" "$TYPECHECK_LOG" "$TEST_LOG" "$MD_LINKS_LOG"
 }
 trap cleanup EXIT
+
+# ─── Markdown Link Checker ──────────────────────────────────────────────────
+
+check_markdown_links() {
+  local failed=0
+  local checked=0
+  local skipped=0
+  
+  echo -e "${BLUE}Checking markdown links...${NC}"
+  
+  local md_files
+  md_files=$(find . -name "*.md" -not -path "./node_modules/*" -not -path "./.next/*" -not -path "./.git/*" -not -path "./out/*" 2>/dev/null | head -100)
+  
+  if [[ -z "$md_files" ]]; then
+    echo -e "${YELLOW}No markdown files found.${NC}"
+    return 0
+  fi
+  
+  local all_links=""
+  while IFS= read -r file; do
+    local links
+    links=$(grep -oE '\[[^]]+\]\([^)]+\)' "$file" 2>/dev/null | sed -E 's/.*\]\(([^)]+)\).*/\1/' | grep -E '^https?://' | grep -vE 'localhost|127\.0\.0\.1' | sort -u)
+    if [[ -n "$links" ]]; then
+      while IFS= read -r link; do
+        all_links+="$file|$link"$'\n'
+      done <<< "$links"
+    fi
+  done <<< "$md_files"
+  
+  all_links=$(echo "$all_links" | sort -u -t'|' -k2,2)
+  
+  if [[ -z "$all_links" ]]; then
+    echo -e "${GREEN}No external links found in markdown files.${NC}"
+    return 0
+  fi
+  
+  local total
+  total=$(echo "$all_links" | wc -l | tr -d ' ')
+  echo -e "${BLUE}Found $total unique external links to check...${NC}"
+  
+  while IFS='|' read -r file link; do
+    [[ -z "$link" ]] && continue
+    
+    ((checked++)) || true
+    
+    printf "  [%3d/%3d] Checking: %s" "$checked" "$total" "$link"
+    
+    local http_code
+    local curl_output
+    
+    curl_output=$(curl -sS -o /dev/null -w "%{http_code}" \
+      --connect-timeout 10 \
+      --max-time 15 \
+      -L \
+      -H "User-Agent: Mozilla/5.0 (compatible; RoutaLinkChecker/1.0)" \
+      "$link" 2>&1)
+    
+    http_code="$curl_output"
+    
+    if [[ "$http_code" =~ ^2[0-9][0-9]$ ]] || [[ "$http_code" =~ ^3[0-9][0-9]$ ]]; then
+      echo -e "\r  ${GREEN}✓${NC} [$checked/$total] $link"
+    elif [[ "$http_code" =~ ^4[0-9][0-9]$ ]] && [[ "$http_code" != "429" ]]; then
+      echo -e "\r  ${YELLOW}⚠${NC} [$checked/$total] $link (HTTP $http_code - may require auth)"
+      ((skipped++)) || true
+    elif [[ "$http_code" == "429" ]]; then
+      echo -e "\r  ${YELLOW}⚠${NC} [$checked/$total] $link (rate limited)"
+      ((skipped++)) || true
+    else
+      echo -e "\r  ${RED}✗${NC} [$checked/$total] $link (HTTP $http_code)"
+      echo "  ${RED}  → Found in: $file${NC}"
+      echo "$file: $link (HTTP $http_code)" >> "$MD_LINKS_LOG"
+      ((failed++)) || true
+    fi
+  done <<< "$all_links"
+  
+  echo ""
+  echo -e "${BLUE}Link check summary:${NC}"
+  echo "  Total checked: $checked"
+  echo "  Passed: $((checked - failed - skipped))"
+  echo "  Warnings: $skipped"
+  echo "  Failed: $failed"
+  
+  if [[ $failed -gt 0 ]]; then
+    echo ""
+    echo -e "${RED}Broken links found:${NC}"
+    cat "$MD_LINKS_LOG"
+    return 1
+  fi
+  
+  return 0
+}
 
 # ─── Main ───────────────────────────────────────────────────────────────────
 
@@ -82,10 +174,10 @@ main() {
     esac
   done
 
-  local lint_exit=0 typecheck_exit=0 test_exit=0
+  local lint_exit=0 typecheck_exit=0 test_exit=0 mdlinks_exit=0
 
   # ─── Run Lint ─────────────────────────────────────────────────────────────
-  echo -e "${BLUE}[1/3] Running lint...${NC}"
+  echo -e "${BLUE}[1/4] Running lint...${NC}"
   echo ""
   set +e
   npm run lint 2>&1 | tee "$LINT_LOG"
@@ -97,14 +189,14 @@ main() {
   else
     echo -e "${RED}✗ Lint failed (exit code: $lint_exit)${NC}"
     if [[ "$fail_fast" == true ]]; then
-      handle_failure "$auto_fix" "lint" $lint_exit 0 0
+      handle_failure "$auto_fix" "lint" $lint_exit 0 0 0
       exit 1
     fi
   fi
   echo ""
 
   # ─── Run Type Check ───────────────────────────────────────────────────────
-  echo -e "${BLUE}[2/3] Running type check...${NC}"
+  echo -e "${BLUE}[2/4] Running type check...${NC}"
   echo ""
   set +e
   npx tsc --noEmit 2>&1 | tee "$TYPECHECK_LOG"
@@ -128,14 +220,14 @@ main() {
   else
     echo -e "${RED}✗ Type check failed (exit code: $typecheck_exit)${NC}"
     if [[ "$fail_fast" == true ]]; then
-      handle_failure "$auto_fix" "typecheck" $lint_exit $typecheck_exit 0
+      handle_failure "$auto_fix" "typecheck" $lint_exit $typecheck_exit 0 0
       exit 1
     fi
   fi
   echo ""
 
   # ─── Run Tests ────────────────────────────────────────────────────────────
-  echo -e "${BLUE}[3/3] Running tests...${NC}"
+  echo -e "${BLUE}[3/4] Running tests...${NC}"
   echo ""
   set +e
   npm run test -- --run 2>&1 | tee "$TEST_LOG"
@@ -147,14 +239,33 @@ main() {
   else
     echo -e "${RED}✗ Tests failed (exit code: $test_exit)${NC}"
     if [[ "$fail_fast" == true ]]; then
-      handle_failure "$auto_fix" "test" $lint_exit $typecheck_exit $test_exit
+      handle_failure "$auto_fix" "test" $lint_exit $typecheck_exit $test_exit 0
+      exit 1
+    fi
+  fi
+  echo ""
+
+  # ─── Check Markdown Links ─────────────────────────────────────────────────
+  echo -e "${BLUE}[4/4] Checking markdown links...${NC}"
+  echo ""
+  set +e
+  check_markdown_links
+  mdlinks_exit=$?
+  set -e
+  echo ""
+  if [[ $mdlinks_exit -eq 0 ]]; then
+    echo -e "${GREEN}✓ Markdown links check passed${NC}"
+  else
+    echo -e "${RED}✗ Markdown links check failed (exit code: $mdlinks_exit)${NC}"
+    if [[ "$fail_fast" == true ]]; then
+      handle_failure "$auto_fix" "mdlinks" $lint_exit $typecheck_exit $test_exit $mdlinks_exit
       exit 1
     fi
   fi
   echo ""
 
   # All passed?
-  if [[ $lint_exit -eq 0 ]] && [[ $typecheck_exit -eq 0 ]] && [[ $test_exit -eq 0 ]]; then
+  if [[ $lint_exit -eq 0 ]] && [[ $typecheck_exit -eq 0 ]] && [[ $test_exit -eq 0 ]] && [[ $mdlinks_exit -eq 0 ]]; then
     maybe_warn_human_review
     echo ""
     echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
@@ -164,7 +275,7 @@ main() {
   fi
 
   # ─── Failure Handling (only reached in --no-fail-fast mode) ───────────────
-  handle_failure "$auto_fix" "all" $lint_exit $typecheck_exit $test_exit
+  handle_failure "$auto_fix" "all" $lint_exit $typecheck_exit $test_exit $mdlinks_exit
   exit 1
 }
 
@@ -247,6 +358,7 @@ handle_failure() {
   local lint_exit="$3"
   local typecheck_exit="$4"
   local test_exit="$5"
+  local mdlinks_exit="$6"
 
   echo ""
   echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
@@ -254,6 +366,7 @@ handle_failure() {
     lint)      echo -e "${RED}  ✗ LINT FAILED${NC}" ;;
     typecheck) echo -e "${RED}  ✗ TYPE CHECK FAILED${NC}" ;;
     test)      echo -e "${RED}  ✗ TESTS FAILED${NC}" ;;
+    mdlinks)   echo -e "${RED}  ✗ MARKDOWN LINKS CHECK FAILED${NC}" ;;
     *)         echo -e "${RED}  Pre-push checks failed!${NC}" ;;
   esac
   echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
@@ -296,6 +409,10 @@ handle_failure() {
 
   if [[ $test_exit -ne 0 ]]; then
     fix_prompt+="## Test Failures\n\`\`\`\n$(cat "$TEST_LOG" | tail -100)\n\`\`\`\n\n"
+  fi
+
+  if [[ $mdlinks_exit -ne 0 ]]; then
+    fix_prompt+="## Markdown Link Errors\n\`\`\`\n$(cat "$MD_LINKS_LOG" | tail -50)\n\`\`\`\n\n"
   fi
 
   fix_prompt+="After fixing all issues, run the checks again to verify, then push the changes."
