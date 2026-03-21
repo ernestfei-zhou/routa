@@ -508,7 +508,13 @@ export function ChatPanel({
                     return false;
                   }
                   // Hide pending AskUserQuestion from chat stream — shown sticky above input
-                  if (msg.role === "tool" && isAskUserQuestionMessage(msg) && !hasAskUserQuestionAnswers(msg) && msg.toolStatus !== "failed") {
+                  if (
+                    msg.role === "tool"
+                    && isAskUserQuestionMessage(msg)
+                    && !hasAskUserQuestionAnswers(msg)
+                    && msg.toolStatus !== "failed"
+                    && msg.toolStatus !== "completed"
+                  ) {
                     return false;
                   }
                   return true;
@@ -532,7 +538,9 @@ export function ChatPanel({
               {/* AskUserQuestion sticky cards — displayed above input until user submits */}
               {pendingAskUserQuestions.length > 0 && (
                 <div className="space-y-2">
-                  {pendingAskUserQuestions.map((msg) => (
+                  {pendingAskUserQuestions
+                    .filter((msg) => msg.toolStatus !== "completed")
+                    .map((msg) => (
                     <AskUserQuestionBubble
                       key={msg.id}
                       message={msg}

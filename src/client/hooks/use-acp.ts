@@ -156,6 +156,11 @@ export interface UseAcpActions {
     skillContext?: { skillName: string; skillContent: string },
   ) => Promise<void>;
   respondToUserInput: (toolCallId: string, response: Record<string, unknown>) => Promise<void>;
+  respondToUserInputForSession: (
+    sessionId: string,
+    toolCallId: string,
+    response: Record<string, unknown>,
+  ) => Promise<void>;
   cancel: () => Promise<void>;
   disconnect: () => void;
   /** Clear auth error (e.g., when user dismisses the popup) */
@@ -597,6 +602,26 @@ export function useAcp(baseUrl: string = ""): UseAcpState & UseAcpActions {
     }
   }, []);
 
+  const respondToUserInputForSession = useCallback(async (
+    targetSessionId: string,
+    toolCallId: string,
+    response: Record<string, unknown>,
+  ): Promise<void> => {
+    const client = clientRef.current;
+    if (!client || !targetSessionId) return;
+
+    try {
+      await client.respondToUserInput(targetSessionId, toolCallId, response);
+    } catch (err) {
+      logRuntime("error", "useAcp.respondToUserInputForSession", "Failed to send AskUserQuestion response", err);
+      setState((s) => ({
+        ...s,
+        error: toErrorMessage(err) || "Failed to submit question response",
+      }));
+      throw err;
+    }
+  }, []);
+
   const disconnect = useCallback(() => {
     clientRef.current?.disconnect();
     clientRef.current = null;
@@ -648,6 +673,7 @@ export function useAcp(baseUrl: string = ""): UseAcpState & UseAcpActions {
     prompt,
     promptSession,
     respondToUserInput,
+    respondToUserInputForSession,
     cancel,
     disconnect,
     clearAuthError,

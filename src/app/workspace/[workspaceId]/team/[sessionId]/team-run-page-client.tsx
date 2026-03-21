@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { DesktopAppShell } from "@/client/components/desktop-app-shell";
 import { WorkspaceSwitcher } from "@/client/components/workspace-switcher";
 import { ChatPanel } from "@/client/components/chat-panel";
 import { getToolEventLabel } from "@/client/components/chat-panel/tool-call-name";
+import type { ChatMessage } from "@/client/components/chat-panel/types";
 import { useAcp } from "@/client/hooks/use-acp";
 import { type NoteData, useNotes } from "@/client/hooks/use-notes";
+import { AskUserQuestionBubble } from "@/client/components/message-bubble";
 import { consumePendingPrompt } from "@/client/utils/pending-prompt";
 import { useWorkspaces } from "@/client/hooks/use-workspaces";
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
@@ -107,6 +109,21 @@ interface SessionHistoryEntry {
     rawInput?: Record<string, unknown>;
     rawOutput?: { output?: string };
   };
+}
+
+interface AskUserQuestionItem {
+  question: string;
+  header: string;
+  options?: Array<{ label: string; description?: string }>;
+  multiSelect?: boolean;
+}
+
+interface PendingSessionQuestion {
+  sessionId: string;
+  toolCallId: string;
+  questions: AskUserQuestionItem[];
+  answers?: Record<string, string>;
+  status?: string;
 }
 
 const TEAM_LEAD_SPECIALIST_ID = "team-agent-lead";
@@ -374,6 +391,35 @@ function toMemberSessionSummary(
     lastUpdatedLabel: stream.lastUpdatedLabel,
     eventCount: stream.eventCount,
     provider: session.provider ?? undefined,
+  };
+}
+
+function extractAskUserQuestionPayload(update?: SessionHistoryEntry["update"]): PendingSessionQuestion | null {
+  if (!update?.toolCallId) return null;
+  const rawInput = update.rawInput;
+  const questions = Array.isArray(rawInput?.questions)
+    ? rawInput.questions.filter((item): item is AskUserQuestionItem => Boolean(item && typeof item === "object" && typeof item.question === "string"))
+    : [];
+  const answers = rawInput?.answers && typeof rawInput.answers === "object"
+    ? Object.fromEntries(
+      Object.entries(rawInput.answers).filter(
+        ([, value]) => typeof value === "string" && value.trim().length > 0,
+      ) as Array<[string, string]>,
+    )
+    : undefined;
+  const looksLikeAskUserQuestion =
+    update.title === "AskUserQuestion"
+    || update.name === "AskUserQuestion"
+    || questions.length > 0;
+
+  if (!looksLikeAskUserQuestion) return null;
+
+  return {
+    sessionId: "",
+    toolCallId: update.toolCallId,
+    questions,
+    answers: answers && Object.keys(answers).length > 0 ? answers : undefined,
+    status: update.status,
   };
 }
 
@@ -984,6 +1030,93 @@ export function TeamRunPageClient() {
     [teamMembers],
   );
 
+  const pendingQuestionsBySessionId = useMemo(() => {
+    const result = new Map<string, PendingSessionQuestion>();
+
+    for (const [historySessionId, history] of Object.entries(historiesBySessionId)) {
+      const pendingByToolCallId = new Map<string, PendingSessionQuestion>();
+
+      for (const entry of history) {
+        const update = entry.update;
+        const toolCallId = update?.toolCallId;
+        if (!toolCallId) continue;
+
+        const askPayload = extractAskUserQuestionPayload(update);
+        const hasAnswers = Boolean(askPayload?.answers && Object.keys(askPayload.answers).length > 0);
+        const failedStatus = update?.status === "failed";
+
+        if (askPayload) {
+          if (failedStatus || hasAnswers) {
+            pendingByToolCallId.delete(toolCallId);
+            continue;
+          }
+          pendingByToolCallId.set(toolCallId, { ...askPayload, sessionId: historySessionId });
+          continue;
+        }
+
+        if ((update?.status === "completed" || update?.status === "failed") && pendingByToolCallId.has(toolCallId)) {
+          pendingByToolCallId.delete(toolCallId);
+        }
+      }
+
+      const latestPending = [...pendingByToolCallId.values()].at(-1);
+      if (latestPending) {
+        result.set(historySessionId, latestPending);
+      }
+    }
+
+    return result;
+  }, [historiesBySessionId]);
+
+  const leadQuestionSessionIdsByItemId = useMemo(() => {
+    const itemIdBySessionId = new Map<string, string>();
+    for (const item of coordinationItems) {
+      const targetSessionId = item.memberSession?.sessionId ?? item.sessionId;
+      if (targetSessionId && !itemIdBySessionId.has(targetSessionId)) {
+        itemIdBySessionId.set(targetSessionId, item.id);
+      }
+    }
+    return itemIdBySessionId;
+  }, [coordinationItems]);
+
+  const handleSubmitSessionQuestion = useCallback(async (
+    targetSessionId: string,
+    toolCallId: string,
+    response: Record<string, unknown>,
+  ) => {
+    const pending = pendingQuestionsBySessionId.get(targetSessionId);
+    const responseText = Object.entries((response.answers as Record<string, string> | undefined) ?? {})
+      .map(([question, answer]) => `${question}: ${answer}`)
+      .join("\n");
+
+    setHistoriesBySessionId((prev) => {
+      const history = prev[targetSessionId] ?? [];
+      return {
+        ...prev,
+        [targetSessionId]: history.map((entry) => (
+          entry.update?.toolCallId === toolCallId
+            ? {
+              ...entry,
+              update: {
+                ...entry.update,
+                status: "completed",
+                rawInput: {
+                  ...(entry.update?.rawInput ?? {}),
+                  ...response,
+                },
+              },
+            }
+            : entry
+        )),
+      };
+    });
+    if (pending?.status === "completed") {
+      void acp.promptSession(targetSessionId, responseText).catch(() => {});
+    } else {
+      void acp.respondToUserInputForSession(targetSessionId, toolCallId, response).catch(() => {});
+    }
+  }, [acp, pendingQuestionsBySessionId]);
+
   const deliverables = useMemo<DeliverableItem[]>(() => {
     const noteDeliverables = notesHook.notes.map((note) => {
       const sourceSession = note.sessionId ? allRunSessions.find((entry) => entry.sessionId === note.sessionId) : undefined;
@@ -1213,9 +1346,18 @@ export function TeamRunPageClient() {
                       isLast={index === coordinationItems.length - 1}
                       activeSessionId={selectedSessionId}
                       workspaceId={workspaceId}
+                      pendingQuestion={
+                        (() => {
+                          const targetSessionId = item.memberSession?.sessionId ?? item.sessionId;
+                          if (!targetSessionId) return null;
+                          if (leadQuestionSessionIdsByItemId.get(targetSessionId) !== item.id) return null;
+                          return pendingQuestionsBySessionId.get(targetSessionId) ?? null;
+                        })()
+                      }
                       onOpenItemSession={item.sessionId ? () => setSelectedSessionForModal(item.sessionId ?? sessionId) : undefined}
                       onSelectSession={item.sessionId ? () => setSelectedSessionId(item.sessionId ?? sessionId) : undefined}
                       onOpenViewer={item.sessionId ? () => setSelectedSessionForModal(item.sessionId ?? sessionId) : undefined}
+                      onSubmitQuestion={handleSubmitSessionQuestion}
                     />
                   ))}
                 </div>
@@ -1495,20 +1637,38 @@ function CoordinationFeedItem({
   isLast,
   activeSessionId,
   workspaceId,
+  pendingQuestion,
   onOpenItemSession,
   onSelectSession,
   onOpenViewer,
+  onSubmitQuestion,
 }: {
   item: TeamActivityItem;
   isLast: boolean;
   activeSessionId?: string;
   workspaceId: string;
+  pendingQuestion?: PendingSessionQuestion | null;
   onOpenItemSession?: () => void;
   onSelectSession?: () => void;
   onOpenViewer?: () => void;
+  onSubmitQuestion?: (sessionId: string, toolCallId: string, response: Record<string, unknown>) => Promise<void>;
 }) {
   const memberSessionActive = item.memberSession?.sessionId === activeSessionId;
   const itemSessionActive = item.sessionId === activeSessionId;
+  const pendingQuestionMessage = pendingQuestion ? {
+    id: `${pendingQuestion.sessionId}-${pendingQuestion.toolCallId}`,
+    role: "tool",
+    content: "AskUserQuestion",
+    timestamp: new Date(),
+    toolName: "AskUserQuestion",
+    toolStatus: "awaiting_input",
+    toolCallId: pendingQuestion.toolCallId,
+    toolKind: "ask-user-question",
+    toolRawInput: {
+      questions: pendingQuestion.questions,
+      answers: pendingQuestion.answers,
+    },
+  } satisfies ChatMessage : null;
 
   return (
     <div className="relative">
@@ -1627,6 +1787,18 @@ function CoordinationFeedItem({
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+          {pendingQuestionMessage && onSubmitQuestion && (
+            <div
+              className="mt-3"
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              <AskUserQuestionBubble
+                message={pendingQuestionMessage}
+                onSubmit={(toolCallId, response) => onSubmitQuestion(pendingQuestion.sessionId, toolCallId, response)}
+              />
             </div>
           )}
         </div>

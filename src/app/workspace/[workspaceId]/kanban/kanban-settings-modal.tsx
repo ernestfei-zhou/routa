@@ -60,6 +60,7 @@ const DEFAULT_DEV_SESSION_SUPERVISION: KanbanDevSessionSupervisionInfo = {
 
 const ROLE_OPTIONS = ["CRAFTER", "ROUTA", "GATE", "DEVELOPER"];
 const KANBAN_EXPORT_WORKSPACE_KEY = "routa.kanbanExportWorkspaceId";
+const MANUAL_ONLY_STAGES = new Set(["blocked"]);
 const ARTIFACT_OPTIONS = [
   { id: "screenshot", label: "Screenshot", hint: "Require UI evidence before continuing." },
   { id: "test_results", label: "Test results", hint: "Ensure verification artifacts are attached." },
@@ -75,6 +76,31 @@ function createEmptyAutomationStep(index: number): KanbanAutomationStep {
     id: `step-${index + 1}`,
     role: "DEVELOPER",
   };
+}
+
+function isManualOnlyColumn(column: KanbanBoardInfo["columns"][0]): boolean {
+  return MANUAL_ONLY_STAGES.has(column.stage);
+}
+
+function getColumnWorkflowMode(
+  column: KanbanBoardInfo["columns"][0],
+  automation: ColumnAutomationConfig | undefined,
+): "manual" | "automated" {
+  if (isManualOnlyColumn(column)) return "manual";
+  return automation?.enabled ? "automated" : "manual";
+}
+
+function getColumnWorkflowSummary(
+  column: KanbanBoardInfo["columns"][0],
+  automation: ColumnAutomationConfig | undefined,
+  providers: AcpProviderInfo[],
+  specialists: SpecialistOption[],
+): string {
+  const mode = getColumnWorkflowMode(column, automation);
+  if (mode === "manual") {
+    return isManualOnlyColumn(column) ? "Manual lane only" : "Manual lane";
+  }
+  return getAutomationSummary(automation ?? { enabled: false }, providers, specialists);
 }
 
 function loadKanbanExportWorkspaceId(defaultWorkspaceId: string): string {
@@ -108,11 +134,7 @@ function getDefaultAutomationForStage(stage: string): ColumnAutomationConfig {
         steps: [{ id: "step-1", role: "GATE" }],
       });
     case "blocked":
-      return syncAutomationPrimaryStep({
-        enabled: true,
-        transitionType: "entry",
-        steps: [{ id: "step-1", role: "ROUTA" }],
-      });
+      return { enabled: false };
     case "done":
       return syncAutomationPrimaryStep({
         enabled: true,
@@ -229,6 +251,37 @@ function SpecialistCategoryTabs({
   );
 }
 
+function WorkspaceTabs({
+  value,
+  onChange,
+}: {
+  value: "structure" | "automation";
+  onChange: (value: "structure" | "automation") => void;
+}) {
+  const options = [
+    { id: "structure" as const, label: "Structure" },
+    { id: "automation" as const, label: "Automation" },
+  ];
+  return (
+    <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-[#0b1119]">
+      {options.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          onClick={() => onChange(option.id)}
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] transition ${
+            value === option.id
+              ? "bg-white text-slate-900 shadow-sm dark:bg-[#111722] dark:text-white"
+              : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function getEditableAutomationSteps(automation: ColumnAutomationConfig): KanbanAutomationStep[] {
   if (automation.steps?.length) {
     return automation.steps.map((step, index) => ({
@@ -295,6 +348,7 @@ export function KanbanSettingsModal({
     board.devSessionSupervision ?? DEFAULT_DEV_SESSION_SUPERVISION,
   );
   const [selectedColumnId, setSelectedColumnId] = useState<string>(board.columns[0]?.id ?? "");
+  const [workspaceView, setWorkspaceView] = useState<"structure" | "automation">("structure");
   const [saving, setSaving] = useState(false);
   const [showRuntimeSettings, setShowRuntimeSettings] = useState(false);
   const [specialistCategory, setSpecialistCategory] = useState<SpecialistCategory>("kanban");
@@ -359,6 +413,9 @@ export function KanbanSettingsModal({
   }, [columnAutomation, selectedColumn]);
 
   const toggleColumnAutomation = (column: KanbanBoardInfo["columns"][0], enabled: boolean) => {
+    if (enabled && isManualOnlyColumn(column)) {
+      return;
+    }
     setColumnAutomation((current) => {
       if (!enabled) {
         return {
@@ -384,12 +441,39 @@ export function KanbanSettingsModal({
     });
   };
 
+  useEffect(() => {
+    if (selectedColumn && isManualOnlyColumn(selectedColumn) && workspaceView === "automation") {
+      setWorkspaceView("structure");
+    }
+  }, [selectedColumn, workspaceView]);
+
+  const updateColumnVisibility = (column: KanbanBoardInfo["columns"][0], visible: boolean) => {
+    if (visible) {
+      setVisibleColumns((current) => (current.includes(column.id) ? current : [...current, column.id]));
+      return;
+    }
+
+    const remaining = visibleColumns.filter((id) => id !== column.id);
+    setVisibleColumns(remaining.length > 0 ? remaining : [column.id]);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
+      const sanitizedColumnAutomation = Object.fromEntries(
+        sortedColumns.map((column) => {
+          const current = columnAutomation[column.id] ?? { enabled: false };
+          return [
+            column.id,
+            isManualOnlyColumn(column)
+              ? { ...current, enabled: false }
+              : current,
+          ];
+        }),
+      );
       await onSave(
         visibleColumns,
-        columnAutomation,
+        sanitizedColumnAutomation,
         Math.max(1, Math.floor(sessionConcurrencyLimit)),
         {
           ...devSessionSupervision,
@@ -608,6 +692,7 @@ export function KanbanSettingsModal({
                       const automation = columnAutomation[column.id] ?? { enabled: false };
                       const active = selectedColumnId === column.id;
                       const visible = visibleColumns.includes(column.id);
+                      const workflowMode = getColumnWorkflowMode(column, automation);
                       return (
                         <div
                           key={column.id}
@@ -626,7 +711,7 @@ export function KanbanSettingsModal({
                               <div className="min-w-0">
                                 <div className={`text-[12px] font-semibold ${active ? "text-white" : "text-slate-900 dark:text-slate-100"}`}>{column.name}</div>
                                 <div className={`mt-0.5 truncate text-[10px] leading-4 ${active ? "text-slate-300" : "text-slate-500 dark:text-slate-400"}`}>
-                                  {column.id} · {automation.enabled ? getAutomationSummary(automation, availableProviders, specialists) : "Manual only"}
+                                  {column.id} · {getColumnWorkflowSummary(column, automation, availableProviders, specialists)}
                                 </div>
                               </div>
                               <div
@@ -636,7 +721,7 @@ export function KanbanSettingsModal({
                                     : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
                                 }`}
                               >
-                                Visible
+                                {workflowMode === "manual" ? "Manual" : "ACP"}
                               </div>
                             </div>
                           </button>
@@ -656,25 +741,17 @@ export function KanbanSettingsModal({
                                   type="checkbox"
                                   aria-label={`Toggle visibility for ${column.name}`}
                                   checked={visible}
-                                  onChange={(event) => {
-                                    if (event.target.checked) {
-                                      setVisibleColumns((current) => [...current, column.id]);
-                                      return;
-                                    }
-                                    const remaining = visibleColumns.filter((id) => id !== column.id);
-                                    setVisibleColumns(remaining.length > 0 ? remaining : [column.id]);
-                                  }}
+                                  onChange={(event) => updateColumnVisibility(column, event.target.checked)}
                                   className="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
                                 />
                               </label>
                               <label className="flex items-center gap-1.5">
-                                <span className={`text-[9px] font-semibold uppercase tracking-[0.16em] ${active ? "text-slate-300" : "text-slate-500 dark:text-slate-400"}`}>
-                                  Auto
-                                </span>
+                                <span className={`text-[9px] font-semibold uppercase tracking-[0.16em] ${active ? "text-slate-300" : "text-slate-500 dark:text-slate-400"}`}>ACP</span>
                                 <input
                                   type="checkbox"
                                   aria-label={`Toggle automation for ${column.name}`}
-                                  checked={automation.enabled}
+                                  checked={workflowMode === "automated"}
+                                  disabled={isManualOnlyColumn(column)}
                                   onChange={(event) => toggleColumnAutomation(column, event.target.checked)}
                                   className="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
                                 />
@@ -691,21 +768,45 @@ export function KanbanSettingsModal({
 
             <main className="min-h-0 overflow-y-auto bg-white p-2 dark:bg-[#0d1118] sm:p-2.5 xl:p-3">
               {selectedColumn ? (
-                <ColumnAutomationWorkspace
-                  column={selectedColumn}
-                  automation={columnAutomation[selectedColumn.id] ?? { enabled: false }}
-                  availableProviders={availableProviders}
-                  specialists={specialists}
-                  specialistCategory={specialistCategory}
-                  specialistLanguage={specialistLanguage}
-                  onSpecialistCategoryChange={setSpecialistCategory}
-                  onUpdate={(updated) => {
-                    setColumnAutomation((current) => ({
-                      ...current,
-                      [selectedColumn.id]: updated,
-                    }));
-                  }}
-                />
+                <div className="space-y-3">
+                  <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 dark:border-slate-800 dark:bg-[#111722] sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                        Column workspace
+                      </div>
+                      <div className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        {selectedColumn.name}
+                      </div>
+                    </div>
+                    <WorkspaceTabs value={workspaceView} onChange={setWorkspaceView} />
+                  </div>
+
+                  {workspaceView === "structure" ? (
+                    <ColumnStructureWorkspace
+                      column={selectedColumn}
+                      visible={visibleColumns.includes(selectedColumn.id)}
+                      automation={columnAutomation[selectedColumn.id] ?? { enabled: false }}
+                      onVisibilityChange={(nextVisible) => updateColumnVisibility(selectedColumn, nextVisible)}
+                      onWorkflowModeChange={(mode) => toggleColumnAutomation(selectedColumn, mode === "automated")}
+                    />
+                  ) : (
+                    <ColumnAutomationWorkspace
+                      column={selectedColumn}
+                      automation={columnAutomation[selectedColumn.id] ?? { enabled: false }}
+                      availableProviders={availableProviders}
+                      specialists={specialists}
+                      specialistCategory={specialistCategory}
+                      specialistLanguage={specialistLanguage}
+                      onSpecialistCategoryChange={setSpecialistCategory}
+                      onUpdate={(updated) => {
+                        setColumnAutomation((current) => ({
+                          ...current,
+                          [selectedColumn.id]: updated,
+                        }));
+                      }}
+                    />
+                  )}
+                </div>
               ) : (
                 <div className="rounded-3xl border border-dashed border-slate-300 p-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
                   No columns available.
@@ -797,6 +898,112 @@ export function KanbanSettingsModal({
   );
 }
 
+function ColumnStructureWorkspace({
+  column,
+  visible,
+  automation,
+  onVisibilityChange,
+  onWorkflowModeChange,
+}: {
+  column: KanbanBoardInfo["columns"][0];
+  visible: boolean;
+  automation: ColumnAutomationConfig;
+  onVisibilityChange: (visible: boolean) => void;
+  onWorkflowModeChange: (mode: "manual" | "automated") => void;
+}) {
+  const workflowMode = getColumnWorkflowMode(column, automation);
+  const manualOnly = isManualOnlyColumn(column);
+
+  return (
+    <div className="space-y-3">
+      <SectionCard eyebrow="Structure" title={column.name} description="">
+        <div className="space-y-3">
+          <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-[#111722] lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:border-slate-700 dark:bg-[#0d1118] dark:text-slate-400">
+                {column.stage}
+              </span>
+              <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:border-slate-700 dark:bg-[#0d1118] dark:text-slate-400">
+                {column.id}
+              </span>
+            </div>
+            <div className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+              workflowMode === "manual"
+                ? "border border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-[#0d1118] dark:text-slate-300"
+                : "border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+            }`}>
+              {workflowMode === "manual" ? "Manual lane" : "ACP automation"}
+            </div>
+          </div>
+
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+            <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-[#111722]">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                Workflow mode
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => onWorkflowModeChange("manual")}
+                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                    workflowMode === "manual"
+                      ? "border-slate-900 bg-slate-900 text-white dark:border-amber-400/40 dark:bg-slate-900"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-[#0d1118] dark:text-slate-300 dark:hover:border-slate-600"
+                  }`}
+                >
+                  Manual lane
+                </button>
+                <button
+                  type="button"
+                  disabled={manualOnly}
+                  onClick={() => onWorkflowModeChange("automated")}
+                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                    workflowMode === "automated"
+                      ? "border-emerald-500 bg-emerald-500 text-white dark:border-emerald-400 dark:bg-emerald-500 dark:text-slate-950"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-[#0d1118] dark:text-slate-300 dark:hover:border-slate-600"
+                  }`}
+                >
+                  ACP automation
+                </button>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                {manualOnly
+                  ? "Blocked lanes stay manual by design so cards can pause work without triggering ACP sessions."
+                  : workflowMode === "manual"
+                    ? "Manual lanes remain first-class workflow stages without any ACP trigger."
+                    : "Automation runs when cards enter or exit this stage according to the lane rules."}
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-[#111722]">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                Visibility
+              </div>
+              <label className="mt-2 flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-[#0b1119]">
+                <input
+                  type="checkbox"
+                  checked={visible}
+                  onChange={(event) => onVisibilityChange(event.target.checked)}
+                  aria-label={`Toggle visibility for ${column.name}`}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+                />
+                <span>
+                  <span className="block text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                    Show this column on the board
+                  </span>
+                  <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">
+                    Hidden columns stay in board data and YAML, but they do not appear in the main board view.
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
 function ColumnAutomationWorkspace({
   column,
   automation,
@@ -816,6 +1023,7 @@ function ColumnAutomationWorkspace({
   onSpecialistCategoryChange: (category: SpecialistCategory) => void;
   onUpdate: (automation: ColumnAutomationConfig) => void;
 }) {
+  const manualOnly = isManualOnlyColumn(column);
   const automationSteps = useMemo(
     () => getEditableAutomationSteps(automation),
     [automation],
@@ -837,6 +1045,31 @@ function ColumnAutomationWorkspace({
     setShowAdvanced(true);
     onUpdate(defaultAutomation);
   };
+
+  if (manualOnly) {
+    return (
+      <SectionCard eyebrow="Automation" title={column.name} description="">
+        <div className="space-y-3">
+          <div className="rounded-lg border border-slate-200 bg-[linear-gradient(135deg,_rgba(148,163,184,0.08),_rgba(255,255,255,0.98)_38%,_rgba(255,255,255,1)_100%)] p-3 dark:border-slate-800 dark:bg-[linear-gradient(135deg,_rgba(148,163,184,0.08),_rgba(15,23,42,0.92)_38%,_rgba(13,17,24,0.98)_100%)]">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:border-slate-700 dark:bg-[#111722] dark:text-slate-400">
+                {column.id}
+              </span>
+              <span className="rounded-md border border-slate-200 bg-white/90 px-2.5 py-1.5 text-xs font-medium text-slate-500 dark:border-slate-700 dark:bg-[#0d1118]/90 dark:text-slate-300">
+                Manual lane only
+              </span>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Blocked is treated as a product-level manual lane. Cards can stop here without creating ACP sessions or looking misconfigured.
+            </p>
+            <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+              Use the Structure workspace if you need to show or hide the lane. ACP automation is intentionally unavailable for this stage.
+            </p>
+          </div>
+        </div>
+      </SectionCard>
+    );
+  }
 
   return (
     <div className="space-y-2">
@@ -1167,6 +1400,77 @@ function ColumnAutomationWorkspace({
         </SectionCard>
       )}
     </div>
+  );
+}
+
+function ColumnStructureWorkspace({
+  column,
+  visible,
+  automation,
+  onVisibilityChange,
+  onWorkflowModeChange,
+}: {
+  column: KanbanBoardInfo["columns"][0];
+  visible: boolean;
+  automation: ColumnAutomationConfig;
+  onVisibilityChange: (visible: boolean) => void;
+  onWorkflowModeChange: (mode: "manual" | "automated") => void;
+}) {
+  const workflowMode = getColumnWorkflowMode(column, automation);
+
+  return (
+    <SectionCard eyebrow="Structure" title={column.name} description="">
+      <div className="space-y-3">
+        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-[#111722]">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-slate-700 dark:bg-[#0b1119] dark:text-slate-400">
+              {column.id}
+            </span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">{column.stage}</span>
+          </div>
+          {column.description && (
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{column.description}</p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-[#0f141d]">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+              Visibility
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <span className="text-sm text-slate-700 dark:text-slate-200">
+                {visible ? "Visible on board" : "Hidden from board"}
+              </span>
+              <input
+                type="checkbox"
+                checked={visible}
+                onChange={(event) => onVisibilityChange(event.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+              />
+            </div>
+          </label>
+
+          <label className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-[#0f141d]">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+              Workflow
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <span className="text-sm text-slate-700 dark:text-slate-200">
+                {workflowMode === "automated" ? "ACP automation" : "Manual handoff"}
+              </span>
+              <input
+                type="checkbox"
+                checked={workflowMode === "automated"}
+                onChange={(event) => onWorkflowModeChange(event.target.checked ? "automated" : "manual")}
+                disabled={isManualOnlyColumn(column)}
+                className="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
+          </label>
+        </div>
+      </div>
+    </SectionCard>
   );
 }
 
