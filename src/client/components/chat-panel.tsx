@@ -73,6 +73,7 @@ export interface PlanEntry {
 interface ChatPanelProps {
   acp: UseAcpState & UseAcpActions;
   activeSessionId: string | null;
+  traceSessionId?: string | null;
   onEnsureSession: (cwd?: string, provider?: string, modeId?: string, model?: string) => Promise<string | null>;
   onSelectSession: (sessionId: string) => Promise<void>;
   skills?: SkillSummary[];
@@ -99,6 +100,7 @@ interface ChatPanelProps {
 export function ChatPanel({
   acp,
   activeSessionId,
+  traceSessionId,
   onEnsureSession,
   onSelectSession,
   skills = [],
@@ -463,7 +465,7 @@ export function ChatPanel({
 
       {/* Main Content Area - Chat or Trace */}
       {viewMode === "trace" ? (
-        <TracePanel sessionId={activeSessionId} />
+        <TracePanel sessionId={traceSessionId ?? activeSessionId} />
       ) : (visibleMessages.length === 0 && !activeSessionId) ? (
 
         /* ── Setup / Empty State ── */

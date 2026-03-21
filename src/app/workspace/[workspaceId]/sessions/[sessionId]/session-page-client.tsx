@@ -223,6 +223,7 @@ export function SessionPageClient() {
   const [dockerRetryText, setDockerRetryText] = useState<string | null>(null);
   const navigationTargetRef = useRef<string | null>(null);
   const providerChildClientsRef = useRef<Map<string, BrowserAcpClient>>(new Map());
+  const displaySessionId = focusedSessionId ?? sessionId;
 
   // Handle custom events for specialist manager
   useEffect(() => {
@@ -299,23 +300,23 @@ export function SessionPageClient() {
   // Select the session from URL on mount
   useEffect(() => {
     // Wait for params to be resolved and not be placeholder
-    if (!isResolved || sessionId === "__placeholder__") return;
-    if (sessionId && acpConnected && sessionId !== acpSessionId) {
-      acpSelectSession(sessionId);
+    if (!isResolved || displaySessionId === "__placeholder__") return;
+    if (displaySessionId && acpConnected && displaySessionId !== acpSessionId) {
+      acpSelectSession(displaySessionId);
     }
-  }, [sessionId, isResolved, acpConnected, acpSessionId, acpSelectSession]);
+  }, [displaySessionId, isResolved, acpConnected, acpSessionId, acpSelectSession]);
 
   // Restore session metadata (role, provider, model) when navigating to an existing session
   const sessionMetadataLoadedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     // Wait for params to be resolved and not be placeholder
-    if (!isResolved || sessionId === "__placeholder__") return;
-    if (!sessionId || !acpConnected) return;
+    if (!isResolved || displaySessionId === "__placeholder__") return;
+    if (!displaySessionId || !acpConnected) return;
     // Only fetch once per session
-    if (sessionMetadataLoadedRef.current.has(sessionId)) return;
-    sessionMetadataLoadedRef.current.add(sessionId);
+    if (sessionMetadataLoadedRef.current.has(displaySessionId)) return;
+    sessionMetadataLoadedRef.current.add(displaySessionId);
 
-    fetch(`/api/sessions/${sessionId}`)
+    fetch(`/api/sessions/${displaySessionId}`)
       .then((res) => {
         if (!res.ok) return null;
         return res.json();
@@ -336,7 +337,7 @@ export function SessionPageClient() {
       .catch((err) => {
         console.warn("[SessionPage] Failed to restore session metadata:", err);
       });
-  }, [sessionId, isResolved, acpConnected, acpSetProvider]);
+  }, [displaySessionId, isResolved, acpConnected, acpSetProvider]);
 
   // ── Restore CRAFTER agents from child sessions on page reload ─────────
   const crafterAgentsRestoredRef = useRef<Set<string>>(new Set());
@@ -1052,7 +1053,7 @@ export function SessionPageClient() {
       await deleteEmptySession(sessionId);
 
       setFocusedSessionId(target.focusedSessionId);
-      acp.selectSession(target.routeSessionId);
+      acp.selectSession(target.focusedSessionId ?? target.routeSessionId);
       router.push(buildSessionHref(target.routeSessionId, target.focusedSessionId));
     },
     [acp, buildSessionHref, deleteEmptySession, ensureConnected, resolveSessionNavigationTarget, router, sessionId]
@@ -2206,7 +2207,8 @@ export function SessionPageClient() {
         <main className="flex-1 min-w-0">
           <ChatPanel
             acp={acp}
-            activeSessionId={sessionId}
+            activeSessionId={displaySessionId}
+            traceSessionId={displaySessionId}
             onEnsureSession={ensureSessionForChat}
             onSelectSession={handleSelectSession}
             repoSelection={repoSelection}

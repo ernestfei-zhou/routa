@@ -5,6 +5,7 @@
 import { v4 as uuidv4 } from "uuid";
 import type { AcpSessionNotification } from "../../../acp-client";
 import type { ChatMessage, PlanEntry, UsageInfo } from "../types";
+import type { TraceRecord } from "@/core/trace";
 import { parseChecklist, type ChecklistItem } from "../../../utils/checklist-parser";
 import {
   type FileChangesState,
@@ -564,11 +565,6 @@ export function processHistoryToMessages(
     const kind = update.sessionUpdate as string | undefined;
     if (!kind) continue;
 
-    // Skip child agent updates
-    const rawNotification = notification as Record<string, unknown>;
-    const isChildAgentUpdate = !!(rawNotification.childAgentId ?? (update.childAgentId as unknown));
-    if (isChildAgentUpdate) continue;
-
     const extractText = (): string => {
       const content = update.content as { type: string; text?: string } | undefined;
       if (content?.text) return content.text;
@@ -635,6 +631,123 @@ export function processHistoryToMessages(
     }
 
     lastKind = kind;
+  }
+
+  return messages;
+}
+
+function normalizeMessageText(value?: string): string {
+  return value?.replace(/\s+/g, " ").trim() ?? "";
+}
+
+export function processTracesToMessages(
+  traces: TraceRecord[],
+  sessionId: string,
+): ChatMessage[] {
+  const messages: ChatMessage[] = [];
+  const sortedTraces = [...traces].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+  );
+  const toolMessagesByCallId = new Map<string, number>();
+
+  for (const trace of sortedTraces) {
+    if (trace.sessionId !== sessionId) continue;
+
+    if (trace.eventType === "user_message") {
+      const content = trace.conversation?.fullContent || trace.conversation?.contentPreview || "";
+      if (!content) continue;
+      const lastMessage = messages.at(-1);
+      if (
+        lastMessage?.role === "user" &&
+        normalizeMessageText(lastMessage.content) === normalizeMessageText(content)
+      ) {
+        continue;
+      }
+      messages.push({
+        id: trace.id,
+        role: "user",
+        content,
+        timestamp: new Date(trace.timestamp),
+      });
+      continue;
+    }
+
+    if (trace.eventType === "agent_message") {
+      const content = trace.conversation?.fullContent || trace.conversation?.contentPreview || "";
+      if (!content) continue;
+      messages.push({
+        id: trace.id,
+        role: "assistant",
+        content,
+        timestamp: new Date(trace.timestamp),
+      });
+      continue;
+    }
+
+    if (trace.eventType === "agent_thought") {
+      const content = trace.conversation?.fullContent || trace.conversation?.contentPreview || "";
+      if (!content) continue;
+      messages.push({
+        id: trace.id,
+        role: "thought",
+        content,
+        timestamp: new Date(trace.timestamp),
+      });
+      continue;
+    }
+
+    if (trace.eventType === "tool_call") {
+      const toolCallId = trace.tool?.toolCallId;
+      const toolName = trace.tool?.name ?? "tool";
+      const index = messages.push({
+        id: toolCallId ?? trace.id,
+        role: "tool",
+        content: trace.tool?.input
+          ? `Input:\n${formatUnknownValue(trace.tool.input)}`
+          : toolName,
+        timestamp: new Date(trace.timestamp),
+        toolName,
+        toolStatus: trace.tool?.status ?? "running",
+        toolCallId,
+        toolRawInput: asRecord(trace.tool?.input),
+      }) - 1;
+      if (toolCallId) {
+        toolMessagesByCallId.set(toolCallId, index);
+      }
+      continue;
+    }
+
+    if (trace.eventType === "tool_result") {
+      const toolCallId = trace.tool?.toolCallId;
+      const toolName = trace.tool?.name ?? "tool";
+      const existingIndex = toolCallId ? toolMessagesByCallId.get(toolCallId) : undefined;
+      if (typeof existingIndex === "number") {
+        const existing = messages[existingIndex];
+        const outputText = trace.tool?.output == null ? existing.content : formatUnknownValue(trace.tool.output);
+        messages[existingIndex] = {
+          ...existing,
+          content: outputText,
+          toolName,
+          toolStatus: trace.tool?.status ?? "completed",
+          toolRawOutput: trace.tool?.output,
+        };
+      } else {
+        const outputText = trace.tool?.output == null ? toolName : formatUnknownValue(trace.tool.output);
+        const index = messages.push({
+          id: toolCallId ?? trace.id,
+          role: "tool",
+          content: outputText,
+          timestamp: new Date(trace.timestamp),
+          toolName,
+          toolStatus: trace.tool?.status ?? "completed",
+          toolCallId,
+          toolRawOutput: trace.tool?.output,
+        }) - 1;
+        if (toolCallId) {
+          toolMessagesByCallId.set(toolCallId, index);
+        }
+      }
+    }
   }
 
   return messages;

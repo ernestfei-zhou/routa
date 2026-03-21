@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { desktopAwareFetch } from "../../../utils/diagnostics";
 import type { AcpSessionNotification } from "../../../acp-client";
+import type { TraceRecord } from "@/core/trace";
 import type { ChatMessage, UsageInfo } from "../types";
 import type { ChecklistItem } from "../../../utils/checklist-parser";
 import { type FileChangesState, createFileChangesState } from "../../../utils/file-changes-tracker";
 import { extractTaskBlocks, hasTaskBlocks, type ParsedTask } from "../../../utils/task-block-parser";
-import { processUpdate, processHistoryToMessages } from "./message-processor";
+import { processTracesToMessages, processUpdate, processHistoryToMessages } from "./message-processor";
 
 export interface UseChatMessagesOptions {
   activeSessionId: string | null;
@@ -86,16 +87,25 @@ export function useChatMessages({
     if (sessionId === "__placeholder__") return;
 
     try {
-      const res = await desktopAwareFetch(`/api/sessions/${sessionId}/history`, { cache: "no-store" });
-      const data = await res.json();
+      const [historyRes, tracesRes] = await Promise.all([
+        desktopAwareFetch(`/api/sessions/${sessionId}/history`, { cache: "no-store" }),
+        desktopAwareFetch(`/api/traces?sessionId=${encodeURIComponent(sessionId)}`, { cache: "no-store" }),
+      ]);
+      const data = await historyRes.json();
+      const tracesData = await tracesRes.json().catch(() => ({}));
       const history = Array.isArray(data?.history) ? data.history as AcpSessionNotification[] : [];
+      const traces = Array.isArray(tracesData?.traces) ? tracesData.traces as TraceRecord[] : [];
 
-      if (history.length === 0) {
+      if (history.length === 0 && traces.length === 0) {
         loadedHistoryRef.current.add(sessionId);
         return;
       }
 
-      const messages = processHistoryToMessages(history, sessionId);
+      const historyMessages = processHistoryToMessages(history, sessionId);
+      const traceMessages = processTracesToMessages(traces, sessionId);
+      const messages = traceMessages.length > historyMessages.length
+        ? traceMessages
+        : historyMessages;
       loadedHistoryRef.current.add(sessionId);
 
       // Check if session is still running
@@ -172,11 +182,6 @@ export function useChatMessages({
         const update = (notification.update ?? notification) as Record<string, unknown>;
         const kind = update.sessionUpdate as string | undefined;
         if (!sid || !kind) continue;
-
-        // Skip child agent updates
-        const rawNotification = notification as Record<string, unknown>;
-        const isChildAgentUpdate = !!(rawNotification.childAgentId ?? (update.childAgentId as unknown));
-        if (isChildAgentUpdate) continue;
 
         const arr = getSessionMessages(sid);
         const extractText = (): string => {
