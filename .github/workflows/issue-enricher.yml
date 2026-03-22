@@ -70,13 +70,46 @@ jobs:
             echo "number=$INPUT_ISSUE_NUMBER" >> $GITHUB_OUTPUT
             echo "dry_run=$INPUT_DRY_RUN" >> $GITHUB_OUTPUT
             echo "assign_copilot=$INPUT_ASSIGN_COPILOT" >> $GITHUB_OUTPUT
+            echo "auto_trigger=false" >> $GITHUB_OUTPUT
           else
             echo "number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
             echo "dry_run=false" >> $GITHUB_OUTPUT
             echo "assign_copilot=false" >> $GITHUB_OUTPUT
+            echo "auto_trigger=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Check auto-trigger eligibility
+        id: eligibility
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          MAX_AUTO_BODY_LENGTH: "200"
+        run: |
+          if [ "$EVENT_NAME" == "workflow_dispatch" ]; then
+            echo "should_analyze=true" >> $GITHUB_OUTPUT
+            echo "reason=manual-dispatch" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          BODY_LENGTH=${#ISSUE_BODY}
+          echo "body_length=$BODY_LENGTH" >> $GITHUB_OUTPUT
+
+          if [ "$BODY_LENGTH" -gt "$MAX_AUTO_BODY_LENGTH" ]; then
+            echo "should_analyze=false" >> $GITHUB_OUTPUT
+            echo "reason=body-too-long" >> $GITHUB_OUTPUT
+            {
+              echo "## 🤖 Issue Enricher"
+              echo ""
+              echo "Skipped automatic enrichment because issue body length (${BODY_LENGTH}) exceeds ${MAX_AUTO_BODY_LENGTH} characters."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "should_analyze=true" >> $GITHUB_OUTPUT
+          echo "reason=eligible" >> $GITHUB_OUTPUT
+
       - name: Sync GitHub issues into local docs/issues cache
+        if: steps.eligibility.outputs.should_analyze == 'true'
         run: |
           echo "### Local issue sync" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -87,10 +120,12 @@ jobs:
 
       - name: Analyze Issue
         id: analyze
+        if: steps.eligibility.outputs.should_analyze == 'true'
         run: |
           ISSUE_NUMBER="${{ steps.issue.outputs.number }}"
           DRY_RUN="${{ steps.issue.outputs.dry_run }}"
           ASSIGN_COPILOT="${{ steps.issue.outputs.assign_copilot }}"
+          AUTO_TRIGGER="${{ steps.issue.outputs.auto_trigger }}"
 
           echo "## 🤖 Issue Enricher" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -104,6 +139,9 @@ jobs:
           fi
           if [ "$ASSIGN_COPILOT" == "true" ]; then
             ARGS="$ARGS --assign-copilot"
+          fi
+          if [ "$AUTO_TRIGGER" == "true" ]; then
+            ARGS="$ARGS --auto-trigger"
           fi
 
           ARGS="$ARGS --skip-sync"

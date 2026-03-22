@@ -31,6 +31,7 @@ import { join, relative } from "path";
 
 const SKILL_PATH = ".claude/skills/issue-enricher/SKILL.md";
 const SYNCED_ISSUES_DIR = join(process.cwd(), "docs/issues");
+const MAX_AUTO_TRIGGER_BODY_LENGTH = 200;
 interface IssueData {
   number: number;
   title: string;
@@ -327,6 +328,7 @@ const ALLOWED_AUTHORS = ["phodal"];
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const dryRun = args.includes("--dry-run");
+  const isAutoTrigger = args.includes("--auto-trigger");
   const shouldReopen = args.includes("--reopen");
   const shouldAssignCopilot = args.includes("--assign-copilot");
   const shouldSkipSync = args.includes("--skip-sync");
@@ -357,6 +359,13 @@ async function main(): Promise<void> {
   console.log(`   Title: ${issue.title}`);
   console.log(`   Author: ${issue.author}`);
   console.log(`   Labels: ${issue.labels.length > 0 ? issue.labels.join(", ") : "(none)"}`);
+
+  if (isAutoTrigger && issue.body.length > MAX_AUTO_TRIGGER_BODY_LENGTH) {
+    console.log(
+      `\n   ⏭️ Skipping automatic enrichment: issue body length (${issue.body.length}) exceeds ${MAX_AUTO_TRIGGER_BODY_LENGTH} characters`
+    );
+    return;
+  }
 
   // Ensure standard labels exist before Claude tries to apply them
   if (!dryRun) {
