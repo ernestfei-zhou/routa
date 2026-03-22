@@ -440,7 +440,7 @@ export async function handleSessionNew({
           baseUrl,
           apiKey,
           allowedNativeTools,
-          mcpServers: [],
+          mcpServers: {},
           systemPromptAppend: specialistSystemPrompt,
         };
         if (mcpConfigs.length > 0) {

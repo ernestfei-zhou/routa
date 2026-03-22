@@ -906,8 +906,6 @@ export function SessionPageClient() {
           // Re-store pending text so the pending-prompt effect can re-send after reconnect
           if (dockerRetryText && sessionId) {
             storePendingPrompt(sessionId, dockerRetryText);
-            pendingPromptSentRef.current.delete(sessionId);
-            pendingPromptTextRef.current = dockerRetryText;
           }
           // The input will be pre-filled in the TiptapInput via dockerRetryText state
           void apiKey; // used by saveProviderConnections inside DockerConfigModal
