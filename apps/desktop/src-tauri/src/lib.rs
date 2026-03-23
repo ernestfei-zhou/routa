@@ -542,6 +542,12 @@ fn start_rust_server(
 ) -> Result<std::net::SocketAddr, String> {
     let db_path = resolve_db_path(app);
     let static_dir = resolve_static_dir(app);
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        std::env::set_var(
+            "ROUTA_SPECIALISTS_RESOURCE_DIR",
+            resource_dir.to_string_lossy().to_string(),
+        );
+    }
     let host = host.to_string();
 
     println!("[rust-server] Starting embedded Rust backend server");

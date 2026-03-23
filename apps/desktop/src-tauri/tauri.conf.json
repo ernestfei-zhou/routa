@@ -31,7 +31,8 @@
     "active": true,
     "targets": "all",
     "resources": [
-      "frontend/**/*"
+      "frontend/**/*",
+      "../../../resources/specialists/**/*"
     ],
     "icon": [
       "icons/32x32.png",

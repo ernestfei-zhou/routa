@@ -196,6 +196,24 @@ impl SpecialistLoader {
         }
     }
 
+    fn collect_resource_search_paths(resource_dir: &Path) -> Vec<PathBuf> {
+        let mut search_paths = Vec::new();
+        let mut current = resource_dir.to_path_buf();
+
+        loop {
+            search_paths.push(current.join("specialists"));
+            search_paths.push(current.join("resources").join("specialists"));
+
+            let next = current.join("_up_");
+            if !next.is_dir() {
+                break;
+            }
+            current = next;
+        }
+
+        search_paths
+    }
+
     fn collect_specialist_paths(
         dir: &Path,
         include_locale_directories: bool,
@@ -317,6 +335,10 @@ impl SpecialistLoader {
 
         if let Some(home_dir) = dirs::home_dir() {
             search_paths.push(home_dir.join(".routa").join("specialists"));
+        }
+
+        if let Ok(resource_dir) = std::env::var("ROUTA_SPECIALISTS_RESOURCE_DIR") {
+            search_paths.extend(Self::collect_resource_search_paths(&PathBuf::from(resource_dir)));
         }
 
         search_paths.push(PathBuf::from("specialists"));
@@ -472,6 +494,21 @@ system_prompt: |
 
     #[test]
     fn test_default_search_paths_include_workspace_and_user_dir() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(
+            temp_dir
+                .path()
+                .join("_up_")
+                .join("_up_")
+                .join("_up_")
+                .join("resources")
+                .join("specialists"),
+        )
+        .unwrap();
+        std::env::set_var(
+            "ROUTA_SPECIALISTS_RESOURCE_DIR",
+            temp_dir.path().to_string_lossy().to_string(),
+        );
         let search_paths = SpecialistLoader::default_search_paths();
         assert!(search_paths
             .iter()
@@ -479,6 +516,86 @@ system_prompt: |
         assert!(search_paths
             .iter()
             .any(|path| path == Path::new("resources/specialists")));
+        assert!(search_paths
+            .iter()
+            .any(|path| path == &temp_dir.path().join("specialists")));
+        assert!(search_paths
+            .iter()
+            .any(|path| path == &temp_dir.path().join("resources").join("specialists")));
+        assert!(search_paths.iter().any(|path| {
+            path == &temp_dir
+                .path()
+                .join("_up_")
+                .join("_up_")
+                .join("_up_")
+                .join("resources")
+                .join("specialists")
+        }));
+        std::env::remove_var("ROUTA_SPECIALISTS_RESOURCE_DIR");
+    }
+
+    #[test]
+    fn test_load_default_dirs_reads_tauri_resource_specialists() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let bundled_root = temp_dir.path().join("resources").join("specialists");
+        std::fs::create_dir_all(bundled_root.join("team")).unwrap();
+        std::fs::write(
+            bundled_root.join("team").join("agent-lead.yaml"),
+            r#"id: "team-agent-lead"
+name: "Agent Lead"
+role: "ROUTA"
+system_prompt: "Coordinate the team."
+"#,
+        )
+        .unwrap();
+
+        std::env::set_var(
+            "ROUTA_SPECIALISTS_RESOURCE_DIR",
+            temp_dir.path().to_string_lossy().to_string(),
+        );
+
+        let mut loader = SpecialistLoader::new();
+        let count = loader.load_default_dirs();
+
+        assert_eq!(count, 1);
+        assert!(loader.get("team-agent-lead").is_some());
+
+        std::env::remove_var("ROUTA_SPECIALISTS_RESOURCE_DIR");
+    }
+
+    #[test]
+    fn test_load_default_dirs_reads_tauri_up_resource_specialists() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let bundled_root = temp_dir
+            .path()
+            .join("_up_")
+            .join("_up_")
+            .join("_up_")
+            .join("resources")
+            .join("specialists");
+        std::fs::create_dir_all(bundled_root.join("team")).unwrap();
+        std::fs::write(
+            bundled_root.join("team").join("qa.yaml"),
+            r#"id: "team-qa"
+name: "QA Specialist"
+role: "GATE"
+system_prompt: "Verify the work."
+"#,
+        )
+        .unwrap();
+
+        std::env::set_var(
+            "ROUTA_SPECIALISTS_RESOURCE_DIR",
+            temp_dir.path().to_string_lossy().to_string(),
+        );
+
+        let mut loader = SpecialistLoader::new();
+        let count = loader.load_default_dirs();
+
+        assert_eq!(count, 1);
+        assert!(loader.get("team-qa").is_some());
+
+        std::env::remove_var("ROUTA_SPECIALISTS_RESOURCE_DIR");
     }
 
     #[test]
