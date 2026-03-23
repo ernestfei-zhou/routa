@@ -15,7 +15,6 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { desktopAwareFetch } from "../utils/diagnostics";
 import { createPortal } from "react-dom";
 import { BranchSelector } from "./branch-selector";
-import { Button } from "./button";
 
 // ─── Types ──────────────────────────────────────────────────────────────
 
@@ -355,10 +354,9 @@ export function RepoPicker({
         />
       ) : (
         /* ── No repo: show trigger ── */
-        <Button
+        <button
           ref={triggerRef}
-          variant="ghost"
-          size="xs"
+          type="button"
           onClick={() => {
             openDropdown(triggerRef.current);
             setTimeout(() => inputRef.current?.focus(), 50);
@@ -367,7 +365,7 @@ export function RepoPicker({
         >
           <GitRepoIcon className="w-3.5 h-3.5" />
           <span>Select or clone a repository...</span>
-        </Button>
+        </button>
       )}
 
       {/* ── Dropdown panel (portal to escape overflow-hidden) ── */}
@@ -409,7 +407,7 @@ export function RepoPicker({
           </div>
 
           {/* ── Existing repos tab ── */}
-            {activeTab === "existing" && (
+          {activeTab === "existing" && (
             <>
               {/* Search */}
               <div className="p-2 border-b border-gray-100 dark:border-gray-800">
@@ -532,11 +530,8 @@ export function RepoPicker({
               )}
 
               {/* Clone button */}
-              <Button
-                variant="primary"
-                size="sm"
-                loading={cloning}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium"
+              <button
+                type="button"
                 onClick={() =>
                   handleClone(
                     cloneUrl.includes("github.com")
@@ -545,12 +540,22 @@ export function RepoPicker({
                   )
                 }
                 disabled={cloning || !cloneUrl.trim()}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                {cloning ? "Cloning..." : "Clone Repository"}
-              </Button>
+                {cloning ? (
+                  <>
+                    <Spinner />
+                    Cloning...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Clone Repository
+                  </>
+                )}
+              </button>
 
               <div className="text-[10px] text-gray-400 dark:text-gray-500">
                 The repo will be cloned and used as the agent working directory.
@@ -592,16 +597,15 @@ function SelectedRepoPill({
       <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
         <GitRepoIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
 
-        <Button
-          variant="ghost"
-          size="xs"
+        <button
           ref={triggerRef}
+          type="button"
           onClick={onClickName}
           className="text-xs font-medium text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate max-w-[200px]"
           title={value.name}
         >
           {value.name}
-        </Button>
+        </button>
 
         <div className="shrink-0">
           <BranchSelector
@@ -627,9 +631,8 @@ function SelectedRepoPill({
           </span>
         )}
 
-        <Button
-          variant="ghost"
-          size="xs"
+        <button
+          type="button"
           onClick={onClear}
           className="ml-0.5 p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           title="Clear repo selection"
@@ -637,7 +640,7 @@ function SelectedRepoPill({
           <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
-        </Button>
+        </button>
       </div>
 
       {showMutedPath && (
@@ -659,9 +662,7 @@ function TabButton({
   children: React.ReactNode;
 }) {
   return (
-    <Button
-      variant="ghost"
-      size="xs"
+    <button
       type="button"
       onClick={onClick}
       className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium transition-colors ${
@@ -671,7 +672,7 @@ function TabButton({
       }`}
     >
       {children}
-    </Button>
+    </button>
   );
 }
 
@@ -706,9 +707,7 @@ function RepoListItem({
         isSelected ? "bg-blue-50 dark:bg-blue-900/10" : ""
       }`}
     >
-      <Button
-        variant="ghost"
-        size="sm"
+      <button
         type="button"
         onClick={onClick}
         className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
@@ -740,7 +739,7 @@ function RepoListItem({
             )}
           </div>
         </div>
-      </Button>
+      </button>
       <div className="flex shrink-0 items-center gap-1" onMouseDown={(e) => e.stopPropagation()}>
         <BranchSelector
           repoPath={repo.path}
@@ -748,9 +747,7 @@ function RepoListItem({
           onBranchChange={onBranchChange}
         />
         {!repo.status.clean && (
-          <Button
-            variant="danger"
-            size="xs"
+          <button
             type="button"
             onClick={handleReset}
             disabled={resetting}
@@ -759,7 +756,7 @@ function RepoListItem({
           >
             <ResetIcon />
             {resetting ? "Resetting..." : "Reset"}
-          </Button>
+          </button>
         )}
       </div>
     </div>
@@ -821,6 +818,15 @@ function ResetIcon() {
     <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v5h5" />
+    </svg>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
   );
 }
