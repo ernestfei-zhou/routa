@@ -1,0 +1,93 @@
+#!/usr/bin/env node
+
+import fs from "node:fs";
+import path from "node:path";
+
+const rootDir = process.cwd();
+const errors = [];
+
+const requiredMainSnippets = [
+  "@storybook/nextjs-vite",
+  "stories: [\"../src/**/*.stories.@(ts|tsx)\"]",
+  "@storybook/addon-a11y",
+];
+
+const requiredPreviewSnippets = [
+  "globalTypes",
+  "colorMode",
+  "nextjs",
+  "appDirectory: true",
+  "desktopTheme",
+];
+
+const requiredStories = {
+  "src/client/components/desktop-app-shell.stories.tsx": ["Default", "KanbanActive", "FocusState", "DarkMode"],
+  "src/client/components/desktop-layout.stories.tsx": ["Default", "LoadingSwitcher", "DarkMode"],
+  "src/client/components/desktop-sidebar.stories.tsx": ["OverviewActive", "KanbanActive", "FocusState", "DarkMode"],
+  "src/client/components/desktop-nav-rail.stories.tsx": ["OverviewActive", "TracesActive", "FocusState", "DarkMode"],
+  "src/client/components/button.stories.tsx": ["Primary", "Secondary", "Danger", "FocusState", "DarkMode"],
+};
+
+function readFile(relativePath) {
+  const fullPath = path.join(rootDir, relativePath);
+  if (!fs.existsSync(fullPath)) {
+    errors.push(`missing required file: ${relativePath}`);
+    return "";
+  }
+
+  return fs.readFileSync(fullPath, "utf-8");
+}
+
+function validateSnippets(relativePath, snippets) {
+  const content = readFile(relativePath);
+  if (!content) {
+    return;
+  }
+
+  for (const snippet of snippets) {
+    if (!content.includes(snippet)) {
+      errors.push(`${relativePath} missing required snippet: ${snippet}`);
+    }
+  }
+}
+
+function parseNamedExports(content) {
+  const names = new Set();
+  const exportRegex = /export const\s+([A-Za-z0-9_]+)\s*:/g;
+  for (const match of content.matchAll(exportRegex)) {
+    names.add(match[1]);
+  }
+
+  return names;
+}
+
+validateSnippets(".storybook/main.ts", requiredMainSnippets);
+validateSnippets(".storybook/preview.tsx", requiredPreviewSnippets);
+
+for (const [relativePath, names] of Object.entries(requiredStories)) {
+  const content = readFile(relativePath);
+  if (!content) {
+    continue;
+  }
+
+  if (!content.includes("tags: [\"autodocs\"]")) {
+    errors.push(`${relativePath} must enable autodocs tag`);
+  }
+
+  const exports = parseNamedExports(content);
+  for (const name of names) {
+    if (!exports.has(name)) {
+      errors.push(`${relativePath} missing required story export: ${name}`);
+    }
+  }
+}
+
+if (errors.length > 0) {
+  console.error("Storybook governance check failed.\n");
+  for (const error of errors) {
+    console.error(`- ${error}`);
+  }
+  process.exit(1);
+}
+
+console.log("Storybook governance check passed.");

@@ -70,6 +70,7 @@ const eslintConfig = [
       "node_modules/**",
       "out/**",
       "build/**",
+      "storybook-static/**",
       "target/**",
       "dist/**",
       "docs-site/**",

@@ -17,6 +17,7 @@ out
 # Production
 /build
 /dist
+/storybook-static/
 docs-site/
 .docusaurus/
 docs/specialists/

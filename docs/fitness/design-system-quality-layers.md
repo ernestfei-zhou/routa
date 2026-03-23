@@ -15,6 +15,13 @@ metrics:
     tier: normal
     description: "代码层与设计层：桌面 shell 禁止回退为硬编码颜色，并保持 dt token 命名契约"
 
+  - name: design_system_storybook_governance
+    command: npm run storybook:governance 2>&1
+    pattern: "Storybook governance check passed"
+    hard_gate: true
+    tier: normal
+    description: "组件层治理：Storybook 必须使用统一框架、统一 stories 目录，以及核心组件状态覆盖"
+
   - name: design_system_component_visual
     command: npm run test:e2e:desktop-shell 2>&1
     pattern: "\\d+\\s+passed"
@@ -69,8 +76,11 @@ metrics:
 
 ### 3. 组件层
 
-- 命令：`npm run test:e2e:desktop-shell`
+- 命令：
+  - `npm run storybook:governance`
+  - `npm run test:e2e:desktop-shell`
 - 覆盖：
+  - `DesktopAppShell` / `DesktopLayout` / `DesktopSidebar` / `DesktopNavRail` / `Button` 的统一 Storybook story contract
   - `desktop-shell-header`
   - `desktop-shell-sidebar`
   - `workspace-tab-bar`
@@ -103,6 +113,7 @@ metrics:
 
 ```bash
 npm run lint:css
+npm run storybook:governance
 npm run test:e2e:desktop-shell
 npm run test:accessibility
 entrix run --dry-run
