@@ -8,6 +8,7 @@
 - Execution plans and debt tracking live in `docs/exec-plans/`
 - Repro reports and agent feedback logs live in `docs/issues/`
 - Quality and fitness guidance live in `docs/fitness/`
+- Refactor triage and extraction workflow live in `docs/REFACTOR.md`
 
 ## Documentation Map
 
@@ -19,6 +20,7 @@
 - `docs/exec-plans/tech-debt-tracker.md`: Cross-cutting debt ledger for cleanup work that does not fit a single feature plan.
 - `docs/issues/`: Feedback-driven incident and bug records. Capture WHAT happened and WHY it mattered.
 - `docs/fitness/`: Fitness function, code quality, API contract, testing, and verification guidance.
+- `docs/REFACTOR.md`: Refactor playbook for long-file triage, test-first extraction, and concept-based clustering.
 - `docs/references/`: LLM-friendly reference material and distilled external docs for high-frequency dependencies.
 - `tools/entrix/docs/adr/README.md`: Entrix-specific architecture decisions, including why long-file analysis uses Git history as a physical design signal.
 
