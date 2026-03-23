@@ -9,43 +9,43 @@ import { MarkdownViewer } from "./markdown/markdown-viewer";
 function JsonNode({ value, depth = 0 }: { value: unknown; depth?: number }) {
   const [collapsed, setCollapsed] = useState(depth > 1);
 
-  if (value === null) return <span className="text-gray-400 dark:text-gray-500">null</span>;
+  if (value === null) return <span className="text-slate-400 dark:text-slate-500">null</span>;
   if (typeof value === "boolean") {
-    return <span className="text-yellow-600 dark:text-yellow-400">{String(value)}</span>;
+    return <span className="text-amber-600 dark:text-amber-400">{String(value)}</span>;
   }
   if (typeof value === "number") {
     return <span className="text-blue-600 dark:text-blue-400">{value}</span>;
   }
   if (typeof value === "string") {
     return (
-      <span className="text-green-700 dark:text-green-400">
+      <span className="text-emerald-700 dark:text-emerald-400">
         &quot;{value}&quot;
       </span>
     );
   }
 
   if (Array.isArray(value)) {
-    if (value.length === 0) return <span className="text-gray-500">[]</span>;
+    if (value.length === 0) return <span className="text-slate-500">[]</span>;
     return (
       <span>
         <button
           onClick={() => setCollapsed((current) => !current)}
-          className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-mono"
+          className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-mono"
         >
           {collapsed ? `[…${value.length}]` : "["}
         </button>
         {!collapsed && (
           <>
-            <div className="pl-3 border-l border-gray-200 dark:border-gray-700 ml-1">
+            <div className="pl-3 border-l border-slate-200 dark:border-slate-700 ml-1">
               {value.map((item, index) => (
                 <div key={index} className="my-0.5">
-                  <span className="text-gray-400 dark:text-gray-500 select-none">{index}: </span>
+                  <span className="text-slate-400 dark:text-slate-500 select-none">{index}: </span>
                   <JsonNode value={item} depth={depth + 1} />
-                  {index < value.length - 1 && <span className="text-gray-400">,</span>}
+                  {index < value.length - 1 && <span className="text-slate-400">,</span>}
                 </div>
               ))}
             </div>
-            <span className="text-gray-500">]</span>
+            <span className="text-slate-500">]</span>
           </>
         )}
       </span>
@@ -54,35 +54,35 @@ function JsonNode({ value, depth = 0 }: { value: unknown; depth?: number }) {
 
   if (typeof value === "object") {
     const entries = Object.entries(value as Record<string, unknown>);
-    if (entries.length === 0) return <span className="text-gray-500">{"{}"}</span>;
+    if (entries.length === 0) return <span className="text-slate-500">{"{}"}</span>;
     return (
       <span>
         <button
           onClick={() => setCollapsed((current) => !current)}
-          className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-mono"
+          className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-mono"
         >
           {collapsed ? `{…${entries.length}}` : "{"}
         </button>
         {!collapsed && (
           <>
-            <div className="pl-3 border-l border-gray-200 dark:border-gray-700 ml-1">
+            <div className="pl-3 border-l border-slate-200 dark:border-slate-700 ml-1">
               {entries.map(([key, nestedValue], index) => (
                 <div key={key} className="my-0.5">
                   <span className="text-slate-700 dark:text-slate-300 font-semibold">&quot;{key}&quot;</span>
-                  <span className="text-gray-500">: </span>
+                  <span className="text-slate-500">: </span>
                   <JsonNode value={nestedValue} depth={depth + 1} />
-                  {index < entries.length - 1 && <span className="text-gray-400">,</span>}
+                  {index < entries.length - 1 && <span className="text-slate-400">,</span>}
                 </div>
               ))}
             </div>
-            <span className="text-gray-500">{"}"}</span>
+            <span className="text-slate-500">{"}"}</span>
           </>
         )}
       </span>
     );
   }
 
-  return <span className="text-gray-700 dark:text-gray-300">{String(value)}</span>;
+  return <span className="text-slate-700 dark:text-slate-300">{String(value)}</span>;
 }
 
 export function tryParseJsonString(value: string): unknown | null {
@@ -233,8 +233,8 @@ export function ToolOutputView({
   if (isCodebaseRetrievalFormat) {
     return (
       <div>
-        <div className="px-2 py-1 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700/60 flex items-center justify-between">
-          <span className="text-[9px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+        <div className="px-2 py-1 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+          <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
             Output (Code Sections)
           </span>
         </div>
@@ -248,10 +248,10 @@ export function ToolOutputView({
   if (isRichTextContent && !isCodebaseRetrievalFormat) {
     return (
       <div>
-        <div className="px-2 py-1 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700/60 flex items-center justify-between">
+        <div className="px-2 py-1 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
           <button
             onClick={() => setRichTextExpanded((current) => !current)}
-            className="flex items-center gap-1.5 text-[9px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider hover:text-gray-600 dark:hover:text-gray-300"
+            className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider hover:text-slate-600 dark:hover:text-slate-300"
           >
             <svg
               className={`w-3 h-3 transition-transform ${richTextExpanded ? "rotate-90" : ""}`}
@@ -264,10 +264,10 @@ export function ToolOutputView({
             </svg>
             Output (Rendered)
           </button>
-          <span className="text-[9px] text-gray-400 dark:text-gray-500">{richTextContent.length} chars</span>
+          <span className="text-[9px] text-slate-400 dark:text-slate-500">{richTextContent.length} chars</span>
         </div>
         {richTextExpanded ? (
-          <div className="p-3 max-h-[500px] overflow-y-auto bg-white dark:bg-gray-900/40">
+          <div className="p-3 max-h-[500px] overflow-y-auto bg-white dark:bg-slate-900/40">
             <MarkdownViewer
               content={richTextContent}
               className="text-xs prose prose-sm dark:prose-invert max-w-none"
@@ -276,7 +276,7 @@ export function ToolOutputView({
         ) : (
           <div
             onClick={() => setRichTextExpanded(true)}
-            className="px-3 py-2 text-[10px] text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 line-clamp-3"
+            className="px-3 py-2 text-[10px] text-slate-500 dark:text-slate-400 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 line-clamp-3"
           >
             {richTextContent.slice(0, 200).replace(/\n/g, " ")}
             {richTextContent.length > 200 && "…"}
@@ -295,8 +295,8 @@ export function ToolOutputView({
 
       return (
         <div>
-          <div className="px-2 py-1 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700/60 flex items-center justify-between">
-            <span className="text-[9px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+          <div className="px-2 py-1 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+            <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
               {label}
             </span>
           </div>
@@ -315,11 +315,11 @@ export function ToolOutputView({
   if (!parsed) {
     return (
       <div>
-        <div className="px-2 py-1 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700/60 flex items-center justify-between">
-          <span className="text-[9px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+        <div className="px-2 py-1 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+          <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
             Output
           </span>
-          {isLarge && <span className="text-[9px] text-gray-400 dark:text-gray-500">{text.length} chars</span>}
+          {isLarge && <span className="text-[9px] text-slate-400 dark:text-slate-500">{text.length} chars</span>}
         </div>
         <CodeBlock
           content={text}
@@ -334,8 +334,8 @@ export function ToolOutputView({
 
   return (
     <div>
-      <div className="px-2 py-1 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700/60 flex items-center justify-between">
-        <span className="text-[9px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+      <div className="px-2 py-1 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+        <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
           Output (JSON)
         </span>
         <div className="flex gap-1">
@@ -343,8 +343,8 @@ export function ToolOutputView({
             onClick={() => setMode("code")}
             className={`text-[9px] px-1.5 py-0.5 rounded transition-colors ${
               mode === "code"
-                ? "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300"
-                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
             }`}
           >
             Code
@@ -353,8 +353,8 @@ export function ToolOutputView({
             onClick={() => setMode("tree")}
             className={`text-[9px] px-1.5 py-0.5 rounded transition-colors ${
               mode === "tree"
-                ? "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300"
-                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
             }`}
           >
             Tree
@@ -363,8 +363,8 @@ export function ToolOutputView({
             onClick={() => setMode("raw")}
             className={`text-[9px] px-1.5 py-0.5 rounded transition-colors ${
               mode === "raw"
-                ? "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300"
-                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
             }`}
           >
             Raw
@@ -372,7 +372,7 @@ export function ToolOutputView({
         </div>
       </div>
       {mode === "tree" ? (
-        <div className="px-2 py-1.5 text-[10px] font-mono bg-white dark:bg-gray-900/40 overflow-auto">
+        <div className="px-2 py-1.5 text-[10px] font-mono bg-white dark:bg-slate-900/40 overflow-auto">
           <JsonNode value={parsed} depth={0} />
         </div>
       ) : mode === "code" ? (
@@ -385,7 +385,7 @@ export function ToolOutputView({
           showHeader={false}
         />
       ) : (
-        <pre className="px-2 py-1.5 text-[10px] font-mono text-gray-700 dark:text-gray-200 whitespace-pre-wrap break-words bg-white dark:bg-gray-900/40">
+        <pre className="px-2 py-1.5 text-[10px] font-mono text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words bg-white dark:bg-slate-900/40">
           {text}
         </pre>
       )}
@@ -404,11 +404,11 @@ export function ToolInputTable({ input }: { input: unknown }) {
       <table className="w-full text-[10px] border-collapse">
         <tbody>
           {entries.map(([key, value]) => (
-            <tr key={key} className="border-b border-gray-100 dark:border-gray-700/50 last:border-0">
-              <td className="py-1 pr-3 font-mono font-semibold text-gray-500 dark:text-gray-400 align-top whitespace-nowrap w-px">
+            <tr key={key} className="border-b border-slate-100 dark:border-slate-700/50 last:border-0">
+              <td className="py-1 pr-3 font-mono font-semibold text-slate-500 dark:text-slate-400 align-top whitespace-nowrap w-px">
                 {key}
               </td>
-              <td className="py-1 font-mono text-gray-700 dark:text-gray-200 whitespace-pre-wrap break-all">
+              <td className="py-1 font-mono text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-all">
                 {typeof value === "string" ? value : JSON.stringify(value, null, 2)}
               </td>
             </tr>
@@ -419,7 +419,7 @@ export function ToolInputTable({ input }: { input: unknown }) {
   }
 
   return (
-    <pre className="text-[10px] text-gray-700 dark:text-gray-200 whitespace-pre-wrap break-words">
+    <pre className="text-[10px] text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words">
       {JSON.stringify(input, null, 2)}
     </pre>
   );

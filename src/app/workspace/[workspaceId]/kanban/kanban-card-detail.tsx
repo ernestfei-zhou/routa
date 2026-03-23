@@ -143,17 +143,17 @@ export function KanbanCardDetail({
   const compactMode = splitMode;
 
   return (
-    <div className="h-full w-full overflow-y-auto bg-gray-50/80 dark:bg-[#10131a]">
+    <div className="h-full w-full overflow-y-auto bg-slate-50/80 dark:bg-[#10131a]">
       <div className={`mx-auto flex min-h-full max-w-6xl flex-col ${compactMode ? "gap-3 p-3" : "gap-4 p-5"}`}>
-        <section className={`border border-gray-200/80 bg-white shadow-sm dark:border-[#232736] dark:bg-[#121620] ${compactMode ? "rounded-2xl p-3" : "rounded-3xl p-4"}`}>
+        <section className={`border border-slate-200/80 bg-white shadow-sm dark:border-[#232736] dark:bg-[#121620] ${compactMode ? "rounded-2xl p-3" : "rounded-3xl p-4"}`}>
           <div className={`flex items-center justify-between gap-3 ${compactMode ? "mb-1.5" : "mb-2"}`}>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
               Card Detail
             </div>
             <button
               type="button"
               onClick={onRefresh}
-              className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-600 transition-colors hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-300 dark:hover:border-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-200"
+              className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600 transition-colors hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 dark:border-slate-700 dark:bg-[#0d1018] dark:text-slate-300 dark:hover:border-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-200"
             >
               Refresh
             </button>
@@ -174,7 +174,7 @@ export function KanbanCardDetail({
               }
             }}
             rows={compactMode ? 3 : 2}
-            className={`w-full resize-none rounded-2xl border border-transparent bg-transparent px-0 py-0 font-semibold leading-tight text-gray-950 outline-none focus:border-transparent focus:ring-0 dark:text-gray-50 ${compactMode ? "text-lg" : "text-xl"}`}
+            className={`w-full resize-none rounded-2xl border border-transparent bg-transparent px-0 py-0 font-semibold leading-tight text-slate-950 outline-none focus:border-transparent focus:ring-0 dark:text-slate-50 ${compactMode ? "text-lg" : "text-xl"}`}
           />
           <div className={`flex flex-wrap items-center ${compactMode ? "mt-2 gap-1.5" : "mt-3 gap-2"}`}>
             <MetaSelect
@@ -241,9 +241,9 @@ export function KanbanCardDetail({
             description={compactMode ? undefined : "Read-only notes appended by downstream stages after the story description is frozen."}
             compact={compactMode}
           >
-            <div className="rounded-2xl border border-gray-200 bg-gray-50/70 dark:border-gray-700 dark:bg-[#0d1018]">
-              <div className={`border-b border-gray-200/70 dark:border-gray-700 ${compactMode ? "px-3 py-2" : "px-4 py-2.5"}`}>
-                <div className="text-[11px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 dark:border-slate-700 dark:bg-[#0d1018]">
+              <div className={`border-b border-slate-200/70 dark:border-slate-700 ${compactMode ? "px-3 py-2" : "px-4 py-2.5"}`}>
+                <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
                   Appended comments
                 </div>
               </div>
@@ -251,11 +251,11 @@ export function KanbanCardDetail({
                 <div className={compactMode ? "px-3 py-2.5" : "px-4 py-3"}>
                   <MarkdownViewer
                     content={task.comment}
-                    className="prose prose-sm max-w-none text-gray-800 dark:prose-invert dark:text-gray-200"
+                    className="prose prose-sm max-w-none text-slate-800 dark:prose-invert dark:text-slate-200"
                   />
                 </div>
               ) : (
-                <div className={`text-sm text-gray-500 dark:text-gray-400 ${compactMode ? "px-3 py-2.5" : "px-4 py-3"}`}>
+                <div className={`text-sm text-slate-500 dark:text-slate-400 ${compactMode ? "px-3 py-2.5" : "px-4 py-3"}`}>
                   No progress notes yet.
                 </div>
               )}
@@ -287,7 +287,7 @@ export function KanbanCardDetail({
               }}
               rows={compactMode ? 4 : 5}
               placeholder={"One test case per line\nExample: User can reopen the session from the run history"}
-              className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-amber-400 dark:border-gray-700 dark:bg-[#0f141d] dark:text-gray-100"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-400 dark:border-slate-700 dark:bg-[#0f141d] dark:text-slate-100"
             />
           </DetailSection>
 
@@ -341,7 +341,7 @@ export function KanbanCardDetail({
           />
         </div>
 
-        <div className={`mt-auto border-t border-gray-200 dark:border-gray-700 ${compactMode ? "pt-3" : "pt-4"}`}>
+        <div className={`mt-auto border-t border-slate-200 dark:border-slate-700 ${compactMode ? "pt-3" : "pt-4"}`}>
           <button
             onClick={onDelete}
             className="w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:border-red-300 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20"
@@ -366,11 +366,11 @@ function DetailSection({
   compact?: boolean;
 }) {
   return (
-    <section className={`border border-gray-200/80 bg-white shadow-sm dark:border-[#232736] dark:bg-[#121620] ${compact ? "rounded-2xl p-3" : "rounded-3xl p-4"}`}>
+    <section className={`border border-slate-200/80 bg-white shadow-sm dark:border-[#232736] dark:bg-[#121620] ${compact ? "rounded-2xl p-3" : "rounded-3xl p-4"}`}>
       <div className={compact ? "mb-2" : "mb-3"}>
-        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500">{title}</div>
+        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">{title}</div>
         {description && (
-          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{description}</div>
+          <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{description}</div>
         )}
       </div>
       {children}
@@ -380,8 +380,8 @@ function DetailSection({
 
 function MetaBadge({ label, value, compact = false }: { label: string; value: string; compact?: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 font-medium text-gray-700 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-300 ${compact ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-[11px]"}`}>
-      <span className="uppercase tracking-wide text-gray-400 dark:text-gray-500">{label}</span>
+    <span className={`inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 font-medium text-slate-700 dark:border-slate-700 dark:bg-[#0d1018] dark:text-slate-300 ${compact ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-[11px]"}`}>
+      <span className="uppercase tracking-wide text-slate-400 dark:text-slate-500">{label}</span>
       <span>{value}</span>
     </span>
   );
@@ -401,14 +401,14 @@ function MetaSelect({
   compact?: boolean;
 }) {
   return (
-    <label className={`inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 font-medium text-gray-700 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-300 ${compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-0.5 text-[11px]"}`}>
-      <span className="uppercase tracking-wide text-gray-400 dark:text-gray-500">{label}</span>
+    <label className={`inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 font-medium text-slate-700 dark:border-slate-700 dark:bg-[#0d1018] dark:text-slate-300 ${compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-0.5 text-[11px]"}`}>
+      <span className="uppercase tracking-wide text-slate-400 dark:text-slate-500">{label}</span>
       <select
         value={value}
         onChange={(event) => {
           void onChange(event.target.value);
         }}
-        className={`rounded-full bg-transparent font-medium text-gray-700 outline-none dark:text-gray-300 ${compact ? "pr-3 text-[10px]" : "pr-4 text-[11px]"}`}
+        className={`rounded-full bg-transparent font-medium text-slate-700 outline-none dark:text-slate-300 ${compact ? "pr-3 text-[10px]" : "pr-4 text-[11px]"}`}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>{option.label}</option>
@@ -420,11 +420,11 @@ function MetaSelect({
 
 function InlineSummary({ label, value, compact = false }: { label: string; value: string; compact?: boolean }) {
   return (
-    <div className={`flex items-start justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-[#0d1018] ${compact ? "px-2.5 py-2" : "px-3 py-2.5"}`}>
-      <div className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400 dark:text-gray-500">
+    <div className={`flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-[#0d1018] ${compact ? "px-2.5 py-2" : "px-3 py-2.5"}`}>
+      <div className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
         {label}
       </div>
-      <div className={`min-w-0 text-right font-medium text-gray-800 dark:text-gray-100 ${compact ? "text-[12px] leading-[1.1rem]" : "text-sm"}`}>
+      <div className={`min-w-0 text-right font-medium text-slate-800 dark:text-slate-100 ${compact ? "text-[12px] leading-[1.1rem]" : "text-sm"}`}>
         {value}
       </div>
     </div>
@@ -493,12 +493,12 @@ function ExecutionSection({
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{laneName}</div>
-          <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+          <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{laneName}</div>
+          <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
             {lane ? "Inherited from the current lane." : "Lane metadata unavailable, using task-level defaults."}
           </div>
         </div>
-        <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${lane?.automation?.enabled ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" : "bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>
+        <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${lane?.automation?.enabled ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400"}`}>
           {lane?.automation?.enabled ? "Automation on" : "Manual"}
         </span>
       </div>
@@ -544,18 +544,18 @@ function ExecutionSection({
       <details
         key={overrideKey}
         open={hasCardOverride || undefined}
-        className={`mt-2.5 rounded-2xl border border-gray-200/80 bg-gray-50/80 dark:border-gray-700 dark:bg-[#0d1018] ${compact ? "px-2.5 py-2.5" : "px-3 py-2.5"}`}
+        className={`mt-2.5 rounded-2xl border border-slate-200/80 bg-slate-50/80 dark:border-slate-700 dark:bg-[#0d1018] ${compact ? "px-2.5 py-2.5" : "px-3 py-2.5"}`}
       >
         <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
               Card Session Override
             </div>
-            <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+            <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
               Keep collapsed to inherit the lane default.
             </div>
           </div>
-          <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-medium text-gray-600 transition-colors hover:border-amber-300 hover:text-amber-700 dark:border-gray-700 dark:bg-[#121620] dark:text-gray-300 dark:hover:border-amber-600 dark:hover:text-amber-200">
+          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-medium text-slate-600 transition-colors hover:border-amber-300 hover:text-amber-700 dark:border-slate-700 dark:bg-[#121620] dark:text-slate-300 dark:hover:border-amber-600 dark:hover:text-amber-200">
             {hasCardOverride ? "Edit override" : "Override this card"}
           </span>
         </summary>
@@ -585,7 +585,7 @@ function ExecutionSection({
                 onProviderChange?.(null);
               }
             }}
-            className={`w-full rounded-2xl border border-gray-200 bg-white text-sm text-gray-700 outline-none focus:border-amber-400 dark:border-gray-700 dark:bg-[#121620] dark:text-gray-300 ${compact ? "px-2.5 py-2" : "px-3 py-2"}`}
+            className={`w-full rounded-2xl border border-slate-200 bg-white text-sm text-slate-700 outline-none focus:border-amber-400 dark:border-slate-700 dark:bg-[#121620] dark:text-slate-300 ${compact ? "px-2.5 py-2" : "px-3 py-2"}`}
           >
             <option value="">Use lane default</option>
             {availableProviders.map((provider) => (
@@ -599,7 +599,7 @@ function ExecutionSection({
                 onChange={async (event) => {
                   await onPatchTask(task.id, { assignedRole: event.target.value });
                 }}
-                className={`rounded-2xl border border-gray-200 bg-white text-sm text-gray-700 outline-none focus:border-amber-400 dark:border-gray-700 dark:bg-[#121620] dark:text-gray-300 ${compact ? "px-2.5 py-2" : "px-3 py-2"}`}
+                className={`rounded-2xl border border-slate-200 bg-white text-sm text-slate-700 outline-none focus:border-amber-400 dark:border-slate-700 dark:bg-[#121620] dark:text-slate-300 ${compact ? "px-2.5 py-2" : "px-3 py-2"}`}
               >
                 {ROLE_OPTIONS.map((role) => <option key={role} value={role}>{role}</option>)}
               </select>
@@ -613,7 +613,7 @@ function ExecutionSection({
                     assignedRole: specialist?.role ?? task.assignedRole,
                   });
                 }}
-                className={`rounded-2xl border border-gray-200 bg-white text-sm text-gray-700 outline-none focus:border-amber-400 dark:border-gray-700 dark:bg-[#121620] dark:text-gray-300 ${compact ? "px-2.5 py-2" : "px-3 py-2"}`}
+                className={`rounded-2xl border border-slate-200 bg-white text-sm text-slate-700 outline-none focus:border-amber-400 dark:border-slate-700 dark:bg-[#121620] dark:text-slate-300 ${compact ? "px-2.5 py-2" : "px-3 py-2"}`}
               >
                 <option value="">{KANBAN_SPECIALIST_LANGUAGE_LABELS[specialistLanguage].noSpecialist}</option>
                 {specialists.map((specialist) => <option key={specialist.id} value={specialist.id}>{getSpecialistDisplayName(specialist)}</option>)}
@@ -654,7 +654,7 @@ function ExecutionSection({
               });
               onProviderChange?.(null);
             }}
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-amber-300 hover:text-amber-700 dark:border-gray-700 dark:bg-[#121620] dark:text-gray-300 dark:hover:border-amber-600 dark:hover:text-amber-200"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-amber-300 hover:text-amber-700 dark:border-slate-700 dark:bg-[#121620] dark:text-slate-300 dark:hover:border-amber-600 dark:hover:text-amber-200"
           >
             Reset override
           </button>
@@ -727,16 +727,16 @@ function RepositoriesWorktreeRow({
     >
       <details className="group">
         <summary className={`flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden ${compact ? "text-[13px]" : "text-sm"}`}>
-          <div className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Repo</div>
+          <div className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Repo</div>
           {primaryCodebase ? (
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               <span className={`h-2 w-2 shrink-0 rounded-full ${primaryCodebase.sourceType === "github" ? "bg-blue-500" : "bg-emerald-500"}`} />
-              <span className="truncate text-gray-700 dark:text-gray-300">
+              <span className="truncate text-slate-700 dark:text-slate-300">
                 {repoSummary}
               </span>
             </div>
           ) : (
-            <span className="min-w-0 flex-1 truncate text-xs text-gray-400 dark:text-gray-500">{repoSummary}</span>
+            <span className="min-w-0 flex-1 truncate text-xs text-slate-400 dark:text-slate-500">{repoSummary}</span>
           )}
           {worktree && (
             <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
@@ -747,18 +747,18 @@ function RepositoriesWorktreeRow({
                   : "bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300"
             }`}>{effectiveBranch ?? worktree.branch}</span>
           )}
-          <span className="ml-auto text-xs text-gray-400 transition-colors group-hover:text-gray-600 dark:group-hover:text-gray-300">
+          <span className="ml-auto text-xs text-slate-400 transition-colors group-hover:text-slate-600 dark:group-hover:text-slate-300">
             Edit
           </span>
         </summary>
-        <div className={`space-y-3 border-l-2 border-gray-200 dark:border-gray-700 ${compact ? "mt-2.5 pl-2.5" : "mt-3 pl-3"}`}>
+        <div className={`space-y-3 border-l-2 border-slate-200 dark:border-slate-700 ${compact ? "mt-2.5 pl-2.5" : "mt-3 pl-3"}`}>
           {sessionInfo && (
             <div className={`rounded-2xl border px-3 py-2 ${sessionCwdMismatch
               ? "border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-900/10"
               : "border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-900/10"}`}>
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
                     Repo Health
                   </div>
                   <div className={`mt-1 text-xs ${sessionCwdMismatch ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-300"}`}>
@@ -775,7 +775,7 @@ function RepositoriesWorktreeRow({
                   {sessionCwdMismatch ? "Session mismatch" : "Aligned"}
                 </span>
               </div>
-              <div className="mt-2 space-y-1 text-[11px] text-gray-600 dark:text-gray-400">
+              <div className="mt-2 space-y-1 text-[11px] text-slate-600 dark:text-slate-400">
                 {expectedPath && (
                   <div>
                     Expected: <span className="font-mono">{expectedPath}</span>
@@ -834,7 +834,7 @@ function RepositoriesWorktreeRow({
           )}
           {codebases.length > 0 && (
             <div>
-              <div className="mb-2 text-[11px] font-medium text-gray-500 dark:text-gray-400">Edit linked repositories</div>
+              <div className="mb-2 text-[11px] font-medium text-slate-500 dark:text-slate-400">Edit linked repositories</div>
               <div className="flex flex-wrap gap-1.5">
                 {codebases.map((codebase) => {
                   const selected = currentCodebaseIds.includes(codebase.id);
@@ -858,7 +858,7 @@ function RepositoriesWorktreeRow({
                       className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[11px] transition-colors ${
                         selected
                           ? "border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-300"
-                          : "border-gray-200 bg-white text-gray-600 hover:border-blue-300 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-400"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 dark:border-slate-700 dark:bg-[#0d1018] dark:text-slate-400"
                       }`}
                       data-testid="detail-repo-toggle"
                     >
@@ -874,7 +874,7 @@ function RepositoriesWorktreeRow({
             </div>
           )}
           {worktree && (
-            <div data-testid="worktree-detail" className="truncate font-mono text-xs text-gray-500 dark:text-gray-500" title={worktree.worktreePath}>
+            <div data-testid="worktree-detail" className="truncate font-mono text-xs text-slate-500 dark:text-slate-500" title={worktree.worktreePath}>
               {worktree.worktreePath}
               {worktree.errorMessage && (
                 <div className="mt-0.5 text-red-600 dark:text-red-400">{worktree.errorMessage}</div>

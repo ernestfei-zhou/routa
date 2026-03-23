@@ -104,11 +104,11 @@ export function SessionsOverview({ sessions, workspaceId, onNavigate, onRefresh 
     return (
       <div key={session.sessionId} style={{ marginLeft: depth * 20 }}>
         <div
-          className="group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-[#151720] transition-colors"
+          className="group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-[#151720] transition-colors"
           onContextMenu={(e) => handleContextMenu(e, session.sessionId)}
         >
           {depth > 0 && (
-            <svg className="w-3 h-3 text-gray-300 dark:text-gray-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-3 h-3 text-slate-300 dark:text-slate-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
           )}
@@ -138,11 +138,11 @@ export function SessionsOverview({ sessions, workspaceId, onNavigate, onRefresh 
                   }}
                   onBlur={() => handleSaveRename(session.sessionId)}
                   autoFocus
-                  className="text-[13px] font-medium px-2 py-1 rounded border border-blue-500 dark:border-blue-400 bg-white dark:bg-[#0e1019] text-gray-700 dark:text-gray-300 outline-none"
+                  className="text-[13px] font-medium px-2 py-1 rounded border border-blue-500 dark:border-blue-400 bg-white dark:bg-[#0e1019] text-slate-700 dark:text-slate-300 outline-none"
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <div className="text-[13px] font-medium text-gray-700 dark:text-gray-300 truncate group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors cursor-pointer">
+                <div className="text-[13px] font-medium text-slate-700 dark:text-slate-300 truncate group-hover:text-slate-900 dark:group-hover:text-slate-100 transition-colors cursor-pointer">
                   {session.name || session.provider || `Session ${session.sessionId.slice(0, 8)}`}
                 </div>
               )}
@@ -152,16 +152,16 @@ export function SessionsOverview({ sessions, workspaceId, onNavigate, onRefresh 
                 </span>
               )}
             </div>
-            <div className="text-[11px] text-gray-400 dark:text-gray-500 truncate">
+            <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
               {session.role && <span className="capitalize">{session.role.toLowerCase()}</span>}
               {session.role && session.provider && <span className="mx-1">·</span>}
               {session.provider && <span>{session.provider}</span>}
             </div>
           </div>
-          <span className="text-[10px] text-gray-400 dark:text-gray-600 font-mono shrink-0">
+          <span className="text-[10px] text-slate-400 dark:text-slate-600 font-mono shrink-0">
             {formatRelativeTime(session.createdAt)}
           </span>
-          <svg className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
           </svg>
         </div>
@@ -171,20 +171,20 @@ export function SessionsOverview({ sessions, workspaceId, onNavigate, onRefresh 
   };
 
   return (
-    <div className="bg-white dark:bg-[#0e1019] border border-gray-200/60 dark:border-[#191c28] rounded-xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-200/60 dark:border-[#191c28] flex items-center justify-between">
+    <div className="bg-white dark:bg-[#0e1019] border border-slate-200/60 dark:border-[#191c28] rounded-xl overflow-hidden">
+      <div className="px-4 py-3 border-b border-slate-200/60 dark:border-[#191c28] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="text-[13px] font-semibold text-gray-700 dark:text-gray-300">
+          <h3 className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">
             Recent Sessions
           </h3>
-          <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-[#191c28] text-gray-500 dark:text-gray-400 font-mono">
+          <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-[#191c28] text-slate-500 dark:text-slate-400 font-mono">
             {sessions.length}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={onRefresh}
-            className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#191c28] transition-colors"
+            className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#191c28] transition-colors"
             title="Refresh"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -193,7 +193,7 @@ export function SessionsOverview({ sessions, workspaceId, onNavigate, onRefresh 
           </button>
           <button
             onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#191c28] transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#191c28] transition-colors"
           >
             {expanded ? "Show Less" : "Show All"}
             <svg className={`w-3 h-3 transition-transform ${expanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -204,14 +204,14 @@ export function SessionsOverview({ sessions, workspaceId, onNavigate, onRefresh 
       </div>
       <div className={`${expanded ? "max-h-[600px] overflow-y-auto" : ""}`}>
         {loading ? (
-          <div className="flex items-center justify-center py-8 text-gray-400 dark:text-gray-500">
+          <div className="flex items-center justify-center py-8 text-slate-400 dark:text-slate-500">
             <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
           </div>
         ) : displaySessions.length === 0 ? (
-          <div className="px-4 py-8 text-center text-[12px] text-gray-400 dark:text-gray-500">
+          <div className="px-4 py-8 text-center text-[12px] text-slate-400 dark:text-slate-500">
             No sessions yet. Start one above.
           </div>
         ) : (
@@ -224,7 +224,7 @@ export function SessionsOverview({ sessions, workspaceId, onNavigate, onRefresh 
       {/* Context Menu */}
       {contextMenu && (
         <div
-          className="fixed z-50 bg-white dark:bg-[#1a1d2e] border border-gray-200 dark:border-[#2a2d3e] rounded-lg shadow-lg py-1 min-w-[160px]"
+          className="fixed z-50 bg-white dark:bg-[#1a1d2e] border border-slate-200 dark:border-[#2a2d3e] rounded-lg shadow-lg py-1 min-w-[160px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -235,7 +235,7 @@ export function SessionsOverview({ sessions, workspaceId, onNavigate, onRefresh 
                 handleRenameSession(contextMenu.sessionId, session.name || session.provider || `Session ${session.sessionId.slice(0, 8)}`);
               }
             }}
-            className="w-full px-3 py-2 text-left text-[12px] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#252838] transition-colors flex items-center gap-2"
+            className="w-full px-3 py-2 text-left text-[12px] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#252838] transition-colors flex items-center gap-2"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
@@ -244,14 +244,14 @@ export function SessionsOverview({ sessions, workspaceId, onNavigate, onRefresh 
           </button>
           <button
             onClick={() => onNavigate(contextMenu.sessionId)}
-            className="w-full px-3 py-2 text-left text-[12px] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#252838] transition-colors flex items-center gap-2"
+            className="w-full px-3 py-2 text-left text-[12px] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#252838] transition-colors flex items-center gap-2"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
             </svg>
             Open
           </button>
-          <div className="h-px bg-gray-200 dark:bg-[#2a2d3e] my-1" />
+          <div className="h-px bg-slate-200 dark:bg-[#2a2d3e] my-1" />
           <button
             onClick={() => handleDeleteSession(contextMenu.sessionId)}
             className="w-full px-3 py-2 text-left text-[12px] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-2"

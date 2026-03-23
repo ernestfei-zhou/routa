@@ -57,13 +57,13 @@ export function SetupView({
             onKeyDown={handleKeyDown}
             placeholder="Describe your task, question, or goal..."
             rows={4}
-            className="w-full px-5 py-3.5 text-base text-gray-900 dark:text-gray-100 bg-transparent resize-none focus:outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500 leading-relaxed"
+            className="w-full px-5 py-3.5 text-base text-slate-900 dark:text-slate-100 bg-transparent resize-none focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 leading-relaxed"
             autoFocus
           />
           {/* Bottom toolbar */}
-          <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100 dark:border-gray-800/60 bg-gray-50/40 dark:bg-gray-900/20">
+          <div className="flex items-center justify-between px-3 py-2 border-t border-slate-100 dark:border-slate-800/60 bg-slate-50/40 dark:bg-slate-900/20">
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] text-gray-400 dark:text-gray-500 mr-1">⌘↵</span>
+              <span className="text-[11px] text-slate-400 dark:text-slate-500 mr-1">⌘↵</span>
               {providers.length > 0 && (
                 <ProviderDropdown
                   providers={providers}
@@ -95,13 +95,13 @@ export function SetupView({
         {/* Workspace + Repository */}
         <div className="grid grid-cols-2 gap-3 items-end">
           <div>
-            <label className="block text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+            <label className="block text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
               Workspace
             </label>
             <select
               value={activeWorkspaceId ?? ""}
               onChange={(e) => onWorkspaceChange(e.target.value)}
-              className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1e2130] text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1e2130] text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               {workspaces.length > 0 ? (
                 workspaces.map((ws) => (
@@ -113,7 +113,7 @@ export function SetupView({
             </select>
           </div>
           <div>
-            <label className="block text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+            <label className="block text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
               Repository
             </label>
             <RepoPicker value={repoSelection} onChange={onRepoChange} />
@@ -135,8 +135,8 @@ function SetupHeader() {
           <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
         </svg>
       </div>
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">What would you like to work on?</h2>
-      <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Describe your task and choose your mode.</p>
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">What would you like to work on?</h2>
+      <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">Describe your task and choose your mode.</p>
     </div>
   );
 }
@@ -149,7 +149,7 @@ interface AgentRoleSelectorProps {
 function AgentRoleSelector({ agentRole, onAgentRoleChange }: AgentRoleSelectorProps) {
   return (
     <div>
-      <label className="block text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">
+      <label className="block text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5">
         Mode
       </label>
       <div className="grid grid-cols-2 gap-3">
@@ -160,21 +160,21 @@ function AgentRoleSelector({ agentRole, onAgentRoleChange }: AgentRoleSelectorPr
           className={`p-3.5 rounded-xl border-2 text-left transition-all duration-150 ${
             agentRole === "ROUTA"
               ? "border-blue-500 bg-blue-50 dark:bg-blue-900/25 shadow-sm"
-              : "border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1f2e] hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm"
+              : "border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1a1f2e] hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm"
           }`}
         >
           <div className="flex items-center gap-2 mb-1.5">
             <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${
-              agentRole === "ROUTA" ? "bg-blue-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+              agentRole === "ROUTA" ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
             }`}>R</div>
-            <span className={`font-semibold text-sm ${agentRole === "ROUTA" ? "text-blue-700 dark:text-blue-300" : "text-gray-800 dark:text-gray-200"}`}>
+            <span className={`font-semibold text-sm ${agentRole === "ROUTA" ? "text-blue-700 dark:text-blue-300" : "text-slate-800 dark:text-slate-200"}`}>
               Routa
             </span>
             {agentRole === "ROUTA" && (
               <span className="ml-auto rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">推荐</span>
             )}
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             负责任务编排与规划。会生成执行规格（spec），并协调后续工作流。
           </p>
         </button>
@@ -186,18 +186,18 @@ function AgentRoleSelector({ agentRole, onAgentRoleChange }: AgentRoleSelectorPr
           className={`p-3.5 rounded-xl border-2 text-left transition-all duration-150 ${
             agentRole === "CRAFTER"
               ? "border-amber-500 bg-amber-50 dark:bg-amber-900/25 shadow-sm"
-              : "border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1f2e] hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-sm"
+              : "border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1a1f2e] hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-sm"
           }`}
         >
           <div className="flex items-center gap-2 mb-1.5">
             <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${
-              agentRole === "CRAFTER" ? "bg-amber-500 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+              agentRole === "CRAFTER" ? "bg-amber-500 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
             }`}>C</div>
-            <span className={`font-semibold text-sm ${agentRole === "CRAFTER" ? "text-amber-700 dark:text-amber-300" : "text-gray-800 dark:text-gray-200"}`}>
+            <span className={`font-semibold text-sm ${agentRole === "CRAFTER" ? "text-amber-700 dark:text-amber-300" : "text-slate-800 dark:text-slate-200"}`}>
               CRATER
             </span>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             专注于具体实现与代码生成。根据任务描述直接进行实现。
           </p>
         </button>

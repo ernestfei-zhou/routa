@@ -59,7 +59,7 @@ steps:
 `;
 
 const sectionHeadCls =
-  "text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider";
+  "text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider";
 
 // ─── DAG Visualization ───────────────────────────────────────────────────────
 
@@ -155,7 +155,7 @@ function WorkflowDag({ steps, onStepClick }: WorkflowDagProps) {
 
   if (!nodes.length) {
     return (
-      <div className="flex items-center justify-center h-24 text-xs text-gray-400 dark:text-gray-500">
+      <div className="flex items-center justify-center h-24 text-xs text-slate-400 dark:text-slate-500">
         No steps to visualize
       </div>
     );
@@ -331,14 +331,14 @@ function EditorModal({ workflow, onClose, onSaved }: EditorModalProps) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white dark:bg-[#1a1d2e] rounded-xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col border border-gray-200 dark:border-gray-700" style={{ maxHeight: "85vh" }}>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+      <div className="relative bg-white dark:bg-[#1a1d2e] rounded-xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col border border-slate-200 dark:border-slate-700" style={{ maxHeight: "85vh" }}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700 shrink-0">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
             {isNew ? "New Workflow" : `Edit: ${workflow!.name}`}
           </h3>
           <button
             onClick={onClose}
-            className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -349,7 +349,7 @@ function EditorModal({ workflow, onClose, onSaved }: EditorModalProps) {
         <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3">
           {isNew && (
             <div>
-              <label htmlFor="workflow-id-input" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="workflow-id-input" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Workflow ID
               </label>
               <input
@@ -358,16 +358,16 @@ function EditorModal({ workflow, onClose, onSaved }: EditorModalProps) {
                 value={id}
                 onChange={(e) => setId(e.target.value)}
                 placeholder="e.g. my-workflow"
-                className="w-full text-xs px-2 py-1.5 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-[#1e2130] text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
+                className="w-full text-xs px-2 py-1.5 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-[#1e2130] text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
               />
-              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
                 Used as the filename (letters, numbers, hyphens, underscores only)
               </p>
             </div>
           )}
 
           <div>
-            <label htmlFor="workflow-yaml-input" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="workflow-yaml-input" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
               YAML Content
             </label>
             <textarea
@@ -377,7 +377,7 @@ function EditorModal({ workflow, onClose, onSaved }: EditorModalProps) {
               onChange={(e) => setYamlContent(e.target.value)}
               rows={20}
               spellCheck={false}
-              className="w-full text-xs px-2 py-1.5 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-[#0f1117] text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono resize-y"
+              className="w-full text-xs px-2 py-1.5 rounded-md border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-[#0f1117] text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono resize-y"
               placeholder="Workflow YAML..."
             />
           </div>
@@ -387,10 +387,10 @@ function EditorModal({ workflow, onClose, onSaved }: EditorModalProps) {
           )}
         </div>
 
-        <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2 shrink-0">
+        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2 shrink-0">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-xs font-medium rounded-md border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             Cancel
           </button>
@@ -461,14 +461,14 @@ function ExecuteModal({ workflow, onClose }: ExecuteModalProps) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white dark:bg-[#1a1d2e] rounded-xl shadow-2xl w-full max-w-lg mx-4 flex flex-col border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+      <div className="relative bg-white dark:bg-[#1a1d2e] rounded-xl shadow-2xl w-full max-w-lg mx-4 flex flex-col border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
             Run: {workflow.name}
           </h3>
           <button
             onClick={onClose}
-            className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -478,14 +478,14 @@ function ExecuteModal({ workflow, onClose }: ExecuteModalProps) {
 
         <div className="px-4 py-4 space-y-3">
           <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
               Workspace
             </label>
             <select
               value={selectedWorkspaceId}
               onChange={(e) => setSelectedWorkspaceId(e.target.value)}
               disabled={executing || workspacesHook.loading || workspacesHook.workspaces.length === 0}
-              className="w-full text-xs px-2 py-1.5 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-[#0f1117] text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+              className="w-full text-xs px-2 py-1.5 rounded-md border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-[#0f1117] text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-blue-500 focus:outline-none"
             >
               {workspacesHook.workspaces.length === 0 ? (
                 <option value="">No active workspace</option>
@@ -500,30 +500,30 @@ function ExecuteModal({ workflow, onClose }: ExecuteModalProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
               Trigger Payload (optional)
             </label>
             <textarea
               value={payload}
               onChange={(e) => setPayload(e.target.value)}
               rows={4}
-              className="w-full text-xs px-2 py-1.5 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-[#0f1117] text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono resize-none"
+              className="w-full text-xs px-2 py-1.5 rounded-md border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-[#0f1117] text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono resize-none"
               placeholder="JSON payload or description for this workflow run..."
             />
           </div>
 
           {result && (
-            <p className="text-xs text-green-600 dark:text-green-400">{result}</p>
+            <p className="text-xs text-emerald-600 dark:text-emerald-400">{result}</p>
           )}
           {error && (
             <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
           )}
         </div>
 
-        <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-xs font-medium rounded-md border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             {result ? "Close" : "Cancel"}
           </button>
@@ -531,7 +531,7 @@ function ExecuteModal({ workflow, onClose }: ExecuteModalProps) {
             <button
               onClick={handleExecute}
               disabled={executing || workspacesHook.loading || !selectedWorkspaceId}
-              className="px-3 py-1.5 text-xs font-medium rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {executing ? "Running…" : "▶ Run"}
             </button>
@@ -560,7 +560,7 @@ function WorkflowCard({ workflow, onEdit, onDelete, onRun }: WorkflowCardProps) 
     : "Manual";
 
   const triggerColors: Record<string, string> = {
-    Manual: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
+    Manual: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300",
     Webhook: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
     Schedule: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
   };
@@ -575,25 +575,25 @@ function WorkflowCard({ workflow, onEdit, onDelete, onRun }: WorkflowCardProps) 
 
   return (
     <div
-      className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1e2130] overflow-hidden"
+      className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1e2130] overflow-hidden"
       data-testid={`workflow-card-${workflow.id}`}
     >
       {/* Header */}
       <div className="px-3 py-2.5 flex items-start gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+            <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
               {workflow.name}
             </span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${triggerColors[triggerBadge] ?? triggerColors.Manual}`}>
               {triggerBadge}
             </span>
-            <span className="text-[10px] text-gray-400 dark:text-gray-500">
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">
               v{workflow.version ?? "1.0"} · {workflow.steps.length} step{workflow.steps.length !== 1 ? "s" : ""}
             </span>
           </div>
           {workflow.description && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
               {workflow.description}
             </p>
           )}
@@ -601,7 +601,7 @@ function WorkflowCard({ workflow, onEdit, onDelete, onRun }: WorkflowCardProps) 
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => onRun(workflow)}
-            className="p-1.5 rounded-md text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors"
+            className="p-1.5 rounded-md text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors"
             title="Run workflow"
             aria-label={`Run workflow ${workflow.name}`}
           >
@@ -611,7 +611,7 @@ function WorkflowCard({ workflow, onEdit, onDelete, onRun }: WorkflowCardProps) 
           </button>
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             title={expanded ? "Collapse" : "Show graph"}
             aria-label={expanded ? "Collapse workflow" : "Show workflow graph"}
           >
@@ -649,7 +649,7 @@ function WorkflowCard({ workflow, onEdit, onDelete, onRun }: WorkflowCardProps) 
 
       {/* DAG Graph */}
       {expanded && (
-        <div className="border-t border-gray-200 dark:border-gray-700 px-3 py-3 bg-gray-50 dark:bg-[#0f1117]">
+        <div className="border-t border-slate-200 dark:border-slate-700 px-3 py-3 bg-slate-50 dark:bg-[#0f1117]">
           <p className={`${sectionHeadCls} mb-2`}>Workflow Graph</p>
           <WorkflowDag
             steps={workflow.steps}
@@ -730,7 +730,7 @@ export function WorkflowPanel() {
 
       {/* Loading */}
       {loading && (
-        <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+        <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
           <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -741,7 +741,7 @@ export function WorkflowPanel() {
 
       {/* Workflow list */}
       {!loading && workflows.length === 0 && (
-        <div className="text-center py-8 text-xs text-gray-400 dark:text-gray-500">
+        <div className="text-center py-8 text-xs text-slate-400 dark:text-slate-500">
           <p>No workflows found in <code className="font-mono">resources/flows/</code></p>
           <p className="mt-1">Create your first workflow to get started.</p>
         </div>

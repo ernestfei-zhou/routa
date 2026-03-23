@@ -53,7 +53,7 @@ const STATE_STYLES: Record<string, { label: string; dot: string; badge: string }
   working:   { label: "Working",   dot: "bg-amber-400 animate-pulse", badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
   completed: { label: "Completed", dot: "bg-emerald-400", badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" },
   failed:    { label: "Failed",    dot: "bg-red-400", badge: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300" },
-  canceled:  { label: "Canceled",  dot: "bg-gray-400", badge: "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400" },
+  canceled:  { label: "Canceled",  dot: "bg-slate-400", badge: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400" },
 };
 
 // ── Sub-components ─────────────────────────────────────────────────────────
@@ -71,18 +71,18 @@ function StatusBadge({ state }: { state: string }) {
 function SkillCard({ skill }: { skill: AgentSkill }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <div className="rounded-lg border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/50 p-4 transition-shadow hover:shadow-md">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/50 p-4 transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <p className="font-mono text-xs uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-0.5">{skill.id}</p>
-          <h3 className="font-semibold text-zinc-800 dark:text-zinc-100 text-sm">{skill.name}</h3>
-          <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-1 leading-relaxed">{skill.description}</p>
+          <p className="font-mono text-xs uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-0.5">{skill.id}</p>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-100 text-sm">{skill.name}</h3>
+          <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 leading-relaxed">{skill.description}</p>
         </div>
       </div>
       {skill.tags && skill.tags.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-3">
           {skill.tags.map((tag) => (
-            <span key={tag} className="rounded-md bg-zinc-100 dark:bg-zinc-700 px-2 py-0.5 text-xs text-zinc-500 dark:text-zinc-400 font-mono">
+            <span key={tag} className="rounded-md bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-xs text-slate-500 dark:text-slate-400 font-mono">
               {tag}
             </span>
           ))}
@@ -99,7 +99,7 @@ function SkillCard({ skill }: { skill: AgentSkill }) {
           {expanded && (
             <ul className="mt-2 space-y-1">
               {skill.examples.map((ex, i) => (
-                <li key={i} className="text-xs text-zinc-500 dark:text-zinc-400 pl-3 border-l-2 border-blue-200 dark:border-blue-800 italic">
+                <li key={i} className="text-xs text-slate-500 dark:text-slate-400 pl-3 border-l-2 border-blue-200 dark:border-blue-800 italic">
                   {ex}
                 </li>
               ))}
@@ -118,16 +118,16 @@ function TaskRow({ task, onSelect }: { task: A2ATask; onSelect: (t: A2ATask) => 
   return (
     <button
       onClick={() => onSelect(task)}
-      className="w-full text-left rounded-lg border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/50 px-4 py-3 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow transition-all group"
+      className="w-full text-left rounded-lg border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/50 px-4 py-3 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow transition-all group"
     >
       <div className="flex items-center justify-between gap-2 min-w-0">
-        <span className="font-mono text-[11px] text-zinc-400 dark:text-zinc-500 truncate">{task.id.slice(0, 8)}…</span>
+        <span className="font-mono text-[11px] text-slate-400 dark:text-slate-500 truncate">{task.id.slice(0, 8)}…</span>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {ts && <span className="text-[11px] text-zinc-400 dark:text-zinc-500">{ts}</span>}
+          {ts && <span className="text-[11px] text-slate-400 dark:text-slate-500">{ts}</span>}
           <StatusBadge state={task.status.state} />
         </div>
       </div>
-      <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-200 truncate group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">
+      <p className="mt-1 text-sm text-slate-700 dark:text-slate-200 truncate group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">
         {prompt.length > 120 ? prompt.slice(0, 120) + "…" : prompt}
       </p>
     </button>
@@ -233,19 +233,19 @@ export default function A2APage() {
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans">
       {/* Header */}
-      <header className="border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur sticky top-0 z-10">
+      <header className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur sticky top-0 z-10">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-amber-500 flex items-center justify-center text-white font-bold text-sm select-none">
               A2
             </div>
             <div>
-              <h1 className="font-semibold text-zinc-900 dark:text-zinc-50 leading-none">
+              <h1 className="font-semibold text-slate-900 dark:text-slate-50 leading-none">
                 {agentCard?.name ?? "A2A Protocol"}
               </h1>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">Agent-to-Agent API</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Agent-to-Agent API</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -254,7 +254,7 @@ export default function A2APage() {
               Live
             </span>
             {agentCard?.version && (
-              <span className="text-xs text-zinc-400 dark:text-zinc-500 font-mono">v{agentCard.version}</span>
+              <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">v{agentCard.version}</span>
             )}
           </div>
         </div>
@@ -264,8 +264,8 @@ export default function A2APage() {
         {/* Left column */}
         <div className="space-y-6">
           {/* Send message */}
-          <section className="rounded-xl border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-900 shadow-sm p-6">
-            <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">
+          <section className="rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900 shadow-sm p-6">
+            <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">
               Send Message
             </h2>
             <form onSubmit={handleSend} className="space-y-3">
@@ -274,7 +274,7 @@ export default function A2APage() {
                 placeholder="Workspace ID (optional)"
                 value={workspaceId}
                 onChange={(e) => setWorkspaceId(e.target.value)}
-                className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-700 dark:text-zinc-200 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
               />
               <textarea
                 rows={3}
@@ -284,13 +284,13 @@ export default function A2APage() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSend(e as unknown as React.FormEvent);
                 }}
-                className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-700 dark:text-zinc-200 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 resize-none"
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 resize-none"
               />
               {sendError && (
                 <p className="text-xs text-red-500 dark:text-red-400">{sendError}</p>
               )}
               <div className="flex items-center justify-between">
-                <p className="text-xs text-zinc-400 dark:text-zinc-500">⌘↵ to send</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500">⌘↵ to send</p>
                 <button
                   type="submit"
                   disabled={sending || !prompt.trim()}
@@ -308,15 +308,15 @@ export default function A2APage() {
           </section>
 
           {/* Tabs */}
-          <div className="flex gap-1 rounded-lg bg-zinc-100 dark:bg-zinc-800/60 p-1 w-fit">
+          <div className="flex gap-1 rounded-lg bg-slate-100 dark:bg-slate-800/60 p-1 w-fit">
             {(["tasks", "card", "skills"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
                   activeTab === tab
-                    ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                 }`}
               >
                 {tab === "tasks" ? `Tasks${tasks.length > 0 ? ` (${tasks.length})` : ""}` : tab === "card" ? "Agent Card" : "Skills"}
@@ -328,7 +328,7 @@ export default function A2APage() {
           {activeTab === "tasks" && (
             <section>
               <div className="flex items-center justify-between mb-3">
-                <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
                   {loadingTasks ? "Refreshing…" : `${tasks.length} task${tasks.length !== 1 ? "s" : ""}`}
                 </p>
                 <button
@@ -340,8 +340,8 @@ export default function A2APage() {
                 </button>
               </div>
               {tasks.length === 0 && !loadingTasks ? (
-                <div className="rounded-xl border border-dashed border-zinc-200 dark:border-zinc-700 p-10 text-center">
-                  <p className="text-sm text-zinc-400 dark:text-zinc-500">No tasks yet. Send a message to create one.</p>
+                <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 p-10 text-center">
+                  <p className="text-sm text-slate-400 dark:text-slate-500">No tasks yet. Send a message to create one.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -357,9 +357,9 @@ export default function A2APage() {
 
           {/* Agent Card JSON */}
           {activeTab === "card" && (
-            <section className="rounded-xl border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-900 p-4">
+            <section className="rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900 p-4">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   /.well-known/agent-card.json
                 </span>
                 <a
@@ -372,11 +372,11 @@ export default function A2APage() {
                 </a>
               </div>
               {agentCard ? (
-                <pre className="text-xs leading-relaxed text-zinc-600 dark:text-zinc-300 overflow-x-auto whitespace-pre-wrap break-words">
+                <pre className="text-xs leading-relaxed text-slate-600 dark:text-slate-300 overflow-x-auto whitespace-pre-wrap break-words">
                   {JSON.stringify(agentCard, null, 2)}
                 </pre>
               ) : (
-                <p className="text-sm text-zinc-400 dark:text-zinc-500">Loading…</p>
+                <p className="text-sm text-slate-400 dark:text-slate-500">Loading…</p>
               )}
             </section>
           )}
@@ -388,7 +388,7 @@ export default function A2APage() {
                 <SkillCard key={skill.id} skill={skill} />
               ))}
               {!agentCard && (
-                <p className="text-sm text-zinc-400 dark:text-zinc-500 col-span-2">Loading skills…</p>
+                <p className="text-sm text-slate-400 dark:text-slate-500 col-span-2">Loading skills…</p>
               )}
             </section>
           )}
@@ -398,29 +398,29 @@ export default function A2APage() {
         <aside className="space-y-4">
           {/* Capabilities summary */}
           {agentCard && (
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-900 p-4">
-              <h2 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900 p-4">
+              <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
                 Capabilities
               </h2>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-zinc-600 dark:text-zinc-300">Streaming</span>
-                  <span className={agentCard.capabilities?.streaming ? "text-emerald-500" : "text-zinc-400"}>
+                  <span className="text-slate-600 dark:text-slate-300">Streaming</span>
+                  <span className={agentCard.capabilities?.streaming ? "text-emerald-500" : "text-slate-400"}>
                     {agentCard.capabilities?.streaming ? "✓" : "✗"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-zinc-600 dark:text-zinc-300">Push Notifications</span>
-                  <span className={agentCard.capabilities?.pushNotifications ? "text-emerald-500" : "text-zinc-400"}>
+                  <span className="text-slate-600 dark:text-slate-300">Push Notifications</span>
+                  <span className={agentCard.capabilities?.pushNotifications ? "text-emerald-500" : "text-slate-400"}>
                     {agentCard.capabilities?.pushNotifications ? "✓" : "✗"}
                   </span>
                 </div>
                 {agentCard.defaultInputModes && (
-                  <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                    <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-1">Input modes</p>
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">Input modes</p>
                     <div className="flex flex-wrap gap-1">
                       {agentCard.defaultInputModes.map((m) => (
-                        <span key={m} className="font-mono text-[11px] bg-zinc-100 dark:bg-zinc-800 rounded px-1.5 py-0.5 text-zinc-500 dark:text-zinc-400">
+                        <span key={m} className="font-mono text-[11px] bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.5 text-slate-500 dark:text-slate-400">
                           {m}
                         </span>
                       ))}
@@ -428,11 +428,11 @@ export default function A2APage() {
                   </div>
                 )}
                 {agentCard.defaultOutputModes && (
-                  <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                    <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-1">Output modes</p>
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">Output modes</p>
                     <div className="flex flex-wrap gap-1">
                       {agentCard.defaultOutputModes.map((m) => (
-                        <span key={m} className="font-mono text-[11px] bg-zinc-100 dark:bg-zinc-800 rounded px-1.5 py-0.5 text-zinc-500 dark:text-zinc-400">
+                        <span key={m} className="font-mono text-[11px] bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.5 text-slate-500 dark:text-slate-400">
                           {m}
                         </span>
                       ))}
@@ -444,8 +444,8 @@ export default function A2APage() {
           )}
 
           {/* Task detail panel */}
-          <div className="rounded-xl border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-900 p-4">
-            <h2 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900 p-4">
+            <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
               Task Detail
             </h2>
             {selectedTask ? (
@@ -454,37 +454,37 @@ export default function A2APage() {
                   <StatusBadge state={selectedTask.status.state} />
                   <button
                     onClick={() => setSelectedTask(null)}
-                    className="text-xs text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
+                    className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
                   >
                     ✕
                   </button>
                 </div>
                 <div>
-                  <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-0.5">Task ID</p>
-                  <p className="font-mono text-xs text-zinc-600 dark:text-zinc-300 break-all">{selectedTask.id}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mb-0.5">Task ID</p>
+                  <p className="font-mono text-xs text-slate-600 dark:text-slate-300 break-all">{selectedTask.id}</p>
                 </div>
                 {selectedTask.contextId && (
                   <div>
-                    <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-0.5">Context ID</p>
-                    <p className="font-mono text-xs text-zinc-600 dark:text-zinc-300 break-all">{selectedTask.contextId}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mb-0.5">Context ID</p>
+                    <p className="font-mono text-xs text-slate-600 dark:text-slate-300 break-all">{selectedTask.contextId}</p>
                   </div>
                 )}
                 {selectedTask.metadata?.workspaceId && (
                   <div>
-                    <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-0.5">Workspace</p>
-                    <p className="font-mono text-xs text-zinc-600 dark:text-zinc-300">{selectedTask.metadata.workspaceId}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mb-0.5">Workspace</p>
+                    <p className="font-mono text-xs text-slate-600 dark:text-slate-300">{selectedTask.metadata.workspaceId}</p>
                   </div>
                 )}
                 {selectedTask.metadata?.userPrompt && (
                   <div>
-                    <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-0.5">Prompt</p>
-                    <p className="text-xs text-zinc-700 dark:text-zinc-200 leading-relaxed">{selectedTask.metadata.userPrompt}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mb-0.5">Prompt</p>
+                    <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">{selectedTask.metadata.userPrompt}</p>
                   </div>
                 )}
                 {selectedTask.status.message && (
                   <div>
-                    <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-0.5">Status Message</p>
-                    <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mb-0.5">Status Message</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                       {selectedTask.status.message.parts.map((p) => p.text).join("")}
                     </p>
                   </div>
@@ -494,21 +494,21 @@ export default function A2APage() {
                   <summary className="cursor-pointer text-xs text-blue-500 dark:text-blue-400 hover:underline list-none">
                     Raw JSON
                   </summary>
-                  <pre className="mt-2 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400 overflow-x-auto whitespace-pre-wrap break-words">
+                  <pre className="mt-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400 overflow-x-auto whitespace-pre-wrap break-words">
                     {JSON.stringify(selectedTask, null, 2)}
                   </pre>
                 </details>
               </div>
             ) : (
-              <p className="text-sm text-zinc-400 dark:text-zinc-500">
+              <p className="text-sm text-slate-400 dark:text-slate-500">
                 Select a task to see details.
               </p>
             )}
           </div>
 
           {/* Quick API reference */}
-          <div className="rounded-xl border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-900 p-4">
-            <h2 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900 p-4">
+            <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
               API Endpoints
             </h2>
             <ul className="space-y-1.5 text-xs font-mono">
@@ -529,7 +529,7 @@ export default function A2APage() {
                   }`}>
                     {ep.method}
                   </span>
-                  <span className="text-zinc-500 dark:text-zinc-400 break-all">{ep.path}</span>
+                  <span className="text-slate-500 dark:text-slate-400 break-all">{ep.path}</span>
                 </li>
               ))}
             </ul>

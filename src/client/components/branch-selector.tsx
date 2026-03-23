@@ -222,7 +222,7 @@ export function BranchSelector({
           }
         }}
         disabled={disabled || switching}
-        className="flex max-w-[220px] items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+        className="flex max-w-[220px] items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
       >
         <BranchIcon />
         <span className="truncate">{switching ? "..." : currentBranch}</span>
@@ -234,7 +234,7 @@ export function BranchSelector({
         )}
         {/* Uncommitted changes dot */}
         {status?.hasUncommittedChanges && (
-          <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 ml-0.5" title="Uncommitted changes" />
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 ml-0.5" title="Uncommitted changes" />
         )}
         <ChevronIcon />
       </Button>
@@ -251,12 +251,12 @@ export function BranchSelector({
             width: 256,
             zIndex: 10000,
           }}
-          className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1e2130] shadow-xl overflow-hidden"
+          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1e2130] shadow-xl overflow-hidden"
         >
           {/* Header */}
-          <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+          <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Switch branch
               </span>
               <Button
@@ -265,7 +265,7 @@ export function BranchSelector({
                 size="xs"
                 onClick={() => fetchBranches(true)}
                 disabled={loading}
-                className="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                className="p-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                 title="Fetch remote branches"
               >
                 <svg
@@ -281,8 +281,8 @@ export function BranchSelector({
             </div>
 
             {/* Search */}
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-gray-50 dark:bg-[#161922] border border-gray-200 dark:border-gray-700">
-              <svg className="w-3 h-3 text-gray-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-50 dark:bg-[#161922] border border-slate-200 dark:border-slate-700">
+              <svg className="w-3 h-3 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -291,7 +291,7 @@ export function BranchSelector({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Filter branches..."
-                className="flex-1 bg-transparent text-[11px] text-gray-900 dark:text-gray-100 placeholder:text-gray-400 outline-none"
+                className="flex-1 bg-transparent text-[11px] text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none"
                 onKeyDown={(e) => {
                   if (e.key === "Escape") setShowDropdown(false);
                 }}
@@ -307,7 +307,7 @@ export function BranchSelector({
               size="xs"
               onClick={handlePull}
               disabled={loading}
-              className="w-full px-3 py-2 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 border-b border-gray-100 dark:border-gray-800 transition-colors"
+              className="w-full px-3 py-2 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 border-b border-slate-100 dark:border-slate-800 transition-colors"
             >
               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -319,7 +319,7 @@ export function BranchSelector({
           {/* Branch list */}
           <div className="max-h-56 overflow-y-auto">
             {loading && !branchData ? (
-              <div className="px-3 py-3 text-xs text-gray-400 text-center">
+              <div className="px-3 py-3 text-xs text-slate-400 text-center">
                 Loading branches...
               </div>
             ) : (
@@ -327,7 +327,7 @@ export function BranchSelector({
                 {/* Local branches */}
                 {localBranches.length > 0 && (
                   <>
-                    <div className="px-3 py-1 text-[9px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                    <div className="px-3 py-1 text-[9px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                       Local
                     </div>
                     {localBranches.map((b) => (
@@ -344,7 +344,7 @@ export function BranchSelector({
                 {/* Remote-only branches */}
                 {remoteBranches.length > 0 && (
                   <>
-                    <div className="px-3 py-1 mt-1 text-[9px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider border-t border-gray-50 dark:border-gray-800 pt-1.5">
+                    <div className="px-3 py-1 mt-1 text-[9px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider border-t border-slate-50 dark:border-slate-800 pt-1.5">
                       Remote
                     </div>
                     {remoteBranches.map((b) => (
@@ -360,7 +360,7 @@ export function BranchSelector({
                 )}
 
                 {localBranches.length === 0 && remoteBranches.length === 0 && (
-                  <div className="px-3 py-3 text-xs text-gray-400 text-center">
+                  <div className="px-3 py-3 text-xs text-slate-400 text-center">
                     {searchQuery ? "No matching branches." : "No branches found."}
                   </div>
                 )}
@@ -393,10 +393,10 @@ function BranchItem({
       variant="ghost"
       size="xs"
       onClick={onClick}
-      className={`w-full justify-start rounded-none text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5 ${
+      className={`w-full justify-start rounded-none text-left px-3 py-1.5 text-[11px] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5 ${
         isCurrent
           ? "text-blue-600 dark:text-blue-400 font-medium"
-          : "text-gray-700 dark:text-gray-300"
+          : "text-slate-700 dark:text-slate-300"
       }`}
     >
       {isCurrent && (
@@ -405,7 +405,7 @@ function BranchItem({
         </svg>
       )}
       {isRemote && (
-        <svg className="w-2.5 h-2.5 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <svg className="w-2.5 h-2.5 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       )}

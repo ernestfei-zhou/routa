@@ -70,19 +70,19 @@ export default function MessagesPage() {
 
   const getStatusBadge = (status: BackgroundTask["status"]) => {
     const colors: Record<string, string> = {
-      pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+      pending: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
       running: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-      completed: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+      completed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
       failed: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-      cancelled: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
+      cancelled: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400",
     };
     return <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${colors[status] ?? colors.pending}`}>{status}</span>;
   };
 
   const getOutcomeBadge = (outcome: TriggerLog["outcome"]) => {
     const colors: Record<string, string> = {
-      triggered: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-      skipped: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+      triggered: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+      skipped: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
       error: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
     };
     return <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${colors[outcome] ?? ""}`}>{outcome}</span>;
@@ -91,17 +91,17 @@ export default function MessagesPage() {
   return (
     <div className="min-h-screen bg-[#fafafa] dark:bg-[#0a0c12]">
       {/* Header */}
-      <header className="h-12 border-b border-gray-100 dark:border-[#151720] flex items-center px-5 sticky top-0 bg-[#fafafa]/90 dark:bg-[#0a0c12]/90 backdrop-blur-sm z-10">
+      <header className="h-12 border-b border-slate-100 dark:border-[#151720] flex items-center px-5 sticky top-0 bg-[#fafafa]/90 dark:bg-[#0a0c12]/90 backdrop-blur-sm z-10">
         <Link href="/" className="flex items-center gap-2.5 mr-6">
           <Image src="/logo.svg" alt="Routa" width={22} height={22} className="rounded-md" />
-          <span className="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Messages</span>
+          <span className="text-[13px] font-semibold text-slate-800 dark:text-slate-200">Messages</span>
         </Link>
         <div className="flex gap-1">
           <select
             value={effectiveWorkspaceId}
             onChange={(e) => setSelectedWorkspaceId(e.target.value)}
             disabled={workspacesLoading || workspaces.length === 0}
-            className="mr-2 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600 dark:border-[#1c1f2e] dark:bg-[#12141c] dark:text-gray-300"
+            className="mr-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 dark:border-[#1c1f2e] dark:bg-[#12141c] dark:text-slate-300"
           >
             {workspaces.length === 0 ? (
               <option value="">No workspace</option>
@@ -115,13 +115,13 @@ export default function MessagesPage() {
           </select>
           <button
             onClick={() => setTab("tasks")}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${tab === "tasks" ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${tab === "tasks" ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
           >
             Background Tasks
           </button>
           <button
             onClick={() => setTab("logs")}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${tab === "logs" ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${tab === "logs" ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
           >
             Webhook Logs
           </button>
@@ -131,20 +131,20 @@ export default function MessagesPage() {
       {/* Content */}
       <main className="max-w-5xl mx-auto p-6">
         {loading ? (
-          <div className="text-center py-12 text-gray-400">Loading...</div>
+          <div className="text-center py-12 text-slate-400">Loading...</div>
         ) : tab === "tasks" ? (
           <div className="space-y-3">
-            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">PR Agent & Background Tasks</h2>
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">PR Agent & Background Tasks</h2>
             {tasks.length === 0 ? (
-              <p className="text-sm text-gray-400 py-8 text-center">No background tasks yet</p>
+              <p className="text-sm text-slate-400 py-8 text-center">No background tasks yet</p>
             ) : (
               tasks.map((t) => (
-                <div key={t.id} className="p-4 bg-white dark:bg-[#12141c] border border-gray-100 dark:border-[#1c1f2e] rounded-xl">
+                <div key={t.id} className="p-4 bg-white dark:bg-[#12141c] border border-slate-100 dark:border-[#1c1f2e] rounded-xl">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{t.name}</span>
+                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{t.name}</span>
                     {getStatusBadge(t.status)}
                   </div>
-                  <div className="flex items-center gap-4 text-[11px] text-gray-500">
+                  <div className="flex items-center gap-4 text-[11px] text-slate-500">
                     <span>Type: {t.type}</span>
                     <span>Created: {formatTime(t.createdAt)}</span>
                     {t.completedAt && <span>Completed: {formatTime(t.completedAt)}</span>}
@@ -156,17 +156,17 @@ export default function MessagesPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Webhook Trigger Logs</h2>
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">Webhook Trigger Logs</h2>
             {logs.length === 0 ? (
-              <p className="text-sm text-gray-400 py-8 text-center">No webhook logs yet</p>
+              <p className="text-sm text-slate-400 py-8 text-center">No webhook logs yet</p>
             ) : (
               logs.map((l) => (
-                <div key={l.id} className="p-4 bg-white dark:bg-[#12141c] border border-gray-100 dark:border-[#1c1f2e] rounded-xl">
+                <div key={l.id} className="p-4 bg-white dark:bg-[#12141c] border border-slate-100 dark:border-[#1c1f2e] rounded-xl">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{l.eventType}{l.eventAction ? `:${l.eventAction}` : ""}</span>
+                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{l.eventType}{l.eventAction ? `:${l.eventAction}` : ""}</span>
                     {getOutcomeBadge(l.outcome)}
                   </div>
-                  <div className="flex items-center gap-4 text-[11px] text-gray-500">
+                  <div className="flex items-center gap-4 text-[11px] text-slate-500">
                     <span>Config: {l.configId.slice(0, 8)}</span>
                     <span>Signature: {l.signatureValid ? "✓" : "✗"}</span>
                     <span>{formatTime(l.createdAt)}</span>

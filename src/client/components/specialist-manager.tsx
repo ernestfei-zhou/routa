@@ -221,26 +221,26 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
       {/* Dialog */}
-      <div className="relative bg-white dark:bg-[#1a1d2e] rounded-xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden border border-gray-200 dark:border-gray-700 max-h-[90vh] flex flex-col">
+      <div className="relative bg-white dark:bg-[#1a1d2e] rounded-xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden border border-slate-200 dark:border-slate-700 max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Specialists</h2>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Specialists</h2>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleSync}
               disabled={syncing}
-              className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-md hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 transition-colors"
             >
               {syncing ? "Syncing..." : "Sync Bundled"}
             </button>
             <button
               onClick={onClose}
-              className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -261,7 +261,7 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
             <>
               {/* Specialists List */}
               <div className="mb-4 flex justify-between items-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
                   {specialists.length} specialists configured
                 </p>
                 <button
@@ -276,39 +276,39 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
                 {specialists.map((specialist) => (
                   <div
                     key={specialist.id}
-                    className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700"
+                    className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700"
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-medium text-gray-900 dark:text-gray-100">{specialist.name}</h3>
+                          <h3 className="font-medium text-slate-900 dark:text-slate-100">{specialist.name}</h3>
                           <span className={`px-2 py-0.5 text-xs rounded-full ${
                             specialist.source === "user"
                               ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
                               : specialist.source === "bundled"
                               ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                              : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                              : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
                           }`}>
                             {specialist.source}
                           </span>
-                          <span className="px-2 py-0.5 text-xs rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                          <span className="px-2 py-0.5 text-xs rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                             {ROLE_LABELS[specialist.role]}
                           </span>
                         </div>
                         {specialist.description && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{specialist.description}</p>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{specialist.description}</p>
                         )}
                         <div className="space-y-1">
-                          <p className="text-xs text-gray-500 dark:text-gray-500">
+                          <p className="text-xs text-slate-500 dark:text-slate-500">
                             Tier: {TIER_LABELS[specialist.defaultModelTier]}
                           </p>
                           {specialist.defaultProvider ? (
-                            <p className="text-xs text-gray-500 dark:text-gray-500">
+                            <p className="text-xs text-slate-500 dark:text-slate-500">
                               Provider: <span className="font-mono">{specialist.defaultProvider}</span>
                             </p>
                           ) : null}
                           {specialist.defaultAdapter ? (
-                            <p className="text-xs text-gray-500 dark:text-gray-500">
+                            <p className="text-xs text-slate-500 dark:text-slate-500">
                               Adapter: <span className="font-mono">{specialist.defaultAdapter}</span>
                             </p>
                           ) : null}
@@ -319,7 +319,7 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
                           <>
                             <button
                               onClick={() => handleEdit(specialist)}
-                              className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                              className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors"
                             >
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -327,7 +327,7 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
                             </button>
                             <button
                               onClick={() => handleDelete(specialist.id)}
-                              className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                              className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors"
                             >
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -342,7 +342,7 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
               </div>
 
               {specialists.length === 0 && !loading && (
-                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                <div className="text-center py-12 text-slate-500 dark:text-slate-400">
                   <p>No specialists found. Click &quot;Sync Bundled&quot; to load default specialists.</p>
                 </div>
               )}
@@ -351,14 +351,14 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
             <>
               {/* Create/Edit Form */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
                   {editingId ? "Edit Specialist" : "New Specialist"}
                 </h3>
 
                 <div className="grid grid-cols-2 gap-4">
                   {/* ID */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       ID *
                     </label>
                     <input
@@ -367,13 +367,13 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
                       onChange={(e) => setForm({ ...form, id: e.target.value })}
                       disabled={!!editingId}
                       placeholder="e.g., my-specialist"
-                      className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
                     />
                   </div>
 
                   {/* Name */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Name *
                     </label>
                     <input
@@ -381,14 +381,14 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
                       placeholder="e.g., My Custom Specialist"
-                      className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400"
                     />
                   </div>
                 </div>
 
                 {/* Description */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Description
                   </label>
                   <input
@@ -396,20 +396,20 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                     placeholder="Brief description of this specialist"
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   {/* Role */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Role *
                     </label>
                     <select
                       value={form.role}
                       onChange={(e) => setForm({ ...form, role: e.target.value as AgentRole })}
-                      className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-gray-100"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md text-sm text-slate-900 dark:text-slate-100"
                     >
                       {Object.entries(ROLE_LABELS).map(([key, label]) => (
                         <option key={key} value={key}>
@@ -421,13 +421,13 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
 
                   {/* Model Tier */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Default Model Tier *
                     </label>
                     <select
                       value={form.defaultModelTier}
                       onChange={(e) => setForm({ ...form, defaultModelTier: e.target.value as ModelTier })}
-                      className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-gray-100"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md text-sm text-slate-900 dark:text-slate-100"
                     >
                       {Object.entries(TIER_LABELS).map(([key, label]) => (
                         <option key={key} value={key}>
@@ -441,7 +441,7 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
                 <div className="grid grid-cols-2 gap-4">
                   {/* Default Provider */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Default ACP Provider
                     </label>
                     <input
@@ -449,16 +449,16 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
                       value={form.defaultProvider}
                       onChange={(e) => setForm({ ...form, defaultProvider: e.target.value })}
                       placeholder="e.g., claude"
-                      className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400"
                     />
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                       Leave empty to use workspace or caller defaults
                     </p>
                   </div>
 
                   {/* Default Adapter */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Default Adapter
                     </label>
                     <input
@@ -466,9 +466,9 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
                       value={form.defaultAdapter}
                       onChange={(e) => setForm({ ...form, defaultAdapter: e.target.value })}
                       placeholder="e.g., acp"
-                      className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400"
                     />
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                       Optional runtime hint used by direct execution flows
                     </p>
                   </div>
@@ -476,7 +476,7 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
 
                 {/* Model Override */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Model Override (optional)
                   </label>
                   <input
@@ -484,16 +484,16 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
                     value={form.model}
                     onChange={(e) => setForm({ ...form, model: e.target.value })}
                     placeholder="e.g., claude:opus-4.6"
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400"
                   />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     Use format provider:model (e.g., claude:opus-4.6) or leave empty for tier-based selection
                   </p>
                 </div>
 
                 {/* System Prompt */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     System Prompt *
                   </label>
                   <textarea
@@ -501,13 +501,13 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
                     onChange={(e) => setForm({ ...form, systemPrompt: e.target.value })}
                     placeholder="Enter the system prompt for this specialist..."
                     rows={8}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 font-mono"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 font-mono"
                   />
                 </div>
 
                 {/* Role Reminder */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Role Reminder
                   </label>
                   <input
@@ -515,16 +515,16 @@ export function SpecialistManager({ open, onClose }: SpecialistManagerProps) {
                     value={form.roleReminder}
                     onChange={(e) => setForm({ ...form, roleReminder: e.target.value })}
                     placeholder="Short reminder shown to the agent"
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400"
                   />
                 </div>
 
                 {/* Actions */}
-                <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
                   <button
                     onClick={handleCancelEdit}
                     disabled={loading}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
                   >
                     Cancel
                   </button>

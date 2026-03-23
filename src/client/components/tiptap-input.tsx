@@ -561,12 +561,12 @@ export function TiptapInput({
   const [modelFilter, setModelFilter] = useState("");
   const editorClass = isHero
     ? "tiptap-chat-input outline-none min-h-[120px] max-h-[360px] overflow-y-auto text-base leading-8 text-slate-900 dark:text-slate-100"
-    : "tiptap-chat-input outline-none min-h-[60px] max-h-[240px] overflow-y-auto text-sm text-gray-900 dark:text-gray-100";
+    : "tiptap-chat-input outline-none min-h-[60px] max-h-[240px] overflow-y-auto text-sm text-slate-900 dark:text-slate-100";
   const wrapperClass = isHero
     ? `tiptap-input-wrapper relative rounded-[24px] border border-[#d6e5fb] bg-white/88 px-4 py-3 shadow-[0_18px_48px_-36px_rgba(14,116,144,0.32)] transition-colors focus-within:ring-2 focus-within:ring-sky-500 focus-within:border-transparent dark:border-white/10 dark:bg-[#101a2d]/88 ${
         disabled ? "opacity-40 cursor-not-allowed" : ""
       }`
-    : `tiptap-input-wrapper relative px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#161922] transition-colors focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent ${
+    : `tiptap-input-wrapper relative px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#161922] transition-colors focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent ${
         disabled ? "opacity-40 cursor-not-allowed" : ""
       }`;
   const toolbarClass = isHero
@@ -574,13 +574,13 @@ export function TiptapInput({
     : "mt-1.5 -mb-0.5 flex min-w-0 items-center gap-2 overflow-hidden";
   const modelButtonClass = isHero
     ? "flex items-center gap-2 rounded-lg border border-[#d6e5fb] px-3 py-1.5 text-sm transition-colors hover:bg-sky-50 dark:border-white/10 dark:hover:bg-white/5"
-    : "flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs transition-colors";
+    : "flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs transition-colors";
   const hintClass = isHero
     ? "ml-auto mr-1 text-xs text-slate-400 dark:text-slate-500"
-    : "ml-auto mr-1 text-[10px] text-gray-300 dark:text-gray-600";
+    : "ml-auto mr-1 text-[10px] text-slate-300 dark:text-slate-600";
   const hintKbdClass = isHero
     ? "rounded bg-sky-50 px-1.5 py-0.5 font-mono text-[11px] text-slate-500 dark:bg-white/8 dark:text-slate-400"
-    : "px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 font-mono";
+    : "px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-mono";
   const sendButtonClass = isHero
     ? "shrink-0 flex h-11 w-11 items-center justify-center rounded-[18px] bg-blue-600 text-white shadow-[0_12px_26px_-14px_rgba(37,99,235,0.75)] transition-all hover:bg-blue-700 hover:shadow-[0_16px_30px_-16px_rgba(37,99,235,0.85)] disabled:opacity-40 disabled:cursor-not-allowed"
     : "shrink-0 w-7 h-7 flex items-center justify-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed";
@@ -685,13 +685,13 @@ export function TiptapInput({
         code: {
           HTMLAttributes: {
             class:
-              "px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs font-mono",
+              "px-1 py-0.5 bg-slate-200 dark:bg-slate-700 rounded text-xs font-mono",
           },
         },
         blockquote: {
           HTMLAttributes: {
             class:
-              "border-l-2 border-gray-300 dark:border-gray-600 pl-3 italic text-gray-600 dark:text-gray-400",
+              "border-l-2 border-slate-300 dark:border-slate-600 pl-3 italic text-slate-600 dark:text-slate-400",
           },
         },
         bulletList: { HTMLAttributes: { class: "list-disc ml-4" } },
@@ -702,7 +702,7 @@ export function TiptapInput({
         lowlight,
         HTMLAttributes: {
           class:
-            "bg-gray-50 dark:bg-[#0d0f17] rounded-lg p-3 text-xs font-mono overflow-x-auto my-1 border border-gray-100 dark:border-gray-800",
+            "bg-slate-50 dark:bg-[#0d0f17] rounded-lg p-3 text-xs font-mono overflow-x-auto my-1 border border-slate-100 dark:border-slate-800",
         },
       }),
       Placeholder.configure({
@@ -992,15 +992,15 @@ export function TiptapInput({
                 className={modelButtonClass}
                 title="Select model"
               >
-                <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-3 h-3 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                <span className={`font-medium truncate ${isHero ? "max-w-[180px] text-slate-700 dark:text-slate-200" : "max-w-[140px] text-gray-700 dark:text-gray-300"}`}>
+                <span className={`font-medium truncate ${isHero ? "max-w-[180px] text-slate-700 dark:text-slate-200" : "max-w-[140px] text-slate-700 dark:text-slate-300"}`}>
                   {selectedModel ? selectedModel.split("/").pop() : "Default model"}
                 </span>
                 {modelLoading
-                  ? <span className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />
-                  : <svg className={`w-3 h-3 text-gray-400 transition-transform ${modelDropdownOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  ? <span className="w-3 h-3 border border-slate-400 border-t-transparent rounded-full animate-spin" />
+                  : <svg className={`w-3 h-3 text-slate-400 transition-transform ${modelDropdownOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                     </svg>
                 }
@@ -1008,18 +1008,18 @@ export function TiptapInput({
 
               {modelDropdownOpen && modelDropdownPos && (
                 <div
-                  className="fixed w-72 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1e2130] shadow-xl z-[9999] flex flex-col"
+                  className="fixed w-72 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1e2130] shadow-xl z-[9999] flex flex-col"
                   style={{ left: modelDropdownPos.left, bottom: modelDropdownPos.bottom, top: modelDropdownPos.top, maxHeight: `${modelDropdownPos.maxHeight}px` }}
                 >
                   {/* Search */}
-                  <div className="p-2 border-b border-gray-100 dark:border-gray-800">
+                  <div className="p-2 border-b border-slate-100 dark:border-slate-800">
                     <input
                       autoFocus
                       type="text"
                       value={modelFilter}
                       onChange={(e) => setModelFilter(e.target.value)}
                       placeholder="Filter models..."
-                      className="w-full px-2 py-1 text-xs rounded border border-gray-200 dark:border-gray-700 bg-transparent outline-none focus:ring-1 focus:ring-blue-500 text-gray-800 dark:text-gray-200"
+                      className="w-full px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-transparent outline-none focus:ring-1 focus:ring-blue-500 text-slate-800 dark:text-slate-200"
                     />
                   </div>
                   <div className="overflow-y-auto flex-1">
@@ -1030,7 +1030,7 @@ export function TiptapInput({
                       className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
                         !selectedModel
                           ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
-                          : "hover:bg-gray-50 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-300"
+                          : "hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300"
                       }`}
                     >
                       <span className="font-medium">Default model</span>
@@ -1045,10 +1045,10 @@ export function TiptapInput({
                           className={`w-full text-left px-3 py-1.5 text-xs transition-colors flex items-center gap-2 ${
                             m === selectedModel
                               ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
-                              : "hover:bg-gray-50 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-300"
+                              : "hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300"
                           }`}
                         >
-                          <span className="text-gray-400 dark:text-gray-500 font-mono text-[10px] shrink-0">
+                          <span className="text-slate-400 dark:text-slate-500 font-mono text-[10px] shrink-0">
                             {m.split("/")[0]}
                           </span>
                           <span className="font-medium truncate">{m.split("/").slice(1).join("/") || m}</span>
@@ -1056,7 +1056,7 @@ export function TiptapInput({
                       ))
                     }
                     {availableModels.length === 0 && !modelLoading && (
-                      <div className="px-3 py-3 text-xs text-gray-400 text-center">No models found</div>
+                      <div className="px-3 py-3 text-xs text-slate-400 text-center">No models found</div>
                     )}
                   </div>
                 </div>
@@ -1096,12 +1096,12 @@ export function TiptapInput({
 
           {/* Usage indicator (shown when we have usage data) */}
           {usageInfo && (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-[10px] text-gray-500 dark:text-gray-400 font-mono" title={`Input: ${usageInfo.inputTokens.toLocaleString()} tokens\nOutput: ${usageInfo.outputTokens.toLocaleString()} tokens`}>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-500 dark:text-slate-400 font-mono" title={`Input: ${usageInfo.inputTokens.toLocaleString()} tokens\nOutput: ${usageInfo.outputTokens.toLocaleString()} tokens`}>
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
               <span>{usageInfo.totalTokens.toLocaleString()}</span>
-              <span className="text-gray-400 dark:text-gray-500">tokens</span>
+              <span className="text-slate-400 dark:text-slate-500">tokens</span>
             </div>
           )}
 
@@ -1161,7 +1161,7 @@ function ModeChip({
       className={`px-2 py-0.5 rounded text-[10px] border transition-colors ${
         active
           ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
-          : "bg-transparent text-gray-500 border-gray-200 hover:bg-gray-100 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-800"
+          : "bg-transparent text-slate-500 border-slate-200 hover:bg-slate-100 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-800"
       }`}
     >
       {label}

@@ -35,8 +35,8 @@ interface CategoryConfig {
 const CATEGORIES: CategoryConfig[] = [
   { name: "Task", color: "text-blue-600 dark:text-blue-400", bgColor: "bg-blue-50 dark:bg-blue-900/20", borderColor: "border-blue-200 dark:border-blue-800" },
   { name: "Agent", color: "text-blue-600 dark:text-blue-400", bgColor: "bg-blue-50 dark:bg-blue-900/20", borderColor: "border-blue-200 dark:border-blue-800" },
-  { name: "Note", color: "text-green-600 dark:text-green-400", bgColor: "bg-green-50 dark:bg-green-900/20", borderColor: "border-green-200 dark:border-green-800" },
-  { name: "Workspace", color: "text-orange-600 dark:text-orange-400", bgColor: "bg-orange-50 dark:bg-orange-900/20", borderColor: "border-orange-200 dark:border-orange-800" },
+  { name: "Note", color: "text-emerald-600 dark:text-emerald-400", bgColor: "bg-emerald-50 dark:bg-emerald-900/20", borderColor: "border-emerald-200 dark:border-emerald-800" },
+  { name: "Workspace", color: "text-amber-600 dark:text-amber-400", bgColor: "bg-amber-50 dark:bg-amber-900/20", borderColor: "border-amber-200 dark:border-amber-800" },
   { name: "Git", color: "text-rose-600 dark:text-rose-400", bgColor: "bg-rose-50 dark:bg-rose-900/20", borderColor: "border-rose-200 dark:border-rose-800" },
 ];
 
@@ -158,11 +158,11 @@ export default function McpToolsPage() {
   };
 
   return (
-    <div className="h-screen flex bg-gray-50 dark:bg-[#0f1117]">
-      <aside className="w-[320px] shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-[#13151d] flex flex-col">
-        <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+    <div className="h-screen flex bg-slate-50 dark:bg-[#0f1117]">
+      <aside className="w-[320px] shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#13151d] flex flex-col">
+        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-sm font-semibold text-gray-900 dark:text-gray-100">MCP Tools</h1>
+            <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-100">MCP Tools</h1>
             <button
               type="button"
               onClick={() => loadTools()}
@@ -181,10 +181,10 @@ export default function McpToolsPage() {
                 onChange={(e) => handleToggleMode(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-8 h-4 bg-gray-300 dark:bg-gray-600 rounded-full peer peer-checked:bg-blue-500 transition-colors" />
+              <div className="w-8 h-4 bg-slate-300 dark:bg-slate-600 rounded-full peer peer-checked:bg-blue-500 transition-colors" />
               <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-4" />
             </div>
-            <span className="text-[11px] text-gray-600 dark:text-gray-400">
+            <span className="text-[11px] text-slate-600 dark:text-slate-400">
               Essential ({ESSENTIAL_TOOLS_COUNT})
             </span>
           </label>
@@ -229,7 +229,7 @@ export default function McpToolsPage() {
                           className={`w-full text-left rounded-md px-2 py-1.5 mb-0.5 transition-colors ${
                             active
                               ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
-                              : "hover:bg-gray-50 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-300"
+                              : "hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300"
                           }`}
                         >
                           <div className="text-xs font-medium truncate">{tool.name}</div>
@@ -246,26 +246,26 @@ export default function McpToolsPage() {
 
       <main className="flex-1 min-w-0 p-5 overflow-y-auto">
         {!selectedTool ? (
-          <div className="text-sm text-gray-500 dark:text-gray-400">No tool selected.</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400">No tool selected.</div>
         ) : (
           <div className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 {selectedTool.name}
               </h2>
-              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                 {selectedTool.description}
               </p>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
                 Arguments (JSON)
               </label>
               <textarea
                 value={argsJson}
                 onChange={(e) => setArgsJson(e.target.value)}
-                className="w-full h-36 p-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1e2130] text-xs font-mono text-gray-900 dark:text-gray-100"
+                className="w-full h-36 p-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1e2130] text-xs font-mono text-slate-900 dark:text-slate-100"
               />
             </div>
 
@@ -279,26 +279,26 @@ export default function McpToolsPage() {
               </button>
               <Link
                 href="/"
-                className="px-3 py-1.5 text-sm font-medium rounded-md border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+                className="px-3 py-1.5 text-sm font-medium rounded-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
               >
                 Back
               </Link>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
                 Tool Result
               </label>
-              <pre className="w-full min-h-40 p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#12141d] text-xs text-gray-800 dark:text-gray-200 overflow-auto">
+              <pre className="w-full min-h-40 p-3 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#12141d] text-xs text-slate-800 dark:text-slate-200 overflow-auto">
                 {result || "{}"}
               </pre>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
                 Input Schema
               </label>
-              <pre className="w-full min-h-24 p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#12141d] text-xs text-gray-800 dark:text-gray-200 overflow-auto">
+              <pre className="w-full min-h-24 p-3 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#12141d] text-xs text-slate-800 dark:text-slate-200 overflow-auto">
                 {JSON.stringify(selectedTool.inputSchema ?? {}, null, 2)}
               </pre>
             </div>

@@ -260,14 +260,14 @@ function EventCard({ event }: { event: AGUIBaseEvent }) {
         className="flex items-center gap-2 w-full text-left"
       >
         <span className={`font-mono font-semibold ${color.text}`}>{event.type}</span>
-        <span className="text-gray-400 truncate flex-1">{summaryParts.join(" | ")}</span>
-        <span className="text-gray-400 shrink-0">{ts}</span>
-        <svg className={`w-2.5 h-2.5 text-gray-400 transition-transform ${expanded ? "rotate-90" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <span className="text-slate-400 truncate flex-1">{summaryParts.join(" | ")}</span>
+        <span className="text-slate-400 shrink-0">{ts}</span>
+        <svg className={`w-2.5 h-2.5 text-slate-400 transition-transform ${expanded ? "rotate-90" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
         </svg>
       </button>
       {expanded && (
-        <pre className="mt-1 text-[9px] font-mono text-gray-600 dark:text-gray-400 whitespace-pre-wrap max-h-40 overflow-auto border-t border-gray-200 dark:border-gray-700 pt-1">
+        <pre className="mt-1 text-[9px] font-mono text-slate-600 dark:text-slate-400 whitespace-pre-wrap max-h-40 overflow-auto border-t border-slate-200 dark:border-slate-700 pt-1">
           {JSON.stringify(event, null, 2)}
         </pre>
       )}
@@ -303,8 +303,8 @@ function AGUIUserBubble({ message }: { message: AssembledMessage }) {
           <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">User</span>
         </div>
         <div className="px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
-          <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed">
-            {message.content || <span className="italic text-gray-400">(empty)</span>}
+          <p className="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap break-words leading-relaxed">
+            {message.content || <span className="italic text-slate-400">(empty)</span>}
           </p>
         </div>
       </div>
@@ -314,7 +314,7 @@ function AGUIUserBubble({ message }: { message: AssembledMessage }) {
 
 function AGUIAssistantBubble({ message }: { message: AssembledMessage }) {
   return (
-    <div className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+    <div className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed">
       <MarkdownViewer content={message.content || ""} className="text-sm" />
     </div>
   );
@@ -328,7 +328,7 @@ function AGUIReasoningBubble({ message }: { message: AssembledMessage }) {
       className="group my-1 flex w-full items-start gap-2 rounded-lg border border-slate-100/50 bg-slate-50/50 px-3 py-1.5 text-left transition-colors hover:bg-slate-100/70 dark:border-slate-800/20 dark:bg-slate-900/10 dark:hover:bg-slate-900/20"
     >
       <span className="shrink-0 pt-0.5 text-[10px] text-slate-500">💭</span>
-      <p className={`text-[11px] text-gray-500 dark:text-gray-400 italic leading-relaxed ${expanded ? "" : "line-clamp-2"}`}>
+      <p className={`text-[11px] text-slate-500 dark:text-slate-400 italic leading-relaxed ${expanded ? "" : "line-clamp-2"}`}>
         {message.content}
       </p>
       {!expanded && message.content.length > 150 && (
@@ -350,10 +350,10 @@ function AGUIToolCard({ tool }: { tool: ToolCallGroup }) {
       >
         <span className="text-[10px]">🔧</span>
         <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300">{tool.toolName}</span>
-        <span className={`text-[10px] ${hasResult ? "text-green-600 dark:text-green-400" : "text-yellow-600 dark:text-yellow-400"}`}>
+        <span className={`text-[10px] ${hasResult ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
           {hasResult ? "✓" : "⏳"}
         </span>
-        <svg className={`w-3 h-3 text-gray-400 ml-auto transition-transform ${expanded ? "rotate-90" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg className={`w-3 h-3 text-slate-400 ml-auto transition-transform ${expanded ? "rotate-90" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
         </svg>
       </button>
@@ -361,16 +361,16 @@ function AGUIToolCard({ tool }: { tool: ToolCallGroup }) {
         <div className="mt-1 ml-4 pl-3 border-l-2 border-amber-200 dark:border-amber-800/40 space-y-2">
           {tool.args && (
             <div>
-              <span className="text-[10px] font-semibold text-gray-500 uppercase">Args</span>
-              <pre className="text-[10px] font-mono text-gray-600 dark:text-gray-400 whitespace-pre-wrap mt-0.5 max-h-32 overflow-auto">
+              <span className="text-[10px] font-semibold text-slate-500 uppercase">Args</span>
+              <pre className="text-[10px] font-mono text-slate-600 dark:text-slate-400 whitespace-pre-wrap mt-0.5 max-h-32 overflow-auto">
                 {tool.args}
               </pre>
             </div>
           )}
           {tool.result && (
             <div>
-              <span className="text-[10px] font-semibold text-gray-500 uppercase">Result</span>
-              <pre className="text-[10px] font-mono text-gray-600 dark:text-gray-400 whitespace-pre-wrap mt-0.5 max-h-40 overflow-auto">
+              <span className="text-[10px] font-semibold text-slate-500 uppercase">Result</span>
+              <pre className="text-[10px] font-mono text-slate-600 dark:text-slate-400 whitespace-pre-wrap mt-0.5 max-h-40 overflow-auto">
                 {tool.result.slice(0, 2000)}{tool.result.length > 2000 ? "\n...(truncated)" : ""}
               </pre>
             </div>
@@ -393,12 +393,12 @@ function AGUICustomCard({ event }: { event: AGUIBaseEvent }) {
       >
         <span className="text-[10px] text-slate-500">⚙</span>
         <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">{name}</span>
-        <svg className={`w-2.5 h-2.5 text-gray-400 ml-auto transition-transform ${expanded ? "rotate-90" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg className={`w-2.5 h-2.5 text-slate-400 ml-auto transition-transform ${expanded ? "rotate-90" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
         </svg>
       </button>
       {expanded && (
-        <pre className="ml-4 mt-1 text-[9px] font-mono text-gray-600 dark:text-gray-400 whitespace-pre-wrap max-h-32 overflow-auto">
+        <pre className="ml-4 mt-1 text-[9px] font-mono text-slate-600 dark:text-slate-400 whitespace-pre-wrap max-h-32 overflow-auto">
           {JSON.stringify(event, null, 2)}
         </pre>
       )}
@@ -432,7 +432,7 @@ export function AGUITracePanel({ sessionId, traces }: AGUITracePanelProps) {
   if (!sessionId) {
     return (
       <div className="h-full flex items-center justify-center p-8">
-        <p className="text-sm text-gray-500 dark:text-gray-400">Select a session to view AG-UI events</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Select a session to view AG-UI events</p>
       </div>
     );
   }
@@ -440,10 +440,10 @@ export function AGUITracePanel({ sessionId, traces }: AGUITracePanelProps) {
   return (
     <div className="h-full flex flex-col bg-white dark:bg-[#13151d]">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-blue-600 dark:text-blue-400">AG-UI</span>
-          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Protocol View</span>
+          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Protocol View</span>
           {agUIEvents.length > 0 && (
             <span className="ml-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
               {agUIEvents.length} events
@@ -452,7 +452,7 @@ export function AGUITracePanel({ sessionId, traces }: AGUITracePanelProps) {
         </div>
 
         {/* View mode toggle */}
-        <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 p-0.5">
+        <div className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-0.5">
           {(["chat", "split", "events"] as const).map((mode) => (
             <button
               key={mode}
@@ -460,7 +460,7 @@ export function AGUITracePanel({ sessionId, traces }: AGUITracePanelProps) {
               className={`px-2 py-1 rounded-md text-[10px] font-semibold transition-all ${
                 viewMode === mode
                   ? "bg-blue-500 text-white shadow-sm"
-                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               }`}
             >
               {mode === "chat" ? "Chat" : mode === "events" ? "Events" : "Split"}
@@ -472,7 +472,7 @@ export function AGUITracePanel({ sessionId, traces }: AGUITracePanelProps) {
       {/* Empty state */}
       {agUIEvents.length === 0 && (
         <div className="flex-1 flex items-center justify-center p-8">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             {traces.length === 0 ? "No traces for this session" : "No AG-UI events generated"}
           </p>
         </div>
@@ -483,7 +483,7 @@ export function AGUITracePanel({ sessionId, traces }: AGUITracePanelProps) {
         <div className="flex-1 flex min-h-0">
           {/* Chat view */}
           {(viewMode === "chat" || viewMode === "split") && (
-            <div className={`${viewMode === "split" ? "w-1/2 border-r border-gray-200 dark:border-gray-800" : "w-full"} overflow-y-auto`}>
+            <div className={`${viewMode === "split" ? "w-1/2 border-r border-slate-200 dark:border-slate-800" : "w-full"} overflow-y-auto`}>
               <div className="p-4 space-y-4">
                 {displayItems.map((item, idx) => {
                   switch (item.type) {
@@ -522,7 +522,7 @@ export function AGUITracePanel({ sessionId, traces }: AGUITracePanelProps) {
           {(viewMode === "events" || viewMode === "split") && (
             <div className={`${viewMode === "split" ? "w-1/2" : "w-full"} overflow-y-auto`}>
               <div className="p-2 space-y-1">
-                <div className="px-2 py-1 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                <div className="px-2 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                   Raw AG-UI Events ({agUIEvents.length})
                 </div>
                 {agUIEvents.map((evt, idx) => (

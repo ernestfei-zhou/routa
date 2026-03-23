@@ -134,7 +134,7 @@ function AssistantBubble({content}: { content: string }) {
     return (
         <div className="w-full">
             <div
-                className="w-full px-3 py-2 rounded-xl border border-gray-200/70 dark:border-gray-800 bg-gray-50/50 dark:bg-[#151924] text-sm text-gray-900 dark:text-gray-100">
+                className="w-full px-3 py-2 rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/50 dark:bg-[#151924] text-sm text-slate-900 dark:text-slate-100">
                 <MarkdownViewer content={content} className="text-sm"/>
             </div>
         </div>
@@ -318,15 +318,15 @@ function getToolStyling(kind?: string): { bgClass: string; borderClass: string; 
         case "web-fetch":
         case "web-search":
             return {
-                bgClass: "bg-cyan-50/50 dark:bg-cyan-900/10",
-                borderClass: "border-cyan-200/50 dark:border-cyan-800/30",
-                iconColorClass: "text-cyan-600 dark:text-cyan-400",
+                bgClass: "bg-blue-50/50 dark:bg-blue-900/10",
+                borderClass: "border-blue-200/50 dark:border-blue-800/30",
+                iconColorClass: "text-blue-600 dark:text-blue-400",
             };
         default:
             return {
-                bgClass: "bg-gray-50 dark:bg-[#161922]",
-                borderClass: "border-gray-200/50 dark:border-gray-800/50",
-                iconColorClass: "text-gray-500 dark:text-gray-400",
+                bgClass: "bg-slate-50 dark:bg-[#161922]",
+                borderClass: "border-slate-200/50 dark:border-slate-800/50",
+                iconColorClass: "text-slate-500 dark:text-slate-400",
             };
     }
 }
@@ -356,10 +356,10 @@ function ToolBubble({
 }) {
     const [expanded, setExpanded] = useState(false);
     const statusColor =
-        toolStatus === "completed" ? "bg-green-500"
+        toolStatus === "completed" ? "bg-emerald-500"
             : toolStatus === "failed" ? "bg-red-500"
-                : toolStatus === "in_progress" || toolStatus === "running" || toolStatus === "streaming" ? "bg-yellow-500 animate-pulse"
-                    : "bg-gray-400";
+                : toolStatus === "in_progress" || toolStatus === "running" || toolStatus === "streaming" ? "bg-amber-500 animate-pulse"
+                    : "bg-slate-400";
 
     // Infer the actual tool name - handles cases where providers send file paths as title
     const displayName = inferToolDisplayName(toolName, toolKind, rawInput);
@@ -383,21 +383,21 @@ function ToolBubble({
             >
                 <span className={`shrink-0 ${styling.iconColorClass}`}>{icon}</span>
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusColor}`}/>
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate flex-1">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate flex-1">
                     {displayName}
                 </span>
                 {inputPreview && (
-                    <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-[40%]">
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[40%]">
                         {inputPreview}
                     </span>
                 )}
                 {!inputPreview && outputSummary && (
-                    <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-[40%]">
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[40%]">
                         {outputSummary}
                     </span>
                 )}
                 <svg
-                    className={`w-2.5 h-2.5 text-gray-400 transition-transform duration-150 shrink-0 ${expanded ? "rotate-90" : ""}`}
+                    className={`w-2.5 h-2.5 text-slate-400 transition-transform duration-150 shrink-0 ${expanded ? "rotate-90" : ""}`}
                     fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
                 >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
@@ -407,7 +407,7 @@ function ToolBubble({
                 <div className={`mt-1 ml-4 rounded-md border ${styling.bgClass} ${styling.borderClass} overflow-hidden`}>
                     {hasInput && (
                         <div className="px-2.5 py-2">
-                            <div className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Input</div>
+                            <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1">Input</div>
                             <ToolInputTable input={rawInput} />
                         </div>
                     )}
@@ -496,9 +496,9 @@ export function AskUserQuestionBubble({
                     return (
                         <div key={item.question}>
                             <div className="flex items-center gap-1.5 mb-1">
-                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCompleted ? "bg-green-500" : isFailed ? "bg-red-500" : "bg-amber-500 animate-pulse"}`} />
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCompleted ? "bg-emerald-500" : isFailed ? "bg-red-500" : "bg-amber-500 animate-pulse"}`} />
                                 <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">{item.header}</span>
-                                <span className="text-xs text-gray-700 dark:text-gray-300">{item.question}</span>
+                                <span className="text-xs text-slate-700 dark:text-slate-300">{item.question}</span>
                             </div>
                             <div className="flex flex-wrap gap-1.5 pl-3">
                                 {(item.options ?? []).map((option) => {
@@ -514,7 +514,7 @@ export function AskUserQuestionBubble({
                                             title={option.description}
                                             className={`rounded-md border px-2 py-0.5 text-[11px] transition-colors ${selected
                                                 ? "border-amber-500 bg-amber-500 text-white dark:bg-amber-600"
-                                                : "border-amber-200 dark:border-amber-700/50 bg-white/80 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:border-amber-400 dark:hover:border-amber-600"
+                                                : "border-amber-200 dark:border-amber-700/50 bg-white/80 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:border-amber-400 dark:hover:border-amber-600"
                                             } ${!isAwaitingInput ? "cursor-default" : "cursor-pointer"}`}
                                         >
                                             {option.label}
@@ -556,10 +556,10 @@ function TaskBubble({
 }) {
     const [expanded, setExpanded] = useState(true);
     const statusColor =
-        toolStatus === "completed" ? "bg-green-500"
+        toolStatus === "completed" ? "bg-emerald-500"
             : toolStatus === "failed" ? "bg-red-500"
                 : toolStatus === "running" ? "bg-amber-500 animate-pulse"
-                    : "bg-gray-400";
+                    : "bg-slate-400";
     const statusLabel =
         toolStatus === "completed" ? "done"
             : toolStatus === "failed" ? "failed"
@@ -585,15 +585,15 @@ function TaskBubble({
             Task{subagentType ? ` [${subagentType}]` : ""}
           </span>
                     {description && (
-                        <span className="text-xs text-gray-700 dark:text-gray-300 truncate flex-1">
+                        <span className="text-xs text-slate-700 dark:text-slate-300 truncate flex-1">
               {description}
             </span>
                     )}
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400 shrink-0">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 shrink-0">
             {statusLabel}
           </span>
                     <svg
-                        className={`w-3 h-3 text-gray-400 transition-transform duration-150 shrink-0 ${expanded ? "rotate-180" : ""}`}
+                        className={`w-3 h-3 text-slate-400 transition-transform duration-150 shrink-0 ${expanded ? "rotate-180" : ""}`}
                         fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
                     >
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
@@ -601,7 +601,7 @@ function TaskBubble({
                 </button>
                 {expanded && (prompt || content) && (
                     <div
-                        className="px-3 py-2 border-t border-amber-200/50 dark:border-amber-800/30 text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                        className="px-3 py-2 border-t border-amber-200/50 dark:border-amber-800/30 text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap max-h-32 overflow-y-auto">
                         {prompt || content}
                     </div>
                 )}
@@ -637,13 +637,13 @@ function PlanBubble({content, entries}: { content: string; entries?: PlanEntry[]
     // Fallback for plain text plan content
     return (
         <div className="w-full">
-            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#161922] overflow-hidden">
-                <div className="px-3 py-2 flex items-center gap-2 bg-gray-100 dark:bg-[#1a1d2e] border-b border-gray-200 dark:border-gray-700">
+            <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#161922] overflow-hidden">
+                <div className="px-3 py-2 flex items-center gap-2 bg-slate-100 dark:bg-[#1a1d2e] border-b border-slate-200 dark:border-slate-700">
                     <span className="w-2 h-2 rounded-full bg-slate-500" />
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Plan</span>
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Plan</span>
                 </div>
                 <div className="px-3 py-2">
-                    <div className="text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{content}</div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap">{content}</div>
                 </div>
             </div>
         </div>
@@ -684,7 +684,7 @@ function UsageBadge({used, size, costAmount, costCurrency}: {
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="3"
-                        className="text-gray-200 dark:text-gray-700"
+                        className="text-slate-200 dark:text-slate-700"
                     />
                     {/* Progress circle */}
                     {size && (
@@ -704,7 +704,7 @@ function UsageBadge({used, size, costAmount, costCurrency}: {
                 </svg>
 
                 {/* Percentage text in center */}
-                <span className="absolute text-[9px] font-semibold text-gray-600 dark:text-gray-300">
+                <span className="absolute text-[9px] font-semibold text-slate-600 dark:text-slate-300">
           {size ? `${pct}%` : formatTokens(used)}
         </span>
 
@@ -712,12 +712,12 @@ function UsageBadge({used, size, costAmount, costCurrency}: {
                 <div
                     className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                     <div
-                        className="px-3 py-2 rounded-lg bg-gray-900 dark:bg-gray-800 text-white text-xs whitespace-nowrap shadow-lg border border-gray-700">
+                        className="px-3 py-2 rounded-lg bg-slate-900 dark:bg-slate-800 text-white text-xs whitespace-nowrap shadow-lg border border-slate-700">
                         <div
                             className="font-medium">{formatTokens(used)}{size ? ` / ${formatTokens(size)}` : ""} tokens
                         </div>
                         {costAmount !== undefined && costAmount > 0 && (
-                            <div className="text-gray-300 mt-0.5">${costAmount.toFixed(4)} {costCurrency ?? "USD"}</div>
+                            <div className="text-slate-300 mt-0.5">${costAmount.toFixed(4)} {costCurrency ?? "USD"}</div>
                         )}
                     </div>
                 </div>
@@ -731,16 +731,16 @@ function InfoBubble({content, rawData}: { content: string; rawData?: Record<stri
     if (rawData) {
         return (
             <div className="flex justify-center my-1">
-                <div className="max-w-xl w-full rounded-lg bg-gray-50 dark:bg-[#161922] border border-gray-100 dark:border-gray-800 text-[11px] text-gray-500 dark:text-gray-400 overflow-hidden">
+                <div className="max-w-xl w-full rounded-lg bg-slate-50 dark:bg-[#161922] border border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 overflow-hidden">
                     <button
-                        className="w-full flex items-center gap-1.5 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-[#1e2230] transition-colors text-left"
+                        className="w-full flex items-center gap-1.5 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-[#1e2230] transition-colors text-left"
                         onClick={() => setExpanded(v => !v)}
                     >
                         <span className="opacity-60">{expanded ? "▾" : "▸"}</span>
                         <span className="font-mono">{content}</span>
                     </button>
                     {expanded && (
-                        <pre className="px-3 pb-2 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[10px] text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-800">
+                        <pre className="px-3 pb-2 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[10px] text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800">
                             {JSON.stringify(rawData, null, 2)}
                         </pre>
                     )}
@@ -751,7 +751,7 @@ function InfoBubble({content, rawData}: { content: string; rawData?: Record<stri
     return (
         <div className="flex justify-center">
             <div
-                className="px-3 py-1 rounded-full bg-gray-50 dark:bg-[#161922] border border-gray-100 dark:border-gray-800 text-[11px] text-gray-500 dark:text-gray-400">
+                className="px-3 py-1 rounded-full bg-slate-50 dark:bg-[#161922] border border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400">
                 {content}
             </div>
         </div>

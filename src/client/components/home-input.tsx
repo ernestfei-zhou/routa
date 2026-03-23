@@ -339,8 +339,8 @@ export function HomeInput({
                                 s.id === selectedSpecialistId ? "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-300" : "text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
                               }`}>
                               <div className="font-medium truncate">{s.name}</div>
-                              {s.description && <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate mt-0.5">{s.description}</div>}
-                              {s.defaultProvider && <div className="text-[10px] text-gray-300 dark:text-gray-600 mt-0.5 font-mono">provider:{s.defaultProvider}</div>}
+                              {s.description && <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5">{s.description}</div>}
+                              {s.defaultProvider && <div className="text-[10px] text-slate-300 dark:text-slate-600 mt-0.5 font-mono">provider:{s.defaultProvider}</div>}
                             </button>
                           ))}
                         </div>
@@ -406,9 +406,9 @@ export function HomeInput({
                               <button key={s.id} onClick={() => { setSelectedSpecialistId(s.id); setShowSpecialistDropdown(false); }}
                                 className="w-full rounded-lg px-3 py-2 text-left text-xs text-slate-700 transition-colors hover:bg-amber-50 hover:text-amber-700 dark:text-slate-300 dark:hover:bg-amber-950/20 dark:hover:text-amber-300">
                                 <div className="font-medium truncate">{s.name}</div>
-                                {s.description && <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate mt-0.5">{s.description}</div>}
-                                {s.role && <div className="text-[10px] text-gray-300 dark:text-gray-600 mt-0.5 font-mono">{s.role}</div>}
-                                {s.defaultProvider && <div className="text-[10px] text-gray-300 dark:text-gray-600 mt-0.5 font-mono">provider:{s.defaultProvider}</div>}
+                                {s.description && <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5">{s.description}</div>}
+                                {s.role && <div className="text-[10px] text-slate-300 dark:text-slate-600 mt-0.5 font-mono">{s.role}</div>}
+                                {s.defaultProvider && <div className="text-[10px] text-slate-300 dark:text-slate-600 mt-0.5 font-mono">provider:{s.defaultProvider}</div>}
                               </button>
                             ))}
                           </div>
@@ -426,7 +426,7 @@ export function HomeInput({
                 <button
                   type="button"
                   onClick={() => setShowWorkspaceDropdown((v) => !v)}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1c1f2e] border border-transparent hover:border-gray-200 dark:hover:border-[#2a2d3d] transition-all"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1c1f2e] border border-transparent hover:border-slate-200 dark:hover:border-[#2a2d3d] transition-all"
                 >
                   <svg
                     className="w-3.5 h-3.5 opacity-50"
@@ -456,7 +456,7 @@ export function HomeInput({
                 </button>
 
                 {showWorkspaceDropdown && (
-                  <div className="absolute bottom-full left-0 mb-1 w-52 rounded-xl border border-gray-200 dark:border-[#1c1f2e] bg-white dark:bg-[#181b26] shadow-xl z-50 overflow-hidden">
+                  <div className="absolute bottom-full left-0 mb-1 w-52 rounded-xl border border-slate-200 dark:border-[#1c1f2e] bg-white dark:bg-[#181b26] shadow-xl z-50 overflow-hidden">
                     <div className="p-1 max-h-48 overflow-y-auto">
                       {workspacesHook.workspaces.map((ws) => (
                         <button
@@ -465,7 +465,7 @@ export function HomeInput({
                           className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors flex items-center gap-2 ${
                             ws.id === selectedWorkspaceId
                               ? "bg-amber-50 dark:bg-amber-900/15 text-amber-700 dark:text-amber-400"
-                              : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#1f2233]"
+                              : "text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#1f2233]"
                           }`}
                         >
                           <svg
@@ -509,8 +509,8 @@ export function HomeInput({
             <div className="hidden flex-1 sm:block" />
 
             {/* Keyboard hint */}
-            <span className="hidden sm:inline text-[11px] text-gray-400 dark:text-gray-500">
-              <kbd className="px-1 py-0.5 rounded bg-gray-100 dark:bg-[#1c1f2e] font-mono text-[10px]">
+            <span className="hidden sm:inline text-[11px] text-slate-400 dark:text-slate-500">
+              <kbd className="px-1 py-0.5 rounded bg-slate-100 dark:bg-[#1c1f2e] font-mono text-[10px]">
                 ⏎
               </kbd>{" "}
               send
@@ -522,8 +522,8 @@ export function HomeInput({
       {/* ─── Mode Tips ──────────────────────────────────────────────── */}
       <div className="mt-1.5 px-1 min-h-[20px]">
         {repoSelection?.path && (
-          <div className="mb-1 flex items-center gap-1.5 text-[10px] text-gray-400 dark:text-gray-500">
-            <span className="font-medium text-gray-500 dark:text-gray-400">
+          <div className="mb-1 flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-slate-500">
+            <span className="font-medium text-slate-500 dark:text-slate-400">
               Repo path
             </span>
             <span className="font-mono truncate" title={repoSelection.path}>
@@ -535,17 +535,17 @@ export function HomeInput({
           (() => {
             const spec = selectedSpecialist;
             return (
-              <div className="flex items-center gap-1.5 text-[10px] text-gray-400 dark:text-gray-500">
+              <div className="flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-slate-500">
                 <span className="flex h-2 w-2 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
                   <svg className="w-1 h-1 text-amber-500" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" /></svg>
                 </span>
                 <span className="font-medium text-amber-600 dark:text-amber-400">{spec?.name}</span>
-                {spec?.role && <><span className="text-gray-300 dark:text-gray-700">·</span><span className="font-mono text-[9px]">{spec.role}</span></>}
+                {spec?.role && <><span className="text-slate-300 dark:text-slate-700">·</span><span className="font-mono text-[9px]">{spec.role}</span></>}
               </div>
             );
           })()
         ) : selectedRole === "ROUTA" ? (
-          <div className="flex items-center gap-1.5 text-[10px] text-gray-400 dark:text-gray-500">
+          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-slate-500">
             <span className="w-2 h-2 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
               <svg className="w-1 h-1 text-amber-500" fill="currentColor" viewBox="0 0 8 8">
                 <circle cx="4" cy="4" r="3" />
@@ -554,7 +554,7 @@ export function HomeInput({
             <span>适合复杂任务 · 自动拆解需求并分配给多个专属 Agent</span>
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 text-[10px] text-gray-400 dark:text-gray-500">
+          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-slate-500">
             <span className="flex h-2 w-2 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800">
               <svg className="w-1 h-1 text-slate-500" fill="currentColor" viewBox="0 0 8 8">
                 <circle cx="4" cy="4" r="3" />
@@ -579,13 +579,13 @@ export function HomeInput({
                 <span className={`text-[11px] font-mono font-medium transition-colors truncate ${
                   isHero
                     ? "text-slate-500 group-hover:text-sky-600 dark:text-slate-400 dark:group-hover:text-sky-300"
-                    : "text-gray-500 group-hover:text-amber-600 dark:text-gray-400 dark:group-hover:text-amber-400"
+                    : "text-slate-500 group-hover:text-amber-600 dark:text-slate-400 dark:group-hover:text-amber-400"
                 }`}>
                   /{skill.name}
                 </span>
                 {skill.description && (
                   <span className={`text-[10px] leading-snug line-clamp-1 ${
-                    isHero ? "text-slate-400 dark:text-slate-500" : "text-gray-400 dark:text-gray-600"
+                    isHero ? "text-slate-400 dark:text-slate-500" : "text-slate-400 dark:text-slate-600"
                   }`}>
                     {skill.description}
                   </span>

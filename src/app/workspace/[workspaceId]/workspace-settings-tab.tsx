@@ -117,10 +117,10 @@ export function WorkspaceSettingsTab({
     <div className="space-y-6 max-w-2xl">
       {/* ── Linked Repositories ─────────────────────────────────── */}
       <section>
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">
           Linked Repositories
         </h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           Repositories linked to this workspace can be selected when creating Kanban tasks.
           No selection on a task means all linked repos are included.
         </p>
@@ -130,24 +130,24 @@ export function WorkspaceSettingsTab({
             {codebases.map((cb) => (
               <span
                 key={cb.id}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0d1018] px-2.5 py-1 text-xs text-gray-700 dark:text-gray-300"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#0d1018] px-2.5 py-1 text-xs text-slate-700 dark:text-slate-300"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                 <span className="max-w-50 truncate">{cb.label ?? cb.repoPath.split("/").pop() ?? cb.repoPath}</span>
-                <span className="text-[10px] text-gray-400 truncate max-w-40">{cb.repoPath}</span>
+                <span className="text-[10px] text-slate-400 truncate max-w-40">{cb.repoPath}</span>
                 {cb.isDefault && (
                   <span className="text-[10px] text-amber-500 font-medium">default</span>
                 )}
                 <button
                   onClick={() => handleEdit(cb)}
-                  className="ml-0.5 w-4 h-4 flex items-center justify-center rounded text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                  className="ml-0.5 w-4 h-4 flex items-center justify-center rounded text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
                   title={`Edit ${cb.label ?? cb.repoPath}`}
                 >
                   ✎
                 </button>
                 <button
                   onClick={() => void handleRemove(cb.id)}
-                  className="w-4 h-4 flex items-center justify-center rounded text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+                  className="w-4 h-4 flex items-center justify-center rounded text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
                   title={`Remove ${cb.label ?? cb.repoPath}`}
                 >
                   ×
@@ -158,14 +158,14 @@ export function WorkspaceSettingsTab({
         )}
 
         {codebases.length === 0 && (
-          <div className="mb-3 text-xs text-gray-400 dark:text-gray-500 italic">
+          <div className="mb-3 text-xs text-slate-400 dark:text-slate-500 italic">
             No repositories linked yet.
           </div>
         )}
 
         {/* RepoPicker for selecting / cloning a repo to link */}
         <div className="flex items-center gap-2">
-          <div className="text-xs text-gray-500 dark:text-gray-400 shrink-0">Add:</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 shrink-0">Add:</div>
           <RepoPicker value={repoPickerValue} onChange={(sel) => void handlePickerChange(sel)} />
         </div>
         {addError && (
@@ -173,16 +173,16 @@ export function WorkspaceSettingsTab({
         )}
       </section>
 
-      <hr className="border-gray-100 dark:border-[#1c1f2e]" />
+      <hr className="border-slate-100 dark:border-[#1c1f2e]" />
 
       {/* ── Worktree Root Override ───────────────────────────────── */}
       <section data-testid="workspace-worktree-settings">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">
           Worktree Root Override
         </h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           You do not need to configure this for the normal flow. By default, this workspace uses{" "}
-          <code className="font-mono text-gray-600 dark:text-gray-300">{defaultWorktreeRootHint}</code>.
+          <code className="font-mono text-slate-600 dark:text-slate-300">{defaultWorktreeRootHint}</code>.
           Only set a custom path if you want to override that location.
         </p>
         <div className="flex gap-2 items-start">
@@ -191,10 +191,10 @@ export function WorkspaceSettingsTab({
               value={worktreeRootDraft}
               onChange={(e) => setWorktreeRootDraft(e.target.value)}
               placeholder={defaultWorktreeRootHint}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-700 outline-none focus:border-amber-400 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-200 font-mono text-xs"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-amber-400 dark:border-slate-700 dark:bg-[#0d1018] dark:text-slate-200 font-mono text-xs"
               data-testid="worktree-root-input"
             />
-            <div className="mt-1.5 text-[11px] text-gray-400 dark:text-gray-500">
+            <div className="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500">
               Effective path:{" "}
               <code className="font-mono">{displayedWorktreeRoot}</code>
             </div>
@@ -223,13 +223,13 @@ export function WorkspaceSettingsTab({
       {/* ── Edit Codebase Modal ───────────────────────────────────── */}
       {editingCodebase && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-[#1c1f2e] dark:bg-[#12141c]">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-[#1c1f2e] dark:bg-[#12141c]">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
               Edit Repository
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">
                   Select or clone a repository
                 </label>
                 <RepoPicker
@@ -248,7 +248,7 @@ export function WorkspaceSettingsTab({
               <button
                 onClick={handleCancelEdit}
                 disabled={editSaving}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-[#191c28]"
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-[#191c28]"
               >
                 Cancel
               </button>

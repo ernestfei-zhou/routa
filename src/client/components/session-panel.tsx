@@ -133,16 +133,16 @@ export function SessionPanel({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-3 py-2 flex items-center justify-between border-b border-gray-100 dark:border-gray-800">
+      <div className="px-3 py-2 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-1.5">
-          <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
-          <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             Sessions
           </span>
           {totalSessions > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-full">
+            <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full">
               {totalSessions}
             </span>
           )}
@@ -150,7 +150,7 @@ export function SessionPanel({
         <button
           onClick={fetchSessions}
           disabled={loading}
-          className="text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50 transition-colors"
+          className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-50 transition-colors"
         >
           {loading ? "..." : "Refresh"}
         </button>
@@ -158,18 +158,18 @@ export function SessionPanel({
 
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-3">
         {workspaceGroups.length === 0 ? (
-          <div className="px-3 py-4 text-center text-gray-400 dark:text-gray-500 text-xs">
+          <div className="px-3 py-4 text-center text-slate-400 dark:text-slate-500 text-xs">
             No sessions yet
           </div>
         ) : (
           workspaceGroups.map((group) => (
-            <div key={group.id} className="bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-800">
-              <div className="px-3 py-2 flex items-center gap-2 border-b border-gray-200 dark:border-gray-800">
+            <div key={group.id} className="bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-800">
+              <div className="px-3 py-2 flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
                 <svg className="w-3 h-3 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
                 </svg>
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{group.title}</span>
-                <span className="ml-auto text-[10px] text-gray-400">{group.sessions.length}</span>
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{group.title}</span>
+                <span className="ml-auto text-[10px] text-slate-400">{group.sessions.length}</span>
               </div>
               
               <div className="p-1.5 space-y-1">
@@ -227,7 +227,7 @@ export function SessionPanel({
                             />
                             {/* Child crafter sessions */}
                             {children.length > 0 && (
-                              <div className="ml-3 pl-2 border-l-2 border-gray-200 dark:border-gray-700 space-y-0.5 mt-0.5">
+                              <div className="ml-3 pl-2 border-l-2 border-slate-200 dark:border-slate-700 space-y-0.5 mt-0.5">
                                 {children.map((child) => {
                                   const childActive = child.sessionId === selectedSessionId;
                                   const childIsEditing = editingId === child.sessionId;
@@ -375,7 +375,7 @@ function SessionItem({
             value={editName}
             onChange={(e) => onSetEditName(e.target.value)}
             autoFocus
-            className="w-full text-xs px-1.5 py-1 rounded border border-blue-300 dark:border-blue-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full text-xs px-1.5 py-1 rounded border border-blue-300 dark:border-blue-600 bg-white dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
             onBlur={() => {
               if (editName.trim()) {
                 onRename(s.sessionId, editName);
@@ -393,7 +393,7 @@ function SessionItem({
           className={`${isChild ? "px-2 py-1.5" : "px-2.5 py-2"} rounded-md cursor-pointer transition-colors ${
             active
               ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-              : "hover:bg-white dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-300"
+              : "hover:bg-white dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300"
           }`}
         >
           <div className="flex items-start justify-between gap-2">
@@ -403,7 +403,7 @@ function SessionItem({
                 <div className={`${isChild ? "text-[11px]" : "text-xs"} font-medium truncate`}>
                   {displayName}
                 </div>
-                <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-gray-400 dark:text-gray-500">
+                <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-slate-500">
                   {s.provider && <span>{s.provider}</span>}
                   {s.role && <span>• {s.role}</span>}
                 </div>
@@ -416,9 +416,9 @@ function SessionItem({
                   e.stopPropagation();
                   onSetMenuOpen(menuOpen === s.sessionId ? null : s.sessionId);
                 }}
-                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors"
               >
-                <svg className="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-3 h-3 text-slate-400" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
                 </svg>
               </button>
@@ -430,12 +430,12 @@ function SessionItem({
       {menuOpen === s.sessionId && (
         <div
           ref={menuRef}
-          className="absolute right-2 top-8 z-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-1 min-w-[100px]"
+          className="absolute right-2 top-8 z-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-lg py-1 min-w-[100px]"
         >
           <button
             type="button"
             onClick={() => onStartEdit(s)}
-            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+            className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
           >
             Rename
           </button>

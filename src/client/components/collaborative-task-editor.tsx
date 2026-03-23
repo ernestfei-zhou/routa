@@ -159,10 +159,10 @@ export function CollaborativeTaskEditor({
   return (
     <div ref={containerRef} className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
               Collaborative Tasks
             </span>
             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300">
@@ -180,7 +180,7 @@ export function CollaborativeTaskEditor({
             {pendingNotes.length > 0 && !hasRunning && (
               <button
                 onClick={toggleSelectAll}
-                className="text-xs font-medium px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className="text-xs font-medium px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
               >
                 {selectedNoteIds.size === pendingNotes.length ? "Deselect All" : "Select All"}
               </button>
@@ -205,10 +205,10 @@ export function CollaborativeTaskEditor({
             <div className="flex items-center gap-1">
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
-                  connected ? "bg-green-500" : "bg-gray-400"
+                  connected ? "bg-emerald-500" : "bg-slate-400"
                 }`}
               />
-              <span className="text-[10px] text-gray-400 dark:text-gray-500">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500">
                 {connected ? "Live" : "Off"}
               </span>
             </div>
@@ -219,10 +219,10 @@ export function CollaborativeTaskEditor({
           <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-900/30 text-slate-600 dark:text-slate-300">
             CRDT
           </span>
-          <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             Concurrency
           </span>
-          <div className="flex items-center rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="flex items-center rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
             {[1, 2].map((n) => (
               <button
                 key={n}
@@ -230,7 +230,7 @@ export function CollaborativeTaskEditor({
                 className={`px-2 py-0.5 text-[11px] font-medium transition-colors ${
                   concurrency === n
                     ? "bg-emerald-600 text-white"
-                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
                 }`}
               >
                 {n}
@@ -282,7 +282,7 @@ export function CollaborativeTaskEditor({
           ))}
 
           {taskNotes.length === 0 && (
-            <div className="text-center py-8 text-xs text-gray-400 dark:text-gray-500">
+            <div className="text-center py-8 text-xs text-slate-400 dark:text-slate-500">
               <div className="space-y-1.5">
                 <div className="text-sm">No task notes yet</div>
                 <div>Tasks will appear here when ROUTA creates them</div>
@@ -326,7 +326,7 @@ export function CollaborativeTaskEditor({
                   onDeleteNote(specNote.id);
                 }}
                 title="Delete spec"
-                className="p-0.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                className="p-0.5 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
               >
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -348,12 +348,12 @@ export function CollaborativeTaskEditor({
             <div className="flex-1 overflow-y-auto px-3 pb-2">
               <MarkdownViewer
                 content={specNote.content}
-                className="text-[11px] text-gray-600 dark:text-gray-400"
+                className="text-[11px] text-slate-600 dark:text-slate-400"
               />
             </div>
           ) : (
             <div className="px-3 pb-2">
-              <div className="text-[11px] text-gray-600 dark:text-gray-400 line-clamp-2">
+              <div className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2">
                 <MarkdownViewer
                   content={specNote.content.slice(0, 200) + (specNote.content.length > 200 ? "..." : "")}
                   className="text-[11px]"
@@ -367,14 +367,14 @@ export function CollaborativeTaskEditor({
               className="absolute left-0 right-0 bottom-0 h-1 cursor-row-resize z-20 hover:bg-blue-500/30 active:bg-blue-500/50 transition-colors group"
               onMouseDown={handleVerticalResizeStart}
             >
-              <div className="absolute left-1/2 bottom-0 -translate-x-1/2 w-8 h-1 rounded-full bg-gray-300 dark:bg-gray-600 group-hover:bg-blue-400 group-active:bg-blue-500 transition-colors" />
+              <div className="absolute left-1/2 bottom-0 -translate-x-1/2 w-8 h-1 rounded-full bg-slate-300 dark:bg-slate-600 group-hover:bg-blue-400 group-active:bg-blue-500 transition-colors" />
             </div>
           )}
         </div>
       )}
       {/* Divider between SPEC and Tasks when SPEC exists and is expanded */}
       {specNote && specNote.content && specExpanded && (
-        <div className="h-px bg-gray-200 dark:bg-gray-700 shrink-0" />
+        <div className="h-px bg-slate-200 dark:bg-slate-700 shrink-0" />
       )}
 
       {/* Content */}
@@ -422,7 +422,7 @@ export function CollaborativeTaskEditor({
             ))}
 
             {taskNotes.length === 0 && (
-              <div className="text-center py-8 text-xs text-gray-400 dark:text-gray-500">
+              <div className="text-center py-8 text-xs text-slate-400 dark:text-slate-500">
                 <div className="space-y-1.5">
                   <div className="text-sm">No task notes yet</div>
                   <div>Tasks will appear here when ROUTA creates them</div>
@@ -465,8 +465,8 @@ interface TaskNoteCardProps {
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   PENDING: {
     label: "Pending",
-    color: "text-gray-600 dark:text-gray-400",
-    bg: "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700",
+    color: "text-slate-600 dark:text-slate-400",
+    bg: "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700",
   },
   IN_PROGRESS: {
     label: "In Progress",
@@ -475,8 +475,8 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }
   },
   COMPLETED: {
     label: "Completed",
-    color: "text-green-600 dark:text-green-400",
-    bg: "bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800",
+    color: "text-emerald-600 dark:text-emerald-400",
+    bg: "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800",
   },
   FAILED: {
     label: "Failed",
@@ -543,11 +543,11 @@ function parseTaskContent(content: string): ParsedTaskSections {
 function TaskSection({ title, content }: { title: string; content: string }) {
   return (
     <div className="mb-2.5 last:mb-0">
-      <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
-        <span className="w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500" />
+      <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+        <span className="w-1 h-1 rounded-full bg-slate-400 dark:bg-slate-500" />
         {title}
       </div>
-      <div className="text-xs text-gray-600 dark:text-gray-300 pl-2.5 border-l border-gray-200 dark:border-gray-700">
+      <div className="text-xs text-slate-600 dark:text-slate-300 pl-2.5 border-l border-slate-200 dark:border-slate-700">
         <MarkdownViewer content={content} className="text-xs" />
       </div>
     </div>
@@ -558,7 +558,7 @@ function TaskSection({ title, content }: { title: string; content: string }) {
 function TaskContentRenderer({ content }: { content: string }) {
   if (!content) {
     return (
-      <div className="text-xs text-gray-400 dark:text-gray-500 italic">
+      <div className="text-xs text-slate-400 dark:text-slate-500 italic">
         No content
       </div>
     );
@@ -571,7 +571,7 @@ function TaskContentRenderer({ content }: { content: string }) {
   if (!hasSections) {
     // No structured sections found, render as plain markdown
     return (
-      <div className="text-xs text-gray-600 dark:text-gray-300">
+      <div className="text-xs text-slate-600 dark:text-slate-300">
         <MarkdownViewer content={content} className="text-xs" />
       </div>
     );
@@ -595,8 +595,8 @@ function TaskContentRenderer({ content }: { content: string }) {
         <TaskSection title="Definition of Done" content={sections.definitionOfDone} />
       )}
       {sections.remainingContent && (
-        <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700/50">
-          <div className="text-xs text-gray-600 dark:text-gray-300">
+        <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/50">
+          <div className="text-xs text-slate-600 dark:text-slate-300">
             <MarkdownViewer content={sections.remainingContent} className="text-xs" />
           </div>
         </div>
@@ -625,7 +625,7 @@ function TaskNoteCard({
 
   const statusIcon = {
     PENDING: (
-      <div className="w-5 h-5 rounded-md border-2 border-gray-300 dark:border-gray-600 shrink-0" />
+      <div className="w-5 h-5 rounded-md border-2 border-slate-300 dark:border-slate-600 shrink-0" />
     ),
     IN_PROGRESS: (
       <div className="w-5 h-5 rounded-md bg-amber-500 flex items-center justify-center shrink-0 animate-pulse">
@@ -645,7 +645,7 @@ function TaskNoteCard({
       </div>
     ),
     COMPLETED: (
-      <div className="w-5 h-5 rounded-md bg-green-500 flex items-center justify-center shrink-0">
+      <div className="w-5 h-5 rounded-md bg-emerald-500 flex items-center justify-center shrink-0">
         <svg
           className="w-3 h-3 text-white"
           fill="none"
@@ -701,7 +701,7 @@ function TaskNoteCard({
             <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
               selected
                 ? "bg-blue-600 border-blue-600"
-                : "border-gray-300 dark:border-gray-600 hover:border-blue-400"
+                : "border-slate-300 dark:border-slate-600 hover:border-blue-400"
             }`}>
               {selected && (
                 <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -715,21 +715,21 @@ function TaskNoteCard({
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500">
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">
               #{index + 1}
             </span>
-            <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+            <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
               {note.title}
             </span>
           </div>
           {!expanded && note.content && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
               {note.content.slice(0, 100)}
             </p>
           )}
           {/* Last updated */}
           <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="text-[9px] text-gray-400 dark:text-gray-500">
+            <span className="text-[9px] text-slate-400 dark:text-slate-500">
               {new Date(note.updatedAt).toLocaleTimeString()}
             </span>
             {note.metadata.assignedAgentIds &&
@@ -747,7 +747,7 @@ function TaskNoteCard({
               onDelete();
             }}
             title="Delete task"
-            className="p-0.5 rounded text-gray-300 dark:text-gray-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
+            className="p-0.5 rounded text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -755,7 +755,7 @@ function TaskNoteCard({
           </button>
         )}
         <svg
-          className={`w-4 h-4 text-gray-400 transition-transform shrink-0 mt-0.5 ${
+          className={`w-4 h-4 text-slate-400 transition-transform shrink-0 mt-0.5 ${
             expanded ? "rotate-180" : ""
           }`}
           fill="none"
@@ -773,7 +773,7 @@ function TaskNoteCard({
 
       {/* Expanded content */}
       {expanded && (
-        <div className="px-3 pb-3 border-t border-gray-100 dark:border-gray-700/50">
+        <div className="px-3 pb-3 border-t border-slate-100 dark:border-slate-700/50">
           {editing ? (
             <TaskNoteEditor
               note={note}
@@ -787,7 +787,7 @@ function TaskNoteCard({
               </div>
 
               {/* Actions */}
-              <div className="mt-3 border-t border-gray-100 pt-2.5 dark:border-gray-700/50">
+              <div className="mt-3 border-t border-slate-100 pt-2.5 dark:border-slate-700/50">
                 <div className="flex flex-wrap items-center gap-1.5">
                 {/* Execute button for pending tasks */}
                 {(status === "PENDING") && onExecute && (
@@ -807,7 +807,7 @@ function TaskNoteCard({
                   </span>
                 )}
                 {status === "COMPLETED" && (
-                  <span className="text-[11px] text-green-600 dark:text-green-400 font-medium flex items-center gap-1 px-2 py-1 rounded-md bg-green-50 dark:bg-green-900/20">
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-50 dark:bg-emerald-900/20">
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
@@ -820,7 +820,7 @@ function TaskNoteCard({
                     e.stopPropagation();
                     onEdit();
                   }}
-                  className="text-[11px] font-medium px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  className="text-[11px] font-medium px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
                 >
                   Edit
                 </button>
@@ -833,7 +833,7 @@ function TaskNoteCard({
                     onStatusChange(e.target.value);
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  className="min-w-29.5 text-[11px] px-2 py-1 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                  className="min-w-29.5 text-[11px] px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                 >
                   <option value="PENDING">Pending</option>
                   <option value="IN_PROGRESS">In Progress</option>
@@ -931,28 +931,28 @@ function TaskNoteEditor({
   return (
     <div className="mt-2.5 space-y-2">
       <div>
-        <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">
+        <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase">
           Title
         </label>
         <input
           ref={titleRef}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="mt-0.5 w-full text-xs px-2 py-1.5 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-emerald-500 outline-none"
+          className="mt-0.5 w-full text-xs px-2 py-1.5 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-emerald-500 outline-none"
         />
       </div>
       <div>
-        <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">
+        <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase">
           Content
         </label>
         <textarea
           value={content}
           onChange={(e) => handleContentChange(e.target.value)}
           rows={8}
-          className="mt-0.5 w-full text-xs px-2 py-1.5 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-emerald-500 outline-none resize-y font-mono"
+          className="mt-0.5 w-full text-xs px-2 py-1.5 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-emerald-500 outline-none resize-y font-mono"
           placeholder="Task content (Markdown supported)..."
         />
-        <div className="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5">
+        <div className="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5">
           Auto-saves after 1.5s of inactivity
         </div>
       </div>
@@ -966,7 +966,7 @@ function TaskNoteEditor({
         </button>
         <button
           onClick={onCancel}
-          className="text-xs font-medium px-2.5 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          className="text-xs font-medium px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
         >
           Cancel
         </button>

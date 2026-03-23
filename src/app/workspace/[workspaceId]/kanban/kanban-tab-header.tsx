@@ -46,17 +46,17 @@ export function KanbanTabHeader({
 
   return (
     <div
-      className="shrink-0 border-b border-gray-200/70 px-4 py-1 dark:border-[#1c1f2e]"
+      className="shrink-0 border-b border-slate-200/70 px-4 py-1 dark:border-[#1c1f2e]"
       data-testid="kanban-page-header"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex min-h-6 items-center gap-2">
-          <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125z" />
           </svg>
-          <h1 className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">Kanban Board</h1>
+          <h1 className="text-[13px] font-semibold text-slate-900 dark:text-slate-100">Kanban Board</h1>
           {tasksCount > 0 && (
-            <span className="text-[11px] text-gray-500 dark:text-gray-400" data-testid="kanban-task-count">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400" data-testid="kanban-task-count">
               ({tasksCount} tasks)
             </span>
           )}
@@ -65,7 +65,7 @@ export function KanbanTabHeader({
         <div className="flex shrink-0 flex-wrap items-center gap-1.5">
           {board && (
             <>
-              <span className="inline-flex h-6 items-center rounded-full bg-gray-100 px-2 text-[11px] dark:bg-[#191c28]">
+              <span className="inline-flex h-6 items-center rounded-full bg-slate-100 px-2 text-[11px] dark:bg-[#191c28]">
                 Limit {board.sessionConcurrencyLimit ?? 1}
               </span>
               <QueueStatusBadge
@@ -103,7 +103,7 @@ export function KanbanTabHeader({
             <select
               value={selectedBoardId ?? ""}
               onChange={(event) => onSelectBoard(event.target.value)}
-              className="h-6 min-h-6 rounded-md border border-gray-200 bg-white px-2 text-[12px] text-gray-700 dark:border-gray-700 dark:bg-[#12141c] dark:text-gray-200"
+              className="h-6 min-h-6 rounded-md border border-slate-200 bg-white px-2 text-[12px] text-slate-700 dark:border-slate-700 dark:bg-[#12141c] dark:text-slate-200"
             >
               {boards.map((item) => (
                 <option key={item.id} value={item.id}>{item.name}</option>
@@ -116,10 +116,10 @@ export function KanbanTabHeader({
               onClick={onToggleBgAgentPanel}
               data-testid="kanban-bg-agent-toggle"
               aria-expanded={bgAgentPanelOpen}
-              className="inline-flex h-6 items-center gap-2 rounded-md border border-gray-200 bg-white px-2 text-[12px] text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-[#12141c] dark:text-gray-300 dark:hover:bg-[#191c28]"
+              className="inline-flex h-6 items-center gap-2 rounded-md border border-slate-200 bg-white px-2 text-[12px] text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-[#12141c] dark:text-slate-300 dark:hover:bg-[#191c28]"
             >
               <svg
-                className={`h-3.5 w-3.5 text-gray-400 transition-transform ${bgAgentPanelOpen ? "rotate-90" : ""}`}
+                className={`h-3.5 w-3.5 text-slate-400 transition-transform ${bgAgentPanelOpen ? "rotate-90" : ""}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -137,13 +137,13 @@ export function KanbanTabHeader({
           </div>
           <button
             onClick={onOpenSettings}
-            className="inline-flex h-6 items-center rounded-md border border-gray-200 bg-white px-2 text-[12px] text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-[#12141c] dark:text-gray-300 dark:hover:bg-[#191c28]"
+            className="inline-flex h-6 items-center rounded-md border border-slate-200 bg-white px-2 text-[12px] text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-[#12141c] dark:text-slate-300 dark:hover:bg-[#191c28]"
             title="Board settings"
           >
             Settings
           </button>
-          <div className="inline-flex h-6 items-center rounded-md border border-gray-200 bg-white p-0.5 dark:border-gray-700 dark:bg-[#12141c]">
-            <span className="px-1.5 text-[11px] font-medium text-gray-400 dark:text-gray-500">{languageLabels.language}</span>
+          <div className="inline-flex h-6 items-center rounded-md border border-slate-200 bg-white p-0.5 dark:border-slate-700 dark:bg-[#12141c]">
+            <span className="px-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-500">{languageLabels.language}</span>
             {(["en", "zh-CN"] as const).map((language) => {
               const active = specialistLanguage === language;
               return (
@@ -156,7 +156,7 @@ export function KanbanTabHeader({
                   className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
                     active
                       ? "bg-amber-500 text-white"
-                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-[#191c28] dark:hover:text-gray-200"
+                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-[#191c28] dark:hover:text-slate-200"
                   }`}
                 >
                   {language === "en" ? languageLabels.english : languageLabels.chinese}
@@ -166,7 +166,7 @@ export function KanbanTabHeader({
           </div>
           <button
             onClick={onRefresh}
-            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-[#1f232f] dark:hover:text-gray-200"
+            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-[#1f232f] dark:hover:text-slate-200"
             title="Refresh"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

@@ -97,10 +97,10 @@ export function TaskPanel({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
               {crafterAgents.length > 0 ? "ROUTA / CRAFTERs" : "Sub Tasks"}
             </span>
             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300">
@@ -113,7 +113,7 @@ export function TaskPanel({
             {hasPending && onConfirmAll && (
               <button
                 onClick={onConfirmAll}
-                className="text-xs font-medium px-2.5 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className="text-xs font-medium px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
               >
                 Confirm All
               </button>
@@ -138,10 +138,10 @@ export function TaskPanel({
         <div className="flex items-center justify-between">
           {/* Concurrency selector */}
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Concurrency
             </span>
-            <div className="flex items-center rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="flex items-center rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
               {[1, 2].map((n) => (
                 <button
                   key={n}
@@ -149,7 +149,7 @@ export function TaskPanel({
                   className={`px-2 py-0.5 text-[11px] font-medium transition-colors ${
                     concurrency === n
                       ? "bg-blue-600 text-white"
-                      : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
                   }`}
                 >
                   {n}
@@ -160,13 +160,13 @@ export function TaskPanel({
 
           {/* View toggle */}
           {crafterAgents.length > 0 && (
-            <div className="flex items-center rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="flex items-center rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
             <button
               onClick={() => setUserViewMode("tasks")}
                 className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${
                   viewMode === "tasks"
-                    ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
-                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    ? "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900"
+                    : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
                 }`}
               >
                 Tasks
@@ -175,8 +175,8 @@ export function TaskPanel({
               onClick={() => setUserViewMode("crafters")}
                 className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${
                   viewMode === "crafters"
-                    ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
-                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    ? "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900"
+                    : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
                 }`}
               >
                 CRAFTERs ({crafterAgents.length})
@@ -353,7 +353,7 @@ export function CraftersView({
 
   if (agents.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 p-4">
+      <div className="flex-1 flex items-center justify-center text-xs text-slate-400 dark:text-slate-500 p-4">
         No CRAFTER agents running yet. Execute tasks to spawn agents.
       </div>
     );
@@ -362,14 +362,14 @@ export function CraftersView({
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Agent Tabs */}
-      <div className="flex items-center gap-1 px-3 py-2 border-b border-gray-100 dark:border-gray-800 overflow-x-auto">
+      <div className="flex items-center gap-1 px-3 py-2 border-b border-slate-100 dark:border-slate-800 overflow-x-auto">
         {agents.map((agent, i) => {
           const isActive = agent.id === (activeCrafterId ?? agents[0]?.id);
           const statusColor =
             agent.status === "running"
               ? "bg-amber-500"
               : agent.status === "completed"
-              ? "bg-green-500"
+              ? "bg-emerald-500"
               : "bg-red-500";
 
           return (
@@ -379,7 +379,7 @@ export function CraftersView({
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium whitespace-nowrap transition-colors ${
                 isActive
                   ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
               title={agent.taskTitle}
             >
@@ -394,16 +394,16 @@ export function CraftersView({
 
       {/* Active Agent Info */}
       {activeAgent && (
-        <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-[#161922]">
+        <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-[#161922]">
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full shrink-0 ${
               activeAgent.status === "running" ? "bg-amber-500 animate-pulse" :
-              activeAgent.status === "completed" ? "bg-green-500" : "bg-red-500"
+              activeAgent.status === "completed" ? "bg-emerald-500" : "bg-red-500"
             }`} />
-            <span className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
+            <span className="text-xs font-medium text-slate-900 dark:text-slate-100 truncate">
               {activeAgent.taskTitle}
             </span>
-            <span className="ml-auto text-[10px] text-gray-400 dark:text-gray-500 capitalize">
+            <span className="ml-auto text-[10px] text-slate-400 dark:text-slate-500 capitalize">
               {activeAgent.status}
             </span>
           </div>
@@ -414,15 +414,15 @@ export function CraftersView({
       <div className="flex-1 overflow-y-auto min-h-0">
         <div className="p-3 space-y-2">
           {activeAgent?.messages.length === 0 && (
-            <div className="text-center py-8 text-xs text-gray-400 dark:text-gray-500">
+            <div className="text-center py-8 text-xs text-slate-400 dark:text-slate-500">
               {activeAgent.status === "running" ? (
                 <div className="space-y-2">
-                  <div className="w-5 h-5 mx-auto border-2 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin" />
+                  <div className="w-5 h-5 mx-auto border-2 border-slate-300 dark:border-slate-600 border-t-blue-500 rounded-full animate-spin" />
                   <div>Agent is working...</div>
                 </div>
               ) : activeAgentHistoryState === "loading" ? (
                 <div className="space-y-2">
-                  <div className="w-5 h-5 mx-auto border-2 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin" />
+                  <div className="w-5 h-5 mx-auto border-2 border-slate-300 dark:border-slate-600 border-t-blue-500 rounded-full animate-spin" />
                   <div>Loading history...</div>
                 </div>
               ) : activeAgent.status === "error" ? (
@@ -491,33 +491,33 @@ function CrafterMessageBubble({ message }: { message: CrafterMessage }) {
 
   if (message.role === "tool") {
     const statusColor =
-      message.toolStatus === "completed" ? "bg-green-500" :
+      message.toolStatus === "completed" ? "bg-emerald-500" :
       message.toolStatus === "failed" ? "bg-red-500" :
-      "bg-yellow-500 animate-pulse";
+      "bg-amber-500 animate-pulse";
 
     return (
-      <div className="rounded-md border border-gray-100 dark:border-gray-800 overflow-hidden">
+      <div className="rounded-md border border-slate-100 dark:border-slate-800 overflow-hidden">
         <button
           type="button"
           onClick={() => setExpanded((e) => !e)}
-          className="w-full px-2.5 py-1 bg-gray-50 dark:bg-[#161922] border-b border-gray-100 dark:border-gray-800 flex items-center gap-2 text-left"
+          className="w-full px-2.5 py-1 bg-slate-50 dark:bg-[#161922] border-b border-slate-100 dark:border-slate-800 flex items-center gap-2 text-left"
         >
           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusColor}`} />
-          <span className="text-[11px] font-mono text-gray-600 dark:text-gray-300 truncate">
+          <span className="text-[11px] font-mono text-slate-600 dark:text-slate-300 truncate">
             {message.toolName ?? "tool"}
           </span>
-          <span className="text-[9px] text-gray-400 dark:text-gray-500 ml-auto">
+          <span className="text-[9px] text-slate-400 dark:text-slate-500 ml-auto">
             {message.toolStatus ?? "pending"}
           </span>
           <svg
-            className={`w-2.5 h-2.5 text-gray-400 transition-transform duration-150 ${expanded ? "rotate-90" : ""}`}
+            className={`w-2.5 h-2.5 text-slate-400 transition-transform duration-150 ${expanded ? "rotate-90" : ""}`}
             fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
         </button>
         {expanded && (
-          <div className="px-2.5 py-1.5 text-[10px] font-mono text-gray-600 dark:text-gray-400 whitespace-pre-wrap max-h-32 overflow-y-auto bg-white dark:bg-[#0f1117]">
+          <div className="px-2.5 py-1.5 text-[10px] font-mono text-slate-600 dark:text-slate-400 whitespace-pre-wrap max-h-32 overflow-y-auto bg-white dark:bg-[#0f1117]">
             {message.content}
           </div>
         )}
@@ -540,7 +540,7 @@ function CrafterMessageBubble({ message }: { message: CrafterMessage }) {
 
   // Assistant message
   return (
-    <div className="text-xs text-gray-900 dark:text-gray-100">
+    <div className="text-xs text-slate-900 dark:text-slate-100">
       {mermaidMatch ? (
         <div className="space-y-2">
           {/* Render text before mermaid */}
@@ -781,39 +781,39 @@ function TaskEditor({
   return (
     <div className="mt-2.5 space-y-2">
       <div>
-        <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">Title</label>
+        <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Title</label>
         <input
           ref={titleRef}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="mt-0.5 w-full text-xs px-2 py-1.5 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 outline-none"
+          className="mt-0.5 w-full text-xs px-2 py-1.5 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-blue-500 outline-none"
         />
       </div>
       <div>
-        <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">Objective</label>
+        <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Objective</label>
         <textarea
           value={objective}
           onChange={(e) => setObjective(e.target.value)}
           rows={2}
-          className="mt-0.5 w-full text-xs px-2 py-1.5 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 outline-none resize-none"
+          className="mt-0.5 w-full text-xs px-2 py-1.5 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-blue-500 outline-none resize-none"
         />
       </div>
       <div>
-        <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">Scope</label>
+        <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Scope</label>
         <textarea
           value={scope}
           onChange={(e) => setScope(e.target.value)}
           rows={3}
-          className="mt-0.5 w-full text-xs px-2 py-1.5 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 outline-none resize-none"
+          className="mt-0.5 w-full text-xs px-2 py-1.5 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-blue-500 outline-none resize-none"
         />
       </div>
       <div>
-        <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">Definition of Done</label>
+        <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Definition of Done</label>
         <textarea
           value={dod}
           onChange={(e) => setDod(e.target.value)}
           rows={3}
-          className="mt-0.5 w-full text-xs px-2 py-1.5 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 outline-none resize-none"
+          className="mt-0.5 w-full text-xs px-2 py-1.5 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-blue-500 outline-none resize-none"
         />
       </div>
       <div className="flex gap-2 pt-1">
@@ -825,7 +825,7 @@ function TaskEditor({
         </button>
         <button
           onClick={onCancel}
-          className="text-xs font-medium px-2.5 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          className="text-xs font-medium px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
         >
           Cancel
         </button>

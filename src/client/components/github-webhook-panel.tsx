@@ -362,25 +362,25 @@ export function GitHubWebhookPanel() {
         </div>
       )}
       {success && (
-        <div className="mx-4 mt-3 px-4 py-2 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 text-green-700 dark:text-green-400 text-sm flex items-start gap-2">
+        <div className="mx-4 mt-3 px-4 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 text-sm flex items-start gap-2">
           <span className="shrink-0 mt-0.5">✓</span>
           <span>{success}</span>
-          <button onClick={() => setSuccess(null)} className="ml-auto shrink-0 text-green-400 hover:text-green-600">✕</button>
+          <button onClick={() => setSuccess(null)} className="ml-auto shrink-0 text-emerald-400 hover:text-emerald-600">✕</button>
         </div>
       )}
 
       {/* Header actions */}
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
         {/* Tabs */}
-        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+        <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
           {(["configs", "logs"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-3 py-1 text-sm rounded-md transition-colors ${
                 activeTab === tab
-                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
               }`}
             >
               {tab === "configs" ? "Configurations" : "Trigger Logs"}
@@ -406,17 +406,17 @@ export function GitHubWebhookPanel() {
         {activeTab === "configs" && (
           <>
             {/* Polling Control Panel */}
-            <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                       Local Polling
                     </span>
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
                       pollingRunning
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                        : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                        : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400"
                     }`}>
                       {pollingRunning ? "Running" : "Stopped"}
                     </span>
@@ -424,7 +424,7 @@ export function GitHubWebhookPanel() {
                   <button
                     onClick={handleTogglePolling}
                     className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                      pollingEnabled ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
+                      pollingEnabled ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-600"
                     }`}
                     title={pollingEnabled ? "Disable polling" : "Enable polling (alternative to webhooks for local dev)"}
                   >
@@ -437,7 +437,7 @@ export function GitHubWebhookPanel() {
                   <select
                     value={pollingInterval}
                     onChange={(e) => handleUpdatePollingInterval(Number(e.target.value))}
-                    className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                    className="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300"
                     disabled={!pollingEnabled}
                   >
                     <option value={10}>10s</option>
@@ -448,11 +448,11 @@ export function GitHubWebhookPanel() {
                   <button
                     onClick={handleManualCheck}
                     disabled={pollingChecking}
-                    className="flex items-center gap-1 px-2 py-1 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 text-gray-700 dark:text-gray-300"
+                    className="flex items-center gap-1 px-2 py-1 text-xs bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 text-slate-700 dark:text-slate-300"
                     title="Manually check for new events now"
                   >
                     {pollingChecking ? (
-                      <div className="w-3 h-3 border border-gray-400 border-t-blue-500 rounded-full animate-spin" />
+                      <div className="w-3 h-3 border border-slate-400 border-t-blue-500 rounded-full animate-spin" />
                     ) : (
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -463,11 +463,11 @@ export function GitHubWebhookPanel() {
                 </div>
               </div>
               {pollingLastChecked && (
-                <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                   Last checked: {new Date(pollingLastChecked).toLocaleString()}
                 </div>
               )}
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 Alternative to webhooks for local development. Polls GitHub API for events.
               </p>
             </div>
@@ -488,8 +488,8 @@ export function GitHubWebhookPanel() {
             {!showForm && (
               <>
                 {loading ? (
-                  <div className="flex items-center justify-center py-12 text-gray-400">
-                    <div className="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin mr-2" />
+                  <div className="flex items-center justify-center py-12 text-slate-400">
+                    <div className="w-5 h-5 border-2 border-slate-300 dark:border-slate-600 border-t-blue-500 rounded-full animate-spin mr-2" />
                     Loading…
                   </div>
                 ) : configs.length === 0 ? (
@@ -527,13 +527,13 @@ export function GitHubWebhookPanel() {
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4">
+        <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
         </svg>
       </div>
-      <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-1">No webhook triggers configured</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mb-4">
+      <h3 className="text-base font-medium text-slate-900 dark:text-slate-100 mb-1">No webhook triggers configured</h3>
+      <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-4">
         Connect a GitHub repository to automatically trigger agents when issues are created, PRs are opened, or builds complete.
       </p>
       <button
@@ -559,14 +559,14 @@ interface WebhookConfigFormProps {
 
 function WebhookConfigForm({ form, setForm, editId, saving, specialists, onSubmit, onCancel, toggleEvent }: WebhookConfigFormProps) {
   return (
-    <form onSubmit={onSubmit} className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-5 mt-2 space-y-4">
-      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+    <form onSubmit={onSubmit} className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-5 mt-2 space-y-4">
+      <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
         {editId ? "Edit Webhook Trigger" : "New Webhook Trigger"}
       </h3>
 
       {/* Name */}
       <div>
-        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
           Name <span className="text-red-500">*</span>
         </label>
         <input
@@ -575,16 +575,16 @@ function WebhookConfigForm({ form, setForm, editId, saving, specialists, onSubmi
           value={form.name}
           onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
           placeholder="e.g. Issue Handler — data-mesh-spike"
-          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-gray-100"
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
           required
         />
       </div>
 
       {/* Repository */}
       <div>
-        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
           GitHub Repository <span className="text-red-500">*</span>
-          <span className="ml-1 text-gray-400 font-normal">(owner/repo)</span>
+          <span className="ml-1 text-slate-400 font-normal">(owner/repo)</span>
         </label>
         <input
           data-testid="webhook-repo"
@@ -592,16 +592,16 @@ function WebhookConfigForm({ form, setForm, editId, saving, specialists, onSubmi
           value={form.repo}
           onChange={(e) => setForm((p) => ({ ...p, repo: e.target.value }))}
           placeholder="phodal-archive/data-mesh-spike"
-          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-gray-100"
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
           required
         />
       </div>
 
       {/* GitHub Token */}
       <div>
-        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
           GitHub Token <span className="text-red-500">{editId ? "" : "*"}</span>
-          {editId && <span className="ml-1 text-gray-400 font-normal">(leave blank to keep existing)</span>}
+          {editId && <span className="ml-1 text-slate-400 font-normal">(leave blank to keep existing)</span>}
         </label>
         <input
           data-testid="webhook-token"
@@ -609,16 +609,16 @@ function WebhookConfigForm({ form, setForm, editId, saving, specialists, onSubmi
           value={form.githubToken}
           onChange={(e) => setForm((p) => ({ ...p, githubToken: e.target.value }))}
           placeholder={editId ? "Leave blank to keep existing token" : "github_pat_..."}
-          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-gray-100"
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
           required={!editId}
         />
       </div>
 
       {/* Webhook Secret */}
       <div>
-        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
           Webhook Secret
-          <span className="ml-1 text-gray-400 font-normal">(used to verify payloads)</span>
+          <span className="ml-1 text-slate-400 font-normal">(used to verify payloads)</span>
         </label>
         <input
           data-testid="webhook-secret"
@@ -626,13 +626,13 @@ function WebhookConfigForm({ form, setForm, editId, saving, specialists, onSubmi
           value={form.webhookSecret}
           onChange={(e) => setForm((p) => ({ ...p, webhookSecret: e.target.value }))}
           placeholder="routa-webhook-secret-2026"
-          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-gray-100"
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
         />
       </div>
 
       {/* Events */}
       <div>
-        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">
           Events to Subscribe <span className="text-red-500">*</span>
         </label>
         <div className="grid grid-cols-2 gap-2">
@@ -642,7 +642,7 @@ function WebhookConfigForm({ form, setForm, editId, saving, specialists, onSubmi
               className={`flex items-start gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${
                 form.eventTypes.includes(ev.value)
                   ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-500"
-                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                  : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
               }`}
             >
               <input
@@ -653,8 +653,8 @@ function WebhookConfigForm({ form, setForm, editId, saving, specialists, onSubmi
                 className="mt-0.5 accent-blue-600"
               />
               <div>
-                <p className="text-xs font-medium text-gray-900 dark:text-gray-100">{ev.label}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{ev.description}</p>
+                <p className="text-xs font-medium text-slate-900 dark:text-slate-100">{ev.label}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{ev.description}</p>
               </div>
             </label>
           ))}
@@ -663,9 +663,9 @@ function WebhookConfigForm({ form, setForm, editId, saving, specialists, onSubmi
 
       {/* Label filter */}
       <div>
-        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
           Label Filter
-          <span className="ml-1 text-gray-400 font-normal">(comma-separated; only trigger for issues with these labels)</span>
+          <span className="ml-1 text-slate-400 font-normal">(comma-separated; only trigger for issues with these labels)</span>
         </label>
         <input
           data-testid="webhook-label-filter"
@@ -673,20 +673,20 @@ function WebhookConfigForm({ form, setForm, editId, saving, specialists, onSubmi
           value={form.labelFilter}
           onChange={(e) => setForm((p) => ({ ...p, labelFilter: e.target.value }))}
           placeholder="feature, enhancement, bug"
-          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-gray-100"
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
         />
       </div>
 
       {/* Trigger Agent */}
       <div>
-        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
           Trigger Agent <span className="text-red-500">*</span>
         </label>
         <select
           data-testid="webhook-agent"
           value={form.triggerAgentId}
           onChange={(e) => setForm((p) => ({ ...p, triggerAgentId: e.target.value }))}
-          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-gray-100"
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
           required
         >
           <option value="">— Select an agent —</option>
@@ -706,9 +706,9 @@ function WebhookConfigForm({ form, setForm, editId, saving, specialists, onSubmi
 
       {/* Prompt Template */}
       <div>
-        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
           Prompt Template
-          <span className="ml-1 text-gray-400 font-normal">(optional; use {`{{event}}`}, {`{{action}}`}, {`{{repo}}`}, {`{{context}}`})</span>
+          <span className="ml-1 text-slate-400 font-normal">(optional; use {`{{event}}`}, {`{{action}}`}, {`{{repo}}`}, {`{{context}}`})</span>
         </label>
         <textarea
           data-testid="webhook-prompt"
@@ -716,7 +716,7 @@ function WebhookConfigForm({ form, setForm, editId, saving, specialists, onSubmi
           onChange={(e) => setForm((p) => ({ ...p, promptTemplate: e.target.value }))}
           rows={3}
           placeholder="Leave blank for default prompt…"
-          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-gray-100 resize-none"
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100 resize-none"
         />
       </div>
 
@@ -729,15 +729,15 @@ function WebhookConfigForm({ form, setForm, editId, saving, specialists, onSubmi
           onChange={(e) => setForm((p) => ({ ...p, enabled: e.target.checked }))}
           className="accent-blue-600"
         />
-        <span className="text-sm text-gray-700 dark:text-gray-300">Enabled</span>
+        <span className="text-sm text-slate-700 dark:text-slate-300">Enabled</span>
       </label>
 
       {/* Actions */}
-      <div className="flex justify-end gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
         >
           Cancel
         </button>
@@ -765,19 +765,19 @@ interface WebhookConfigCardProps {
 
 function WebhookConfigCard({ config, onEdit, onDelete, onRegister, onToggle, registering }: WebhookConfigCardProps) {
   return (
-    <div className={`bg-white dark:bg-gray-800/50 border rounded-xl p-4 transition-colors ${
+    <div className={`bg-white dark:bg-slate-800/50 border rounded-xl p-4 transition-colors ${
       config.enabled
-        ? "border-gray-200 dark:border-gray-700"
-        : "border-gray-100 dark:border-gray-800 opacity-60"
+        ? "border-slate-200 dark:border-slate-700"
+        : "border-slate-100 dark:border-slate-800 opacity-60"
     }`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className={`w-2 h-2 rounded-full shrink-0 ${config.enabled ? "bg-green-500" : "bg-gray-400"}`} />
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{config.name}</h4>
+            <span className={`w-2 h-2 rounded-full shrink-0 ${config.enabled ? "bg-emerald-500" : "bg-slate-400"}`} />
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{config.name}</h4>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 ml-4">
-            <span className="font-medium text-gray-700 dark:text-gray-300">{config.repo}</span>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 ml-4">
+            <span className="font-medium text-slate-700 dark:text-slate-300">{config.repo}</span>
             {" → "}
             <span className="inline-flex items-center gap-1">
               <span className="w-3.5 h-3.5 inline-block">🤖</span>
@@ -802,7 +802,7 @@ function WebhookConfigCard({ config, onEdit, onDelete, onRegister, onToggle, reg
         <button
           onClick={onToggle}
           title={config.enabled ? "Disable" : "Enable"}
-          className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
         >
           {config.enabled ? (
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -817,14 +817,14 @@ function WebhookConfigCard({ config, onEdit, onDelete, onRegister, onToggle, reg
       </div>
 
       {/* Action buttons */}
-      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
         <button
           onClick={onRegister}
           disabled={registering}
-          className="flex items-center gap-1 px-2.5 py-1 text-xs bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-300 rounded-md transition-colors disabled:opacity-50"
+          className="flex items-center gap-1 px-2.5 py-1 text-xs bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-slate-300 rounded-md transition-colors disabled:opacity-50"
         >
           {registering ? (
-            <span className="w-3 h-3 border border-white dark:border-gray-900 border-t-transparent rounded-full animate-spin" />
+            <span className="w-3 h-3 border border-white dark:border-slate-900 border-t-transparent rounded-full animate-spin" />
           ) : (
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
@@ -835,7 +835,7 @@ function WebhookConfigCard({ config, onEdit, onDelete, onRegister, onToggle, reg
 
         <button
           onClick={onEdit}
-          className="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+          className="flex items-center gap-1 px-2.5 py-1 text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors"
         >
           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -869,10 +869,10 @@ function TriggerLogsTable({ logs, configs, onRefresh }: TriggerLogsTableProps) {
   return (
     <div className="mt-2">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-gray-500 dark:text-gray-400">{logs.length} recent events</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{logs.length} recent events</p>
         <button
           onClick={onRefresh}
-          className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+          className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -883,21 +883,21 @@ function TriggerLogsTable({ logs, configs, onRefresh }: TriggerLogsTableProps) {
 
       {logs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">No webhook events received yet.</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Events will appear here once GitHub sends webhook payloads.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">No webhook events received yet.</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Events will appear here once GitHub sends webhook payloads.</p>
         </div>
       ) : (
         <div className="space-y-2">
           {logs.map((log) => (
-            <div key={log.id} className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 flex items-center gap-3">
+            <div key={log.id} className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 flex items-center gap-3">
               <span className={`w-2 h-2 rounded-full shrink-0 ${
-                log.outcome === "triggered" ? "bg-green-500" :
-                log.outcome === "skipped" ? "bg-yellow-400" : "bg-red-500"
+                log.outcome === "triggered" ? "bg-emerald-500" :
+                log.outcome === "skipped" ? "bg-amber-400" : "bg-red-500"
               }`} />
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
+                <p className="text-xs font-medium text-slate-900 dark:text-slate-100 truncate">
                   {log.eventType}{log.eventAction ? ` · ${log.eventAction}` : ""}
-                  <span className="ml-1.5 text-gray-400 font-normal">
+                  <span className="ml-1.5 text-slate-400 font-normal">
                     {configMap[log.configId] ?? log.configId}
                   </span>
                 </p>
@@ -905,10 +905,10 @@ function TriggerLogsTable({ logs, configs, onRefresh }: TriggerLogsTableProps) {
                   <p className="text-xs text-red-500 truncate">{log.errorMessage}</p>
                 )}
                 {log.backgroundTaskId && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Task: {log.backgroundTaskId}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Task: {log.backgroundTaskId}</p>
                 )}
               </div>
-              <span className="shrink-0 text-xs text-gray-400">
+              <span className="shrink-0 text-xs text-slate-400">
                 {new Date(log.createdAt).toLocaleTimeString()}
               </span>
             </div>

@@ -72,17 +72,17 @@ export function SkillPanel({ skillsHook: externalHook }: SkillPanelProps) {
       <div className="px-3 py-2 flex items-center justify-between">
         <button
           onClick={() => setCollapsed((v) => !v)}
-          className="flex items-center gap-1.5 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+          className="flex items-center gap-1.5 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
         >
-          <svg className={`w-3 h-3 text-gray-400 transition-transform ${collapsed ? "" : "rotate-90"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className={`w-3 h-3 text-slate-400 transition-transform ${collapsed ? "" : "rotate-90"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
-          <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
-          <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Skills</span>
+          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Skills</span>
           {allDisplaySkills.length > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-full">
+            <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full">
               {allDisplaySkills.length}
             </span>
           )}
@@ -90,9 +90,9 @@ export function SkillPanel({ skillsHook: externalHook }: SkillPanelProps) {
         {!collapsed && (
           <div className="flex items-center gap-2">
             <button onClick={() => setShowCatalogModal(true)} className="text-[11px] text-amber-600 hover:text-amber-700 dark:text-amber-400 transition-colors" title="Browse skill catalog">Catalog</button>
-            <button onClick={() => setShowCloneModal(true)} className="text-[11px] text-green-600 hover:text-green-700 dark:text-green-400 transition-colors" title="Clone skills from GitHub">Clone</button>
+            <button onClick={() => setShowCloneModal(true)} className="text-[11px] text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 transition-colors" title="Clone skills from GitHub">Clone</button>
             <button onClick={() => setShowUploadModal(true)} className="text-[11px] text-blue-500 hover:text-blue-600 dark:text-blue-400 transition-colors" title="Upload skill zip">Upload</button>
-            <button onClick={reloadFromDisk} disabled={loading} className="text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50 transition-colors">{loading ? "..." : "Reload"}</button>
+            <button onClick={reloadFromDisk} disabled={loading} className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-50 transition-colors">{loading ? "..." : "Reload"}</button>
           </div>
         )}
       </div>
@@ -109,7 +109,7 @@ export function SkillPanel({ skillsHook: externalHook }: SkillPanelProps) {
       {/* Skill list */}
       <div className="px-1.5 pb-2">
         {allDisplaySkills.length === 0 ? (
-          <div className="px-3 py-4 text-center text-gray-400 dark:text-gray-500 text-xs">
+          <div className="px-3 py-4 text-center text-slate-400 dark:text-slate-500 text-xs">
             No skills found. Clone from GitHub, upload a zip, or add SKILL.md files.
           </div>
         ) : (
@@ -121,7 +121,7 @@ export function SkillPanel({ skillsHook: externalHook }: SkillPanelProps) {
                 className={`group w-full text-left px-2.5 py-2 mb-0.5 rounded-md transition-all duration-150 ${
                   expandedSkill === skill.name
                     ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 ring-1 ring-blue-200 dark:ring-blue-800/50"
-                    : "hover:bg-gray-100/80 dark:hover:bg-gray-800/60 text-gray-700 dark:text-gray-300"
+                    : "hover:bg-slate-100/80 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300"
                 }`}
               >
                 <div className="flex items-center gap-1.5">
@@ -129,7 +129,7 @@ export function SkillPanel({ skillsHook: externalHook }: SkillPanelProps) {
                     className={`w-3 h-3 shrink-0 transition-transform duration-150 ${
                       expandedSkill === skill.name
                         ? "rotate-90 text-blue-500 dark:text-blue-400"
-                        : "text-gray-400 group-hover:text-gray-500 dark:group-hover:text-gray-300"
+                        : "text-slate-400 group-hover:text-slate-500 dark:group-hover:text-slate-300"
                     }`}
                     fill="none"
                     viewBox="0 0 24 24"
@@ -147,21 +147,21 @@ export function SkillPanel({ skillsHook: externalHook }: SkillPanelProps) {
                     </span>
                   )}
                   {skill.license && (
-                    <span className="ml-auto shrink-0 px-1.5 py-0.5 text-[9px] text-gray-400 bg-gray-100 dark:bg-gray-800 rounded">
+                    <span className="ml-auto shrink-0 px-1.5 py-0.5 text-[9px] text-slate-400 bg-slate-100 dark:bg-slate-800 rounded">
                       {skill.license}
                     </span>
                   )}
                 </div>
-                <div className="mt-0.5 ml-[18px] text-[10px] text-gray-400 dark:text-gray-500 line-clamp-2 leading-relaxed">
+                <div className="mt-0.5 ml-[18px] text-[10px] text-slate-400 dark:text-slate-500 line-clamp-2 leading-relaxed">
                   {skill.shortDescription || skill.description}
                 </div>
               </button>
 
               {/* Expanded skill content */}
               {expandedSkill === skill.name && loadedSkill?.name === skill.name && (
-                <div className="mx-2.5 mb-2 rounded-md bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 overflow-hidden">
+                <div className="mx-2.5 mb-2 rounded-md bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 overflow-hidden">
                   {/* Full description */}
-                  <div className="px-3 py-2 text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed border-b border-gray-100 dark:border-gray-700">
+                  <div className="px-3 py-2 text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed border-b border-slate-100 dark:border-slate-700">
                     {loadedSkill.description}
                   </div>
                   {/* Skill instructions rendered as markdown */}
@@ -363,16 +363,16 @@ function SkillCatalogModal({
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-lg mx-4 bg-white dark:bg-[#1e2130] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="relative w-full max-w-lg mx-4 bg-white dark:bg-[#1e2130] rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
               Skill Catalog
             </h3>
             <button
               onClick={onClose}
-              className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -381,13 +381,13 @@ function SkillCatalogModal({
           </div>
 
           {/* Catalog type tabs */}
-          <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+          <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
             <button
               onClick={() => handleSwitchCatalog("skillssh")}
               className={`flex-1 px-3 py-1.5 text-[11px] font-medium rounded-md transition-colors ${
                 catalogType === "skillssh"
                   ? "bg-white dark:bg-[#1e2130] text-amber-700 dark:text-amber-400 shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
               }`}
             >
               <span className="flex items-center justify-center gap-1.5">
@@ -401,8 +401,8 @@ function SkillCatalogModal({
               onClick={() => handleSwitchCatalog("github")}
               className={`flex-1 px-3 py-1.5 text-[11px] font-medium rounded-md transition-colors ${
                 catalogType === "github"
-                  ? "bg-white dark:bg-[#1e2130] text-gray-900 dark:text-gray-100 shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  ? "bg-white dark:bg-[#1e2130] text-slate-900 dark:text-slate-100 shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
               }`}
             >
               <span className="flex items-center justify-center gap-1.5">
@@ -418,9 +418,9 @@ function SkillCatalogModal({
         {/* Search / repo input */}
         <div className="px-5 pt-3">
           {catalogType === "skillssh" ? (
-            <div className="flex items-center rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#161922] overflow-hidden">
+            <div className="flex items-center rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#161922] overflow-hidden">
               <svg
-                className="w-3.5 h-3.5 ml-3 text-gray-400 shrink-0"
+                className="w-3.5 h-3.5 ml-3 text-slate-400 shrink-0"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -434,7 +434,7 @@ function SkillCatalogModal({
                 value={query}
                 onChange={(e) => handleSearch(e.target.value)}
                 placeholder="Search skills... (e.g. react, supabase, testing)"
-                className="flex-1 px-2.5 py-2.5 bg-transparent text-xs text-gray-900 dark:text-gray-100 placeholder:text-gray-400 outline-none"
+                className="flex-1 px-2.5 py-2.5 bg-transparent text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none"
                 onKeyDown={(e) => {
                   if (e.key === "Escape") onClose();
                 }}
@@ -449,14 +449,14 @@ function SkillCatalogModal({
           ) : (
             <div className="space-y-2">
               <div className="flex gap-2">
-                <div className="flex-1 flex items-center rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#161922] overflow-hidden">
-                  <span className="pl-2.5 text-[10px] text-gray-400 font-mono shrink-0">repo:</span>
+                <div className="flex-1 flex items-center rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#161922] overflow-hidden">
+                  <span className="pl-2.5 text-[10px] text-slate-400 font-mono shrink-0">repo:</span>
                   <input
                     type="text"
                     value={githubRepo}
                     onChange={(e) => setGithubRepo(e.target.value)}
                     placeholder="owner/repo"
-                    className="flex-1 px-1.5 py-2 bg-transparent text-xs text-gray-900 dark:text-gray-100 placeholder:text-gray-400 outline-none font-mono"
+                    className="flex-1 px-1.5 py-2 bg-transparent text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none font-mono"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") listGithubCatalog(githubRepo, githubPath);
                       if (e.key === "Escape") onClose();
@@ -466,7 +466,7 @@ function SkillCatalogModal({
                 <button
                   onClick={() => listGithubCatalog(githubRepo, githubPath)}
                   disabled={catalogLoading || !githubRepo.trim()}
-                  className="px-3 py-2 text-xs font-medium text-white bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                  className="px-3 py-2 text-xs font-medium text-white bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
                 >
                   {catalogLoading ? (
                     <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -495,7 +495,7 @@ function SkillCatalogModal({
                     className={`px-1.5 py-0.5 text-[10px] font-mono rounded transition-colors ${
                       githubRepo === preset.repo && githubPath === preset.path
                         ? "text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30"
-                        : "text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        : "text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700"
                     }`}
                   >
                     {preset.label}
@@ -511,13 +511,13 @@ function SkillCatalogModal({
           {catalogType === "skillssh" ? (
             /* skills.sh results */
             catalogSkills.length === 0 && !catalogLoading ? (
-              <div className="text-center py-6 text-xs text-gray-400 dark:text-gray-500">
+              <div className="text-center py-6 text-xs text-slate-400 dark:text-slate-500">
                 {query.length >= 2
                   ? "No skills found. Try a different search term."
                   : (
                     <div className="space-y-1">
                       <div>Type at least 2 characters to search the <a href="https://skills.sh" target="_blank" rel="noopener noreferrer" className="text-amber-500 hover:text-amber-600 dark:hover:text-amber-400">skills.sh</a> catalog.</div>
-                      <div className="text-[10px] text-gray-300 dark:text-gray-600">e.g. react, supabase, testing, next.js</div>
+                      <div className="text-[10px] text-slate-300 dark:text-slate-600">e.g. react, supabase, testing, next.js</div>
                     </div>
                   )}
               </div>
@@ -530,10 +530,10 @@ function SkillCatalogModal({
                       key={skillKey}
                       className={`flex items-center gap-2 px-2.5 py-2 rounded-md cursor-pointer transition-colors ${
                         skill.installed
-                          ? "bg-green-50/50 dark:bg-green-900/10 opacity-60"
+                          ? "bg-emerald-50/50 dark:bg-emerald-900/10 opacity-60"
                           : isSelected(skill)
                             ? "bg-amber-50 dark:bg-amber-900/20"
-                            : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                            : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
                       }`}
                     >
                       <input
@@ -541,27 +541,27 @@ function SkillCatalogModal({
                         checked={skill.installed || isSelected(skill)}
                         disabled={skill.installed}
                         onChange={() => toggleSkill(skill)}
-                        className="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-amber-600 focus:ring-amber-500 disabled:opacity-50 shrink-0"
+                        className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 text-amber-600 focus:ring-amber-500 disabled:opacity-50 shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <span className={`text-xs font-medium truncate ${
-                            skill.installed ? "text-gray-400" : "text-gray-800 dark:text-gray-200"
+                            skill.installed ? "text-slate-400" : "text-slate-800 dark:text-slate-200"
                           }`}>
                             {skill.name}
                           </span>
                           {skill.installed && (
-                            <span className="shrink-0 px-1 py-0.5 text-[8px] text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded">
+                            <span className="shrink-0 px-1 py-0.5 text-[8px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 rounded">
                               installed
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
                           {skill.source}
                         </div>
                       </div>
                       {skill.installs > 0 && (
-                        <span className="shrink-0 text-[10px] text-gray-400 dark:text-gray-500 tabular-nums">
+                        <span className="shrink-0 text-[10px] text-slate-400 dark:text-slate-500 tabular-nums">
                           {formatInstalls(skill.installs)}
                         </span>
                       )}
@@ -573,7 +573,7 @@ function SkillCatalogModal({
           ) : (
             /* GitHub catalog results */
             githubCatalogSkills.length === 0 && !catalogLoading ? (
-              <div className="text-center py-6 text-xs text-gray-400 dark:text-gray-500">
+              <div className="text-center py-6 text-xs text-slate-400 dark:text-slate-500">
                 Select a repo above or click &quot;Load&quot; to browse skills.
               </div>
             ) : (
@@ -583,10 +583,10 @@ function SkillCatalogModal({
                     key={skill.name}
                     className={`flex items-center gap-2 px-2.5 py-2 rounded-md cursor-pointer transition-colors ${
                       skill.installed
-                        ? "bg-green-50/50 dark:bg-green-900/10 opacity-60"
+                        ? "bg-emerald-50/50 dark:bg-emerald-900/10 opacity-60"
                         : githubSelected.has(skill.name)
                           ? "bg-blue-50 dark:bg-blue-900/20"
-                          : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                          : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
                     }`}
                   >
                     <input
@@ -594,17 +594,17 @@ function SkillCatalogModal({
                       checked={skill.installed || githubSelected.has(skill.name)}
                       disabled={skill.installed}
                       onChange={() => toggleGithubSkill(skill.name)}
-                      className="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 disabled:opacity-50 shrink-0"
+                      className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 disabled:opacity-50 shrink-0"
                     />
                     <div className="flex-1 min-w-0">
                       <span className={`text-xs font-medium ${
-                        skill.installed ? "text-gray-400" : "text-gray-800 dark:text-gray-200"
+                        skill.installed ? "text-slate-400" : "text-slate-800 dark:text-slate-200"
                       }`}>
                         {skill.name}
                       </span>
                     </div>
                     {skill.installed && (
-                      <span className="shrink-0 px-1 py-0.5 text-[8px] text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded">
+                      <span className="shrink-0 px-1 py-0.5 text-[8px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 rounded">
                         installed
                       </span>
                     )}
@@ -618,15 +618,15 @@ function SkillCatalogModal({
           {installResult && (
             <div className="mt-3 space-y-2">
               {installResult.installed.length > 0 && (
-                <div className="rounded-md bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/50 px-3 py-2">
-                  <div className="text-xs text-green-700 dark:text-green-400 font-medium mb-1">
+                <div className="rounded-md bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/50 px-3 py-2">
+                  <div className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mb-1">
                     Installed {installResult.installed.length} skill{installResult.installed.length !== 1 ? "s" : ""}
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {installResult.installed.map((name) => (
                       <span
                         key={name}
-                        className="px-1.5 py-0.5 text-[10px] font-mono text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded"
+                        className="px-1.5 py-0.5 text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/30 rounded"
                       >
                         {name}
                       </span>
@@ -648,8 +648,8 @@ function SkillCatalogModal({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-          <div className="text-[10px] text-gray-400 dark:text-gray-500">
+        <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
+          <div className="text-[10px] text-slate-400 dark:text-slate-500">
             {totalResults > 0 && (
               <>
                 {totalResults} results
@@ -660,7 +660,7 @@ function SkillCatalogModal({
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 rounded-md transition-colors"
+              className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 rounded-md transition-colors"
             >
               Close
             </button>
@@ -747,24 +747,24 @@ function SkillCloneModal({
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md mx-4 bg-white dark:bg-[#1e2130] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="relative w-full max-w-md mx-4 bg-white dark:bg-[#1e2130] rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <svg
-              className="w-4 h-4 text-green-600 dark:text-green-400"
+              className="w-4 h-4 text-emerald-600 dark:text-emerald-400"
               viewBox="0 0 24 24"
               fill="currentColor"
             >
               <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
             </svg>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
               Clone Skills from GitHub
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
           >
             <svg
               className="w-4 h-4"
@@ -784,13 +784,13 @@ function SkillCloneModal({
 
         {/* Body */}
         <div className="p-5 space-y-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Clone a GitHub repo containing skills (with{" "}
-            <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px]">
+            <code className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[10px]">
               SKILL.md
             </code>{" "}
             files). Skills will be imported to{" "}
-            <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px]">
+            <code className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[10px]">
               .agents/skills/
             </code>
             .
@@ -798,11 +798,11 @@ function SkillCloneModal({
 
           {/* URL input */}
           <div>
-            <label className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5 block">
+            <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 block">
               Repository URL
             </label>
-            <div className="flex items-center rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#161922] overflow-hidden">
-              <span className="pl-3 text-[10px] text-gray-400 dark:text-gray-500 font-mono whitespace-nowrap">
+            <div className="flex items-center rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#161922] overflow-hidden">
+              <span className="pl-3 text-[10px] text-slate-400 dark:text-slate-500 font-mono whitespace-nowrap">
                 github.com/
               </span>
               <input
@@ -819,7 +819,7 @@ function SkillCloneModal({
                   setResult(null);
                 }}
                 placeholder="vercel-labs/agent-skills"
-                className="flex-1 px-1.5 py-2.5 bg-transparent text-xs text-gray-900 dark:text-gray-100 placeholder:text-gray-400 outline-none font-mono"
+                className="flex-1 px-1.5 py-2.5 bg-transparent text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none font-mono"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && url.trim()) handleClone();
                   if (e.key === "Escape") onClose();
@@ -831,7 +831,7 @@ function SkillCloneModal({
 
           {/* Examples */}
           <div className="flex flex-wrap gap-1.5">
-            <span className="text-[10px] text-gray-400 dark:text-gray-500">
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">
               Examples:
             </span>
             {[
@@ -863,15 +863,15 @@ function SkillCloneModal({
 
           {/* Success */}
           {result && (
-            <div className="rounded-md bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/50 px-3 py-2">
-              <div className="text-xs text-green-700 dark:text-green-400 font-medium mb-1">
+            <div className="rounded-md bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/50 px-3 py-2">
+              <div className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mb-1">
                 Imported {result.count} skill{result.count !== 1 ? "s" : ""}!
               </div>
               <div className="flex flex-wrap gap-1">
                 {result.imported.map((name) => (
                   <span
                     key={name}
-                    className="px-1.5 py-0.5 text-[10px] font-mono text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded"
+                    className="px-1.5 py-0.5 text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/30 rounded"
                   >
                     /{name}
                   </span>
@@ -882,10 +882,10 @@ function SkillCloneModal({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-2">
+        <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 rounded-md transition-colors"
+            className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 rounded-md transition-colors"
           >
             {result ? "Close" : "Cancel"}
           </button>
@@ -893,7 +893,7 @@ function SkillCloneModal({
             <button
               onClick={handleClone}
               disabled={!url.trim() || cloning}
-              className="px-4 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+              className="px-4 py-1.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
               {cloning ? (
                 <>
@@ -1015,15 +1015,15 @@ function SkillUploadModal({
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md mx-4 bg-white dark:bg-[#1e2130] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="relative w-full max-w-md mx-4 bg-white dark:bg-[#1e2130] rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
             Upload Skill Package
           </h3>
           <button
             onClick={onClose}
-            className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -1033,9 +1033,9 @@ function SkillUploadModal({
 
         {/* Body */}
         <div className="p-5">
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
             Upload a .zip file containing SKILL.md and any related files.
-            It will be extracted to the <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px]">.agents/skills/</code> directory.
+            It will be extracted to the <code className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[10px]">.agents/skills/</code> directory.
           </p>
 
           {/* Drop zone */}
@@ -1048,8 +1048,8 @@ function SkillUploadModal({
               dragOver
                 ? "border-blue-400 bg-blue-50 dark:bg-blue-900/10"
                 : selectedFile
-                  ? "border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/10"
-                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                  ? "border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/10"
+                  : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
             }`}
           >
             <input
@@ -1065,22 +1065,22 @@ function SkillUploadModal({
 
             {selectedFile ? (
               <div>
-                <svg className="w-8 h-8 mx-auto text-green-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-8 h-8 mx-auto text-emerald-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
                   {selectedFile.name}
                 </div>
-                <div className="text-[11px] text-gray-400 mt-1">
+                <div className="text-[11px] text-slate-400 mt-1">
                   {(selectedFile.size / 1024).toFixed(1)} KB - Click to change
                 </div>
               </div>
             ) : (
               <div>
-                <svg className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                 </svg>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+                <div className="text-xs text-slate-500 dark:text-slate-400">
                   Drop a .zip file here or click to browse
                 </div>
               </div>
@@ -1094,17 +1094,17 @@ function SkillUploadModal({
           )}
 
           {success && (
-            <div className="mt-3 px-3 py-2 rounded-md bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs">
+            <div className="mt-3 px-3 py-2 rounded-md bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-xs">
               Skill uploaded successfully! Reloading...
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-2">
+        <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 rounded-md transition-colors"
+            className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 rounded-md transition-colors"
           >
             Cancel
           </button>

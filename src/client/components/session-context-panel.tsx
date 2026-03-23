@@ -135,7 +135,7 @@ export function SessionContextPanel({
 
   if (loading) {
     return (
-      <div className="px-3 py-4 text-center text-gray-400 dark:text-gray-500 text-xs">
+      <div className="px-3 py-4 text-center text-slate-400 dark:text-slate-500 text-xs">
         Loading...
       </div>
     );
@@ -197,7 +197,7 @@ export function SessionContextPanel({
           setRenameValue(displayName);
           setRenamingId(sid);
         }}
-        className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+        className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
         title="Rename"
       >
         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -210,7 +210,7 @@ export function SessionContextPanel({
           e.stopPropagation();
           handleDelete(sid);
         }}
-        className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500"
+        className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-slate-400 hover:text-red-500"
         title="Delete"
       >
         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -225,7 +225,7 @@ export function SessionContextPanel({
     session,
     label,
     icon,
-    iconColor = "text-gray-400",
+    iconColor = "text-slate-400",
     indent = false,
     highlighted = false,
   }: {
@@ -244,7 +244,7 @@ export function SessionContextPanel({
       <div className={indent ? "ml-5" : ""}>
         <div
           onClick={() => !isRenaming && onSelectSession(session.sessionId)}
-          className={`group flex items-start gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${highlighted ? "bg-amber-50 ring-1 ring-amber-200 hover:bg-amber-100 dark:bg-amber-900/20 dark:ring-amber-800 dark:hover:bg-amber-900/30" : "hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+          className={`group flex items-start gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${highlighted ? "bg-amber-50 ring-1 ring-amber-200 hover:bg-amber-100 dark:bg-amber-900/20 dark:ring-amber-800 dark:hover:bg-amber-900/30" : "hover:bg-slate-100 dark:hover:bg-slate-800"}`}
         >
           <span className={`shrink-0 mt-0.5 ${iconColor}`}>{icon}</span>
           <div className="min-w-0 flex-1">
@@ -259,11 +259,11 @@ export function SessionContextPanel({
                   if (e.key === "Escape") setRenamingId(null);
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full text-[11px] font-medium bg-white dark:bg-gray-900 border border-blue-400 rounded px-1 py-0.5 outline-none text-gray-700 dark:text-gray-300"
+                className="w-full text-[11px] font-medium bg-white dark:bg-slate-900 border border-blue-400 rounded px-1 py-0.5 outline-none text-slate-700 dark:text-slate-300"
               />
             ) : (
               <div className="flex items-center gap-1.5 min-w-0">
-                <div className="text-[11px] font-medium text-gray-700 dark:text-gray-300 truncate">
+                <div className="text-[11px] font-medium text-slate-700 dark:text-slate-300 truncate">
                   {displayName}
                 </div>
                 {isChildSession && (
@@ -278,7 +278,7 @@ export function SessionContextPanel({
                 )}
               </div>
             )}
-            <div className="text-[10px] text-gray-400 dark:text-gray-500">
+            <div className="text-[10px] text-slate-400 dark:text-slate-500">
               {label ? `${label} • ` : ""}{session.role}{session.role ? " • " : ""}{formatTimeAgo(session.createdAt)}
             </div>
           </div>
@@ -289,7 +289,7 @@ export function SessionContextPanel({
   };
 
   return (
-    <div className="border-b border-gray-100 dark:border-gray-800">
+    <div className="border-b border-slate-100 dark:border-slate-800">
       {/* Current Session Info */}
       <div className="px-3 py-3 bg-blue-50 dark:bg-blue-900/10 border-b border-blue-100 dark:border-blue-900/30">
         <div className="flex items-start gap-2">
@@ -313,7 +313,7 @@ export function SessionContextPanel({
                   if (e.key === "Enter") handleRename(context.current.sessionId);
                   if (e.key === "Escape") setRenamingId(null);
                 }}
-                className="w-full text-xs font-semibold bg-white dark:bg-gray-900 border border-blue-400 rounded px-1 py-0.5 outline-none text-blue-700 dark:text-blue-300"
+                className="w-full text-xs font-semibold bg-white dark:bg-slate-900 border border-blue-400 rounded px-1 py-0.5 outline-none text-blue-700 dark:text-blue-300"
               />
             ) : (
               <div className="flex items-center gap-1">
@@ -362,7 +362,7 @@ export function SessionContextPanel({
       </div>
 
       {context.kanbanContext && (
-        <div className="border-b border-gray-100 dark:border-gray-800">
+        <div className="border-b border-slate-100 dark:border-slate-800">
           <div className="px-3 py-2 flex items-center gap-1.5">
             <svg
               className="w-3.5 h-3.5 text-emerald-500"
@@ -373,7 +373,7 @@ export function SessionContextPanel({
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h8m-8 5h5m-5 5h8M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
             </svg>
-            <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Kanban Story
             </span>
           </div>
@@ -393,7 +393,7 @@ export function SessionContextPanel({
                 Task {context.kanbanContext.taskId.slice(0, 8)}
               </div>
               {context.kanbanContext.currentLaneSession && (
-                <div className="mt-2 text-[10px] text-gray-600 dark:text-gray-300">
+                <div className="mt-2 text-[10px] text-slate-600 dark:text-slate-300">
                   Current lane session: {formatLaneSessionLabel(context.kanbanContext.currentLaneSession)}
                   {" · "}
                   <span className="font-semibold uppercase tracking-wide">
@@ -407,7 +407,7 @@ export function SessionContextPanel({
                     <div className="text-[10px] font-semibold uppercase tracking-wide text-blue-500 dark:text-blue-300">
                       Previous Lane
                     </div>
-                    <div className="mt-0.5 truncate text-[11px] text-gray-700 dark:text-gray-200">
+                    <div className="mt-0.5 truncate text-[11px] text-slate-700 dark:text-slate-200">
                       {formatLaneSessionLabel(context.kanbanContext.previousLaneSession)}
                     </div>
                   </div>
@@ -425,7 +425,7 @@ export function SessionContextPanel({
                     <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
                       Previous Run In Lane
                     </div>
-                    <div className="mt-0.5 truncate text-[11px] text-gray-700 dark:text-gray-200">
+                    <div className="mt-0.5 truncate text-[11px] text-slate-700 dark:text-slate-200">
                       {formatLaneSessionLabel(context.kanbanContext.previousLaneRun)}
                     </div>
                   </div>
@@ -452,10 +452,10 @@ export function SessionContextPanel({
                   return (
                     <div
                       key={handoff.id}
-                      className="rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-[#121722]"
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-[#121722]"
                     >
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                        <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                           {handoff.direction}
                         </span>
                         <span className="rounded-full bg-sky-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
@@ -465,7 +465,7 @@ export function SessionContextPanel({
                           {handoff.status}
                         </span>
                       </div>
-                      <div className="mt-1 text-[11px] text-gray-700 dark:text-gray-200">
+                      <div className="mt-1 text-[11px] text-slate-700 dark:text-slate-200">
                         {handoff.request}
                       </div>
                       {handoff.responseSummary && (
@@ -473,13 +473,13 @@ export function SessionContextPanel({
                           {handoff.responseSummary}
                         </div>
                       )}
-                      <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-gray-400 dark:text-gray-500">
+                      <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-slate-400 dark:text-slate-500">
                         <span>
                           {counterpartLane} • {formatTimeAgo(handoff.requestedAt)}
                         </span>
                         <button
                           onClick={() => onSelectSession(counterpartSessionId)}
-                          className="rounded-md border border-gray-200 px-2 py-1 font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                          className="rounded-md border border-slate-200 px-2 py-1 font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                         >
                           Open Session
                         </button>
@@ -495,10 +495,10 @@ export function SessionContextPanel({
 
       {/* Session Hierarchy — always expanded */}
       {hasHierarchy && (
-        <div className="border-b border-gray-100 dark:border-gray-800">
+        <div className="border-b border-slate-100 dark:border-slate-800">
           <div className="px-3 py-2 flex items-center gap-1.5">
             <svg
-              className="w-3.5 h-3.5 text-gray-400"
+              className="w-3.5 h-3.5 text-slate-400"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -506,7 +506,7 @@ export function SessionContextPanel({
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
             </svg>
-            <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Hierarchy
             </span>
           </div>
@@ -530,10 +530,10 @@ export function SessionContextPanel({
             {context.siblings.length > 0 && (
               <div className="space-y-0.5">
                 <div className="flex items-center gap-1.5 px-2 py-1">
-                  <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-3 h-3 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                   </svg>
-                  <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">
                     {context.siblings.length} Sibling Session{context.siblings.length > 1 ? "s" : ""}
                   </span>
                 </div>
@@ -558,10 +558,10 @@ export function SessionContextPanel({
             {context.children.length > 0 && (
               <div className="space-y-0.5">
                 <div className="flex items-center gap-1.5 px-2 py-1">
-                  <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-3 h-3 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                   </svg>
-                  <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">
                     {context.children.length} Child Session{context.children.length > 1 ? "s" : ""}
                   </span>
                 </div>

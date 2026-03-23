@@ -130,7 +130,7 @@ export function AcpProviderDropdown({
 
   const defaultButtonClassName = variant === "hero"
     ? "flex items-center gap-2 rounded-lg border border-[#d6e5fb] px-3 py-1.5 text-sm transition-colors hover:bg-sky-50 dark:border-white/10 dark:hover:bg-white/5"
-    : "flex items-center gap-1.5 pl-2 pr-1.5 py-0.5 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-transparent transition-colors disabled:opacity-40 disabled:cursor-not-allowed";
+    : "flex items-center gap-1.5 pl-2 pr-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-transparent transition-colors disabled:opacity-40 disabled:cursor-not-allowed";
   const defaultLabelClassName = variant === "hero"
     ? "font-medium truncate max-w-[160px] text-slate-700 dark:text-slate-200"
     : "truncate max-w-30";
@@ -223,12 +223,12 @@ export function AcpProviderDropdown({
         data-testid={dataTestId}
       >
         {showStatusDot && (
-          <span className={`w-1.5 h-1.5 rounded-full ${selectedProviderInfo?.status === "available" ? "bg-green-500" : "bg-gray-400"}`} />
+          <span className={`w-1.5 h-1.5 rounded-full ${selectedProviderInfo?.status === "available" ? "bg-emerald-500" : "bg-slate-400"}`} />
         )}
         <span className={labelClassName ?? defaultLabelClassName}>
           {selectedProviderInfo?.name ?? (allowAuto ? autoLabel : "Select provider")}
         </span>
-        <svg className={`w-3 h-3 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg className={`w-3 h-3 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
@@ -236,7 +236,7 @@ export function AcpProviderDropdown({
       {isOpen && dropdownPos && typeof document !== "undefined" && createPortal(
         <div
           ref={dropdownRef}
-          className={`fixed ${panelWidthClassName} rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1e2130] shadow-xl z-[9999] overflow-hidden`}
+          className={`fixed ${panelWidthClassName} rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1e2130] shadow-xl z-[9999] overflow-hidden`}
           style={{
             left: dropdownPos.left,
             top: dropdownPos.top,
@@ -245,8 +245,8 @@ export function AcpProviderDropdown({
           }}
         >
           <div className="flex h-full max-h-[inherit] flex-col">
-            <div className="border-b border-gray-100 px-3 py-2 dark:border-gray-800">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
+            <div className="border-b border-slate-100 px-3 py-2 dark:border-slate-800">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
                 Providers
               </p>
             </div>
@@ -259,11 +259,11 @@ export function AcpProviderDropdown({
                     onClick={() => handleSelect("")}
                     className={`mb-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors ${
                       selectedProvider
-                        ? "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800/50"
+                        ? "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50"
                         : "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
                     }`}
                   >
-                    <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
                     <span className="font-medium">{autoLabel}</span>
                   </button>
                 )}
@@ -279,36 +279,36 @@ export function AcpProviderDropdown({
                           provider.id === selectedProvider
                             ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
                             : provider.status === "available"
-                              ? "text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800/50"
-                              : "text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800/50"
+                              ? "text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50"
+                              : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/50"
                         }`}
                       >
-                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${provider.status === "available" ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`} />
+                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${provider.status === "available" ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"}`} />
                         <span className="min-w-0 flex-1 truncate font-medium">{provider.name}</span>
-                        <span className="max-w-[120px] truncate font-mono text-[10px] text-gray-400 dark:text-gray-500">
+                        <span className="max-w-[120px] truncate font-mono text-[10px] text-slate-400 dark:text-slate-500">
                           {provider.command}
                         </span>
                       </button>
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-lg border border-dashed border-gray-200 px-3 py-4 text-center text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                  <div className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
                     勾选下方 Provider 以加入快捷列表。
                   </div>
                 )}
               </div>
 
-              <div className="border-t border-gray-100 dark:border-gray-800">
+              <div className="border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setSettingsOpen((open) => !open)}
                   className="flex w-full items-center justify-between px-3 py-2 text-left"
                 >
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
                     Quick Access
                   </p>
                   <svg
-                    className={`h-3.5 w-3.5 text-gray-400 transition-transform ${settingsOpen ? "rotate-180" : ""}`}
+                    className={`h-3.5 w-3.5 text-slate-400 transition-transform ${settingsOpen ? "rotate-180" : ""}`}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -321,7 +321,7 @@ export function AcpProviderDropdown({
 
               {settingsOpen && (
                 <div className="p-2 pt-1">
-                  <p className="px-2 pb-2 text-[10px] text-gray-400 dark:text-gray-500">
+                  <p className="px-2 pb-2 text-[10px] text-slate-400 dark:text-slate-500">
                     Choose which providers appear in this dropdown and drag checked items to reorder them.
                   </p>
                   {settingsProviders.map((provider) => {
@@ -338,14 +338,14 @@ export function AcpProviderDropdown({
                           moveVisibleProvider(draggingProviderId, provider.id);
                         }}
                         className={`flex items-center gap-2 rounded-lg px-2 py-2 text-xs ${
-                          draggingProviderId === provider.id ? "bg-gray-50 dark:bg-gray-800/60" : ""
+                          draggingProviderId === provider.id ? "bg-slate-50 dark:bg-slate-800/60" : ""
                         }`}
                       >
                         <button
                           type="button"
                           aria-label={`Drag ${provider.name}`}
-                          className={`flex h-6 w-6 items-center justify-center rounded text-gray-400 ${
-                            checked ? "cursor-grab hover:bg-gray-100 dark:hover:bg-gray-800" : "cursor-not-allowed opacity-40"
+                          className={`flex h-6 w-6 items-center justify-center rounded text-slate-400 ${
+                            checked ? "cursor-grab hover:bg-slate-100 dark:hover:bg-slate-800" : "cursor-not-allowed opacity-40"
                           }`}
                         >
                           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -356,12 +356,12 @@ export function AcpProviderDropdown({
                           type="checkbox"
                           checked={checked}
                           onChange={(event) => handleVisibleToggle(provider.id, event.target.checked)}
-                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 dark:border-gray-600"
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 dark:border-slate-600"
                         />
-                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${provider.status === "available" ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`} />
+                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${provider.status === "available" ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"}`} />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate font-medium text-gray-900 dark:text-gray-100">{provider.name}</p>
-                          <p className="truncate font-mono text-[10px] text-gray-400 dark:text-gray-500">{provider.id}</p>
+                          <p className="truncate font-medium text-slate-900 dark:text-slate-100">{provider.name}</p>
+                          <p className="truncate font-mono text-[10px] text-slate-400 dark:text-slate-500">{provider.id}</p>
                         </div>
                       </div>
                     );
@@ -369,11 +369,11 @@ export function AcpProviderDropdown({
                 </div>
               )}
 
-              <div className="border-t border-gray-100 p-2 dark:border-gray-800">
+              <div className="border-t border-slate-100 p-2 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={handleOpenSettingsPanel}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800/50"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800/50"
                 >
                   Open Provider Settings
                 </button>
@@ -403,7 +403,7 @@ function NoProvidersMessage({ providers }: { providers: AcpProviderInfo[] }) {
   const hasUnavailable = providers.some((provider) => provider.status !== "available");
 
   return (
-    <div className="px-3 py-3 text-center text-xs text-gray-500 dark:text-gray-400">
+    <div className="px-3 py-3 text-center text-xs text-slate-500 dark:text-slate-400">
       {hasUnavailable ? (
         <>
           <p className="font-medium mb-1">No providers available</p>

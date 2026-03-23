@@ -361,7 +361,7 @@ export function RepoPicker({
             openDropdown(triggerRef.current);
             setTimeout(() => inputRef.current?.focus(), 50);
           }}
-          className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
         >
           <GitRepoIcon className="w-3.5 h-3.5" />
           <span>Select or clone a repository...</span>
@@ -379,10 +379,10 @@ export function RepoPicker({
             width: 420,
             zIndex: 9999,
           }}
-          className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1e2130] shadow-xl overflow-hidden"
+          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1e2130] shadow-xl overflow-hidden"
         >
           {/* ── Tabs ── */}
-          <div className="flex border-b border-gray-100 dark:border-gray-800">
+          <div className="flex border-b border-slate-100 dark:border-slate-800">
             <TabButton
               active={activeTab === "existing"}
               onClick={() => setActiveTab("existing")}
@@ -410,8 +410,8 @@ export function RepoPicker({
           {activeTab === "existing" && (
             <>
               {/* Search */}
-              <div className="p-2 border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-gray-50 dark:bg-[#161922] border border-gray-200 dark:border-gray-700">
+              <div className="p-2 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-slate-50 dark:bg-[#161922] border border-slate-200 dark:border-slate-700">
                   <SearchIcon />
                   <input
                     ref={inputRef}
@@ -419,7 +419,7 @@ export function RepoPicker({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search repositories or paste GitHub URL..."
-                    className="flex-1 bg-transparent text-xs text-gray-900 dark:text-gray-100 placeholder:text-gray-400 outline-none"
+                    className="flex-1 bg-transparent text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none"
                     onKeyDown={(e) => {
                       if (e.key === "Escape") setShowDropdown(false);
                     }}
@@ -462,12 +462,12 @@ export function RepoPicker({
             <div className="p-3 space-y-3">
               {/* URL input */}
               <div>
-                <label className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">
+                <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 block">
                   Repository URL
                 </label>
                 <div className="flex items-center gap-1.5">
-                  <div className="flex-1 flex items-center rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#161922] overflow-hidden">
-                    <span className="pl-2.5 text-[10px] text-gray-400 dark:text-gray-500 font-mono whitespace-nowrap">
+                  <div className="flex-1 flex items-center rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#161922] overflow-hidden">
+                    <span className="pl-2.5 text-[10px] text-slate-400 dark:text-slate-500 font-mono whitespace-nowrap">
                       github.com/
                     </span>
                     <input
@@ -483,7 +483,7 @@ export function RepoPicker({
                         setCloneError(null);
                       }}
                       placeholder="owner/repo"
-                      className="flex-1 px-1.5 py-2 bg-transparent text-xs text-gray-900 dark:text-gray-100 placeholder:text-gray-400 outline-none font-mono"
+                      className="flex-1 px-1.5 py-2 bg-transparent text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none font-mono"
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && cloneUrl.trim()) {
                           handleClone(
@@ -504,14 +504,14 @@ export function RepoPicker({
               {cloneProgress && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
                       {cloneProgress.message}
                     </span>
-                    <span className="text-[10px] font-mono text-gray-400">
+                    <span className="text-[10px] font-mono text-slate-400">
                       {cloneProgress.percent}%
                     </span>
                   </div>
-                  <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-blue-500 rounded-full transition-all duration-300"
                       style={{ width: `${Math.max(cloneProgress.percent, 2)}%` }}
@@ -557,7 +557,7 @@ export function RepoPicker({
                 )}
               </button>
 
-              <div className="text-[10px] text-gray-400 dark:text-gray-500">
+              <div className="text-[10px] text-slate-400 dark:text-slate-500">
                 The repo will be cloned and used as the agent working directory.
               </div>
             </div>
@@ -595,13 +595,13 @@ function SelectedRepoPill({
   return (
     <div className={`min-w-0 ${showMutedPath ? "flex flex-col gap-0.5" : "flex items-center gap-1.5 overflow-hidden"}`}>
       <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-        <GitRepoIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+        <GitRepoIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
 
         <button
           ref={triggerRef}
           type="button"
           onClick={onClickName}
-          className="text-xs font-medium text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate max-w-[200px]"
+          className="text-xs font-medium text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate max-w-[200px]"
           title={value.name}
         >
           {value.name}
@@ -617,7 +617,7 @@ function SelectedRepoPill({
 
         {showInlinePath && (
           <span
-            className="max-w-[200px] truncate text-[10px] font-mono text-gray-500 dark:text-gray-400"
+            className="max-w-[200px] truncate text-[10px] font-mono text-slate-500 dark:text-slate-400"
             title={value.path}
           >
             {value.path}
@@ -625,7 +625,7 @@ function SelectedRepoPill({
         )}
 
         {currentRepo && !currentRepo.status.clean && (
-          <span className="text-[9px] px-1 py-0.5 rounded bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400">
+          <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
             {currentRepo.status.modified > 0 && `${currentRepo.status.modified}M`}
             {currentRepo.status.untracked > 0 && ` ${currentRepo.status.untracked}U`}
           </span>
@@ -634,7 +634,7 @@ function SelectedRepoPill({
         <button
           type="button"
           onClick={onClear}
-          className="ml-0.5 p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          className="ml-0.5 p-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
           title="Clear repo selection"
         >
           <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -644,7 +644,7 @@ function SelectedRepoPill({
       </div>
 
       {showMutedPath && (
-        <div className="pl-5 text-[10px] font-mono text-gray-400 dark:text-gray-500 truncate" title={value.path}>
+        <div className="pl-5 text-[10px] font-mono text-slate-400 dark:text-slate-500 truncate" title={value.path}>
           {value.path}
         </div>
       )}
@@ -668,7 +668,7 @@ function TabButton({
       className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium transition-colors ${
         active
           ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/10"
-          : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+          : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50"
       }`}
     >
       {children}
@@ -703,7 +703,7 @@ function RepoListItem({
 
   return (
     <div
-      className={`w-full px-3 py-2 flex items-center gap-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
+      className={`w-full px-3 py-2 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${
         isSelected ? "bg-blue-50 dark:bg-blue-900/10" : ""
       }`}
     >
@@ -712,25 +712,25 @@ function RepoListItem({
         onClick={onClick}
         className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
       >
-        <div className="w-7 h-7 rounded-md bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-          <svg className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" viewBox="0 0 16 16" fill="currentColor">
+        <div className="w-7 h-7 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+          <svg className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" viewBox="0 0 16 16" fill="currentColor">
             <path fillRule="evenodd" d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1h-8a1 1 0 00-1 1v6.708A2.486 2.486 0 014.5 9h8V1.5z" />
           </svg>
         </div>
         <div className="flex-1 text-left min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
+            <span className="text-xs font-medium text-slate-900 dark:text-slate-100 truncate">
               {repo.name}
             </span>
             {isSelected && <CheckIcon />}
           </div>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono flex items-center gap-0.5">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono flex items-center gap-0.5">
               <BranchIcon />
               {repo.branch}
             </span>
             {!repo.status.clean && (
-              <span className="text-[9px] text-yellow-600 dark:text-yellow-400">modified</span>
+              <span className="text-[9px] text-amber-600 dark:text-amber-400">modified</span>
             )}
             {repo.status.behind > 0 && (
               <span className="text-[9px] text-blue-600 dark:text-blue-400">
@@ -765,7 +765,7 @@ function RepoListItem({
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <div className="px-3 py-1.5 text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+    <div className="px-3 py-1.5 text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
       {children}
     </div>
   );
@@ -773,7 +773,7 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 
 function EmptyState({ children }: { children: React.ReactNode }) {
   return (
-    <div className="px-3 py-4 text-center text-xs text-gray-400">
+    <div className="px-3 py-4 text-center text-xs text-slate-400">
       {children}
     </div>
   );
@@ -807,7 +807,7 @@ function CheckIcon() {
 
 function SearchIcon() {
   return (
-    <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
     </svg>
   );

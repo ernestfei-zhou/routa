@@ -60,7 +60,7 @@ const EVENT_COLORS: Record<string, { bg: string; text: string; border: string }>
   TOOL_CALL_START:           { bg: "bg-amber-50 dark:bg-amber-950/30",       text: "text-amber-700 dark:text-amber-300",      border: "border-amber-200 dark:border-amber-800" },
   TOOL_CALL_ARGS:            { bg: "bg-amber-50 dark:bg-amber-950/20",       text: "text-amber-600 dark:text-amber-400",      border: "border-amber-100 dark:border-amber-900" },
   TOOL_CALL_END:             { bg: "bg-amber-50 dark:bg-amber-950/30",       text: "text-amber-700 dark:text-amber-300",      border: "border-amber-200 dark:border-amber-800" },
-  TOOL_CALL_RESULT:          { bg: "bg-orange-50 dark:bg-orange-950/30",     text: "text-orange-700 dark:text-orange-300",    border: "border-orange-200 dark:border-orange-800" },
+  TOOL_CALL_RESULT:          { bg: "bg-amber-50 dark:bg-amber-950/30",     text: "text-amber-700 dark:text-amber-300",    border: "border-amber-200 dark:border-amber-800" },
   REASONING_START:           { bg: "bg-slate-50 dark:bg-slate-950/30",       text: "text-slate-700 dark:text-slate-300",      border: "border-slate-200 dark:border-slate-800" },
   REASONING_MESSAGE_START:   { bg: "bg-slate-50 dark:bg-slate-950/30",       text: "text-slate-700 dark:text-slate-300",      border: "border-slate-200 dark:border-slate-800" },
   REASONING_MESSAGE_CONTENT: { bg: "bg-slate-50 dark:bg-slate-950/20",       text: "text-slate-600 dark:text-slate-400",      border: "border-slate-100 dark:border-slate-900" },
@@ -70,7 +70,7 @@ const EVENT_COLORS: Record<string, { bg: string; text: string; border: string }>
   RAW:                       { bg: "bg-slate-50 dark:bg-slate-950/30",       text: "text-slate-600 dark:text-slate-400",      border: "border-slate-200 dark:border-slate-800" },
 };
 
-const DEFAULT_EVENT_COLOR = { bg: "bg-gray-50 dark:bg-gray-950/30", text: "text-gray-600 dark:text-gray-400", border: "border-gray-200 dark:border-gray-800" };
+const DEFAULT_EVENT_COLOR = { bg: "bg-slate-50 dark:bg-slate-950/30", text: "text-slate-600 dark:text-slate-400", border: "border-slate-200 dark:border-slate-800" };
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
@@ -82,14 +82,14 @@ function ProtocolToggle({
   onChange: (mode: ProtocolMode) => void;
 }) {
   return (
-    <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 p-0.5">
+    <div className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-0.5">
       <button
         data-testid="protocol-toggle-ag-ui"
         onClick={() => onChange("ag-ui")}
         className={`px-3 py-1.5 rounded-md text-xs font-semibold tracking-wide transition-all ${
           mode === "ag-ui"
             ? "bg-blue-500 text-white shadow-sm"
-            : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+            : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
         }`}
       >
         AG-UI
@@ -100,7 +100,7 @@ function ProtocolToggle({
         className={`px-3 py-1.5 rounded-md text-xs font-semibold tracking-wide transition-all ${
           mode === "acp"
             ? "bg-emerald-500 text-white shadow-sm"
-            : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+            : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
         }`}
       >
         ACP
@@ -133,14 +133,14 @@ function EventCard({ event, index }: { event: AGUIEvent; index: number }) {
       onClick={() => setExpanded(!expanded)}
     >
       <div className="flex items-center gap-2">
-        <span className="w-6 text-right text-[10px] text-zinc-400 dark:text-zinc-600 font-mono tabular-nums flex-shrink-0">
+        <span className="w-6 text-right text-[10px] text-slate-400 dark:text-slate-600 font-mono tabular-nums flex-shrink-0">
           {index + 1}
         </span>
         <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wider ${colors.text} ${colors.bg} border ${colors.border}`}>
           {event.type}
         </span>
         {event.messageId && (
-          <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-600 truncate max-w-[100px]">
+          <span className="text-[10px] font-mono text-slate-400 dark:text-slate-600 truncate max-w-[100px]">
             {event.messageId.slice(0, 8)}
           </span>
         )}
@@ -150,16 +150,16 @@ function EventCard({ event, index }: { event: AGUIEvent; index: number }) {
           </span>
         )}
         {summary && (
-          <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate flex-1 min-w-0">
+          <span className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1 min-w-0">
             {summary}
           </span>
         )}
-        <span className="text-[10px] text-zinc-400 dark:text-zinc-600 font-mono flex-shrink-0">
+        <span className="text-[10px] text-slate-400 dark:text-slate-600 font-mono flex-shrink-0">
           {event.timestamp ? new Date(event.timestamp).toLocaleTimeString() : ""}
         </span>
       </div>
       {expanded && (
-        <pre className="mt-2 text-[11px] text-zinc-600 dark:text-zinc-300 bg-white/50 dark:bg-black/20 rounded p-2 overflow-x-auto font-mono leading-relaxed">
+        <pre className="mt-2 text-[11px] text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-black/20 rounded p-2 overflow-x-auto font-mono leading-relaxed">
           {JSON.stringify(event, null, 2)}
         </pre>
       )}
@@ -197,7 +197,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           <span className="text-[10px] font-bold tracking-wider text-amber-600 dark:text-amber-400 block mb-1">
             TOOL: {message.toolName ?? message.toolCallId ?? "unknown"}
           </span>
-          <pre className="text-xs text-zinc-600 dark:text-zinc-300 font-mono whitespace-pre-wrap break-words">
+          <pre className="text-xs text-slate-600 dark:text-slate-300 font-mono whitespace-pre-wrap break-words">
             {message.content.length > 500 ? message.content.slice(0, 500) + "…" : message.content}
           </pre>
         </div>
@@ -208,9 +208,9 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   // assistant
   return (
     <div className="flex justify-start mb-3">
-      <div className="max-w-[80%] rounded-2xl rounded-bl-md bg-zinc-100 dark:bg-zinc-800 px-4 py-2.5 text-sm text-zinc-800 dark:text-zinc-100 leading-relaxed shadow-sm">
+      <div className="max-w-[80%] rounded-2xl rounded-bl-md bg-slate-100 dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 leading-relaxed shadow-sm">
         <div className="whitespace-pre-wrap">{message.content}</div>
-        {message.isStreaming && <span className="inline-block w-1.5 h-4 bg-zinc-400 dark:bg-zinc-500 ml-0.5 animate-pulse rounded-sm" />}
+        {message.isStreaming && <span className="inline-block w-1.5 h-4 bg-slate-400 dark:bg-slate-500 ml-0.5 animate-pulse rounded-sm" />}
       </div>
     </div>
   );
@@ -701,12 +701,12 @@ export default function AGUIPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       {/* ── Header ── */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-zinc-950/80 border-b border-zinc-200 dark:border-zinc-800">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Link href="/" className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
+            <Link href="/" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                 <path d="M15 18l-6-6 6-6" />
               </svg>
@@ -718,7 +718,7 @@ export default function AGUIPage() {
               >
                 AG-UI Protocol
               </h1>
-              <p className="text-[11px] text-zinc-400 dark:text-zinc-500 leading-tight">
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-tight">
                 Agent-User Interaction Protocol Test
               </p>
             </div>
@@ -730,7 +730,7 @@ export default function AGUIPage() {
             <select
               value={selectedWorkspaceId}
               onChange={(e) => setSelectedWorkspaceId(e.target.value)}
-              className="rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2.5 py-1 text-xs text-zinc-600 dark:text-zinc-300"
+              className="rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1 text-xs text-slate-600 dark:text-slate-300"
             >
               {workspacesHook.workspaces.length === 0 ? (
                 <option value="">No workspace</option>
@@ -743,24 +743,24 @@ export default function AGUIPage() {
               )}
             </select>
 
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-50 dark:bg-[#1e2130] text-[11px] font-medium text-gray-500 dark:text-gray-400">
-              <span className={`w-1.5 h-1.5 rounded-full ${sending ? "bg-amber-400 animate-pulse" : "bg-green-500"}`} />
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-50 dark:bg-[#1e2130] text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              <span className={`w-1.5 h-1.5 rounded-full ${sending ? "bg-amber-400 animate-pulse" : "bg-emerald-500"}`} />
               {protocolMode === "ag-ui" ? "AG-UI" : "ACP"}
-              <span className="text-gray-400 dark:text-gray-500 font-mono text-[10px]">
+              <span className="text-slate-400 dark:text-slate-500 font-mono text-[10px]">
                 {protocolMode === "ag-ui" ? "/api/ag-ui" : "/api/acp"}
               </span>
             </div>
 
             <span
               data-testid="event-counter"
-              className="font-mono text-xs text-zinc-400 dark:text-zinc-500 tabular-nums"
+              className="font-mono text-xs text-slate-400 dark:text-slate-500 tabular-nums"
             >
               {eventCount} events
             </span>
 
             <button
               onClick={handleClear}
-              className="text-xs text-zinc-400 hover:text-red-500 dark:text-zinc-500 dark:hover:text-red-400 transition-colors"
+              className="text-xs text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors"
             >
               Clear
             </button>
@@ -778,14 +778,14 @@ export default function AGUIPage() {
             className="flex-1 overflow-y-auto px-2 py-4 space-y-1"
           >
             {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-zinc-400 dark:text-zinc-600">
+              <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-600">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 mb-3 opacity-50">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
                 <p className="text-sm font-medium">
                   Send a message to test the {protocolMode === "ag-ui" ? "AG-UI" : "ACP"} protocol
                 </p>
-                <p className="text-xs mt-1 text-zinc-400 dark:text-zinc-600">
+                <p className="text-xs mt-1 text-slate-400 dark:text-slate-600">
                   Switch between protocols using the toggle above
                 </p>
               </div>
@@ -807,7 +807,7 @@ export default function AGUIPage() {
           {/* Input */}
           <form
             onSubmit={handleSend}
-            className="border-t border-zinc-200 dark:border-zinc-800 px-2 py-3 flex gap-2"
+            className="border-t border-slate-200 dark:border-slate-800 px-2 py-3 flex gap-2"
           >
             <input
               data-testid="ag-ui-input"
@@ -815,7 +815,7 @@ export default function AGUIPage() {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder={`Send via ${protocolMode === "ag-ui" ? "AG-UI" : "ACP"} protocol…`}
-              className="flex-1 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 dark:focus:border-blue-600 transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
+              className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 dark:focus:border-blue-600 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
               disabled={sending}
             />
             {sending ? (
@@ -832,7 +832,7 @@ export default function AGUIPage() {
                 type="submit"
                 data-testid="send-button"
                 disabled={!prompt.trim()}
-                className="rounded-xl bg-blue-500 hover:bg-blue-600 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white px-5 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed"
+                className="rounded-xl bg-blue-500 hover:bg-blue-600 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white px-5 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed"
               >
                 Send
               </button>
@@ -844,19 +844,19 @@ export default function AGUIPage() {
         <div
           className={`transition-all ${showEvents ? "w-[420px]" : "w-0"} flex-shrink-0 overflow-hidden`}
         >
-          <div className="h-full flex flex-col border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/50">
-            <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-200 dark:border-zinc-800">
+          <div className="h-full flex flex-col border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/50">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <h2 className="text-xs font-bold tracking-wider text-zinc-500 dark:text-zinc-400 uppercase">
+                <h2 className="text-xs font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase">
                   Event Inspector
                 </h2>
-                <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-600 tabular-nums">
+                <span className="text-[10px] font-mono text-slate-400 dark:text-slate-600 tabular-nums">
                   ({eventCount})
                 </span>
               </div>
               <button
                 onClick={() => setShowEvents(false)}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                   <line x1="18" y1="6" x2="6" y2="18" />
@@ -870,7 +870,7 @@ export default function AGUIPage() {
               className="flex-1 overflow-y-auto p-2 space-y-1"
             >
               {events.length === 0 && (
-                <p className="text-xs text-zinc-400 dark:text-zinc-600 text-center py-8">
+                <p className="text-xs text-slate-400 dark:text-slate-600 text-center py-8">
                   No events yet. Send a message to see AG-UI events stream here.
                 </p>
               )}

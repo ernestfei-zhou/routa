@@ -171,12 +171,12 @@ export function KanbanCardArtifacts({
   const missingRequiredArtifacts = requiredArtifacts.filter((type) => (coverage.get(type) ?? 0) === 0);
 
   return (
-    <section className={`border border-gray-200/80 bg-white shadow-sm dark:border-[#232736] dark:bg-[#121620] ${compact ? "rounded-2xl p-3" : "rounded-3xl p-4"}`}>
+    <section className={`border border-slate-200/80 bg-white shadow-sm dark:border-[#232736] dark:bg-[#121620] ${compact ? "rounded-2xl p-3" : "rounded-3xl p-4"}`}>
       <div className={compact ? "mb-2" : "mb-3"}>
-        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
           Artifacts
         </div>
-        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+        <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
           Agent-produced evidence attached to this task.
         </div>
       </div>
@@ -204,7 +204,7 @@ export function KanbanCardArtifacts({
             );
           })}
         </div>
-        <div className="text-xs leading-5 text-gray-500 dark:text-gray-400">
+        <div className="text-xs leading-5 text-slate-500 dark:text-slate-400">
           {requiredArtifacts.length > 0
             ? (
               missingRequiredArtifacts.length === 0
@@ -215,7 +215,7 @@ export function KanbanCardArtifacts({
         </div>
 
         {loading ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-sm text-gray-500 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-400">
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500 dark:border-slate-700 dark:bg-[#0d1018] dark:text-slate-400">
             Loading artifacts...
           </div>
         ) : loadError ? (
@@ -223,7 +223,7 @@ export function KanbanCardArtifacts({
             {loadError}
           </div>
         ) : artifacts.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-sm text-gray-500 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-400">
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500 dark:border-slate-700 dark:bg-[#0d1018] dark:text-slate-400">
             No artifacts attached yet.
           </div>
         ) : (
@@ -237,7 +237,7 @@ export function KanbanCardArtifacts({
               return (
                 <article
                   key={artifact.id}
-                  className="rounded-2xl border border-gray-200/80 bg-gray-50/70 p-3 dark:border-gray-700 dark:bg-[#0d1018]"
+                  className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-[#0d1018]"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -246,27 +246,27 @@ export function KanbanCardArtifacts({
                           {formatArtifactTypeLabel(artifact.type)}
                         </span>
                         {artifact.providedByAgentId && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
                             by {artifact.providedByAgentId}
                           </span>
                         )}
                         {artifact.metadata?.filename && (
-                          <span className="truncate text-xs text-gray-500 dark:text-gray-400">
+                          <span className="truncate text-xs text-slate-500 dark:text-slate-400">
                             {artifact.metadata.filename}
                           </span>
                         )}
                       </div>
-                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         {formatArtifactTimestamp(artifact.createdAt)}
                       </div>
                     </div>
-                    <div className="truncate text-[11px] uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500">
+                    <div className="truncate text-[11px] uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
                       {artifact.status}
                     </div>
                   </div>
 
                   {artifact.context && (
-                    <p className="mt-2 text-sm leading-6 text-gray-700 dark:text-gray-300">{artifact.context}</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">{artifact.context}</p>
                   )}
 
                   {screenshotSrc ? (
@@ -276,13 +276,13 @@ export function KanbanCardArtifacts({
                       width={1200}
                       height={800}
                       unoptimized
-                      className="mt-3 max-h-56 w-full rounded-xl border border-gray-200 object-cover dark:border-gray-700"
+                      className="mt-3 max-h-56 w-full rounded-xl border border-slate-200 object-cover dark:border-slate-700"
                     />
                   ) : artifact.type === "code_diff" && artifact.content ? (
                     <div className="mt-3 space-y-2">
                       {diffChunks.map((chunk, index) => (
-                        <details key={`${artifact.id}-${chunk.filename}-${index}`} open className="group rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-[#121620]">
-                          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-xs text-gray-600 dark:text-gray-300 [&::-webkit-details-marker]:hidden">
+                        <details key={`${artifact.id}-${chunk.filename}-${index}`} open className="group rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-[#121620]">
+                          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-xs text-slate-600 dark:text-slate-300 [&::-webkit-details-marker]:hidden">
                             <span className="truncate font-medium">{chunk.filename}</span>
                             <span className="shrink-0 font-mono">
                               <span className="text-emerald-600 dark:text-emerald-300">+{chunk.additions}</span>
@@ -298,13 +298,13 @@ export function KanbanCardArtifacts({
                             showLineNumbers
                             wordWrap={false}
                             maxHeight="260px"
-                            className="border-t border-gray-200 dark:border-gray-700"
+                            className="border-t border-slate-200 dark:border-slate-700"
                           />
                         </details>
                       ))}
                     </div>
                   ) : artifact.content ? (
-                    <pre className="mt-3 overflow-x-auto rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs leading-5 text-gray-700 dark:border-gray-700 dark:bg-[#121620] dark:text-gray-300">
+                    <pre className="mt-3 overflow-x-auto rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs leading-5 text-slate-700 dark:border-slate-700 dark:bg-[#121620] dark:text-slate-300">
                       {artifact.content}
                     </pre>
                   ) : null}

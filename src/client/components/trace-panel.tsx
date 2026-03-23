@@ -263,10 +263,10 @@ function InlineToolView({
   const statusIcon = status === "completed" ? "✓" : status === "failed" ? "✗" : "⏳";
   const statusColor =
     status === "completed"
-      ? "text-green-600 dark:text-green-400"
+      ? "text-emerald-600 dark:text-emerald-400"
       : status === "failed"
         ? "text-red-600 dark:text-red-400"
-        : "text-yellow-600 dark:text-yellow-400 animate-pulse";
+        : "text-amber-600 dark:text-amber-400 animate-pulse";
 
   // Generate a brief summary of the tool input
   const inputSummary = useMemo(() => {
@@ -289,10 +289,10 @@ function InlineToolView({
       {/* Compact tool header - inline with flow */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="group flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-50/50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-800/30 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors w-full text-left"
+        className="group flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors w-full text-left"
       >
         <svg
-          className={`w-3 h-3 text-orange-400 transition-transform shrink-0 ${expanded ? "rotate-90" : ""}`}
+          className={`w-3 h-3 text-amber-400 transition-transform shrink-0 ${expanded ? "rotate-90" : ""}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -300,49 +300,49 @@ function InlineToolView({
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
         </svg>
-        <span className="text-[10px] text-orange-500 dark:text-orange-400">🔧</span>
-        <code className="text-[11px] font-mono font-medium text-orange-700 dark:text-orange-300">
+        <span className="text-[10px] text-amber-500 dark:text-amber-400">🔧</span>
+        <code className="text-[11px] font-mono font-medium text-amber-700 dark:text-amber-300">
           {toolName}
         </code>
         {inputSummary && (
           <>
-            <span className="text-gray-300 dark:text-gray-600">→</span>
-            <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate flex-1 font-mono">
+            <span className="text-slate-300 dark:text-slate-600">→</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate flex-1 font-mono">
               {inputSummary}
             </span>
           </>
         )}
         <span className={`text-xs shrink-0 ${statusColor}`}>{statusIcon}</span>
-        <span className="text-[9px] text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <span className="text-[9px] text-slate-400 dark:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
           {formatTime(toolCall.timestamp)}
         </span>
       </button>
 
       {/* Expanded content */}
       {expanded && (
-        <div className="mt-2 ml-4 pl-3 border-l-2 border-orange-200 dark:border-orange-800/40 space-y-2">
+        <div className="mt-2 ml-4 pl-3 border-l-2 border-amber-200 dark:border-amber-800/40 space-y-2">
           {/* Input */}
           {toolCall.tool?.input != null && (
-            <div className="rounded-md border border-gray-200 dark:border-gray-700/60 overflow-hidden">
-              <div className="px-2 py-1 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700/60">
-                <span className="text-[9px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+            <div className="rounded-md border border-slate-200 dark:border-slate-700/60 overflow-hidden">
+              <div className="px-2 py-1 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/60">
+                <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                   Input
                 </span>
               </div>
-              <div className="px-2 py-1.5 bg-white dark:bg-gray-900/40">
+              <div className="px-2 py-1.5 bg-white dark:bg-slate-900/40">
                 <ToolInputTable input={toolCall.tool.input} />
               </div>
             </div>
           )}
           {toolContextPath && (
-            <div className="rounded-md border border-orange-200 dark:border-orange-800/40 overflow-hidden">
-              <div className="px-2 py-1 bg-orange-50 dark:bg-orange-900/20 border-b border-orange-200 dark:border-orange-800/40">
-                <span className="text-[9px] font-semibold text-orange-500 dark:text-orange-400 uppercase tracking-wider">
+            <div className="rounded-md border border-amber-200 dark:border-amber-800/40 overflow-hidden">
+              <div className="px-2 py-1 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800/40">
+                <span className="text-[9px] font-semibold text-amber-500 dark:text-amber-400 uppercase tracking-wider">
                   Tool Context
                 </span>
               </div>
-              <div className="px-2 py-1.5 bg-white dark:bg-gray-900/40">
-                <code className="block text-[11px] text-orange-700 dark:text-orange-300 break-all">
+              <div className="px-2 py-1.5 bg-white dark:bg-slate-900/40">
+                <code className="block text-[11px] text-amber-700 dark:text-amber-300 break-all">
                   {toolContextPath}
                 </code>
               </div>
@@ -350,7 +350,7 @@ function InlineToolView({
           )}
           {/* Output */}
           {outputStr && (
-            <div className="rounded-md border border-cyan-200 dark:border-cyan-800/40 overflow-hidden">
+            <div className="rounded-md border border-blue-200 dark:border-blue-800/40 overflow-hidden">
               <ToolOutputView output={rawOutput ?? outputStr} toolName={toolName} />
             </div>
           )}
@@ -370,14 +370,14 @@ function InlineThoughtView({ trace }: { trace: TraceRecord }) {
   return (
     <button
       onClick={() => setExpanded(!expanded)}
-      className="group flex items-start gap-2 my-1 px-3 py-1.5 rounded-lg bg-yellow-50/40 dark:bg-yellow-900/5 border border-yellow-100/50 dark:border-yellow-800/20 hover:bg-yellow-50/70 dark:hover:bg-yellow-900/10 transition-colors w-full text-left"
+      className="group flex items-start gap-2 my-1 px-3 py-1.5 rounded-lg bg-amber-50/40 dark:bg-amber-900/5 border border-amber-100/50 dark:border-amber-800/20 hover:bg-amber-50/70 dark:hover:bg-amber-900/10 transition-colors w-full text-left"
     >
-      <span className="text-[10px] text-yellow-500 shrink-0 pt-0.5">💭</span>
-      <p className={`text-[11px] text-gray-500 dark:text-gray-400 italic leading-relaxed ${expanded ? "" : "line-clamp-2"}`}>
+      <span className="text-[10px] text-amber-500 shrink-0 pt-0.5">💭</span>
+      <p className={`text-[11px] text-slate-500 dark:text-slate-400 italic leading-relaxed ${expanded ? "" : "line-clamp-2"}`}>
         {content}
       </p>
       {!expanded && content.length > 150 && (
-        <span className="text-[9px] text-yellow-500 dark:text-yellow-400 shrink-0 pt-0.5">...</span>
+        <span className="text-[9px] text-amber-500 dark:text-amber-400 shrink-0 pt-0.5">...</span>
       )}
     </button>
   );
@@ -403,13 +403,13 @@ function UserMessageBubble({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">User</span>
-          <span className="text-[10px] text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
             {formatTime(trace.timestamp)}
           </span>
         </div>
         <div className="px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
-          <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed">
-            {content || <span className="italic text-gray-400">(empty)</span>}
+          <p className="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap break-words leading-relaxed">
+            {content || <span className="italic text-slate-400">(empty)</span>}
           </p>
         </div>
       </div>
@@ -454,12 +454,12 @@ function AgentResponseBlock({
             key={evt.id}
             className={`text-[10px] font-semibold uppercase tracking-wide ${
               evt.eventType === "session_start"
-                ? "text-green-600 dark:text-green-400"
+                ? "text-emerald-600 dark:text-emerald-400"
                 : "text-red-500 dark:text-red-400"
             }`}
           >
             {evt.eventType === "session_start" ? "▶ Session Started" : "■ Session Ended"}
-            <span className="ml-2 font-normal text-gray-400">{formatTime(evt.timestamp)}</span>
+            <span className="ml-2 font-normal text-slate-400">{formatTime(evt.timestamp)}</span>
           </span>
         ))}
       </div>
@@ -514,9 +514,9 @@ function AgentResponseBlock({
         <div className="flex items-center gap-2 mb-2">
           <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">Agent</span>
           {model && (
-            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-mono">{model}</span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">{model}</span>
           )}
-          <span className="text-[10px] text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
             {formatTime(turn.startTime)}
             {turn.startTime !== turn.endTime && ` → ${formatTime(turn.endTime)}`}
           </span>
@@ -526,7 +526,7 @@ function AgentResponseBlock({
         {thoughts.length > 0 && (
           <button
             onClick={() => setThoughtsExpanded(!thoughtsExpanded)}
-            className="flex items-center gap-1.5 mb-2 text-[10px] text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300"
+            className="flex items-center gap-1.5 mb-2 text-[10px] text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
           >
             <svg
               className={`w-3 h-3 transition-transform ${thoughtsExpanded ? "rotate-90" : ""}`}
@@ -555,7 +555,7 @@ function AgentResponseBlock({
             }
             if (item.type === "message") {
               return (
-                <div key={idx} className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+                <div key={idx} className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed">
                   <MarkdownViewer content={item.content || ""} className="text-sm" />
                 </div>
               );
@@ -729,10 +729,10 @@ export function TracePanel({ sessionId }: TracePanelProps) {
   return (
     <div className="h-full flex flex-col bg-white dark:bg-[#13151d]">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
           <svg
-            className="w-4 h-4 text-gray-500 dark:text-gray-400"
+            className="w-4 h-4 text-slate-500 dark:text-slate-400"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -744,11 +744,11 @@ export function TracePanel({ sessionId }: TracePanelProps) {
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
             Agent Trace
           </span>
           {traces.length > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-full">
+            <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full">
               {traces.length}
             </span>
           )}
@@ -758,14 +758,14 @@ export function TracePanel({ sessionId }: TracePanelProps) {
           <button
             onClick={fetchTraces}
             disabled={loading}
-            className="text-[11px] text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 disabled:opacity-50 transition-colors"
+            className="text-[11px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 disabled:opacity-50 transition-colors"
           >
             {loading ? "..." : "Refresh"}
           </button>
           <button
             onClick={exportTraces}
             disabled={traces.length === 0}
-            className="px-2 py-1 text-[11px] font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-2 py-1 text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Export
           </button>
@@ -774,7 +774,7 @@ export function TracePanel({ sessionId }: TracePanelProps) {
 
       {/* Stats bar */}
       {stats && (
-        <div className="px-4 py-2 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800 flex items-center gap-4 text-[10px] text-gray-500 dark:text-gray-400 shrink-0">
+        <div className="px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 flex items-center gap-4 text-[10px] text-slate-500 dark:text-slate-400 shrink-0">
           <span>{stats.totalRecords} total records</span>
           <span>{stats.uniqueSessions} sessions</span>
           <span>{stats.totalDays} days</span>
@@ -782,14 +782,14 @@ export function TracePanel({ sessionId }: TracePanelProps) {
       )}
 
       {/* Filter bar */}
-      <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex items-center gap-1.5 shrink-0 overflow-x-auto">
+      <div className="px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-1.5 shrink-0 overflow-x-auto">
         {(
           [
             { key: "all", label: "All", active: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" },
             { key: "user_message", label: "User", active: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" },
             { key: "agent_message", label: "Agent", active: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" },
-            { key: "tools", label: "Tools", active: "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300" },
-            { key: "agent_thought", label: "Thoughts", active: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300" },
+            { key: "tools", label: "Tools", active: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300" },
+            { key: "agent_thought", label: "Thoughts", active: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300" },
           ] as const
         ).map(({ key, label, active }) => (
           <button
@@ -798,7 +798,7 @@ export function TracePanel({ sessionId }: TracePanelProps) {
             className={`px-2 py-1 text-[11px] font-medium rounded-md whitespace-nowrap transition-colors ${
               filter === key
                 ? active
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
             }`}
           >
             {label}
@@ -807,7 +807,7 @@ export function TracePanel({ sessionId }: TracePanelProps) {
       </div>
 
       {kanbanContext && (
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-emerald-50/50 dark:bg-emerald-900/10">
+        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-emerald-50/50 dark:bg-emerald-900/10">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-300">
               Kanban Story
@@ -817,15 +817,15 @@ export function TracePanel({ sessionId }: TracePanelProps) {
                 {kanbanContext.columnId}
               </span>
             )}
-            <span className="rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-mono text-gray-600 dark:bg-[#13151d] dark:text-gray-300">
+            <span className="rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-mono text-slate-600 dark:bg-[#13151d] dark:text-slate-300">
               {kanbanContext.taskId.slice(0, 8)}
             </span>
           </div>
-          <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">
+          <div className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
             {kanbanContext.taskTitle}
           </div>
           {kanbanContext.currentLaneSession && (
-            <div className="mt-2 text-[11px] text-gray-600 dark:text-gray-300">
+            <div className="mt-2 text-[11px] text-slate-600 dark:text-slate-300">
               Current lane session: {formatLaneSessionSummary(kanbanContext.currentLaneSession)}
               {" · "}
               <span className="font-semibold uppercase tracking-wide">
@@ -834,12 +834,12 @@ export function TracePanel({ sessionId }: TracePanelProps) {
             </div>
           )}
           {kanbanContext.previousLaneSession && (
-            <div className="mt-1 text-[11px] text-gray-600 dark:text-gray-300">
+            <div className="mt-1 text-[11px] text-slate-600 dark:text-slate-300">
               Previous lane session: {formatLaneSessionSummary(kanbanContext.previousLaneSession)}
             </div>
           )}
           {kanbanContext.previousLaneRun && (
-            <div className="mt-1 text-[11px] text-gray-600 dark:text-gray-300">
+            <div className="mt-1 text-[11px] text-slate-600 dark:text-slate-300">
               Previous run in lane: {formatLaneSessionSummary(kanbanContext.previousLaneRun)}
             </div>
           )}
@@ -848,10 +848,10 @@ export function TracePanel({ sessionId }: TracePanelProps) {
               {kanbanContext.relatedHandoffs.slice(0, 3).map((handoff) => (
                 <div
                   key={handoff.id}
-                  className="rounded-lg border border-gray-200 bg-white/90 px-3 py-2 dark:border-gray-700 dark:bg-[#13151d]"
+                  className="rounded-lg border border-slate-200 bg-white/90 px-3 py-2 dark:border-slate-700 dark:bg-[#13151d]"
                 >
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                    <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                       {handoff.direction}
                     </span>
                     <span className="rounded-full bg-sky-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
@@ -861,7 +861,7 @@ export function TracePanel({ sessionId }: TracePanelProps) {
                       {handoff.status}
                     </span>
                   </div>
-                  <div className="mt-1 text-[11px] text-gray-700 dark:text-gray-200">
+                  <div className="mt-1 text-[11px] text-slate-700 dark:text-slate-200">
                     {handoff.request}
                   </div>
                   {handoff.responseSummary && (
@@ -888,7 +888,7 @@ export function TracePanel({ sessionId }: TracePanelProps) {
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center">
             <svg
-              className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3"
+              className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -900,7 +900,7 @@ export function TracePanel({ sessionId }: TracePanelProps) {
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
               />
             </svg>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               {sessionId ? "No traces for this session yet" : "Select a session to view traces"}
             </p>
           </div>

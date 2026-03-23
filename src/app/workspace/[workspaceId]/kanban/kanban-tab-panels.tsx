@@ -137,14 +137,14 @@ export function KanbanBoardSurface({
           </div>
         </div>
       )}
-      <div className="shrink-0 rounded-2xl border border-gray-200/70 bg-white px-4 py-2 dark:border-[#1c1f2e] dark:bg-[#12141c]">
+      <div className="shrink-0 rounded-2xl border border-slate-200/70 bg-white px-4 py-2 dark:border-[#1c1f2e] dark:bg-[#12141c]">
         <div className="flex flex-col gap-1.5 lg:flex-row lg:items-center lg:justify-between lg:gap-3">
           <div className="flex min-w-0 flex-1 flex-col gap-1.5 lg:flex-row lg:items-center lg:gap-2">
             <div className="flex min-w-0 flex-wrap items-center gap-2 xl:max-w-[56rem]">
-              <span className="inline-flex h-8 items-center text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Repos</span>
+              <span className="inline-flex h-8 items-center text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Repos</span>
               {codebases.length === 0 ? (
-                <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-dashed border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-[#0d1018]">
-                  <span className="text-sm text-gray-400 dark:text-gray-500">No repositories linked.</span>
+                <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-[#0d1018]">
+                  <span className="text-sm text-slate-400 dark:text-slate-500">No repositories linked.</span>
                   <div className="flex items-center gap-2">
                     <RepoPicker
                       value={null}
@@ -180,13 +180,13 @@ export function KanbanBoardSurface({
                         setSelectedCodebase(defaultCodebase);
                         void fetchCodebaseWorktrees(defaultCodebase);
                       }}
-                      className="inline-flex h-8 max-w-[200px] items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-[11px] text-gray-700 transition-colors hover:border-amber-400 hover:bg-amber-50 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-300 dark:hover:bg-amber-900/10"
+                      className="inline-flex h-8 max-w-[200px] items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-[11px] text-slate-700 transition-colors hover:border-amber-400 hover:bg-amber-50 dark:border-slate-700 dark:bg-[#0d1018] dark:text-slate-300 dark:hover:bg-amber-900/10"
                       data-testid="codebase-badge"
                       title={`${defaultCodebase.label ?? defaultCodebase.repoPath} - ${defaultCodebase.branch ? `@${defaultCodebase.branch}` : ""}`}
                     >
                       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${defaultCodebase.sourceType === "github" ? "bg-blue-500" : "bg-emerald-500"}`} />
                       <span className="truncate font-medium">{defaultCodebase.label ?? defaultCodebase.repoPath.split("/").pop() ?? defaultCodebase.repoPath}</span>
-                      {defaultCodebase.branch && <span className="shrink-0 text-gray-400 dark:text-gray-500">@{defaultCodebase.branch}</span>}
+                      {defaultCodebase.branch && <span className="shrink-0 text-slate-400 dark:text-slate-500">@{defaultCodebase.branch}</span>}
                     </button>
                   )}
                   {codebases.length > 1 && (
@@ -198,7 +198,7 @@ export function KanbanBoardSurface({
                           void fetchCodebaseWorktrees(otherRepo);
                         }
                       }}
-                      className="inline-flex h-8 items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2 text-[11px] text-gray-600 transition-colors hover:border-amber-400 hover:bg-amber-50 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-400 dark:hover:bg-amber-900/10"
+                      className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 text-[11px] text-slate-600 transition-colors hover:border-amber-400 hover:bg-amber-50 dark:border-slate-700 dark:bg-[#0d1018] dark:text-slate-400 dark:hover:bg-amber-900/10"
                       title={`+${codebases.length - 1} more ${codebases.length - 1 === 1 ? "repository" : "repositories"} - click to view all`}
                     >
                       <span className="font-medium">+{codebases.length - 1}</span>
@@ -212,8 +212,8 @@ export function KanbanBoardSurface({
 
           {onAgentPrompt ? (
             <div className="flex min-w-0 flex-1 items-center justify-center">
-              <div className="group relative flex w-full max-w-3xl items-center rounded-2xl border border-gray-200 bg-white shadow-sm transition-colors focus-within:border-amber-400/80 focus-within:ring-2 focus-within:ring-amber-400/15 dark:border-gray-700 dark:bg-[#12141c]">
-                <div className="shrink-0 border-r border-gray-200 dark:border-gray-700">
+              <div className="group relative flex w-full max-w-3xl items-center rounded-2xl border border-slate-200 bg-white shadow-sm transition-colors focus-within:border-amber-400/80 focus-within:ring-2 focus-within:ring-amber-400/15 dark:border-slate-700 dark:bg-[#12141c]">
+                <div className="shrink-0 border-r border-slate-200 dark:border-slate-700">
                   <AcpProviderDropdown
                     providers={availableProviders}
                     selectedProvider={acp?.selectedProvider ?? ""}
@@ -221,7 +221,7 @@ export function KanbanBoardSurface({
                     disabled={!acp?.connected || availableProviders.length === 0}
                     ariaLabel={kanbanTaskAgentCopy.providerAriaLabel}
                     dataTestId="kanban-agent-provider"
-                    buttonClassName="flex h-8 items-center gap-1.5 rounded-l-2xl rounded-r-none bg-transparent px-2.5 text-[12px] font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:text-gray-200 dark:hover:bg-gray-800/40"
+                    buttonClassName="flex h-8 items-center gap-1.5 rounded-l-2xl rounded-r-none bg-transparent px-2.5 text-[12px] font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:text-slate-200 dark:hover:bg-slate-800/40"
                     labelClassName="max-w-[120px] truncate"
                   />
                 </div>
@@ -237,12 +237,12 @@ export function KanbanBoardSurface({
                   }}
                   placeholder={acp?.connected ? kanbanTaskAgentCopy.placeholder : kanbanTaskAgentCopy.connectingPlaceholder}
                   disabled={agentLoading || !acp?.connected}
-                  className="h-8 w-full bg-transparent px-3 pr-2 text-sm text-gray-800 placeholder-gray-400 outline-none disabled:opacity-50 dark:text-gray-200 dark:placeholder-gray-500"
+                  className="h-8 w-full bg-transparent px-3 pr-2 text-sm text-slate-800 placeholder-slate-400 outline-none disabled:opacity-50 dark:text-slate-200 dark:placeholder-slate-500"
                 />
                 <button
                   onClick={() => void handleAgentSubmit()}
                   disabled={!agentInput.trim() || agentLoading || !acp?.connected}
-                  className="mr-1.5 inline-flex h-8 shrink-0 items-center gap-1 rounded-lg bg-gray-900 px-3 text-[12px] font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 dark:bg-amber-500 dark:hover:bg-amber-400 dark:disabled:bg-[#1a1d29] dark:disabled:text-gray-500"
+                  className="mr-1.5 inline-flex h-8 shrink-0 items-center gap-1 rounded-lg bg-slate-900 px-3 text-[12px] font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:bg-amber-500 dark:hover:bg-amber-400 dark:disabled:bg-[#1a1d29] dark:disabled:text-slate-500"
                 >
                   {agentLoading ? "..." : (
                     <>
@@ -255,7 +255,7 @@ export function KanbanBoardSurface({
                 </button>
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="inline-flex h-8 shrink-0 items-center rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-0 text-[12px] font-semibold text-white shadow-sm transition-all hover:from-amber-600 hover:to-orange-500"
+                  className="inline-flex h-8 shrink-0 items-center rounded-lg bg-gradient-to-r from-amber-500 to-amber-500 px-3 py-0 text-[12px] font-semibold text-white shadow-sm transition-all hover:from-amber-600 hover:to-amber-500"
                 >
                   {kanbanTaskAgentCopy.manual}
                 </button>
@@ -273,7 +273,7 @@ export function KanbanBoardSurface({
           ) : (
             <button
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex h-8 items-center rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-3 text-[12px] font-medium text-white shadow-sm transition-all hover:from-amber-600 hover:to-orange-500"
+              className="inline-flex h-8 items-center rounded-lg bg-gradient-to-r from-amber-500 to-amber-500 px-3 text-[12px] font-medium text-white shadow-sm transition-all hover:from-amber-600 hover:to-amber-500"
             >
               {kanbanTaskAgentCopy.manual}
             </button>
@@ -302,16 +302,16 @@ export function KanbanBoardSurface({
                         await moveTask(dragTaskId, column.id);
                         setDragTaskId(null);
                       }}
-                      className={`flex h-full min-h-26.25 shrink-0 flex-col rounded-2xl border border-gray-200/70 bg-white p-3 dark:border-[#1c1f2e] dark:bg-[#12141c] ${widthClass}`}
+                      className={`flex h-full min-h-26.25 shrink-0 flex-col rounded-2xl border border-slate-200/70 bg-white p-3 dark:border-[#1c1f2e] dark:bg-[#12141c] ${widthClass}`}
                       data-testid="kanban-column"
                     >
                       <div className="mb-3 space-y-2">
                         <div>
-                          <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{column.name}</div>
-                          <div className="text-[11px] text-gray-400 dark:text-gray-500">{columnTasks.length} cards</div>
+                          <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">{column.name}</div>
+                          <div className="text-[11px] text-slate-400 dark:text-slate-500">{columnTasks.length} cards</div>
                         </div>
                         <div
-                          className="truncate text-[10px] leading-4 text-gray-500 dark:text-gray-400"
+                          className="truncate text-[10px] leading-4 text-slate-500 dark:text-slate-400"
                           data-testid={`kanban-column-automation-${column.id}`}
                           title={laneAutomation?.enabled ? formatLaneAutomationSummary(laneAutomation, providers, specialists) : column.stage === "blocked" ? "Manual lane only" : "Manual lane"}
                         >
@@ -356,13 +356,13 @@ export function KanbanBoardSurface({
 
         {agentPanelOpen && agentSessionId && acp && (
           <aside
-            className="flex h-full w-lg min-w-md flex-col overflow-hidden rounded-2xl border border-gray-200/70 bg-white dark:border-[#1c1f2e] dark:bg-[#12141c]"
+            className="flex h-full w-lg min-w-md flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white dark:border-[#1c1f2e] dark:bg-[#12141c]"
             data-testid="kanban-agent-panel"
           >
-            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-[#191c28]">
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-[#191c28]">
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{kanbanTaskAgentCopy.panelTitle}</div>
-                <div className="truncate text-[11px] text-gray-400 dark:text-gray-500">
+                <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{kanbanTaskAgentCopy.panelTitle}</div>
+                <div className="truncate text-[11px] text-slate-400 dark:text-slate-500">
                   {agentSession?.provider ?? acp.selectedProvider} · {agentSessionId.slice(0, 12)}...
                 </div>
               </div>
@@ -371,13 +371,13 @@ export function KanbanBoardSurface({
                   href={`/workspace/${workspaceId}/sessions/${agentSessionId}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-[#191c28]"
+                  className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-[#191c28]"
                 >
                   {kanbanTaskAgentCopy.open}
                 </a>
                 <button
                   onClick={onCloseAgentPanel}
-                  className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-[#191c28]"
+                  className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-[#191c28]"
                 >
                   {kanbanTaskAgentCopy.close}
                 </button>
@@ -504,7 +504,7 @@ export function KanbanTaskDetailOverlay({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6 animate-in fade-in duration-150">
-      <div className="relative h-[88vh] w-full max-w-7xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-[#1c1f2e] dark:bg-[#12141c] animate-in zoom-in-95 duration-150">
+      <div className="relative h-[88vh] w-full max-w-7xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-[#1c1f2e] dark:bg-[#12141c] animate-in zoom-in-95 duration-150">
         <div ref={detailSplitContainerRef} className="flex h-full">
           {activeTaskId && (() => {
             const task = activeTask;
@@ -512,7 +512,7 @@ export function KanbanTaskDetailOverlay({
             const sessionInfo = task.triggerSessionId ? sessionMap.get(task.triggerSessionId) ?? null : null;
             return (
               <div
-                className={`${hasSessionPane ? "shrink-0" : "flex-1"} h-full min-w-0 border-r border-gray-200/80 dark:border-[#202433]`}
+                className={`${hasSessionPane ? "shrink-0" : "flex-1"} h-full min-w-0 border-r border-slate-200/80 dark:border-[#202433]`}
                 style={hasSessionPane ? { width: `${detailSplitRatio * 100}%` } : undefined}
               >
                 <KanbanCardDetail
@@ -555,7 +555,7 @@ export function KanbanTaskDetailOverlay({
               onMouseDown={() => setIsDraggingDetailSplit(true)}
               data-testid="kanban-detail-split-handle"
             >
-              <div className="h-12 w-1 rounded-full bg-gray-300 transition-colors hover:bg-amber-400 dark:bg-gray-700 dark:hover:bg-amber-500" />
+              <div className="h-12 w-1 rounded-full bg-slate-300 transition-colors hover:bg-amber-400 dark:bg-slate-700 dark:hover:bg-amber-500" />
             </div>
           )}
           {hasSessionPane ? (() => {
@@ -604,7 +604,7 @@ export function KanbanTaskDetailOverlay({
                 style={activeTaskId ? { width: `${(1 - detailSplitRatio) * 100}%` } : undefined}
               >
                 {activeTask && (
-                  <div className="shrink-0 border-b border-gray-200/80 bg-gray-50/80 p-2 dark:border-[#202433] dark:bg-[#10131a]">
+                  <div className="shrink-0 border-b border-slate-200/80 bg-slate-50/80 p-2 dark:border-[#202433] dark:bg-[#10131a]">
                     <KanbanCardActivityBar
                       task={activeTask}
                       sessions={combinedSessions}

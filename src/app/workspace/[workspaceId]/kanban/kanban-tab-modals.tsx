@@ -58,9 +58,9 @@ export function KanbanCodebaseModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-[#1c1f2e] dark:bg-[#12141c]" data-testid="codebase-detail-modal">
+      <div className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-[#1c1f2e] dark:bg-[#12141c]" data-testid="codebase-detail-modal">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             {selectedCodebase.label ?? selectedCodebase.repoPath.split("/").pop()}
           </h3>
           <div className="flex items-center gap-2">
@@ -82,7 +82,7 @@ export function KanbanCodebaseModal({
             )}
             <button
               onClick={onClose}
-              className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
             >
               Close
             </button>
@@ -92,7 +92,7 @@ export function KanbanCodebaseModal({
         {editingCodebase ? (
           <div className="space-y-4">
             <div>
-              <label className="mb-2 block text-xs font-medium text-gray-500 dark:text-gray-400">
+              <label className="mb-2 block text-xs font-medium text-slate-500 dark:text-slate-400">
                 Select or clone a repository
               </label>
               <RepoPicker
@@ -141,7 +141,7 @@ export function KanbanCodebaseModal({
               <button
                 onClick={handleCancelEditCodebase}
                 disabled={editSaving || replacingAll}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-[#191c28]"
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-[#191c28]"
               >
                 Cancel
               </button>
@@ -151,12 +151,12 @@ export function KanbanCodebaseModal({
           <div className="min-h-0 space-y-4 overflow-y-auto pr-1 text-sm">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
-                <div className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Path</div>
-                <div className="truncate font-mono text-xs text-gray-700 dark:text-gray-300">{selectedCodebase.repoPath}</div>
+                <div className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Path</div>
+                <div className="truncate font-mono text-xs text-slate-700 dark:text-slate-300">{selectedCodebase.repoPath}</div>
               </div>
               <div>
-                <div className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Branch</div>
-                <div className="text-gray-700 dark:text-gray-300">
+                <div className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Branch</div>
+                <div className="text-slate-700 dark:text-slate-300">
                   {liveBranchInfo?.current ?? selectedCodebase.branch ?? "—"}
                   {liveBranchInfo && liveBranchInfo.current !== selectedCodebase.branch && selectedCodebase.branch && (
                     <span className="ml-1 text-[10px] text-amber-500">(stored: {selectedCodebase.branch})</span>
@@ -164,12 +164,12 @@ export function KanbanCodebaseModal({
                 </div>
               </div>
               <div>
-                <div className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Source Type</div>
-                <div className="text-gray-700 dark:text-gray-300">{selectedCodebase.sourceType ?? "local"}</div>
+                <div className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Source Type</div>
+                <div className="text-slate-700 dark:text-slate-300">{selectedCodebase.sourceType ?? "local"}</div>
               </div>
               {selectedCodebase.sourceUrl && (
                 <div>
-                  <div className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Source URL</div>
+                  <div className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Source URL</div>
                   <a href={selectedCodebase.sourceUrl} target="_blank" rel="noreferrer" className="block truncate text-xs text-amber-600 hover:underline dark:text-amber-400">
                     {selectedCodebase.sourceUrl}
                   </a>
@@ -178,10 +178,10 @@ export function KanbanCodebaseModal({
             </div>
             <div>
               <div className="mb-2 flex items-center justify-between gap-3">
-                <div className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Worktrees ({codebaseWorktrees.length})
                 </div>
-                <div className="text-[11px] text-gray-400 dark:text-gray-500">Manage branches and clean stale worktrees here.</div>
+                <div className="text-[11px] text-slate-400 dark:text-slate-500">Manage branches and clean stale worktrees here.</div>
               </div>
               {worktreeActionError && (
                 <div className="mb-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-600 dark:border-rose-900/40 dark:bg-rose-900/10 dark:text-rose-300">
@@ -189,13 +189,13 @@ export function KanbanCodebaseModal({
                 </div>
               )}
               {codebaseWorktrees.length === 0 ? (
-                <div className="text-xs text-gray-400 dark:text-gray-500">No worktrees created yet</div>
+                <div className="text-xs text-slate-400 dark:text-slate-500">No worktrees created yet</div>
               ) : (
                 <div className="space-y-2">
                   {codebaseWorktrees.map((worktree) => {
                     const linkedTasks = localTasks.filter((task) => task.worktreeId === worktree.id);
                     return (
-                      <div key={worktree.id} className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+                      <div key={worktree.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                           <div className="min-w-0 flex-1 space-y-2">
                             <div className="flex flex-wrap items-center gap-2">
@@ -206,24 +206,24 @@ export function KanbanCodebaseModal({
                                     ? "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
                                     : "bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300"
                               }`}>{worktree.status}</span>
-                              <span className="font-mono text-xs text-gray-700 dark:text-gray-300">{worktree.branch}</span>
-                              <span className="text-[11px] text-gray-400 dark:text-gray-500">base {worktree.baseBranch}</span>
+                              <span className="font-mono text-xs text-slate-700 dark:text-slate-300">{worktree.branch}</span>
+                              <span className="text-[11px] text-slate-400 dark:text-slate-500">base {worktree.baseBranch}</span>
                               {linkedTasks.length > 0 && (
                                 <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-700 dark:bg-sky-900/20 dark:text-sky-300">
                                   {linkedTasks.length} linked task{linkedTasks.length > 1 ? "s" : ""}
                                 </span>
                               )}
                             </div>
-                            <div className="break-all font-mono text-xs text-gray-400 dark:text-gray-500">{worktree.worktreePath}</div>
+                            <div className="break-all font-mono text-xs text-slate-400 dark:text-slate-500">{worktree.worktreePath}</div>
                             {linkedTasks.length > 0 && (
                               <div className="flex flex-wrap gap-1.5">
                                 {linkedTasks.slice(0, 4).map((task) => (
-                                  <span key={task.id} className="rounded-full border border-gray-200 px-2 py-0.5 text-[10px] text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                                  <span key={task.id} className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] text-slate-500 dark:border-slate-700 dark:text-slate-400">
                                     {task.title}
                                   </span>
                                 ))}
                                 {linkedTasks.length > 4 && (
-                                  <span className="rounded-full border border-gray-200 px-2 py-0.5 text-[10px] text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                                  <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] text-slate-500 dark:border-slate-700 dark:text-slate-400">
                                     +{linkedTasks.length - 4} more
                                   </span>
                                 )}
@@ -249,11 +249,11 @@ export function KanbanCodebaseModal({
             </div>
 
             {selectedCodebase.sourceType === "github" && selectedCodebase.sourceUrl && (
-              <div className="border-t border-gray-200 pt-3 dark:border-gray-700">
+              <div className="border-t border-slate-200 pt-3 dark:border-slate-700">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-xs font-medium text-gray-700 dark:text-gray-300">Re-clone Repository</div>
-                    <div className="text-[11px] text-gray-500 dark:text-gray-400">Pull latest or re-clone if the local copy is corrupted</div>
+                    <div className="text-xs font-medium text-slate-700 dark:text-slate-300">Re-clone Repository</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">Pull latest or re-clone if the local copy is corrupted</div>
                   </div>
                   <button
                     onClick={() => void handleReclone()}
@@ -295,7 +295,7 @@ export function KanbanDeleteCodebaseModal({
 
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 px-4 animate-in fade-in duration-150">
-      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-[#1c1f2e] dark:bg-[#12141c] animate-in zoom-in-95 duration-150">
+      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-[#1c1f2e] dark:bg-[#12141c] animate-in zoom-in-95 duration-150">
         <div className="p-6">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
@@ -304,11 +304,11 @@ export function KanbanDeleteCodebaseModal({
               </svg>
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Remove Repository</h3>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                Are you sure you want to remove <span className="font-medium text-gray-900 dark:text-gray-100">&quot;{selectedCodebase.label ?? selectedCodebase.repoPath.split("/").pop()}&quot;</span> from this workspace?
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Remove Repository</h3>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                Are you sure you want to remove <span className="font-medium text-slate-900 dark:text-slate-100">&quot;{selectedCodebase.label ?? selectedCodebase.repoPath.split("/").pop()}&quot;</span> from this workspace?
               </p>
-              <p className="mt-2 text-xs text-gray-500 dark:text-gray-500">
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-500">
                 This will only unlink the repository from this workspace. The repository files will not be deleted from your computer.
               </p>
             </div>
@@ -320,7 +320,7 @@ export function KanbanDeleteCodebaseModal({
             <button
               onClick={onCancel}
               disabled={deletingCodebase}
-              className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-300 dark:hover:bg-[#191c28]"
+              className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-[#0d1018] dark:text-slate-300 dark:hover:bg-[#191c28]"
             >
               Cancel
             </button>
@@ -357,7 +357,7 @@ export function KanbanReplaceAllReposModal({
 
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 px-4 animate-in fade-in duration-150">
-      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-[#1c1f2e] dark:bg-[#12141c] animate-in zoom-in-95 duration-150">
+      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-[#1c1f2e] dark:bg-[#12141c] animate-in zoom-in-95 duration-150">
         <div className="p-6">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/20">
@@ -366,13 +366,13 @@ export function KanbanReplaceAllReposModal({
               </svg>
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Replace All Repositories</h3>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                This will update all <span className="font-medium text-gray-900 dark:text-gray-100">{codebasesCount} repositories</span> in this workspace to use:
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Replace All Repositories</h3>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                This will update all <span className="font-medium text-slate-900 dark:text-slate-100">{codebasesCount} repositories</span> in this workspace to use:
               </p>
-              <div className="mt-2 rounded-lg bg-gray-50 p-2 dark:bg-[#0d1018]">
-                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{editRepoSelection.name}</div>
-                <div className="truncate font-mono text-xs text-gray-500 dark:text-gray-400">{editRepoSelection.path}</div>
+              <div className="mt-2 rounded-lg bg-slate-50 p-2 dark:bg-[#0d1018]">
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-300">{editRepoSelection.name}</div>
+                <div className="truncate font-mono text-xs text-slate-500 dark:text-slate-400">{editRepoSelection.path}</div>
               </div>
               <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
                 This is useful when the codebase path has changed or you need to fix repository references.
@@ -386,7 +386,7 @@ export function KanbanReplaceAllReposModal({
             <button
               onClick={onCancel}
               disabled={replacingAll}
-              className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-300 dark:hover:bg-[#191c28]"
+              className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-[#0d1018] dark:text-slate-300 dark:hover:bg-[#191c28]"
             >
               Cancel
             </button>
@@ -419,7 +419,7 @@ export function KanbanDeleteTaskModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 animate-in fade-in duration-150">
-      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-[#1c1f2e] dark:bg-[#12141c] animate-in zoom-in-95 duration-150">
+      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-[#1c1f2e] dark:bg-[#12141c] animate-in zoom-in-95 duration-150">
         <div className="p-6">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
@@ -428,9 +428,9 @@ export function KanbanDeleteTaskModal({
               </svg>
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Delete Task</h3>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                Are you sure you want to delete <span className="font-medium text-gray-900 dark:text-gray-100">&quot;{deleteConfirmTask.title}&quot;</span>? This action cannot be undone.
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Delete Task</h3>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                Are you sure you want to delete <span className="font-medium text-slate-900 dark:text-slate-100">&quot;{deleteConfirmTask.title}&quot;</span>? This action cannot be undone.
               </p>
               {deleteConfirmTask.githubNumber && (
                 <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
@@ -443,7 +443,7 @@ export function KanbanDeleteTaskModal({
             <button
               onClick={onCancel}
               disabled={isDeleting}
-              className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-[#0d1018] dark:text-gray-300 dark:hover:bg-[#191c28]"
+              className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-[#0d1018] dark:text-slate-300 dark:hover:bg-[#191c28]"
             >
               Cancel
             </button>

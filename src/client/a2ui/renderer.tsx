@@ -105,13 +105,13 @@ function resolveBoolean(val: DynamicBoolean | undefined, data: Record<string, un
 // ─── Style mapping ────────────────────────────────────────────────
 
 const TEXT_VARIANT_CLASSES: Record<TextVariant, string> = {
-  h1: "text-2xl font-bold text-gray-900 dark:text-gray-100",
-  h2: "text-xl font-semibold text-gray-800 dark:text-gray-200",
-  h3: "text-base font-semibold text-gray-800 dark:text-gray-200",
-  h4: "text-sm font-semibold text-gray-700 dark:text-gray-300",
-  h5: "text-xs font-semibold text-gray-700 dark:text-gray-300",
-  body: "text-sm text-gray-600 dark:text-gray-400",
-  caption: "text-xs text-gray-500 dark:text-gray-500",
+  h1: "text-2xl font-bold text-slate-900 dark:text-slate-100",
+  h2: "text-xl font-semibold text-slate-800 dark:text-slate-200",
+  h3: "text-base font-semibold text-slate-800 dark:text-slate-200",
+  h4: "text-sm font-semibold text-slate-700 dark:text-slate-300",
+  h5: "text-xs font-semibold text-slate-700 dark:text-slate-300",
+  body: "text-sm text-slate-600 dark:text-slate-400",
+  caption: "text-xs text-slate-500 dark:text-slate-500",
 };
 
 const TEXT_ACCENT_CLASSES: Record<TextAccent, string> = {
@@ -119,7 +119,7 @@ const TEXT_ACCENT_CLASSES: Record<TextAccent, string> = {
   warning:  "text-amber-600 dark:text-amber-500",
   error:    "text-red-600 dark:text-red-400",
   info:     "text-blue-600 dark:text-blue-400",
-  muted:    "text-gray-400 dark:text-gray-500",
+  muted:    "text-slate-400 dark:text-slate-500",
   primary:  "text-amber-600 dark:text-amber-500",
   route:    "text-slate-600 dark:text-slate-300",
 };
@@ -129,7 +129,7 @@ const TEXT_ACCENT_PILL_CLASSES: Record<TextAccent, string> = {
   warning:  "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400",
   error:    "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
   info:     "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400",
-  muted:    "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
+  muted:    "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400",
   primary:  "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400",
   route:    "bg-slate-100 dark:bg-slate-900/30 text-slate-700 dark:text-slate-300",
 };
@@ -168,7 +168,7 @@ const GAP_COL_CLASSES: Record<string, string> = {
 };
 
 const BUTTON_VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  default: "px-3 py-1.5 rounded-lg border border-gray-200 dark:border-[#252838] text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#191c28] transition-colors",
+  default: "px-3 py-1.5 rounded-lg border border-slate-200 dark:border-[#252838] text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#191c28] transition-colors",
   primary: "px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 transition-colors shadow-sm",
   borderless: "px-2 py-1 text-sm font-medium text-amber-600 dark:text-amber-500 hover:text-amber-700 dark:hover:text-amber-400 transition-colors",
 };
@@ -277,7 +277,7 @@ function A2UIComponentRenderer({ componentId, ctx }: { componentId: string; ctx:
         : undefined;
       if (comp.pill) {
         return (
-          <span key={comp.id} className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider shrink-0 ${accentCls ?? "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"}`} style={flex}>
+          <span key={comp.id} className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider shrink-0 ${accentCls ?? "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"}`} style={flex}>
             {text}
           </span>
         );
@@ -303,9 +303,9 @@ function A2UIComponentRenderer({ componentId, ctx }: { componentId: string; ctx:
     case "Icon": {
       const name = resolveString(comp.name, ctx.data, ctx.scope);
       const icon = ICON_SVG_MAP[name];
-      if (icon) return <span key={comp.id} className="shrink-0 text-gray-500 dark:text-gray-400" style={flex}>{icon}</span>;
+      if (icon) return <span key={comp.id} className="shrink-0 text-slate-500 dark:text-slate-400" style={flex}>{icon}</span>;
       // Fallback: render name as text
-      return <span key={comp.id} className="text-xs text-gray-400 shrink-0" style={flex}>{name}</span>;
+      return <span key={comp.id} className="text-xs text-slate-400 shrink-0" style={flex}>{name}</span>;
     }
 
     case "Row": {
@@ -343,10 +343,10 @@ function A2UIComponentRenderer({ componentId, ctx }: { componentId: string; ctx:
       const headerLabel = comp.label ? resolveString(comp.label, ctx.data, ctx.scope) : undefined;
       const cardAccentCls = comp.accent ? (accentBorderMap[comp.accent] ?? "") : "";
       return (
-        <div key={comp.id} className={`bg-white dark:bg-[#12141c] rounded-xl border border-gray-200/60 dark:border-[#1c1f2e] overflow-hidden ${cardAccentCls}`} style={flex}>
+        <div key={comp.id} className={`bg-white dark:bg-[#12141c] rounded-xl border border-slate-200/60 dark:border-[#1c1f2e] overflow-hidden ${cardAccentCls}`} style={flex}>
           {headerLabel && (
-            <div className="px-4 py-2.5 border-b border-gray-100 dark:border-[#191c28] flex items-center justify-between">
-              <span className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">{headerLabel}</span>
+            <div className="px-4 py-2.5 border-b border-slate-100 dark:border-[#191c28] flex items-center justify-between">
+              <span className="text-[12px] font-semibold text-slate-700 dark:text-slate-300">{headerLabel}</span>
             </div>
           )}
           <div className="p-4">
@@ -367,8 +367,8 @@ function A2UIComponentRenderer({ componentId, ctx }: { componentId: string; ctx:
 
     case "Divider": {
       return comp.axis === "vertical"
-        ? <div key={comp.id} className="w-px bg-gray-200 dark:bg-[#1c1f2e] self-stretch mx-1" />
-        : <hr key={comp.id} className="border-gray-200 dark:border-[#191c28] my-2" />;
+        ? <div key={comp.id} className="w-px bg-slate-200 dark:bg-[#1c1f2e] self-stretch mx-1" />
+        : <hr key={comp.id} className="border-slate-200 dark:border-[#191c28] my-2" />;
     }
 
     case "Button": {
@@ -406,18 +406,18 @@ function A2UIComponentRenderer({ componentId, ctx }: { componentId: string; ctx:
       const isLong = comp.variant === "longText";
       return (
         <div key={comp.id} className="flex flex-col gap-1" style={flex}>
-          {label && <label className="text-xs font-medium text-gray-600 dark:text-gray-400">{label}</label>}
+          {label && <label className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</label>}
           {isLong ? (
             <textarea
               defaultValue={value}
               rows={3}
-              className="px-3 py-2 rounded-lg border border-gray-200 dark:border-[#252838] bg-gray-50 dark:bg-[#0e1019] text-sm text-gray-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-amber-500/30 resize-none"
+              className="px-3 py-2 rounded-lg border border-slate-200 dark:border-[#252838] bg-slate-50 dark:bg-[#0e1019] text-sm text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-amber-500/30 resize-none"
             />
           ) : (
             <input
               type={comp.variant === "number" ? "number" : comp.variant === "obscured" ? "password" : "text"}
               defaultValue={value}
-              className="px-3 py-2 rounded-lg border border-gray-200 dark:border-[#252838] bg-gray-50 dark:bg-[#0e1019] text-sm text-gray-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-amber-500/30"
+              className="px-3 py-2 rounded-lg border border-slate-200 dark:border-[#252838] bg-slate-50 dark:bg-[#0e1019] text-sm text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-amber-500/30"
             />
           )}
         </div>
@@ -428,8 +428,8 @@ function A2UIComponentRenderer({ componentId, ctx }: { componentId: string; ctx:
       const label = resolveString(comp.label, ctx.data, ctx.scope);
       const checked = resolveBoolean(comp.value, ctx.data, ctx.scope);
       return (
-        <label key={comp.id} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer" style={flex}>
-          <input type="checkbox" defaultChecked={checked} className="rounded border-gray-300 dark:border-gray-600" />
+        <label key={comp.id} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer" style={flex}>
+          <input type="checkbox" defaultChecked={checked} className="rounded border-slate-300 dark:border-slate-600" />
           {label}
         </label>
       );
@@ -440,7 +440,7 @@ function A2UIComponentRenderer({ componentId, ctx }: { componentId: string; ctx:
       const value = resolveNumber(comp.value, ctx.data, ctx.scope);
       return (
         <div key={comp.id} className="flex flex-col gap-1" style={flex}>
-          {label && <label className="text-xs font-medium text-gray-600 dark:text-gray-400">{label}</label>}
+          {label && <label className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</label>}
           <input
             type="range"
             defaultValue={value}
@@ -463,7 +463,7 @@ function A2UIComponentRenderer({ componentId, ctx }: { componentId: string; ctx:
     case "DateTimeInput":
       // Placeholder for less common types
       return (
-        <div key={comp.id} className="text-xs text-gray-400 italic p-2" style={flex}>
+        <div key={comp.id} className="text-xs text-slate-400 italic p-2" style={flex}>
           [{comp.component}]
         </div>
       );
@@ -479,7 +479,7 @@ function A2UITabsRenderer({ comp, ctx }: { comp: Extract<A2UIComponent, { compon
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1 border-b border-gray-200/60 dark:border-[#191c28]">
+      <div className="flex items-center gap-1 border-b border-slate-200/60 dark:border-[#191c28]">
         {comp.tabs.map((tab, idx) => {
           const title = resolveString(tab.title, ctx.data, ctx.scope);
           const isActive = idx === activeIdx;
@@ -490,7 +490,7 @@ function A2UITabsRenderer({ comp, ctx }: { comp: Extract<A2UIComponent, { compon
               className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 ${
                 isActive
                   ? "border-amber-500 text-amber-600 dark:text-amber-400"
-                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
               }`}
             >
               {title}
@@ -535,7 +535,7 @@ export function A2UISurfaceRenderer({ surface, onAction, className }: A2UISurfac
           {surface.theme.iconUrl && (
             <Image src={surface.theme.iconUrl} className="w-5 h-5 rounded" alt="" />
           )}
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
             {surface.theme.agentDisplayName}
           </span>
         </div>

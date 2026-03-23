@@ -246,10 +246,10 @@ function SearchOutputViewer({ matches, matchCount, expanded, onToggle }: SearchO
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
       >
         <svg
-          className={`w-3 h-3 text-gray-400 transition-transform duration-150 ${expanded ? "rotate-90" : ""}`}
+          className={`w-3 h-3 text-slate-400 transition-transform duration-150 ${expanded ? "rotate-90" : ""}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -257,7 +257,7 @@ function SearchOutputViewer({ matches, matchCount, expanded, onToggle }: SearchO
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
         </svg>
-        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
           {matchCount ?? matches.reduce((sum, m) => sum + m.lines.length, 0)} {(matchCount ?? matches.length) === 1 ? "match" : "matches"} in {matches.length} {matches.length === 1 ? "file" : "files"}
         </span>
       </button>
@@ -265,25 +265,25 @@ function SearchOutputViewer({ matches, matchCount, expanded, onToggle }: SearchO
       {expanded && (
         <div className="mt-2 space-y-2 px-2 pb-2">
           {matches.map((match, idx) => (
-            <div key={idx} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <div key={idx} className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
               <button
                 type="button"
                 onClick={() => setSelectedFile(selectedFile === idx ? null : idx)}
-                className="w-full px-3 py-2 flex items-center justify-between bg-gray-50 dark:bg-gray-800/60 text-left hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="w-full px-3 py-2 flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 text-left hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  <span className="text-xs font-mono text-gray-700 dark:text-gray-300 truncate">
+                  <span className="text-xs font-mono text-slate-700 dark:text-slate-300 truncate">
                     {match.path.split("/").slice(-2).join("/")}
                   </span>
-                  <span className="text-[10px] text-gray-400 dark:text-gray-500 shrink-0">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0">
                     {match.lines.length} {match.lines.length === 1 ? "line" : "lines"}
                   </span>
                 </div>
                 <svg
-                  className={`w-3 h-3 text-gray-400 transition-transform duration-150 ${selectedFile === idx ? "rotate-180" : ""}`}
+                  className={`w-3 h-3 text-slate-400 transition-transform duration-150 ${selectedFile === idx ? "rotate-180" : ""}`}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -294,13 +294,13 @@ function SearchOutputViewer({ matches, matchCount, expanded, onToggle }: SearchO
               </button>
 
               {selectedFile === idx && (
-                <div className="px-3 py-2 bg-white dark:bg-gray-900/40 text-xs font-mono">
+                <div className="px-3 py-2 bg-white dark:bg-slate-900/40 text-xs font-mono">
                   {match.lines.map((line, lineIdx) => (
                     <div key={lineIdx} className="flex gap-2 py-0.5">
-                      <span className="text-gray-400 dark:text-gray-500 select-none shrink-0 w-8 text-right">
+                      <span className="text-slate-400 dark:text-slate-500 select-none shrink-0 w-8 text-right">
                         {line.lineNumber}
                       </span>
-                      <span className="text-gray-700 dark:text-gray-200 whitespace-pre-wrap break-all">
+                      <span className="text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-all">
                         {line.content}
                       </span>
                     </div>
@@ -332,10 +332,10 @@ function ReadOutputViewer({ readOutput, expanded, onToggle }: ReadOutputViewerPr
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
       >
         <svg
-          className={`w-3 h-3 text-gray-400 transition-transform duration-150 ${expanded ? "rotate-90" : ""}`}
+          className={`w-3 h-3 text-slate-400 transition-transform duration-150 ${expanded ? "rotate-90" : ""}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -343,18 +343,18 @@ function ReadOutputViewer({ readOutput, expanded, onToggle }: ReadOutputViewerPr
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
         </svg>
-        <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
-        <span className="text-xs font-mono text-gray-700 dark:text-gray-300 truncate">
+        <span className="text-xs font-mono text-slate-700 dark:text-slate-300 truncate">
           {filename}
         </span>
         {readOutput.startLine > 1 && (
-          <span className="text-[10px] text-gray-400 dark:text-gray-500 shrink-0">
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0">
             Ln {readOutput.startLine}
           </span>
         )}
-        <span className="text-[10px] text-gray-400 dark:text-gray-500 shrink-0">
+        <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0">
           {lineCount} lines
         </span>
       </button>

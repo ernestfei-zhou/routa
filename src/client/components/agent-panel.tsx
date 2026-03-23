@@ -45,25 +45,25 @@ export function AgentPanel({ refreshKey, workspaceId = "" }: AgentPanelProps) {
 
   const statusColor: Record<string, string> = {
     PENDING:
-      "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+      "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300",
     ACTIVE:
-      "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
     COMPLETED:
       "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300",
     ERROR: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
     CANCELLED:
-      "bg-gray-200 text-gray-500 dark:bg-gray-600 dark:text-gray-400",
+      "bg-slate-200 text-slate-500 dark:bg-slate-600 dark:text-slate-400",
   };
 
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
-      <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
+      <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             Agents
           </h2>
           {agents.length > 0 && (
-            <span className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full">
+            <span className="px-2 py-0.5 text-xs bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-full">
               {agents.length}
             </span>
           )}
@@ -78,19 +78,19 @@ export function AgentPanel({ refreshKey, workspaceId = "" }: AgentPanelProps) {
       </div>
 
       {/* Create agent form */}
-      <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700 flex gap-2">
+      <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-700 flex gap-2">
         <input
           type="text"
           value={newAgentName}
           onChange={(e) => setNewAgentName(e.target.value)}
           placeholder="Agent name..."
-          className="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
+          className="flex-1 px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500"
           onKeyDown={(e) => e.key === "Enter" && createAgent()}
         />
         <select
           value={newAgentRole}
           onChange={(e) => setNewAgentRole(e.target.value)}
-          className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+          className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
         >
           <option value="ROUTA">ROUTA</option>
           <option value="CRAFTER">CRAFTER</option>
@@ -105,35 +105,35 @@ export function AgentPanel({ refreshKey, workspaceId = "" }: AgentPanelProps) {
       </div>
 
       {/* Agent list */}
-      <div className="divide-y divide-gray-100 dark:divide-gray-700 max-h-64 overflow-y-auto">
+      <div className="divide-y divide-slate-100 dark:divide-slate-700 max-h-64 overflow-y-auto">
         {agents.length === 0 ? (
-          <div className="px-5 py-6 text-center text-gray-400 dark:text-gray-500 text-sm">
+          <div className="px-5 py-6 text-center text-slate-400 dark:text-slate-500 text-sm">
             No agents yet. Connect chat or create one.
           </div>
         ) : (
           agents.map((agent) => (
             <div
               key={agent.id}
-              className="px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+              className="px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                  <span className="font-medium text-sm text-slate-900 dark:text-slate-100">
                     {agent.name}
                   </span>
                   <span
-                    className={`px-2 py-0.5 text-xs font-medium rounded-full ${roleColor[agent.role] ?? "bg-gray-100"}`}
+                    className={`px-2 py-0.5 text-xs font-medium rounded-full ${roleColor[agent.role] ?? "bg-slate-100"}`}
                   >
                     {agent.role}
                   </span>
                 </div>
                 <span
-                  className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColor[agent.status] ?? "bg-gray-100"}`}
+                  className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColor[agent.status] ?? "bg-slate-100"}`}
                 >
                   {agent.status}
                 </span>
               </div>
-              <div className="mt-1 text-xs text-gray-400 dark:text-gray-500 font-mono truncate">
+              <div className="mt-1 text-xs text-slate-400 dark:text-slate-500 font-mono truncate">
                 {agent.id}
               </div>
             </div>

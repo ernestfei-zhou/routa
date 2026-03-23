@@ -10,8 +10,8 @@ export function TabButton({ active, onClick, children }: { active: boolean; onCl
       onClick={onClick}
       className={`px-3.5 py-2 text-[13px] font-medium border-b-2 transition-colors ${
         active
-          ? "text-gray-900 dark:text-gray-100 border-amber-500"
-          : "text-gray-400 dark:text-gray-500 border-transparent hover:text-gray-600 dark:hover:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
+          ? "text-slate-900 dark:text-slate-100 border-amber-500"
+          : "text-slate-400 dark:text-slate-500 border-transparent hover:text-slate-600 dark:hover:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600"
       }`}
     >
       {children}
@@ -48,15 +48,15 @@ export function StatCard({
   };
 
   return (
-    <div className="flex items-center gap-3 p-4 rounded-xl bg-white dark:bg-[#12141c] border border-gray-200/60 dark:border-[#1c1f2e] hover:shadow-sm transition-shadow">
+    <div className="flex items-center gap-3 p-4 rounded-xl bg-white dark:bg-[#12141c] border border-slate-200/60 dark:border-[#1c1f2e] hover:shadow-sm transition-shadow">
       <div className={`w-9 h-9 rounded-lg ${bgMap[color]} flex items-center justify-center shrink-0 ${textMap[color]}`}>
         {icon}
       </div>
       <div>
-        <div className="text-xl font-bold text-gray-900 dark:text-gray-100 tabular-nums leading-none">{value}</div>
-        <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
+        <div className="text-xl font-bold text-slate-900 dark:text-slate-100 tabular-nums leading-none">{value}</div>
+        <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
           {label}
-          {sub && <span className="ml-1 text-gray-300 dark:text-gray-600">· {sub}</span>}
+          {sub && <span className="ml-1 text-slate-300 dark:text-slate-600">· {sub}</span>}
         </div>
       </div>
     </div>
@@ -81,12 +81,12 @@ export function DashboardCard({
   const isEmpty = count === 0;
 
   return (
-    <div className="bg-white dark:bg-[#12141c] rounded-xl border border-gray-200/60 dark:border-[#1c1f2e] overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-[#191c28]">
+    <div className="bg-white dark:bg-[#12141c] rounded-xl border border-slate-200/60 dark:border-[#1c1f2e] overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-[#191c28]">
         <div className="flex items-center gap-2">
-          <h3 className="text-[13px] font-semibold text-gray-800 dark:text-gray-200">{title}</h3>
+          <h3 className="text-[13px] font-semibold text-slate-800 dark:text-slate-200">{title}</h3>
           {count !== undefined && count > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-[#191c28] text-[10px] font-mono text-gray-500 dark:text-gray-400">
+            <span className="px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-[#191c28] text-[10px] font-mono text-slate-500 dark:text-slate-400">
               {count}
             </span>
           )}
@@ -94,9 +94,9 @@ export function DashboardCard({
         {action}
       </div>
       {isEmpty ? (
-        <div className="px-4 py-6 text-center text-[12px] text-gray-400 dark:text-gray-500">{emptyText}</div>
+        <div className="px-4 py-6 text-center text-[12px] text-slate-400 dark:text-slate-500">{emptyText}</div>
       ) : (
-        <div className="divide-y divide-gray-50 dark:divide-[#151720]">{children}</div>
+        <div className="divide-y divide-slate-50 dark:divide-[#151720]">{children}</div>
       )}
     </div>
   );
@@ -132,8 +132,8 @@ export function TaskStatusIcon({ status }: { status: string }) {
     );
   }
   return (
-    <div className="w-7 h-7 rounded-md bg-gray-100 dark:bg-[#191c28] flex items-center justify-center shrink-0">
-      <div className="w-2.5 h-2.5 rounded-full border-2 border-gray-400 dark:border-gray-500" />
+    <div className="w-7 h-7 rounded-md bg-slate-100 dark:bg-[#191c28] flex items-center justify-center shrink-0">
+      <div className="w-2.5 h-2.5 rounded-full border-2 border-slate-400 dark:border-slate-500" />
     </div>
   );
 }
@@ -143,13 +143,13 @@ export function TaskStatusIcon({ status }: { status: string }) {
 export function TaskStatusBadge({ status }: { status: string }) {
   const s = status.toUpperCase();
   const map: Record<string, string> = {
-    PENDING: "bg-gray-100 dark:bg-gray-800 text-gray-500",
+    PENDING: "bg-slate-100 dark:bg-slate-800 text-slate-500",
     IN_PROGRESS: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
     REVIEW_REQUIRED: "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
     COMPLETED: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
-    NEEDS_FIX: "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400",
+    NEEDS_FIX: "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
     BLOCKED: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400",
-    CANCELLED: "bg-gray-100 dark:bg-gray-800 text-gray-400",
+    CANCELLED: "bg-slate-100 dark:bg-slate-800 text-slate-400",
   };
 
   return (
@@ -185,15 +185,15 @@ export function AgentStatusDot({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
     ACTIVE: "bg-emerald-500",
     PENDING: "bg-amber-400",
-    COMPLETED: "bg-gray-400 dark:bg-gray-500",
+    COMPLETED: "bg-slate-400 dark:bg-slate-500",
     ERROR: "bg-red-500",
-    CANCELLED: "bg-gray-300 dark:bg-gray-600",
+    CANCELLED: "bg-slate-300 dark:bg-slate-600",
   };
 
   return (
     <div className="flex items-center gap-1.5">
       <span className={`w-1.5 h-1.5 rounded-full ${colorMap[s] || colorMap.PENDING}`} />
-      <span className="text-[10px] text-gray-400 dark:text-gray-500 capitalize">{status.toLowerCase()}</span>
+      <span className="text-[10px] text-slate-400 dark:text-slate-500 capitalize">{status.toLowerCase()}</span>
     </div>
   );
 }
@@ -213,17 +213,17 @@ export function OverlayModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div
-        className="relative w-full max-w-5xl h-[80vh] bg-white dark:bg-[#12141c] border border-gray-200 dark:border-[#1c1f2e] rounded-xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-5xl h-[80vh] bg-white dark:bg-[#12141c] border border-slate-200 dark:border-[#1c1f2e] rounded-xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="h-11 px-4 border-b border-gray-100 dark:border-[#191c28] flex items-center justify-between">
+        <div className="h-11 px-4 border-b border-slate-100 dark:border-[#191c28] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</span>
+            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</span>
             <a
               href="/settings/agents"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             >
               Open in new tab
             </a>
@@ -231,7 +231,7 @@ export function OverlayModal({
           <button
             type="button"
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-[#191c28] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 dark:hover:bg-[#191c28] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             title="Close (Esc)"
             aria-label="Close"
           >
@@ -250,24 +250,24 @@ export function OverlayModal({
 
 export function bgTaskStatusClass(status: string): string {
   switch (status) {
-    case "PENDING":   return "bg-gray-100 dark:bg-gray-700/40 text-gray-500 dark:text-gray-400";
+    case "PENDING":   return "bg-slate-100 dark:bg-slate-700/40 text-slate-500 dark:text-slate-400";
     case "RUNNING":   return "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400";
     case "COMPLETED": return "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400";
     case "FAILED":    return "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400";
-    case "CANCELLED": return "bg-gray-100 dark:bg-gray-700/40 text-gray-400 dark:text-gray-500";
-    default:          return "bg-gray-100 dark:bg-gray-700/40 text-gray-500 dark:text-gray-400";
+    case "CANCELLED": return "bg-slate-100 dark:bg-slate-700/40 text-slate-400 dark:text-slate-500";
+    default:          return "bg-slate-100 dark:bg-slate-700/40 text-slate-500 dark:text-slate-400";
   }
 }
 
 export function BgTaskStatusIcon({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
-    PENDING: "text-gray-400",
+    PENDING: "text-slate-400",
     RUNNING: "text-blue-500 animate-spin",
     COMPLETED: "text-emerald-500",
     FAILED: "text-red-500",
-    CANCELLED: "text-gray-400",
+    CANCELLED: "text-slate-400",
   };
-  const cls = colorMap[status] ?? "text-gray-400";
+  const cls = colorMap[status] ?? "text-slate-400";
   if (status === "COMPLETED") {
     return (
       <svg className={`w-4 h-4 ${cls} shrink-0`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
