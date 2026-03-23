@@ -41,6 +41,28 @@ export const Danger: Story = {
   },
 };
 
+export const DesktopSecondary: Story = {
+  parameters: {
+    desktopTheme: true,
+  },
+  args: {
+    variant: "desktop-secondary",
+    size: "xs",
+    children: "Refresh",
+  },
+};
+
+export const DesktopAccent: Story = {
+  parameters: {
+    desktopTheme: true,
+  },
+  args: {
+    variant: "desktop-accent",
+    size: "xs",
+    children: "Kanban",
+  },
+};
+
 export const Loading: Story = {
   args: {
     loading: true,

@@ -1,3 +1,5 @@
+import { Button } from "./button";
+
 interface WorkspacePageHeaderProps {
   title: string;
   workspaceId: string;
@@ -51,34 +53,18 @@ export function WorkspacePageHeader({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={onRefresh}
-          className="rounded-md bg-desktop-bg-secondary px-2.5 py-1.5 text-[11px] font-medium text-desktop-text-secondary transition-colors hover:bg-desktop-bg-active/70 hover:text-desktop-text-primary"
-        >
+        <Button type="button" size="xs" variant="desktop-secondary" onClick={onRefresh}>
           Refresh
-        </button>
-        <button
-          type="button"
-          onClick={onTeam}
-          className="rounded-md bg-desktop-bg-secondary px-2.5 py-1.5 text-[11px] font-medium text-desktop-text-secondary transition-colors hover:bg-desktop-bg-active/70 hover:text-desktop-text-primary"
-        >
+        </Button>
+        <Button type="button" size="xs" variant="desktop-secondary" onClick={onTeam}>
           Team
-        </button>
-        <button
-          type="button"
-          onClick={onKanban}
-          className="rounded-md bg-desktop-accent px-2.5 py-1.5 text-[11px] font-medium text-desktop-accent-text transition-colors hover:opacity-90"
-        >
+        </Button>
+        <Button type="button" size="xs" variant="desktop-accent" onClick={onKanban}>
           Kanban
-        </button>
-        <button
-          type="button"
-          onClick={onTraces}
-          className="rounded-md bg-desktop-bg-secondary px-2.5 py-1.5 text-[11px] font-medium text-desktop-text-secondary transition-colors hover:bg-desktop-bg-active/70 hover:text-desktop-text-primary"
-        >
+        </Button>
+        <Button type="button" size="xs" variant="desktop-secondary" onClick={onTraces}>
           Traces
-        </button>
+        </Button>
       </div>
     </header>
   );

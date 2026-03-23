@@ -1,3 +1,5 @@
+import { Button } from "./button";
+
 interface OverviewCardProps {
   className?: string;
   eyebrow: string;
@@ -38,13 +40,15 @@ export function OverviewCard({
           </span>
         ))}
       </div>
-      <button
+      <Button
         type="button"
+        size="sm"
+        variant="desktop-outline"
         onClick={onAction}
-        className="mt-5 rounded-md border border-desktop-border px-3 py-2 text-[12px] font-medium text-desktop-text-secondary transition-colors hover:bg-desktop-bg-active hover:text-desktop-text-primary"
+        className="mt-5 rounded-md text-[12px]"
       >
         {actionLabel}
-      </button>
+      </Button>
     </section>
   );
 }
