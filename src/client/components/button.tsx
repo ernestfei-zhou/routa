@@ -2,7 +2,7 @@
 
 import React, { ButtonHTMLAttributes, forwardRef } from "react";
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "desktop-secondary" | "desktop-accent";
 type ButtonSize = "xs" | "sm" | "md" | "lg";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -25,6 +25,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:ring-gray-500",
       danger:
         "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 dark:bg-red-600 dark:hover:bg-red-700",
+      "desktop-secondary":
+        "bg-white dark:bg-[#1a1f2e] text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 focus:ring-gray-500",
+      "desktop-accent":
+        "bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 dark:bg-indigo-600 dark:hover:bg-indigo-700",
     };
 
 const sizeStyles: Record<ButtonSize, string> = {

@@ -17,6 +17,7 @@ const meta = {
     activeTab: "overview",
     notesCount: 4,
     activityCount: 2,
+    onTabChange: () => {},
   },
 } satisfies Meta<typeof WorkspaceTabBar>;
 
@@ -24,28 +25,42 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const OverviewActive: Story = {};
+const defaultStoryArgs = {
+  activeTab: "overview" as const,
+  notesCount: 4,
+  activityCount: 2,
+  onTabChange: () => {},
+};
+
+export const OverviewActive: Story = {
+  args: defaultStoryArgs,
+};
 
 export const NotesActive: Story = {
   args: {
+    ...defaultStoryArgs,
     activeTab: "notes",
   },
 };
 
 export const ActivityActive: Story = {
   args: {
+    ...defaultStoryArgs,
     activeTab: "activity",
   },
 };
 
 export const ZeroCounts: Story = {
   args: {
+    ...defaultStoryArgs,
+    activeTab: "notes",
     notesCount: 0,
     activityCount: 0,
   },
 };
 
 export const FocusState: Story = {
+  args: defaultStoryArgs,
   play: async ({ canvasElement }) => {
     const button = canvasElement.querySelector("button");
     if (button instanceof HTMLElement) {
@@ -55,6 +70,7 @@ export const FocusState: Story = {
 };
 
 export const DarkMode: Story = {
+  args: defaultStoryArgs,
   globals: {
     colorMode: "dark",
   },
