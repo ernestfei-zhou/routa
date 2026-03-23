@@ -1,8 +1,10 @@
 ---
+title: "Rust Desktop Kanban Input Planning Flow"
 date: 2026-03-20
 agent: Codex (GPT-5)
 status: resolved
 severity: medium
+area: kanban
 component: rust-kanban
 ---
 

@@ -2,6 +2,7 @@
 title: "Kanban lacks flow observability, controllability, and optimization primitives"
 date: "2026-03-19"
 status: open
+area: kanban
 labels:
   - Agent
   - kanban
@@ -110,4 +111,3 @@ The next Kanban milestone should focus on adding:
 3. structured blocked-state data
 4. policy-based gates, not only artifact existence checks
 5. a flow observability dashboard in the workspace UI
-

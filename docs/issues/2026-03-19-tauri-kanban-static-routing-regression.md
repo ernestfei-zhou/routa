@@ -1,8 +1,10 @@
 ---
+title: "Tauri Kanban Static Routing Regression"
 date: 2026-03-19
 agent: Codex (GPT-5)
 status: resolved
 severity: high
+area: desktop
 component: tauri-frontend
 ---
 

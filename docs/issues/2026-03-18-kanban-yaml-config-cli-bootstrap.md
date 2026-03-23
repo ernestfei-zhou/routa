@@ -1,7 +1,7 @@
 ---
 title: "[Feature] 支持从 YAML 配置初始化/加载 Kanban（便于 CLI 一键恢复和批量同步）"
 date: 2026-03-18
-status: closed
+status: resolved
 severity: medium
 area: kanban
 tags: ["enhancement", "cli", "kanban", "yaml", "automation", "bootstrap"]

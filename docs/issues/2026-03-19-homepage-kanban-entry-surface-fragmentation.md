@@ -1,4 +1,5 @@
 ---
+title: "Homepage and Kanban Entry Surface Fragmentation"
 date: 2026-03-19
 agent: Codex (GPT-5)
 status: open

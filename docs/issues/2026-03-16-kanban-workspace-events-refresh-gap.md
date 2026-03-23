@@ -2,6 +2,7 @@
 date: 2026-03-16
 title: Kanban Workspace Events Refresh Gap
 status: open
+area: kanban
 labels: [bug, kanban, realtime, sse, architecture]
 ---
 

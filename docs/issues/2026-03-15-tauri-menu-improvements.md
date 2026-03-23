@@ -2,6 +2,7 @@
 date: 2026-03-15
 title: Tauri Desktop Menu Improvements
 status: resolved
+area: desktop
 labels: [enhancement, tauri, ux]
 ---
 
@@ -138,4 +139,3 @@ Potential improvements for future iterations:
 commit eac6323
 feat(tauri): add system menu for tool mode and navigation
 ```
-
