@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { WorkspaceTabBar } from "./workspace-tab-bar";
 
 const meta = {
-  title: "Workspace/Navigation/WorkspaceTabBar",
+  title: "Workspace/Workspace Tab Bar",
   component: WorkspaceTabBar,
   tags: ["autodocs"],
   parameters: {

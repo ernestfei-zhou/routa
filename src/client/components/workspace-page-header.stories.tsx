@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { WorkspacePageHeader } from "./workspace-page-header";
 
 const meta = {
-  title: "Workspace/Header/WorkspacePageHeader",
+  title: "Workspace/Workspace Page Header",
   component: WorkspacePageHeader,
   tags: ["autodocs"],
   parameters: {

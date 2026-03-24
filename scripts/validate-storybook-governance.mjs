@@ -22,6 +22,14 @@ const requiredPreviewSnippets = [
   "desktopTheme",
 ];
 
+const requiredManagerSnippets = [
+  "storybook/manager-api",
+  "storybook/theming",
+  "addons.setConfig",
+  "showRoots: true",
+  "brandTitle: \"Routa Storybook\"",
+];
+
 const requiredStories = {
   "src/client/components/desktop-app-shell.stories.tsx": ["Default", "KanbanActive", "FocusState", "DarkMode"],
   "src/client/components/desktop-layout.stories.tsx": ["Default", "LoadingSwitcher", "DarkMode"],
@@ -81,6 +89,7 @@ function parseNamedExports(content) {
 
 validateSnippets(".storybook/main.ts", requiredMainSnippets);
 validateSnippets(".storybook/preview.tsx", requiredPreviewSnippets);
+validateSnippets(".storybook/manager.ts", requiredManagerSnippets);
 
 for (const [relativePath, names] of Object.entries(requiredStories)) {
   const content = readFile(relativePath);
