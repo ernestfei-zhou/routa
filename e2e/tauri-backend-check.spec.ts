@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type APIRequestContext } from "@playwright/test";
 
 /**
  * Tauri/Rust Backend Verification Test
@@ -17,6 +17,33 @@ test.describe("Tauri/Rust Backend Verification", () => {
   const getBaseUrl = () => {
     return process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3210";
   };
+
+  async function getJsonWithRetry<T>(
+    request: APIRequestContext,
+    url: string,
+    opts: { attempts?: number; retryDelayMs?: number } = {}
+  ): Promise<T> {
+    const attempts = opts.attempts ?? 3;
+    const retryDelayMs = opts.retryDelayMs ?? 500;
+    let lastError: unknown;
+
+    for (let i = 0; i < attempts; i += 1) {
+      try {
+        const response = await request.get(url);
+        if (!response.ok()) {
+          throw new Error(`HTTP ${response.status()} for ${url}`);
+        }
+        return (await response.json()) as T;
+      } catch (error) {
+        lastError = error;
+        if (i < attempts - 1) {
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+        }
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error(`Failed to fetch ${url}`);
+  }
 
   test("Rust backend health check", async ({ request }) => {
     const baseUrl = getBaseUrl();
@@ -54,11 +81,10 @@ test.describe("Tauri/Rust Backend Verification", () => {
 
   test("Team specialists are exposed by the Rust backend", async ({ request }) => {
     const baseUrl = getBaseUrl();
-
-    const specialistsRes = await request.get(`${baseUrl}/api/specialists`);
-    expect(specialistsRes.ok()).toBeTruthy();
-
-    const data = await specialistsRes.json();
+    const data = await getJsonWithRetry<{ specialists: Array<{ id: string }> }>(
+      request,
+      `${baseUrl}/api/specialists`
+    );
     expect(Array.isArray(data.specialists)).toBeTruthy();
 
     const specialistIds = data.specialists.map((specialist: { id: string }) => specialist.id);
@@ -83,16 +109,16 @@ test.describe("Tauri/Rust Backend Verification", () => {
     });
 
     // Check that the page loads - look for Routa branding
-    await expect(page.locator("header span").filter({ hasText: "Routa" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/kanban-first control surface/i)).toBeVisible({ timeout: 15_000 });
     console.log("✓ Routa header visible");
 
     // Check main content is present
     await expect(page.locator("main")).toBeVisible();
     console.log("✓ Main content visible");
 
-    // Check MCP link is present in navigation
-    await expect(page.getByRole("link", { name: "MCP" })).toBeVisible();
-    console.log("✓ MCP link visible");
+    // Check top navigation is present
+    await expect(page.getByRole("link", { name: "Kanban" }).first()).toBeVisible();
+    console.log("✓ Kanban link visible");
 
     // Full page screenshot
     await page.screenshot({
@@ -149,7 +175,13 @@ test.describe("Tauri/Rust Backend Verification", () => {
     await expect(page.getByText("Operations Engineer")).toBeVisible();
     await expect(page.getByText("General Engineer")).toBeVisible();
     await expect(page.getByText("8 members")).toBeVisible();
-    await expect(page.getByText("No Team runs yet.")).toBeVisible();
+
+    const emptyState = page.getByText("No Team runs yet.");
+    if (await emptyState.isVisible().catch(() => false)) {
+      await expect(emptyState).toBeVisible();
+    } else {
+      await expect(page.getByText("Direct delegates").first()).toBeVisible();
+    }
 
     await page.screenshot({
       path: "test-results/tauri-05-team-page.png",

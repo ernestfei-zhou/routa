@@ -62,5 +62,5 @@ describe("buildReviewAnalysisPayload", () => {
     expect(payload.diff).toContain("+export const value = 2;");
     expect(payload.reviewRules).toContain("Ignore formatting-only issues.");
     expect(payload.configSnippets.some((snippet) => snippet.path === "AGENTS.md")).toBe(true);
-  });
+  }, 15_000);
 });

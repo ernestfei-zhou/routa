@@ -135,6 +135,7 @@ pub async fn run(
                         .create(
                             &session_id,
                             &cwd,
+                            None,
                             &effective_workspace_id,
                             Some(&effective_provider),
                             Some(&effective_role),

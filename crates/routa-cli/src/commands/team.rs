@@ -123,6 +123,7 @@ pub async fn run(
                 .create(
                     &session_id,
                     &cwd,
+                    None,
                     &workspace_id,
                     Some(provider),
                     Some(specialist.role.as_str()),
