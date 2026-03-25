@@ -7,8 +7,5 @@ if [ -n "$SKIP_HOOKS" ]; then
   exit 0
 fi
 
-# Verify submodule refs are pushed before the main pre-push checks.
-./scripts/check-submodule-refs.sh
-
-# Run smart check script
+# Run hook runtime via smart-check compatibility wrapper.
 ./scripts/smart-check.sh
