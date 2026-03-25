@@ -8,6 +8,7 @@
 //! 5. Coordinator generates @@@task blocks → delegates to CRAFTER agents
 //! 6. Waits for all child agents to complete
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use routa_core::orchestration::{OrchestratorConfig, RoutaOrchestrator};
@@ -293,7 +294,7 @@ pub async fn run(
 
     // ── 9. Print summary ────────────────────────────────────────────────
     println!();
-    print_session_summary(&router, &workspace_id).await;
+    print_session_summary(&router, &workspace_id, Some(&agent_id), Some(&session_id)).await;
 
     // ── 10. Cleanup ─────────────────────────────────────────────────────
     state.acp_manager.kill_session(&session_id).await;
@@ -303,7 +304,12 @@ pub async fn run(
 }
 
 /// Print a summary of agents and tasks after the session completes.
-pub(crate) async fn print_session_summary(router: &RpcRouter, workspace_id: &str) {
+pub(crate) async fn print_session_summary(
+    router: &RpcRouter,
+    workspace_id: &str,
+    root_agent_id: Option<&str>,
+    session_id: Option<&str>,
+) {
     println!("╔══════════════════════════════════════════════════════════╗");
     println!("║  Session Summary                                        ║");
     println!("╚══════════════════════════════════════════════════════════╝");
@@ -318,11 +324,29 @@ pub(crate) async fn print_session_summary(router: &RpcRouter, workspace_id: &str
         }))
         .await;
 
-    if let Some(result) = agents_resp.get("result") {
+    let related_agent_ids = if let Some(result) = agents_resp.get("result") {
         if let Some(agents) = result.get("agents").and_then(|a| a.as_array()) {
+            let related_agent_ids = collect_related_agent_ids(agents, root_agent_id);
+            let visible_agents: Vec<&serde_json::Value> = if related_agent_ids.is_empty() {
+                agents.iter().collect()
+            } else {
+                agents
+                    .iter()
+                    .filter(|agent| {
+                        agent_id(agent)
+                            .map(|id| related_agent_ids.contains(id))
+                            .unwrap_or(false)
+                    })
+                    .collect()
+            };
+
             println!();
-            println!("  Agents ({}):", agents.len());
-            for agent in agents {
+            print_summary_heading(
+                "Agents",
+                visible_agents.len(),
+                agents.len().saturating_sub(visible_agents.len()),
+            );
+            for agent in visible_agents {
                 let name = agent.get("name").and_then(|v| v.as_str()).unwrap_or("?");
                 let role = agent.get("role").and_then(|v| v.as_str()).unwrap_or("?");
                 let status = agent.get("status").and_then(|v| v.as_str()).unwrap_or("?");
@@ -334,7 +358,18 @@ pub(crate) async fn print_session_summary(router: &RpcRouter, workspace_id: &str
                 };
                 println!("    {} {} ({}) — {}", icon, name, role, status);
             }
+
+            related_agent_ids
+        } else {
+            HashSet::new()
         }
+    } else {
+        HashSet::new()
+    };
+
+    if root_agent_id.is_some() && related_agent_ids.is_empty() {
+        println!();
+        println!("  Agents: no run-related agents found");
     }
 
     // List tasks
@@ -349,9 +384,23 @@ pub(crate) async fn print_session_summary(router: &RpcRouter, workspace_id: &str
 
     if let Some(result) = tasks_resp.get("result") {
         if let Some(tasks) = result.get("tasks").and_then(|a| a.as_array()) {
+            let visible_tasks: Vec<&serde_json::Value> =
+                if root_agent_id.is_none() && session_id.is_none() {
+                    tasks.iter().collect()
+                } else {
+                    tasks
+                        .iter()
+                        .filter(|task| is_run_related_task(task, &related_agent_ids, session_id))
+                        .collect()
+                };
+
             println!();
-            println!("  Tasks ({}):", tasks.len());
-            for task in tasks {
+            print_summary_heading(
+                "Tasks",
+                visible_tasks.len(),
+                tasks.len().saturating_sub(visible_tasks.len()),
+            );
+            for task in visible_tasks {
                 let title = task.get("title").and_then(|v| v.as_str()).unwrap_or("?");
                 let status = task.get("status").and_then(|v| v.as_str()).unwrap_or("?");
                 let icon = match status {
@@ -376,6 +425,113 @@ pub(crate) fn truncate_path(path: &str, max_len: usize) -> String {
     } else {
         format!("...{}", &path[path.len() - (max_len - 3)..])
     }
+}
+
+fn print_summary_heading(label: &str, visible: usize, hidden: usize) {
+    if hidden > 0 {
+        println!("  {} ({} shown, {} hidden):", label, visible, hidden);
+    } else {
+        println!("  {} ({}):", label, visible);
+    }
+}
+
+fn collect_related_agent_ids(
+    agents: &[serde_json::Value],
+    root_agent_id: Option<&str>,
+) -> HashSet<String> {
+    let mut related = HashSet::new();
+    let Some(root_agent_id) = root_agent_id else {
+        return related;
+    };
+
+    related.insert(root_agent_id.to_string());
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for agent in agents {
+            let Some(agent_id) = agent_id(agent) else {
+                continue;
+            };
+            if related.contains(agent_id) {
+                continue;
+            }
+
+            let parent_id = agent.get("parentId").and_then(|value| value.as_str());
+            if parent_id
+                .map(|parent_id| related.contains(parent_id))
+                .unwrap_or(false)
+            {
+                related.insert(agent_id.to_string());
+                changed = true;
+            }
+        }
+    }
+
+    related
+}
+
+fn is_run_related_task(
+    task: &serde_json::Value,
+    related_agent_ids: &HashSet<String>,
+    session_id: Option<&str>,
+) -> bool {
+    assigned_to_matches(task, related_agent_ids)
+        || session_matches(task, session_id)
+        || lane_session_agent_matches(task, related_agent_ids)
+}
+
+fn assigned_to_matches(task: &serde_json::Value, related_agent_ids: &HashSet<String>) -> bool {
+    task.get("assignedTo")
+        .and_then(|value| value.as_str())
+        .map(|assigned_to| related_agent_ids.contains(assigned_to))
+        .unwrap_or(false)
+}
+
+fn session_matches(task: &serde_json::Value, session_id: Option<&str>) -> bool {
+    let Some(session_id) = session_id else {
+        return false;
+    };
+
+    task.get("sessionId")
+        .and_then(|value| value.as_str())
+        .map(|value| value == session_id)
+        .unwrap_or(false)
+        || task
+            .get("triggerSessionId")
+            .and_then(|value| value.as_str())
+            .map(|value| value == session_id)
+            .unwrap_or(false)
+        || task
+            .get("sessionIds")
+            .and_then(|value| value.as_array())
+            .map(|values| {
+                values
+                    .iter()
+                    .any(|value| value.as_str() == Some(session_id))
+            })
+            .unwrap_or(false)
+}
+
+fn lane_session_agent_matches(
+    task: &serde_json::Value,
+    related_agent_ids: &HashSet<String>,
+) -> bool {
+    task.get("laneSessions")
+        .and_then(|value| value.as_array())
+        .map(|lane_sessions| {
+            lane_sessions.iter().any(|lane_session| {
+                lane_session
+                    .get("routaAgentId")
+                    .and_then(|value| value.as_str())
+                    .map(|agent_id| related_agent_ids.contains(agent_id))
+                    .unwrap_or(false)
+            })
+        })
+        .unwrap_or(false)
+}
+
+fn agent_id(agent: &serde_json::Value) -> Option<&str> {
+    agent.get("id").and_then(|value| value.as_str())
 }
 
 const QUICK_PROMPT_COORDINATOR_SYSTEM_PROMPT: &str = r#"## Routa Quick Coordinator

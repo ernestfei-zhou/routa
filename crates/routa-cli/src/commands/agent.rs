@@ -682,7 +682,13 @@ async fn execute_specialist_run(
         }
         if journey_context.is_none() {
             println!();
-            super::prompt::print_session_summary(router, &workspace_id).await;
+            super::prompt::print_session_summary(
+                router,
+                &workspace_id,
+                Some(&agent_id),
+                Some(&session_id),
+            )
+            .await;
         }
         state.acp_manager.kill_session(&session_id).await;
         orchestrator.cleanup(&session_id).await;
@@ -691,7 +697,13 @@ async fn execute_specialist_run(
 
     if journey_context.is_none() {
         println!();
-        super::prompt::print_session_summary(router, &workspace_id).await;
+        super::prompt::print_session_summary(
+            router,
+            &workspace_id,
+            Some(&agent_id),
+            Some(&session_id),
+        )
+        .await;
     }
 
     state.acp_manager.kill_session(&session_id).await;

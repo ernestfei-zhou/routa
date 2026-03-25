@@ -225,6 +225,7 @@ pub async fn run(
         renderer.finish();
         run_interactive_repl(
             state,
+            &agent_id,
             &session_id,
             &router,
             &workspace_id,
@@ -236,7 +237,7 @@ pub async fn run(
 
     // ── 12. Print summary ────────────────────────────────────────────────
     println!();
-    print_session_summary(&router, &workspace_id).await;
+    print_session_summary(&router, &workspace_id, Some(&agent_id), Some(&session_id)).await;
 
     // ── 13. Cleanup ──────────────────────────────────────────────────────
     state.acp_manager.kill_session(&session_id).await;
@@ -248,13 +249,14 @@ pub async fn run(
 /// Show team status (agents and tasks in workspace).
 pub async fn status(state: &AppState, workspace_id: &str) -> Result<(), String> {
     let router = RpcRouter::new(state.clone());
-    print_session_summary(&router, workspace_id).await;
+    print_session_summary(&router, workspace_id, None, None).await;
     Ok(())
 }
 
 /// Interactive REPL for team mode.
 async fn run_interactive_repl(
     state: &AppState,
+    agent_id: &str,
     session_id: &str,
     router: &RpcRouter,
     workspace_id: &str,
@@ -291,7 +293,8 @@ async fn run_interactive_repl(
                 break;
             }
             "/status" => {
-                print_session_summary(router, workspace_id).await;
+                print_session_summary(router, workspace_id, Some(&agent_id), Some(session_id))
+                    .await;
             }
             "/members" => {
                 println!();
