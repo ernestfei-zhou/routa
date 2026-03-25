@@ -298,4 +298,4 @@ outputs:
 - [Oracle Agent Spec GitHub](https://github.com/oracle/agent-spec)
 - [Agent Spec 技术报告](https://arxiv.org/html/2510.04173v1)
 - [PyAgentSpec 文档](https://oracle.github.io/agent-spec/)
-- [语言规范](https://oracle.github.io/agent-spec/language_spec_25_4_0.html)
+- [语言规范](https://github.com/oracle/agent-spec)

@@ -198,6 +198,7 @@ metrics:
     command: ./scripts/check-markdown-links.sh 2>&1
     hard_gate: true
     tier: normal
+    execution_scope: ci
     description: "Markdown 中的外链必须可达；429 与需要鉴权的 4xx 记为告警不阻断"
 
   - name: clippy_pass

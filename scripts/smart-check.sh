@@ -77,11 +77,12 @@ main() {
   local fitness_exit=0
   : > "$FITNESS_LOG"
 
-  echo "[fitness] Phase 1/2: lint, typecheck, tests"
+  echo "[fitness] Running local pre-push fitness metrics..."
   echo ""
   set +e
   PYTHONPATH=tools/entrix python3 -m entrix.cli run \
     --parallel \
+    --scope local \
     --min-score 0 \
     --metric eslint_pass \
     --metric ts_typecheck_pass \
@@ -91,23 +92,6 @@ main() {
   echo ""
 
   if [[ $fitness_exit -ne 0 ]]; then
-    if [[ "$fail_fast" == true ]]; then
-      handle_failure "$auto_fix" "fitness"
-      exit 1
-    fi
-  fi
-
-  echo "[fitness] Phase 2/2: markdown external links"
-  echo "[fitness] Scanning tracked markdown only; vendored docs and workspace mirrors are skipped."
-  echo ""
-  set +e
-  ./scripts/check-markdown-links.sh 2>&1 | tee -a "$FITNESS_LOG"
-  local markdown_exit=${PIPESTATUS[0]}
-  set -e
-  echo ""
-
-  if [[ $markdown_exit -ne 0 ]]; then
-    fitness_exit=$markdown_exit
     if [[ "$fail_fast" == true ]]; then
       handle_failure "$auto_fix" "fitness"
       exit 1
