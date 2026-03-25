@@ -6,43 +6,58 @@ use routa_core::state::AppState;
 
 use super::agent;
 
-pub async fn run(
-    state: &AppState,
-    specialist_target: &str,
-    prompt: Option<&str>,
-    workspace_id: &str,
-    provider: Option<&str>,
-    provider_timeout_ms: Option<u64>,
-    provider_retries: u8,
-    repeat_count: u8,
-) -> Result<(), String> {
+#[derive(Clone, Copy)]
+pub struct RunArgs<'a> {
+    pub specialist_target: &'a str,
+    pub prompt: Option<&'a str>,
+    pub workspace_id: &'a str,
+    pub provider: Option<&'a str>,
+    pub provider_timeout_ms: Option<u64>,
+    pub provider_retries: u8,
+    pub repeat_count: u8,
+}
+
+pub async fn run(state: &AppState, args: RunArgs<'_>) -> Result<(), String> {
+    let RunArgs {
+        specialist_target,
+        prompt,
+        workspace_id,
+        provider,
+        provider_timeout_ms,
+        provider_retries,
+        repeat_count,
+    } = args;
     if looks_like_existing_specialist_file(specialist_target) {
         return agent::run(
             state,
-            None,
-            Some(specialist_target),
-            prompt,
-            workspace_id,
-            provider,
-            None,
-            provider_timeout_ms,
-            provider_retries,
-            repeat_count,
+            agent::RunArgs {
+                specialist: None,
+                specialist_file: Some(specialist_target),
+                prompt,
+                workspace_id,
+                provider,
+                specialist_dir: None,
+                provider_timeout_ms,
+                provider_retries,
+                repeat_count,
+            },
         )
         .await;
     }
 
     agent::run(
         state,
-        Some(specialist_target),
-        None,
-        prompt,
-        workspace_id,
-        provider,
-        None,
-        provider_timeout_ms,
-        provider_retries,
-        repeat_count,
+        agent::RunArgs {
+            specialist: Some(specialist_target),
+            specialist_file: None,
+            prompt,
+            workspace_id,
+            provider,
+            specialist_dir: None,
+            provider_timeout_ms,
+            provider_retries,
+            repeat_count,
+        },
     )
     .await
 }

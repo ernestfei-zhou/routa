@@ -620,7 +620,8 @@ fn extract_artifact_payload(output: &str) -> Result<Option<UiJourneyArtifactPayl
 
         let payload_text = remaining[..relative_end].trim();
         if payload_text.is_empty() {
-            last_error = Some("UI journey artifact payload marker was present but empty".to_string());
+            last_error =
+                Some("UI journey artifact payload marker was present but empty".to_string());
         } else {
             match parse_artifact_payload_candidate(payload_text) {
                 Ok(payload) => last_valid_payload = Some(payload),
@@ -647,19 +648,20 @@ fn extract_artifact_payload(output: &str) -> Result<Option<UiJourneyArtifactPayl
     }
 }
 
-fn parse_artifact_payload_candidate(payload_text: &str) -> Result<UiJourneyArtifactPayload, String> {
+fn parse_artifact_payload_candidate(
+    payload_text: &str,
+) -> Result<UiJourneyArtifactPayload, String> {
     let normalized_lines = payload_text
         .lines()
-        .map(|line| {
-            line.trim_start_matches(|char: char| char.is_whitespace() || char == '▶')
-        })
+        .map(|line| line.trim_start_matches(|char: char| char.is_whitespace() || char == '▶'))
         .collect::<Vec<_>>()
         .join("\n");
     let stripped_controls = normalized_lines
         .chars()
         .filter(|char| matches!(char, '\n' | '\r' | '\t') || !char.is_control())
         .collect::<String>();
-    let candidate = extract_json_object_slice(&stripped_controls).unwrap_or(stripped_controls.as_str());
+    let candidate =
+        extract_json_object_slice(&stripped_controls).unwrap_or(stripped_controls.as_str());
 
     serde_json::from_str::<UiJourneyArtifactPayload>(candidate).map_err(|err| {
         format!(

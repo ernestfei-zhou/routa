@@ -847,15 +847,17 @@ async fn main() {
                     } => {
                         commands::agent::run(
                             &state,
-                            specialist.as_deref(),
-                            specialist_file.as_deref(),
-                            prompt.as_deref(),
-                            &workspace_id,
-                            provider.as_deref(),
-                            specialist_dir.as_deref(),
-                            None,
-                            0,
-                            1,
+                            commands::agent::RunArgs {
+                                specialist: specialist.as_deref(),
+                                specialist_file: specialist_file.as_deref(),
+                                prompt: prompt.as_deref(),
+                                workspace_id: &workspace_id,
+                                provider: provider.as_deref(),
+                                specialist_dir: specialist_dir.as_deref(),
+                                provider_timeout_ms: None,
+                                provider_retries: 0,
+                                repeat_count: 1,
+                            },
                         )
                         .await
                     }
@@ -878,13 +880,15 @@ async fn main() {
                     } => {
                         commands::specialist::run(
                             &state,
-                            &specialist,
-                            prompt.as_deref(),
-                            &workspace_id,
-                            provider.as_deref(),
-                            provider_timeout_ms,
-                            provider_retries,
-                            repeat,
+                            commands::specialist::RunArgs {
+                                specialist_target: &specialist,
+                                prompt: prompt.as_deref(),
+                                workspace_id: &workspace_id,
+                                provider: provider.as_deref(),
+                                provider_timeout_ms,
+                                provider_retries,
+                                repeat_count: repeat,
+                            },
                         )
                         .await
                     }

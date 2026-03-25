@@ -11,6 +11,16 @@ pub(crate) struct ProviderRuntimeDiagnostic {
     pub(crate) hint: Option<String>,
 }
 
+pub(crate) struct RuntimeFailureContext<'a> {
+    pub(crate) provider: &'a str,
+    pub(crate) run_started_at: SystemTime,
+    pub(crate) prompt_status: Option<&'a str>,
+    pub(crate) history_entry_count: usize,
+    pub(crate) output_chars: usize,
+    pub(crate) last_process_output: Option<&'a str>,
+    pub(crate) provider_output: Option<&'a str>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum CodexProcessOutputEvent {
     AgentMessage(String),
@@ -129,23 +139,17 @@ pub(crate) fn extract_provider_output_from_process_output(
 }
 
 pub(crate) fn augment_runtime_failure_message(
-    provider: &str,
     failure_message: &str,
-    run_started_at: SystemTime,
-    prompt_status: Option<&str>,
-    history_entry_count: usize,
-    output_chars: usize,
-    last_process_output: Option<&str>,
-    provider_output: Option<&str>,
+    context: &RuntimeFailureContext<'_>,
 ) -> String {
     let Some(diagnostic) = diagnose_runtime_failure(
-        provider,
-        run_started_at,
-        prompt_status,
-        history_entry_count,
-        output_chars,
-        last_process_output,
-        provider_output,
+        context.provider,
+        context.run_started_at,
+        context.prompt_status,
+        context.history_entry_count,
+        context.output_chars,
+        context.last_process_output,
+        context.provider_output,
     ) else {
         return failure_message.to_string();
     };
@@ -517,7 +521,7 @@ mod tests {
     use super::{
         augment_runtime_failure_message, classify_codex_process_output, diagnose_runtime_failure,
         extract_opencode_failure_hint, extract_provider_output_from_process_output,
-        normalize_ui_journey_update, truncate, CodexProcessOutputEvent,
+        normalize_ui_journey_update, truncate, CodexProcessOutputEvent, RuntimeFailureContext,
     };
     use std::fs;
     use std::time::SystemTime;
@@ -554,15 +558,18 @@ mod tests {
 
     #[test]
     fn augments_runtime_failure_with_process_output() {
+        let context = RuntimeFailureContext {
+            provider: "opencode",
+            run_started_at: SystemTime::now(),
+            prompt_status: Some("pending"),
+            history_entry_count: 1,
+            output_chars: 0,
+            last_process_output: Some("provider stderr line"),
+            provider_output: None,
+        };
         let message = augment_runtime_failure_message(
-            "opencode",
             "UI journey exceeded the maximum runtime budget",
-            SystemTime::now(),
-            Some("pending"),
-            1,
-            0,
-            Some("provider stderr line"),
-            None,
+            &context,
         );
 
         assert!(message.contains("last process output"));

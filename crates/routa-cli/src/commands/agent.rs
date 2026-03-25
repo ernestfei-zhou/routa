@@ -41,7 +41,41 @@ use ui_journey_provider::{
     diagnose_runtime_failure as diagnose_ui_journey_runtime_failure,
     extract_provider_output_from_process_output as extract_ui_journey_provider_output_from_process_output,
     normalize_ui_journey_update, verify_provider_readiness,
+    RuntimeFailureContext as UiJourneyRuntimeFailureContext,
 };
+
+#[derive(Clone, Copy)]
+pub struct RunArgs<'a> {
+    pub specialist: Option<&'a str>,
+    pub specialist_file: Option<&'a str>,
+    pub prompt: Option<&'a str>,
+    pub workspace_id: &'a str,
+    pub provider: Option<&'a str>,
+    pub specialist_dir: Option<&'a str>,
+    pub provider_timeout_ms: Option<u64>,
+    pub provider_retries: u8,
+    pub repeat_count: u8,
+}
+
+struct SelectedSpecialistRunArgs<'a> {
+    selected_specialist: SpecialistConfig,
+    user_prompt: String,
+    workspace_id: &'a str,
+    provider: Option<&'a str>,
+    provider_timeout_ms: Option<u64>,
+    provider_retries: u8,
+    repeat_count: u8,
+}
+
+struct ExecuteSpecialistRunArgs<'a> {
+    selected_specialist: SpecialistConfig,
+    user_prompt: String,
+    workspace_id: &'a str,
+    effective_provider: &'a str,
+    provider_timeout_ms: Option<u64>,
+    provider_retries: u8,
+    journey_context_override: Option<UiJourneyRunContext>,
+}
 
 pub async fn list(state: &AppState, workspace_id: &str, limit: usize) -> Result<(), String> {
     let router = RpcRouter::new(state.clone());
@@ -160,18 +194,18 @@ pub async fn summary(state: &AppState, agent_id: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub async fn run(
-    state: &AppState,
-    specialist: Option<&str>,
-    specialist_file: Option<&str>,
-    prompt: Option<&str>,
-    workspace_id: &str,
-    provider: Option<&str>,
-    specialist_dir: Option<&str>,
-    provider_timeout_ms: Option<u64>,
-    provider_retries: u8,
-    repeat_count: u8,
-) -> Result<(), String> {
+pub async fn run(state: &AppState, args: RunArgs<'_>) -> Result<(), String> {
+    let RunArgs {
+        specialist,
+        specialist_file,
+        prompt,
+        workspace_id,
+        provider,
+        specialist_dir,
+        provider_timeout_ms,
+        provider_retries,
+        repeat_count,
+    } = args;
     let router = RpcRouter::new(state.clone());
 
     let selected_specialist = if let Some(path) = specialist_file {
@@ -201,13 +235,15 @@ pub async fn run(
         return run_selected_specialist(
             state,
             &router,
-            selected,
-            user_prompt,
-            workspace_id,
-            provider,
-            provider_timeout_ms,
-            provider_retries,
-            repeat_count,
+            SelectedSpecialistRunArgs {
+                selected_specialist: selected,
+                user_prompt,
+                workspace_id,
+                provider,
+                provider_timeout_ms,
+                provider_retries,
+                repeat_count,
+            },
         )
         .await;
     };
@@ -220,13 +256,15 @@ pub async fn run(
     run_selected_specialist(
         state,
         &router,
-        selected_specialist,
-        user_prompt,
-        workspace_id,
-        provider,
-        provider_timeout_ms,
-        provider_retries,
-        repeat_count,
+        SelectedSpecialistRunArgs {
+            selected_specialist,
+            user_prompt,
+            workspace_id,
+            provider,
+            provider_timeout_ms,
+            provider_retries,
+            repeat_count,
+        },
     )
     .await
 }
@@ -234,14 +272,17 @@ pub async fn run(
 async fn run_selected_specialist(
     state: &AppState,
     router: &RpcRouter,
-    selected_specialist: SpecialistConfig,
-    user_prompt: String,
-    workspace_id: &str,
-    provider: Option<&str>,
-    provider_timeout_ms: Option<u64>,
-    provider_retries: u8,
-    repeat_count: u8,
+    args: SelectedSpecialistRunArgs<'_>,
 ) -> Result<(), String> {
+    let SelectedSpecialistRunArgs {
+        selected_specialist,
+        user_prompt,
+        workspace_id,
+        provider,
+        provider_timeout_ms,
+        provider_retries,
+        repeat_count,
+    } = args;
     let effective_provider = provider
         .map(str::to_string)
         .or_else(|| selected_specialist.default_provider.clone())
@@ -258,13 +299,15 @@ async fn run_selected_specialist(
         return execute_specialist_run(
             state,
             router,
-            selected_specialist,
-            user_prompt,
-            workspace_id,
-            &effective_provider,
-            provider_timeout_ms,
-            provider_retries,
-            None,
+            ExecuteSpecialistRunArgs {
+                selected_specialist,
+                user_prompt,
+                workspace_id,
+                effective_provider: &effective_provider,
+                provider_timeout_ms,
+                provider_retries,
+                journey_context_override: None,
+            },
         )
         .await;
     }
@@ -285,13 +328,15 @@ async fn run_selected_specialist(
         let run_result = execute_specialist_run(
             state,
             router,
-            selected_specialist.clone(),
-            user_prompt.clone(),
-            workspace_id,
-            &effective_provider,
-            provider_timeout_ms,
-            provider_retries,
-            Some(context.clone()),
+            ExecuteSpecialistRunArgs {
+                selected_specialist: selected_specialist.clone(),
+                user_prompt: user_prompt.clone(),
+                workspace_id,
+                effective_provider: &effective_provider,
+                provider_timeout_ms,
+                provider_retries,
+                journey_context_override: Some(context.clone()),
+            },
         )
         .await;
 
@@ -331,14 +376,17 @@ async fn run_selected_specialist(
 async fn execute_specialist_run(
     state: &AppState,
     router: &RpcRouter,
-    selected_specialist: SpecialistConfig,
-    user_prompt: String,
-    workspace_id: &str,
-    effective_provider: &str,
-    provider_timeout_ms: Option<u64>,
-    provider_retries: u8,
-    journey_context_override: Option<UiJourneyRunContext>,
+    args: ExecuteSpecialistRunArgs<'_>,
 ) -> Result<(), String> {
+    let ExecuteSpecialistRunArgs {
+        selected_specialist,
+        user_prompt,
+        workspace_id,
+        effective_provider,
+        provider_timeout_ms,
+        provider_retries,
+        journey_context_override,
+    } = args;
     let run_start = Instant::now();
     let wall_clock_start = std::time::SystemTime::now();
     let journey_context = journey_context_override.or_else(|| {
@@ -438,9 +486,11 @@ async fn execute_specialist_run(
     println!("📋 Prompt: {}", user_prompt);
     println!();
 
-    let mut launch_options = SessionLaunchOptions::default();
-    launch_options.initialize_timeout_ms = provider_timeout_ms;
-    launch_options.specialist_id = Some(selected_specialist.id.clone());
+    let launch_options = SessionLaunchOptions {
+        initialize_timeout_ms: provider_timeout_ms,
+        specialist_id: Some(selected_specialist.id.clone()),
+        ..SessionLaunchOptions::default()
+    };
 
     let max_attempts = 1usize + usize::from(provider_retries);
     let mut final_session_id: Option<String> = None;
@@ -731,14 +781,16 @@ async fn execute_specialist_run(
         .and_then(|diagnostic| diagnostic.failure_stage_override)
         .unwrap_or("prompt_submission");
         let error = augment_ui_journey_runtime_failure_message(
-            effective_provider,
             &prompt_error.unwrap_or_else(|| "Failed to send prompt".to_string()),
-            wall_clock_start,
-            metrics.prompt_status.as_deref(),
-            metrics.history_entry_count,
-            metrics.output_chars,
-            metrics.last_process_output.as_deref(),
-            None,
+            &UiJourneyRuntimeFailureContext {
+                provider: effective_provider,
+                run_started_at: wall_clock_start,
+                prompt_status: metrics.prompt_status.as_deref(),
+                history_entry_count: metrics.history_entry_count,
+                output_chars: metrics.output_chars,
+                last_process_output: metrics.last_process_output.as_deref(),
+                provider_output: None,
+            },
         );
         if let Some(context) = journey_context.as_ref() {
             metrics.elapsed_ms = run_start.elapsed().as_millis();
@@ -808,14 +860,16 @@ async fn execute_specialist_run(
             .and_then(|diagnostic| diagnostic.failure_stage_override)
             .unwrap_or(reason.as_str());
             let failure_summary = augment_ui_journey_runtime_failure_message(
-                effective_provider,
                 default_failure_summary,
-                wall_clock_start,
-                metrics.prompt_status.as_deref(),
-                metrics.history_entry_count,
-                metrics.output_chars,
-                metrics.last_process_output.as_deref(),
-                Some(specialist_output.as_str()),
+                &UiJourneyRuntimeFailureContext {
+                    provider: effective_provider,
+                    run_started_at: wall_clock_start,
+                    prompt_status: metrics.prompt_status.as_deref(),
+                    history_entry_count: metrics.history_entry_count,
+                    output_chars: metrics.output_chars,
+                    last_process_output: metrics.last_process_output.as_deref(),
+                    provider_output: Some(specialist_output.as_str()),
+                },
             );
             write_ui_journey_failure_artifacts(context, failure_stage, &failure_summary, &metrics);
             return Err(format!(
