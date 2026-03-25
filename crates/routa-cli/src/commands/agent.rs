@@ -36,7 +36,7 @@ use ui_journey::{
 };
 use ui_journey_provider::{
     augment_runtime_failure_message as augment_ui_journey_runtime_failure_message,
-    verify_provider_readiness,
+    diagnose_runtime_failure as diagnose_ui_journey_runtime_failure, verify_provider_readiness,
 };
 
 pub async fn list(state: &AppState, workspace_id: &str) -> Result<(), String> {
@@ -638,6 +638,16 @@ async fn execute_specialist_run(
     metrics.output_chars = specialist_output.chars().count();
 
     if prompt_error.is_some() && specialist_output.trim().is_empty() && failure_reason.is_none() {
+        let failure_stage = diagnose_ui_journey_runtime_failure(
+            effective_provider,
+            wall_clock_start,
+            metrics.prompt_status.as_deref(),
+            metrics.history_entry_count,
+            metrics.output_chars,
+            metrics.last_process_output.as_deref(),
+        )
+        .and_then(|diagnostic| diagnostic.failure_stage_override)
+        .unwrap_or("prompt_submission");
         let error = augment_ui_journey_runtime_failure_message(
             effective_provider,
             &prompt_error.unwrap_or_else(|| "Failed to send prompt".to_string()),
@@ -649,7 +659,7 @@ async fn execute_specialist_run(
         );
         if let Some(context) = journey_context.as_ref() {
             metrics.elapsed_ms = run_start.elapsed().as_millis();
-            write_ui_journey_failure_artifacts(context, "prompt_submission", &error, &metrics);
+            write_ui_journey_failure_artifacts(context, failure_stage, &error, &metrics);
         }
         if journey_context.is_none() {
             println!();
@@ -671,26 +681,31 @@ async fn execute_specialist_run(
     if let Some(context) = journey_context.as_ref() {
         if let Some(reason) = failure_reason {
             metrics.elapsed_ms = run_start.elapsed().as_millis();
-            let failure_summary = match reason.as_str() {
+            let default_failure_summary = match reason.as_str() {
                 "session_idle_timeout" => "Session timed out with no activity",
                 "execution_timeout" => "UI journey exceeded the maximum runtime budget",
                 _ => "Provider process exited unexpectedly",
             };
+            let failure_stage = diagnose_ui_journey_runtime_failure(
+                effective_provider,
+                wall_clock_start,
+                metrics.prompt_status.as_deref(),
+                metrics.history_entry_count,
+                metrics.output_chars,
+                metrics.last_process_output.as_deref(),
+            )
+            .and_then(|diagnostic| diagnostic.failure_stage_override)
+            .unwrap_or(reason.as_str());
             let failure_summary = augment_ui_journey_runtime_failure_message(
                 effective_provider,
-                failure_summary,
+                default_failure_summary,
                 wall_clock_start,
                 metrics.prompt_status.as_deref(),
                 metrics.history_entry_count,
                 metrics.output_chars,
                 metrics.last_process_output.as_deref(),
             );
-            write_ui_journey_failure_artifacts(
-                context,
-                reason.as_str(),
-                &failure_summary,
-                &metrics,
-            );
+            write_ui_journey_failure_artifacts(context, failure_stage, &failure_summary, &metrics);
             return Err(format!(
                 "Failed to complete specialist run: {}",
                 failure_summary

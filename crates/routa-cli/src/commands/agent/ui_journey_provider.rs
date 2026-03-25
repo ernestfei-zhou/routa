@@ -5,6 +5,12 @@ use std::time::{Duration, SystemTime};
 
 use routa_core::acp::{get_preset_by_id_with_registry, AcpPreset};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ProviderRuntimeDiagnostic {
+    pub(crate) failure_stage_override: Option<&'static str>,
+    pub(crate) hint: Option<String>,
+}
+
 pub(crate) async fn verify_provider_readiness(provider: &str) -> Result<(), String> {
     let normalized_provider = provider.trim().to_lowercase();
     if normalized_provider.is_empty() {
@@ -49,30 +55,64 @@ pub(crate) fn augment_runtime_failure_message(
     output_chars: usize,
     last_process_output: Option<&str>,
 ) -> String {
-    let mut hints = Vec::new();
+    let Some(diagnostic) = diagnose_runtime_failure(
+        provider,
+        run_started_at,
+        prompt_status,
+        history_entry_count,
+        output_chars,
+        last_process_output,
+    ) else {
+        return failure_message.to_string();
+    };
 
-    if let Some(output) = last_process_output
+    let Some(hint) = diagnostic.hint else {
+        return failure_message.to_string();
+    };
+    format!("{}; hint: {}", failure_message, hint)
+}
+
+pub(crate) fn diagnose_runtime_failure(
+    provider: &str,
+    run_started_at: SystemTime,
+    prompt_status: Option<&str>,
+    history_entry_count: usize,
+    output_chars: usize,
+    last_process_output: Option<&str>,
+) -> Option<ProviderRuntimeDiagnostic> {
+    let normalized_process_output = last_process_output
         .map(str::trim)
-        .filter(|value| !value.is_empty())
-    {
+        .filter(|value| !value.is_empty());
+    let mut hints = Vec::new();
+    if let Some(output) = normalized_process_output {
         hints.push(format!("last process output: {}", truncate(output, 240)));
     }
 
+    let mut failure_stage_override = None;
     if provider.trim().eq_ignore_ascii_case("opencode")
         && output_chars == 0
         && history_entry_count <= 1
+        && normalized_process_output.is_none()
         && matches!(prompt_status, Some("pending" | "rpc_timeout" | "error"))
     {
-        if let Some(opencode_hint) = latest_opencode_failure_hint(run_started_at) {
-            hints.push(opencode_hint);
+        if let Some(opencode_diagnostic) = latest_opencode_failure_hint(run_started_at) {
+            if let Some(stage) = opencode_diagnostic.failure_stage_override {
+                failure_stage_override = Some(stage);
+            }
+            if let Some(hint) = opencode_diagnostic.hint {
+                hints.push(hint);
+            }
         }
     }
 
-    if hints.is_empty() {
-        return failure_message.to_string();
+    if hints.is_empty() && failure_stage_override.is_none() {
+        return None;
     }
 
-    format!("{}; hint: {}", failure_message, hints.join(" | "))
+    Some(ProviderRuntimeDiagnostic {
+        failure_stage_override,
+        hint: (!hints.is_empty()).then(|| hints.join(" | ")),
+    })
 }
 
 fn resolve_preset_command(preset: &AcpPreset) -> String {
@@ -163,7 +203,7 @@ fn verify_directory_writable(dir: &Path, label: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn latest_opencode_failure_hint(run_started_at: SystemTime) -> Option<String> {
+fn latest_opencode_failure_hint(run_started_at: SystemTime) -> Option<ProviderRuntimeDiagnostic> {
     let log_dir = resolve_opencode_log_dir()?;
     let threshold = run_started_at
         .checked_sub(Duration::from_secs(120))
@@ -201,34 +241,51 @@ fn resolve_opencode_log_dir() -> Option<PathBuf> {
     Some(data_base.join("opencode").join("log"))
 }
 
-fn extract_opencode_failure_hint(path: &Path) -> Option<String> {
+fn extract_opencode_failure_hint(path: &Path) -> Option<ProviderRuntimeDiagnostic> {
     let contents = std::fs::read_to_string(path).ok()?;
     let file_name = path.file_name()?.to_string_lossy();
 
     if contents.contains("FreeUsageLimitError") || contents.contains("Rate limit exceeded") {
-        return Some(format!(
-            "latest OpenCode log {} reports rate limiting from opencode.ai/zen (FreeUsageLimitError)",
-            file_name
-        ));
+        return Some(ProviderRuntimeDiagnostic {
+            failure_stage_override: Some("provider_rate_limited"),
+            hint: Some(format!(
+                "latest OpenCode log {} reports rate limiting from opencode.ai/zen (FreeUsageLimitError)",
+                file_name
+            )),
+        });
     }
 
     if contents.contains("attempt to write a readonly database") {
-        return Some(format!(
-            "latest OpenCode log {} reports a readonly database in the OpenCode data directory",
-            file_name
-        ));
+        return Some(ProviderRuntimeDiagnostic {
+            failure_stage_override: Some("provider_storage"),
+            hint: Some(format!(
+                "latest OpenCode log {} reports a readonly database in the OpenCode data directory",
+                file_name
+            )),
+        });
+    }
+
+    if contents.contains("service=llm providerID=opencode") {
+        return Some(ProviderRuntimeDiagnostic {
+            failure_stage_override: Some("provider_runtime"),
+            hint: Some(format!(
+                "latest OpenCode log {} started an LLM stream but produced no assistant output before shutdown",
+                file_name
+            )),
+        });
     }
 
     contents
         .lines()
         .rev()
         .find(|line| line.contains("service=session.processor error="))
-        .map(|line| {
-            format!(
+        .map(|line| ProviderRuntimeDiagnostic {
+            failure_stage_override: Some("provider_runtime"),
+            hint: Some(format!(
                 "latest OpenCode log {} reports {}",
                 file_name,
                 truncate(line, 240)
-            )
+            )),
         })
 }
 
@@ -243,7 +300,10 @@ fn truncate(value: &str, max_chars: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{augment_runtime_failure_message, extract_opencode_failure_hint, truncate};
+    use super::{
+        augment_runtime_failure_message, diagnose_runtime_failure, extract_opencode_failure_hint,
+        truncate,
+    };
     use std::fs;
     use std::time::SystemTime;
     use tempfile::tempdir;
@@ -254,9 +314,12 @@ mod tests {
         let path = temp.path().join("2026-03-25T072419.log");
         fs::write(&path, "ERROR service=session.processor error=Rate limit exceeded. Please try again later.\nFreeUsageLimitError").unwrap();
 
-        let hint = extract_opencode_failure_hint(&path).unwrap();
-        assert!(hint.contains("rate limiting"));
-        assert!(hint.contains("2026-03-25T072419.log"));
+        let diagnostic = extract_opencode_failure_hint(&path).unwrap();
+        assert_eq!(
+            diagnostic.failure_stage_override,
+            Some("provider_rate_limited")
+        );
+        assert!(diagnostic.hint.unwrap().contains("2026-03-25T072419.log"));
     }
 
     #[test]
@@ -269,8 +332,9 @@ mod tests {
         )
         .unwrap();
 
-        let hint = extract_opencode_failure_hint(&path).unwrap();
-        assert!(hint.contains("readonly database"));
+        let diagnostic = extract_opencode_failure_hint(&path).unwrap();
+        assert_eq!(diagnostic.failure_stage_override, Some("provider_storage"));
+        assert!(diagnostic.hint.unwrap().contains("readonly database"));
     }
 
     #[test]
@@ -287,6 +351,43 @@ mod tests {
 
         assert!(message.contains("last process output"));
         assert!(message.contains("provider stderr line"));
+    }
+
+    #[test]
+    fn extracts_runtime_stall_hint_from_opencode_log() {
+        let temp = tempdir().unwrap();
+        let path = temp.path().join("2026-03-25T074517.log");
+        fs::write(
+            &path,
+            "INFO service=session.processor process\nINFO service=llm providerID=opencode modelID=big-pickle stream",
+        )
+        .unwrap();
+
+        let diagnostic = extract_opencode_failure_hint(&path).unwrap();
+        assert_eq!(diagnostic.failure_stage_override, Some("provider_runtime"));
+        assert!(diagnostic
+            .hint
+            .unwrap()
+            .contains("produced no assistant output"));
+    }
+
+    #[test]
+    fn diagnoses_runtime_failure_for_non_empty_process_output() {
+        let diagnostic = diagnose_runtime_failure(
+            "opencode",
+            SystemTime::now(),
+            Some("pending"),
+            1,
+            0,
+            Some("provider stderr line"),
+        )
+        .unwrap();
+
+        assert_eq!(diagnostic.failure_stage_override, None);
+        assert!(diagnostic
+            .hint
+            .unwrap()
+            .contains("last process output: provider stderr line"));
     }
 
     #[test]
