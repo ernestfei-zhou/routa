@@ -472,6 +472,17 @@ async fn execute_specialist_run(
 
     let prompt_response = match state.acp_manager.prompt(&session_id, &initial_prompt).await {
         Ok(response) => response,
+        Err(err)
+            if journey_context.is_some()
+                && err
+                    .to_string()
+                    .contains("Timeout waiting for session/prompt") =>
+        {
+            println!(
+                "⚠️  Prompt submission timed out waiting for RPC response; continuing to monitor session output..."
+            );
+            serde_json::Value::Null
+        }
         Err(err) => {
             let error = format!("Failed to send prompt: {}", err);
             if let Some(context) = journey_context.as_ref() {

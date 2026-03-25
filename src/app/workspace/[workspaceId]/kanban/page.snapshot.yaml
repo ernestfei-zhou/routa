@@ -1,28 +1,60 @@
 # page-id: kanban
 # route: /workspace/default/kanban
 # source-page: src/app/workspace/[workspaceId]/kanban/page.tsx
-# url: http://127.0.0.1:3100/workspace/default/kanban
+# url: http://localhost:3000/workspace/default/kanban
 # title: Routa - Multi-Agent Coordinator
-# generated-at: 2026-03-21T01:30:49.577Z
-# generator: playwright
-# playwright-version: 1.58.2
-- text: Backlog 1 cards -> Default · CRAFTER · Backlog Refiner
-- button "Open Stabilize Page Snapshot Fixtures":
-  - img
-  - button "Delete task":
-    - img
-  - text: Idle Not synced Stabilize Page Snapshot Fixtures high
-  - paragraph: Introduce deterministic fixture data for snapshot validation.
-  - text: snapshot ci
-  - button "Run"
-  - text: Automation Card override
-  - button "Edit"
-- text: Todo 0 cards -> Default · CRAFTER · Todo Orchestrator Dev 0 cards -> Default · CRAFTER · Dev Crafter Review 0 cards -> Default · GATE · QA Frontend -> Default · GATE · Review Guard Done 1 cards -> Default · GATE · Done Reporter
-- button "Open Validate Snapshot Pipeline":
-  - img
-  - button "Delete task":
-    - img
-  - text: Idle Not synced Validate Snapshot Pipeline medium
-  - paragraph: Verify the snapshot validator runs against fixture data.
-  - text: snapshot Automation Card override
-  - button "Edit"
+# generated-at: 2026-03-25T05:37:56.138Z
+# generator: playwright-cli
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e5]:
+        - img "Routa" [ref=e6]
+        - generic [ref=e7]: Routa
+      - button "Default Workspace" [ref=e10]:
+        - img [ref=e11]
+        - generic [ref=e13]: Default Workspace
+        - img [ref=e14]
+    - generic [ref=e17]:
+      - complementary [ref=e18]:
+        - navigation [ref=e19]:
+          - link "Home" [ref=e20] [cursor=pointer]:
+            - /url: /
+            - img [ref=e21]
+          - link "Overview" [ref=e23] [cursor=pointer]:
+            - /url: /workspace/default
+            - img [ref=e24]
+          - link "Kanban" [ref=e26] [cursor=pointer]:
+            - /url: /workspace/default/kanban
+            - img [ref=e28]
+          - link "Team" [ref=e30] [cursor=pointer]:
+            - /url: /workspace/default/team
+            - img [ref=e31]
+          - link "Traces" [ref=e36] [cursor=pointer]:
+            - /url: /traces
+            - img [ref=e37]
+        - link "Settings" [ref=e41] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e42]
+      - main [ref=e45]:
+        - generic [ref=e48]:
+          - generic [ref=e50]:
+            - generic [ref=e51]:
+              - img [ref=e52]
+              - heading "Kanban Board" [level=1] [ref=e54]
+              - generic [ref=e55]: (39 tasks)
+            - generic [ref=e56]:
+              - button "Backend Agents" [ref=e58]:
+                - img [ref=e59]
+                - text: Backend Agents
+              - button "Settings" [ref=e61]
+              - generic [ref=e62]:
+                - generic [ref=e63]: Language
+                - button "English" [pressed] [ref=e64]
+                - button "Chinese" [ref=e65]
+              - button "Refresh" [ref=e66]:
+                - img [ref=e67]
+          - generic [ref=e69]: No board available yet.
+  - button "Open Next.js Dev Tools" [ref=e75] [cursor=pointer]:
+    - img [ref=e76]
+  - alert [ref=e79]
