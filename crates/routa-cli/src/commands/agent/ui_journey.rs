@@ -43,6 +43,7 @@ pub(crate) struct UiJourneyRunMetrics {
     pub(crate) prompt_status: Option<String>,
     pub(crate) history_entry_count: usize,
     pub(crate) output_chars: usize,
+    pub(crate) last_process_output: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -278,12 +279,13 @@ pub(crate) fn write_artifact_set(
             "prompt_status": metrics.prompt_status,
             "history_entry_count": metrics.history_entry_count,
             "output_chars": metrics.output_chars,
+            "last_process_output": metrics.last_process_output,
             "failure_stage": stage,
         }
     });
 
     let summary = format!(
-        "# UI Journey Evaluation\n\n- Specialist: {specialist}\n- Provider: {provider}\n- Scenario: {scenario}\n- Run ID: {run_id}\n- Stage: {stage}\n- Base URL: {base_url}\n- Status: {status}\n- Message: {message}\n- Attempts: {attempts}\n- Provider timeout (ms): {timeout}\n- Retries: {retries}\n- Total elapsed (ms): {elapsed}\n- Session ID: {session_id}\n- Prompt status: {prompt_status}\n- History entries: {history_entries}\n- Output chars: {output_chars}\n",
+        "# UI Journey Evaluation\n\n- Specialist: {specialist}\n- Provider: {provider}\n- Scenario: {scenario}\n- Run ID: {run_id}\n- Stage: {stage}\n- Base URL: {base_url}\n- Status: {status}\n- Message: {message}\n- Attempts: {attempts}\n- Provider timeout (ms): {timeout}\n- Retries: {retries}\n- Total elapsed (ms): {elapsed}\n- Session ID: {session_id}\n- Prompt status: {prompt_status}\n- History entries: {history_entries}\n- Output chars: {output_chars}\n- Last process output: {last_process_output}\n",
         specialist = context.specialist_id,
         provider = context.provider,
         scenario = scenario_id.as_str(),
@@ -302,6 +304,10 @@ pub(crate) fn write_artifact_set(
         prompt_status = metrics.prompt_status.as_deref().unwrap_or("unknown"),
         history_entries = metrics.history_entry_count,
         output_chars = metrics.output_chars,
+        last_process_output = metrics
+            .last_process_output
+            .as_deref()
+            .unwrap_or("none"),
     );
 
     let evaluation_path = artifact_dir.join("evaluation.json");
@@ -567,6 +573,7 @@ pub(crate) fn validate_success_artifacts(
             "prompt_status": metrics.prompt_status,
             "history_entry_count": metrics.history_entry_count,
             "output_chars": metrics.output_chars,
+            "last_process_output": metrics.last_process_output,
             "failure_stage": serde_json::Value::Null,
         }),
     );
@@ -955,6 +962,7 @@ mod tests {
             prompt_status: None,
             history_entry_count: 0,
             output_chars: 0,
+            last_process_output: None,
         };
 
         write_artifact_set(
@@ -1038,6 +1046,7 @@ mod tests {
             prompt_status: None,
             history_entry_count: 0,
             output_chars: 0,
+            last_process_output: None,
         };
 
         let output_dir = std::path::Path::new(&artifact_dir)
@@ -1110,6 +1119,7 @@ mod tests {
             prompt_status: None,
             history_entry_count: 0,
             output_chars: 0,
+            last_process_output: None,
         };
 
         let output_dir = std::path::Path::new(&artifact_dir)
@@ -1163,6 +1173,7 @@ mod tests {
             prompt_status: None,
             history_entry_count: 0,
             output_chars: 0,
+            last_process_output: None,
         };
 
         let output_dir = std::path::Path::new(&artifact_dir)
@@ -1221,6 +1232,7 @@ mod tests {
             prompt_status: None,
             history_entry_count: 0,
             output_chars: 0,
+            last_process_output: None,
         };
 
         let output_dir = std::path::Path::new(&artifact_dir)
@@ -1275,6 +1287,7 @@ mod tests {
             prompt_status: None,
             history_entry_count: 0,
             output_chars: 0,
+            last_process_output: None,
         };
 
         let output_dir = std::path::Path::new(&artifact_dir)
@@ -1329,6 +1342,7 @@ mod tests {
             prompt_status: None,
             history_entry_count: 0,
             output_chars: 0,
+            last_process_output: None,
         };
 
         let output_dir = std::path::Path::new(&artifact_dir)

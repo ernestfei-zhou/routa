@@ -300,6 +300,7 @@ async fn execute_specialist_run(
         prompt_status: None,
         history_entry_count: 0,
         output_chars: 0,
+        last_process_output: None,
     };
 
     if let Some(context) = journey_context.as_ref() {
@@ -612,6 +613,7 @@ async fn execute_specialist_run(
         .await
         .unwrap_or_default();
     metrics.history_entry_count = history.len();
+    metrics.last_process_output = extract_last_process_output_line(&history);
     let specialist_output = if collected_output.trim().is_empty() {
         extract_agent_output_from_history(&history)
     } else {
@@ -683,6 +685,26 @@ async fn execute_specialist_run(
     }
 
     Ok(())
+}
+
+fn extract_last_process_output_line(history: &[serde_json::Value]) -> Option<String> {
+    history.iter().rev().find_map(|entry| {
+        let update = entry
+            .get("params")
+            .and_then(|params| params.get("update"))
+            .and_then(|value| value.as_object())?;
+        let session_update = update
+            .get("sessionUpdate")
+            .and_then(|value| value.as_str())?;
+        if session_update != "process_output" {
+            return None;
+        }
+        update
+            .get("data")
+            .and_then(|value| value.as_str())
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+    })
 }
 
 fn load_specialist_from_file(path: &str) -> Result<SpecialistConfig, String> {
