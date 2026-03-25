@@ -403,6 +403,13 @@ pub(crate) fn validate_success_artifacts(
     if verdict.trim().is_empty() {
         return Err("Evaluation artifact verdict cannot be empty".to_string());
     }
+    let expected_verdict = expected_verdict_for_score(task_fit_score);
+    if verdict != expected_verdict {
+        return Err(format!(
+            "Evaluation artifact verdict/score mismatch: score {} requires '{}', got '{}'",
+            task_fit_score, expected_verdict, verdict
+        ));
+    }
 
     let findings = evaluation
         .get("findings")
@@ -425,6 +432,26 @@ pub(crate) fn validate_success_artifacts(
                     index, field
                 ));
             }
+        }
+        let finding_type = object
+            .get("type")
+            .and_then(|value| value.as_str())
+            .unwrap_or("");
+        if !matches!(finding_type, "issue" | "observation") {
+            return Err(format!(
+                "Finding at index {} has unsupported type '{}'; expected 'issue' or 'observation'",
+                index, finding_type
+            ));
+        }
+        let severity = object
+            .get("severity")
+            .and_then(|value| value.as_str())
+            .unwrap_or("");
+        if !matches!(severity, "low" | "medium" | "high") {
+            return Err(format!(
+                "Finding at index {} has unsupported severity '{}'; expected low|medium|high",
+                index, severity
+            ));
         }
     }
 
@@ -461,6 +488,16 @@ pub(crate) fn validate_success_artifacts(
     );
 
     Ok(())
+}
+
+fn expected_verdict_for_score(task_fit_score: i64) -> &'static str {
+    if task_fit_score >= 80 {
+        "Good Fit"
+    } else if task_fit_score >= 60 {
+        "Partial Fit"
+    } else {
+        "Poor Fit"
+    }
 }
 
 pub(crate) fn load_aggregate_run(
@@ -989,6 +1026,106 @@ mod tests {
 
         let error = validate_success_artifacts(&context, &metrics).unwrap_err();
         assert!(error.contains("missing string field: description"));
+    }
+
+    #[test]
+    fn rejects_verdict_score_mismatch() {
+        let base_dir = tempdir().unwrap();
+        let artifact_dir = base_dir
+            .path()
+            .join("artifacts")
+            .to_string_lossy()
+            .to_string();
+        let context = UiJourneyRunContext {
+            specialist_id: "ui-journey-evaluator".to_string(),
+            provider: "opencode".to_string(),
+            run_id: "2026-03-25-005".to_string(),
+            prompt: UiJourneyPromptParams {
+                scenario_id: Some("core-home-session".to_string()),
+                base_url: DEFAULT_BASE_URL.to_string(),
+                artifact_dir: artifact_dir.clone(),
+                run_id: Some("2026-03-25-005".to_string()),
+            },
+        };
+        let metrics = UiJourneyRunMetrics {
+            attempts: 1,
+            provider_timeout_ms: None,
+            provider_retries: 0,
+            elapsed_ms: 900,
+            initialization_elapsed_ms: Some(120),
+        };
+
+        let output_dir = std::path::Path::new(&artifact_dir)
+            .join("core-home-session")
+            .join("2026-03-25-005");
+        fs::create_dir_all(output_dir.join("screenshots")).unwrap();
+        fs::write(
+            output_dir.join("evaluation.json"),
+            r#"{
+  "scenario_id": "core-home-session",
+  "run_id": "2026-03-25-005",
+  "task_fit_score": 85,
+  "verdict": "Partial Fit",
+  "findings": [],
+  "evidence_summary": "Verdict mismatch."
+}"#,
+        )
+        .unwrap();
+        fs::write(output_dir.join("summary.md"), "# Summary\n").unwrap();
+        fs::write(output_dir.join("screenshots").join("step-01.png"), "png").unwrap();
+
+        let error = validate_success_artifacts(&context, &metrics).unwrap_err();
+        assert!(error.contains("verdict/score mismatch"));
+    }
+
+    #[test]
+    fn rejects_findings_with_unsupported_enums() {
+        let base_dir = tempdir().unwrap();
+        let artifact_dir = base_dir
+            .path()
+            .join("artifacts")
+            .to_string_lossy()
+            .to_string();
+        let context = UiJourneyRunContext {
+            specialist_id: "ui-journey-evaluator".to_string(),
+            provider: "opencode".to_string(),
+            run_id: "2026-03-25-006".to_string(),
+            prompt: UiJourneyPromptParams {
+                scenario_id: Some("core-home-session".to_string()),
+                base_url: DEFAULT_BASE_URL.to_string(),
+                artifact_dir: artifact_dir.clone(),
+                run_id: Some("2026-03-25-006".to_string()),
+            },
+        };
+        let metrics = UiJourneyRunMetrics {
+            attempts: 1,
+            provider_timeout_ms: None,
+            provider_retries: 0,
+            elapsed_ms: 900,
+            initialization_elapsed_ms: Some(120),
+        };
+
+        let output_dir = std::path::Path::new(&artifact_dir)
+            .join("core-home-session")
+            .join("2026-03-25-006");
+        fs::create_dir_all(output_dir.join("screenshots")).unwrap();
+        fs::write(
+            output_dir.join("evaluation.json"),
+            r#"{
+  "scenario_id": "core-home-session",
+  "run_id": "2026-03-25-006",
+  "task_fit_score": 45,
+  "verdict": "Poor Fit",
+  "findings": [{"type": "warning", "description": "Bad enum", "severity": "critical"}],
+  "evidence_summary": "Unsupported enums."
+}"#,
+        )
+        .unwrap();
+        fs::write(output_dir.join("summary.md"), "# Summary\n").unwrap();
+        fs::write(output_dir.join("screenshots").join("step-01.png"), "png").unwrap();
+
+        let error = validate_success_artifacts(&context, &metrics).unwrap_err();
+        assert!(error.contains("unsupported type"));
     }
 
     #[test]
