@@ -11,7 +11,7 @@
 [![Rust](https://img.shields.io/badge/Rust-Axum-orange.svg)](https://github.com/tokio-rs/axum)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-[How It Works](#how-it-works) • [The Agent Team](#the-agent-team) • [Bring Your Own Agents](#bring-your-own-agents) • [Quick Start](#quick-start) • [Architecture](#architecture)
+[Why Routa](#why-routa) • [Architecture](#architecture) • [How It Works](#how-it-works) • [Agent Team](#the-agent-team) • [Bring Your Own Agents](#bring-your-own-agents) • [Quick Start](#quick-start)
 
 </div>
 
@@ -21,24 +21,32 @@
 > This project primarily provides a **Tauri desktop application** (binary distribution).
 > The web version is available for demo purposes only.
 
-Project links:
+[Releases](https://github.com/phodal/routa/releases) · [Docs](https://phodal.github.io/routa/) · [Demo (Bilibili)](https://www.bilibili.com/video/BV16CwyzUED5/) · [Demo (YouTube)](https://www.youtube.com/watch?v=spjmr_1AQLM) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-- Releases: https://github.com/phodal/routa/releases
-- Docs: https://phodal.github.io/routa/
-- Demo Video: https://www.bilibili.com/video/BV16CwyzUED5/
-- Demo Video (YouTube): https://www.youtube.com/watch?v=spjmr_1AQLM
-- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
-- Security: [SECURITY.md](SECURITY.md)
+## Why Routa
 
-## The Idea
+One agent doing everything sounds great until it doesn't. A single agent context-switches between planning, coding, reviewing, and reporting — the same way a solo developer burns out juggling every role on a project.
 
-Most AI coding tools give you one agent doing everything. Routa gives you a **team**.
+Real teams don't work that way. They specialize, hand off, and keep work visible on a board.
 
-You describe what you want in plain language. Routa's Kanban board becomes the coordination layer — breaking your intent into cards, assigning specialized agents to each column, and flowing work from Backlog → Todo → Dev → Review → Done. Each stage has a dedicated agent that knows its job and passes work forward when it's ready.
+Routa applies the same idea to AI agents. A Kanban board becomes the coordination layer: you describe what you want, Routa decomposes it into cards, and specialized agents pick up work as it flows through columns — Backlog → Todo → Dev → Review → Done. Each agent knows its role and passes work forward when ready.
 
-Think of it as a software team that never sleeps, where the Kanban board is both the project manager and the communication bus.
+The board is both the project manager and the communication bus.
 
 ![Routa Kanban Overview](https://github.com/user-attachments/assets/8fdf7934-f8ba-469f-a8b8-70e215637a45)
+
+## Architecture
+
+Routa runs on two runtime surfaces that share the same domain model:
+
+- **Web**: Next.js app and API (`src/`)
+- **Desktop**: Tauri + Axum (`apps/desktop/` + `crates/routa-server/`)
+
+Both runtimes feed the same workspace-scoped coordination model — sessions, kanban automation, tasks, tools, and traces. The desktop backend is a full local coordination runtime, not a thin transport shim.
+
+![Routa architecture](docs/architecture.svg)
+
+At the center is the ACP orchestration layer. Provider families are normalized through shared adapters and registry logic, so different agent CLIs and Docker providers converge on the same session lifecycle and streaming model. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full contract.
 
 ## How It Works
 
@@ -166,31 +174,19 @@ routa chat                        # Interactive chat
 - Security reports: [SECURITY.md](SECURITY.md)
 - Contribution guide: [CONTRIBUTING.md](CONTRIBUTING.md)
 
-## 🏗 Architecture
+## Harness Engineering
 
-Routa is built around ACP-backed session orchestration.
+Routa is a practical case study of [Harness Engineering](https://www.phodal.com/blog/harness-engineering/) — building systems that are readable for AI, constrained by guardrails, and improved through fast automated feedback.
 
-The product runs on two runtime surfaces: a Next.js web runtime and a Tauri + Axum desktop runtime. Both feed the same workspace-scoped coordination model for sessions, kanban automation, tasks, tools, and traces.
+- **Readability** — [AGENTS.md](AGENTS.md) defines standards. Specialist definitions in [`resources/specialists/`](resources/specialists/) reveal role boundaries. Machine-friendly interfaces (MCP, ACP, A2A, REST, CLI) mean agent workflows don't depend on manual UI steps.
+- **Defense** — Pre-commit lint, pre-push smart checks, and fitness functions ([docs/fitness/](docs/fitness/)) define hard gates: tests, API contract checks, and lint.
+- **Feedback Loops** — Issue enrichment, review handoff automation, and backlog hygiene workflows close the loop between agent output and the next iteration.
 
-![Routa architecture](docs/architecture.svg)
+## License
 
-At the center is the ACP orchestration layer. In the current codebase, provider families are normalized through shared provider adapters, provider registry logic, and ACP preset catalogs, so BYOK SDK/API integrations and ACP CLI/Docker providers still converge on the same session lifecycle and streaming model.
+MIT — see [LICENSE](LICENSE).
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the canonical architecture contract and [docs/architecture.svg](docs/architecture.svg) for the visual overview.
-
-## 🎯 Harness Engineering in Practice
-
-Routa is a practical case study of the three principles from [Harness Engineering](https://www.phodal.com/blog/harness-engineering/): build systems that are readable for AI, constrained by engineering guardrails, and improved through fast automated feedback.
-
-- **System Readability** — [AGENTS.md](AGENTS.md) defines coding standards, testing strategy, and Git discipline. Specialist definitions in [`resources/specialists/`](resources/specialists/) reveal role boundaries and quality gates. Machine-friendly interfaces (MCP, ACP, A2A, REST, CLI) mean agent workflows don't depend on manual UI steps.
-- **Defense Mechanisms** — `.husky/pre-commit` runs lint, `.husky/pre-push` delegates to [`scripts/smart-check.sh`](scripts/smart-check.sh). Fitness functions ([docs/fitness/README.md](docs/fitness/README.md)) define hard gates: `npm run test:run`, `cargo test --workspace`, `npm run api:check`, `npm run lint`.
-- **Automated Feedback Loops** — Issue enrichment, review handoff automation, and backlog hygiene workflows ([`.github/workflows/`](.github/workflows/)) close the loop between agent output and the next iteration.
-
-## 📄 License
-
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
-
-Built with [Model Context Protocol](https://modelcontextprotocol.io/) by Anthropic · [Agent Client Protocol](https://github.com/agentclientprotocol/typescript-sdk) · [A2A Protocol](https://a2aprotocol.ai/) · Inspired by [Intent](https://www.augmentcode.com/product/intent)
+Built with [Model Context Protocol](https://modelcontextprotocol.io/) · [Agent Client Protocol](https://github.com/agentclientprotocol/typescript-sdk) · [A2A Protocol](https://a2aprotocol.ai/) · Inspired by [Intent](https://www.augmentcode.com/product/intent)
 
 ---
 
