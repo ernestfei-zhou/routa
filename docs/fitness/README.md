@@ -25,6 +25,12 @@ entrix run --tier normal
 # 完整检查（所有 tier，<15min）
 entrix run
 
+# Harness Fluency 评估（文本报告）
+npm run fitness:fluency
+
+# Harness Fluency 评估（JSON + 与上次快照对比）
+npm run fitness:fluency -- --format json --compare-last
+
 # 并行执行（加速）
 entrix run --parallel
 

@@ -1,0 +1,10 @@
+{
+  "name": "@routa/harness-fluency",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Harness Fluency evaluation CLI for Routa repositories",
+  "scripts": {
+    "start": "node --import tsx src/cli.ts"
+  }
+}

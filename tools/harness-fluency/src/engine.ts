@@ -1,0 +1,610 @@
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import path from "node:path";
+
+import { glob } from "glob";
+import { load as loadYaml } from "js-yaml";
+
+import {
+  CELL_PASS_THRESHOLD,
+  type CellResult,
+  type CliOptions,
+  type CriterionResult,
+  type DetectorDefinition,
+  DETERMINISTIC_PRIORITY,
+  type DimensionResult,
+  type EvaluateOptions,
+  type FluencyCriterion,
+  type HarnessFluencyReport,
+  loadFluencyModel,
+  parseArgs,
+  type Recommendation,
+  renderHelp,
+  type ReportComparison,
+} from "./model.js";
+
+type EvaluationContext = {
+  repoRoot: string;
+  jsonCache: Map<string, Promise<unknown>>;
+  yamlCache: Map<string, Promise<unknown>>;
+};
+
+type CommandExecutionResult = {
+  exitCode: number;
+  output: string;
+};
+
+type MutableCellAccumulator = {
+  id: string;
+  level: string;
+  levelName: string;
+  dimension: string;
+  dimensionName: string;
+  criteria: CriterionResult[];
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function buildCellId(level: string, dimension: string): string {
+  return `${dimension}:${level}`;
+}
+
+function toAbsolutePath(basePath: string, targetPath: string): string {
+  return path.isAbsolute(targetPath) ? targetPath : path.resolve(basePath, targetPath);
+}
+
+function formatPercent(value: number | null): string {
+  if (value === null) {
+    return "n/a";
+  }
+  return `${Math.round(value * 100)}%`;
+}
+
+function lookupPath(source: unknown, spec: readonly (string | number)[]): unknown {
+  let current = source;
+  for (const segment of spec) {
+    if (typeof segment === "number") {
+      if (!Array.isArray(current) || current[segment] === undefined) {
+        return undefined;
+      }
+      current = current[segment];
+      continue;
+    }
+
+    if (!isRecord(current) && !Array.isArray(current)) {
+      return undefined;
+    }
+
+    const value = (current as Record<string, unknown>)[segment];
+    if (value === undefined) {
+      return undefined;
+    }
+    current = value;
+  }
+  return current;
+}
+
+async function pathExists(targetPath: string): Promise<boolean> {
+  try {
+    await access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readStructuredFile(
+  cache: Map<string, Promise<unknown>>,
+  targetPath: string,
+  parser: (content: string) => unknown,
+): Promise<unknown> {
+  const cached = cache.get(targetPath);
+  if (cached) {
+    return cached;
+  }
+
+  const promise = readFile(targetPath, "utf8").then((content) => parser(content));
+  cache.set(targetPath, promise);
+  return promise;
+}
+
+async function readJsonFile(context: EvaluationContext, relativePath: string): Promise<unknown> {
+  const absolutePath = toAbsolutePath(context.repoRoot, relativePath);
+  return readStructuredFile(context.jsonCache, absolutePath, (content) => JSON.parse(content));
+}
+
+async function readYamlFile(context: EvaluationContext, relativePath: string): Promise<unknown> {
+  const absolutePath = toAbsolutePath(context.repoRoot, relativePath);
+  return readStructuredFile(context.yamlCache, absolutePath, (content) => loadYaml(content));
+}
+
+async function runCommand(command: string, repoRoot: string, timeoutMs: number): Promise<CommandExecutionResult> {
+  return new Promise((resolve, reject) => {
+    const shell = process.env.SHELL || "zsh";
+    const child = spawn(shell, ["-lc", command], {
+      cwd: repoRoot,
+      env: process.env,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    let output = "";
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM");
+    }, timeoutMs);
+
+    child.stdout.on("data", (chunk) => {
+      output += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      output += chunk.toString();
+    });
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      resolve({
+        exitCode: code ?? 1,
+        output: output.trim(),
+      });
+    });
+  });
+}
+
+async function evaluateDetector(
+  detector: DetectorDefinition,
+  context: EvaluationContext,
+): Promise<Pick<CriterionResult, "status" | "detail" | "evidence">> {
+  switch (detector.type) {
+    case "file_exists": {
+      const exists = await pathExists(toAbsolutePath(context.repoRoot, detector.path));
+      return {
+        status: exists ? "pass" : "fail",
+        detail: exists ? `found ${detector.path}` : `missing ${detector.path}`,
+        evidence: exists ? [detector.path] : [],
+      };
+    }
+    case "any_file_exists": {
+      const matched: string[] = [];
+      for (const candidate of detector.paths) {
+        if (await pathExists(toAbsolutePath(context.repoRoot, candidate))) {
+          matched.push(candidate);
+        }
+      }
+      return {
+        status: matched.length > 0 ? "pass" : "fail",
+        detail:
+          matched.length > 0
+            ? `found ${matched.join(", ")}`
+            : `missing all candidates: ${detector.paths.join(", ")}`,
+        evidence: matched,
+      };
+    }
+    case "glob_count": {
+      const matches = new Set<string>();
+      for (const patternText of detector.patterns) {
+        const found = await glob(patternText, {
+          cwd: context.repoRoot,
+          dot: true,
+          nodir: false,
+        });
+        for (const match of found) {
+          matches.add(match);
+        }
+      }
+      return {
+        status: matches.size >= detector.min ? "pass" : "fail",
+        detail: `matched ${matches.size} paths (min ${detector.min})`,
+        evidence: Array.from(matches).sort().slice(0, 10),
+      };
+    }
+    case "json_path_exists": {
+      try {
+        const document = await readJsonFile(context, detector.path);
+        const resolved = lookupPath(document, detector.jsonPath);
+        return {
+          status: resolved === undefined ? "fail" : "pass",
+          detail:
+            resolved === undefined
+              ? `missing JSON path ${detector.jsonPath.join(".")} in ${detector.path}`
+              : `found JSON path ${detector.jsonPath.join(".")} in ${detector.path}`,
+          evidence: resolved === undefined ? [] : [detector.path],
+        };
+      } catch (error) {
+        return {
+          status: "fail",
+          detail: `unable to read ${detector.path}: ${error instanceof Error ? error.message : String(error)}`,
+          evidence: [],
+        };
+      }
+    }
+    case "yaml_path_exists": {
+      try {
+        const document = await readYamlFile(context, detector.path);
+        const resolved = lookupPath(document, detector.yamlPath);
+        return {
+          status: resolved === undefined ? "fail" : "pass",
+          detail:
+            resolved === undefined
+              ? `missing YAML path ${detector.yamlPath.join(".")} in ${detector.path}`
+              : `found YAML path ${detector.yamlPath.join(".")} in ${detector.path}`,
+          evidence: resolved === undefined ? [] : [detector.path],
+        };
+      } catch (error) {
+        return {
+          status: "fail",
+          detail: `unable to read ${detector.path}: ${error instanceof Error ? error.message : String(error)}`,
+          evidence: [],
+        };
+      }
+    }
+    case "command_exit_code": {
+      const result = await runCommand(detector.command, context.repoRoot, detector.timeoutMs);
+      return {
+        status: result.exitCode === detector.expectedExitCode ? "pass" : "fail",
+        detail: `exit code ${result.exitCode}, expected ${detector.expectedExitCode}`,
+        evidence: result.output ? [result.output] : [],
+      };
+    }
+    case "command_output_regex": {
+      const result = await runCommand(detector.command, context.repoRoot, detector.timeoutMs);
+      const passed =
+        result.exitCode === detector.expectedExitCode && new RegExp(detector.pattern, detector.flags).test(result.output);
+      return {
+        status: passed ? "pass" : "fail",
+        detail: passed
+          ? `command output matched ${detector.pattern}`
+          : `command output did not match ${detector.pattern}`,
+        evidence: result.output ? [result.output] : [],
+      };
+    }
+    case "manual_attestation":
+      return {
+        status: "skipped",
+        detail: `manual attestation required: ${detector.prompt}`,
+        evidence: [],
+      };
+    default:
+      return {
+        status: "fail",
+        detail: `unsupported detector ${(detector as { type: string }).type}`,
+        evidence: [],
+      };
+  }
+}
+
+async function evaluateCriterion(
+  criterion: FluencyCriterion,
+  context: EvaluationContext,
+): Promise<CriterionResult> {
+  const detectorResult = await evaluateDetector(criterion.detector, context);
+  return {
+    id: criterion.id,
+    level: criterion.level,
+    dimension: criterion.dimension,
+    weight: criterion.weight,
+    critical: criterion.critical,
+    status: detectorResult.status,
+    detectorType: criterion.detector.type,
+    detail: detectorResult.detail,
+    evidence: detectorResult.evidence,
+    whyItMatters: criterion.whyItMatters,
+    recommendedAction: criterion.recommendedAction,
+    evidenceHint: criterion.evidenceHint,
+  };
+}
+
+function compareLevelIds(
+  previousLevel: string,
+  currentLevel: string,
+  order: Map<string, number>,
+): "same" | "up" | "down" {
+  const previousIndex = order.get(previousLevel) ?? -1;
+  const currentIndex = order.get(currentLevel) ?? -1;
+  if (previousIndex === currentIndex) {
+    return "same";
+  }
+  return currentIndex > previousIndex ? "up" : "down";
+}
+
+function collectRecommendations(criteria: readonly CriterionResult[]): Recommendation[] {
+  const deduped = new Set<string>();
+
+  return criteria
+    .filter((criterion) => criterion.status === "fail")
+    .sort((left, right) => {
+      if (left.critical !== right.critical) {
+        return left.critical ? -1 : 1;
+      }
+      if (left.weight !== right.weight) {
+        return right.weight - left.weight;
+      }
+      const detectorDelta = DETERMINISTIC_PRIORITY[left.detectorType] - DETERMINISTIC_PRIORITY[right.detectorType];
+      if (detectorDelta !== 0) {
+        return detectorDelta;
+      }
+      return left.id.localeCompare(right.id);
+    })
+    .filter((criterion) => {
+      if (deduped.has(criterion.recommendedAction)) {
+        return false;
+      }
+      deduped.add(criterion.recommendedAction);
+      return true;
+    })
+    .slice(0, 5)
+    .map((criterion) => ({
+      criterionId: criterion.id,
+      action: criterion.recommendedAction,
+      whyItMatters: criterion.whyItMatters,
+      evidenceHint: criterion.evidenceHint,
+      critical: criterion.critical,
+      weight: criterion.weight,
+    }));
+}
+
+async function loadPreviousSnapshot(snapshotPath: string): Promise<HarnessFluencyReport | null> {
+  if (!(await pathExists(snapshotPath))) {
+    return null;
+  }
+  return JSON.parse(await readFile(snapshotPath, "utf8")) as HarnessFluencyReport;
+}
+
+function buildComparison(
+  previousReport: HarnessFluencyReport,
+  currentReport: HarnessFluencyReport,
+  levelOrder: Map<string, number>,
+): ReportComparison {
+  const dimensionChanges = Object.values(currentReport.dimensions).map((dimension) => {
+    const previousDimension = previousReport.dimensions[dimension.dimension];
+    return {
+      dimension: dimension.dimension,
+      previousLevel: previousDimension?.level ?? "unknown",
+      currentLevel: dimension.level,
+      change: previousDimension
+        ? compareLevelIds(previousDimension.level, dimension.level, levelOrder)
+        : "up",
+    };
+  });
+
+  const previousCriteria = new Map(previousReport.criteria.map((criterion) => [criterion.id, criterion.status]));
+  const currentCriteria = new Map(currentReport.criteria.map((criterion) => [criterion.id, criterion.status]));
+  const criteriaChanges = Array.from(new Set([...previousCriteria.keys(), ...currentCriteria.keys()]))
+    .map((id) => ({
+      id,
+      previousStatus: previousCriteria.get(id) ?? null,
+      currentStatus: currentCriteria.get(id) ?? null,
+    }))
+    .filter((entry) => entry.previousStatus !== entry.currentStatus)
+    .sort((left, right) => left.id.localeCompare(right.id));
+
+  return {
+    previousGeneratedAt: previousReport.generatedAt,
+    previousOverallLevel: previousReport.overallLevel,
+    overallChange: compareLevelIds(previousReport.overallLevel, currentReport.overallLevel, levelOrder),
+    dimensionChanges,
+    criteriaChanges,
+  };
+}
+
+async function persistSnapshot(report: HarnessFluencyReport, snapshotPath: string): Promise<void> {
+  await mkdir(path.dirname(snapshotPath), { recursive: true });
+  await writeFile(snapshotPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+}
+
+export async function evaluateHarnessFluency(options: EvaluateOptions): Promise<HarnessFluencyReport> {
+  const repoRoot = path.resolve(options.repoRoot);
+  const model = await loadFluencyModel(path.resolve(options.modelPath));
+  const levelOrder = new Map(model.levels.map((level, index) => [level.id, index]));
+  const levelById = new Map(model.levels.map((level) => [level.id, level]));
+  const dimensionById = new Map(model.dimensions.map((dimension) => [dimension.id, dimension]));
+
+  const previousSnapshot = options.compareLast ? await loadPreviousSnapshot(path.resolve(options.snapshotPath)) : null;
+  const context: EvaluationContext = { repoRoot, jsonCache: new Map(), yamlCache: new Map() };
+  const criteriaResults = await Promise.all(model.criteria.map((criterion) => evaluateCriterion(criterion, context)));
+
+  const cellAccumulators = new Map<string, MutableCellAccumulator>();
+  for (const criterionResult of criteriaResults) {
+    const level = levelById.get(criterionResult.level);
+    const dimension = dimensionById.get(criterionResult.dimension);
+    if (!level || !dimension) {
+      throw new Error(`unknown cell reference for ${criterionResult.id}`);
+    }
+
+    const cellId = buildCellId(criterionResult.level, criterionResult.dimension);
+    const accumulator = cellAccumulators.get(cellId) ?? {
+      id: cellId,
+      level: criterionResult.level,
+      levelName: level.name,
+      dimension: criterionResult.dimension,
+      dimensionName: dimension.name,
+      criteria: [],
+    };
+    accumulator.criteria.push(criterionResult);
+    cellAccumulators.set(cellId, accumulator);
+  }
+
+  const cells: CellResult[] = [];
+  for (const level of model.levels) {
+    for (const dimension of model.dimensions) {
+      const accumulator = cellAccumulators.get(buildCellId(level.id, dimension.id));
+      if (!accumulator) {
+        throw new Error(`missing accumulated cell ${dimension.id}:${level.id}`);
+      }
+
+      const applicableWeight = accumulator.criteria.reduce(
+        (total, criterion) => total + (criterion.status === "skipped" ? 0 : criterion.weight),
+        0,
+      );
+      const passedWeight = accumulator.criteria.reduce(
+        (total, criterion) => total + (criterion.status === "pass" ? criterion.weight : 0),
+        0,
+      );
+      const score = applicableWeight === 0 ? 0 : passedWeight / applicableWeight;
+
+      cells.push({
+        id: accumulator.id,
+        level: level.id,
+        levelName: level.name,
+        dimension: dimension.id,
+        dimensionName: dimension.name,
+        score,
+        passed: applicableWeight > 0 && score >= CELL_PASS_THRESHOLD,
+        passedWeight,
+        applicableWeight,
+        criteria: accumulator.criteria.sort((left, right) => left.id.localeCompare(right.id)),
+      });
+    }
+  }
+
+  const cellById = new Map(cells.map((cell) => [cell.id, cell]));
+  const dimensions: Record<string, DimensionResult> = {};
+  for (const dimension of model.dimensions) {
+    let achievedIndex = -1;
+    for (let index = 0; index < model.levels.length; index += 1) {
+      const cell = cellById.get(buildCellId(model.levels[index].id, dimension.id));
+      if (!cell?.passed) {
+        break;
+      }
+      achievedIndex = index;
+    }
+
+    const resolvedIndex = Math.max(achievedIndex, 0);
+    const currentLevel = model.levels[resolvedIndex];
+    const nextLevel = model.levels[resolvedIndex + 1] ?? null;
+    dimensions[dimension.id] = {
+      dimension: dimension.id,
+      name: dimension.name,
+      level: currentLevel.id,
+      levelName: currentLevel.name,
+      levelIndex: resolvedIndex,
+      score: cellById.get(buildCellId(currentLevel.id, dimension.id))?.score ?? 0,
+      nextLevel: nextLevel?.id ?? null,
+      nextLevelName: nextLevel?.name ?? null,
+      nextLevelProgress: nextLevel
+        ? cellById.get(buildCellId(nextLevel.id, dimension.id))?.score ?? null
+        : null,
+    };
+  }
+
+  const overallLevelIndex = Math.min(...Object.values(dimensions).map((dimension) => dimension.levelIndex));
+  const overallLevel = model.levels[overallLevelIndex];
+  const nextLevel = model.levels[overallLevelIndex + 1] ?? null;
+  const nextLevelReadiness =
+    nextLevel === null
+      ? null
+      : model.dimensions.reduce((total, dimension) => {
+          return total + (cellById.get(buildCellId(nextLevel.id, dimension.id))?.score ?? 0);
+        }, 0) / model.dimensions.length;
+
+  const blockingCriteria =
+    nextLevel === null
+      ? []
+      : model.dimensions.flatMap((dimension) => {
+          return cellById
+            .get(buildCellId(nextLevel.id, dimension.id))
+            ?.criteria.filter((criterion) => criterion.status === "fail") ?? [];
+        });
+
+  const report: HarnessFluencyReport = {
+    modelVersion: model.version,
+    repoRoot,
+    generatedAt: new Date().toISOString(),
+    snapshotPath: path.resolve(options.snapshotPath),
+    overallLevel: overallLevel.id,
+    overallLevelName: overallLevel.name,
+    nextLevel: nextLevel?.id ?? null,
+    nextLevelName: nextLevel?.name ?? null,
+    nextLevelReadiness,
+    dimensions,
+    cells,
+    criteria: criteriaResults.sort((left, right) => left.id.localeCompare(right.id)),
+    blockingCriteria: blockingCriteria.sort((left, right) => left.id.localeCompare(right.id)),
+    recommendations: collectRecommendations(blockingCriteria),
+    comparison: null,
+  };
+
+  if (previousSnapshot) {
+    report.comparison = buildComparison(previousSnapshot, report, levelOrder);
+  }
+  if (options.save) {
+    await persistSnapshot(report, path.resolve(options.snapshotPath));
+  }
+
+  return report;
+}
+
+export function formatTextReport(report: HarnessFluencyReport): string {
+  const lines = [
+    "HARNESS FLUENCY REPORT",
+    "",
+    `Repository: ${report.repoRoot}`,
+    `Model Version: ${report.modelVersion}`,
+    `Overall Level: ${report.overallLevelName}`,
+    `Next Level: ${report.nextLevelName ?? "Reached top level"}`,
+    `Next Level Readiness: ${formatPercent(report.nextLevelReadiness)}`,
+    "",
+    "Dimensions:",
+  ];
+
+  for (const dimension of Object.values(report.dimensions).sort((left, right) => left.name.localeCompare(right.name))) {
+    lines.push(`- ${dimension.name}: ${dimension.levelName} (${formatPercent(dimension.score)})`);
+  }
+
+  lines.push("", report.nextLevelName ? `Blocking Gaps To ${report.nextLevelName}:` : "Blocking Gaps: none");
+  if (report.nextLevelName) {
+    if (report.blockingCriteria.length === 0) {
+      lines.push("- None");
+    } else {
+      for (const criterion of report.blockingCriteria) {
+        lines.push(`- ${criterion.id} — ${criterion.evidenceHint}`);
+      }
+    }
+  }
+
+  lines.push("", "Recommended Next Actions:");
+  if (report.recommendations.length === 0) {
+    lines.push("- None");
+  } else {
+    for (const recommendation of report.recommendations) {
+      lines.push(`- ${recommendation.action}`);
+    }
+  }
+
+  if (report.comparison) {
+    lines.push(
+      "",
+      "Comparison To Last Snapshot:",
+      `- Overall: ${report.comparison.overallChange} (${report.comparison.previousOverallLevel} -> ${report.overallLevel})`,
+      `- Dimensions changed: ${report.comparison.dimensionChanges.filter((entry) => entry.change !== "same").length}`,
+      `- Criteria changed: ${report.comparison.criteriaChanges.length}`,
+    );
+  }
+
+  lines.push("", `Snapshot: ${report.snapshotPath}`);
+  return lines.join("\n");
+}
+
+export async function runCli(
+  argv: readonly string[],
+): Promise<{ options: CliOptions; report: HarnessFluencyReport | null }> {
+  const options = parseArgs(argv);
+  if (options.help) {
+    console.log(renderHelp());
+    return { options, report: null };
+  }
+
+  const report = await evaluateHarnessFluency({
+    repoRoot: options.repoRoot,
+    modelPath: options.modelPath,
+    snapshotPath: options.snapshotPath,
+    compareLast: options.compareLast,
+    save: options.save,
+  });
+
+  console.log(options.format === "json" ? JSON.stringify(report, null, 2) : formatTextReport(report));
+  return { options, report };
+}
