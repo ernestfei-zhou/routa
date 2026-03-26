@@ -101,6 +101,8 @@ logs
 test-results
 .routa
 .entrix/
+docs/fitness/reports/
+crates/docs/fitness/reports/
 apps/desktop/src-tauri/icons/android/
 apps/desktop/src-tauri/icons/ios/
 .next-desktop/
