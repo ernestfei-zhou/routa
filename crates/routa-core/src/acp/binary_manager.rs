@@ -295,16 +295,16 @@ impl AcpBinaryManager {
     }
 
     /// Prepare the executable (set permissions, remove quarantine).
-    async fn prepare_executable(&self, exe_path: &Path) -> Result<(), String> {
+    async fn prepare_executable(&self, _exe_path: &Path) -> Result<(), String> {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let mut perms = tokio::fs::metadata(exe_path)
+            let mut perms = tokio::fs::metadata(_exe_path)
                 .await
                 .map_err(|e| format!("Failed to get metadata: {}", e))?
                 .permissions();
             perms.set_mode(perms.mode() | 0o755);
-            tokio::fs::set_permissions(exe_path, perms)
+            tokio::fs::set_permissions(_exe_path, perms)
                 .await
                 .map_err(|e| format!("Failed to set permissions: {}", e))?;
         }
@@ -312,7 +312,7 @@ impl AcpBinaryManager {
         // Remove macOS quarantine attribute
         #[cfg(target_os = "macos")]
         {
-            let exe_str = exe_path.to_string_lossy().to_string();
+            let exe_str = _exe_path.to_string_lossy().to_string();
             let _ = tokio::process::Command::new("xattr")
                 .args(["-d", "com.apple.quarantine", &exe_str])
                 .output()

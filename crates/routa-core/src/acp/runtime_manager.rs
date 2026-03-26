@@ -473,24 +473,24 @@ impl AcpRuntimeManager {
         None
     }
 
-    async fn make_executable(&self, path: &Path) -> Result<(), String> {
+    async fn make_executable(&self, _path: &Path) -> Result<(), String> {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let mut perms = tokio::fs::metadata(path)
+            let mut perms = tokio::fs::metadata(_path)
                 .await
-                .map_err(|e| format!("metadata {:?}: {}", path, e))?
+                .map_err(|e| format!("metadata {:?}: {}", _path, e))?
                 .permissions();
             perms.set_mode(perms.mode() | 0o755);
-            tokio::fs::set_permissions(path, perms)
+            tokio::fs::set_permissions(_path, perms)
                 .await
-                .map_err(|e| format!("chmod {:?}: {}", path, e))?;
+                .map_err(|e| format!("chmod {:?}: {}", _path, e))?;
         }
 
         // Remove macOS quarantine
         #[cfg(target_os = "macos")]
         {
-            let s = path.to_string_lossy().to_string();
+            let s = _path.to_string_lossy().to_string();
             let _ = tokio::process::Command::new("xattr")
                 .args(["-d", "com.apple.quarantine", &s])
                 .output()
