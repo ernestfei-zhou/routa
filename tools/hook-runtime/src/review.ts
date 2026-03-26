@@ -2,6 +2,8 @@ import { isAiAgent, isInteractive } from "./ai.js";
 import { runCommand } from "./process.js";
 import { promptYesNo } from "./prompt.js";
 
+const REVIEW_UNAVAILABLE_BYPASS_ENV = "ROUTA_ALLOW_REVIEW_UNAVAILABLE";
+
 type ReviewTrigger = {
   action: string;
   name: string;
@@ -116,6 +118,10 @@ async function parseDecision(report: ReviewReport, base: string, outputMode: "hu
   return buildResultBase(base, report, "passed", true, false, message);
 }
 
+function shouldBypassUnavailableReviewGate(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env[REVIEW_UNAVAILABLE_BYPASS_ENV] === "1";
+}
+
 export async function runReviewTriggerPhase(outputMode: "human" | "jsonl" = "human"): Promise<ReviewPhaseResult> {
   const reviewBase = await resolveReviewBase();
   if (outputMode === "human") {
@@ -146,8 +152,19 @@ export async function runReviewTriggerPhase(outputMode: "human" | "jsonl" = "hum
 
   const report = parseReport(review.output);
   if (review.exitCode !== 3) {
-    const message = "Unable to evaluate review triggers. Continuing without review gate.";
-    return buildResultBase(reviewBase, report, "unavailable", true, false, message);
+    if (shouldBypassUnavailableReviewGate()) {
+      const message = `${REVIEW_UNAVAILABLE_BYPASS_ENV}=1 set, bypassing unavailable review gate.`;
+      if (outputMode === "human") {
+        console.log(message);
+        console.log("");
+      }
+      return buildResultBase(reviewBase, report, "unavailable", true, true, message);
+    }
+
+    const message =
+      `Unable to evaluate review triggers. Blocking push because the review gate could not be evaluated. ` +
+      `Fix the review environment and rerun, or set ${REVIEW_UNAVAILABLE_BYPASS_ENV}=1 to bypass intentionally.`;
+    return buildResultBase(reviewBase, report, "unavailable", false, false, message);
   }
 
   if (outputMode === "human") {
