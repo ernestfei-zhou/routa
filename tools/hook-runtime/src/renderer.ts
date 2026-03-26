@@ -258,8 +258,8 @@ class PlainHumanMetricReporter implements HumanMetricReporter {
     console.log("");
   }
 
-  onMetricStart(metric: HookMetric, index: number, total: number): void {
-    console.log(`[fitness ${index}/${total}] ${metric.name} RUN`);
+  onMetricStart(): void {
+    return;
   }
 
   onMetricOutput(): void {}
@@ -276,8 +276,9 @@ class PlainHumanMetricReporter implements HumanMetricReporter {
 export function createHumanMetricReporter(
   metrics: HookMetric[],
   options: ReporterOptions,
+  verbose = false,
 ): HumanMetricReporter {
-  if (options.stream?.isTTY) {
+  if (verbose && options.stream?.isTTY) {
     return new DynamicHumanMetricReporter(metrics, options);
   }
 

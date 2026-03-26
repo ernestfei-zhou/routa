@@ -80,6 +80,7 @@ export function parseArgs(argv: string[]): CliOptions {
     profilePhases: profileDefinition.phases,
     allowReviewUnavailable: process.env.ROUTA_ALLOW_REVIEW_UNAVAILABLE === "1",
     tailLines: parsePositiveInt(process.env.ROUTA_HOOK_RUNTIME_TAIL_LINES, DEFAULT_TAIL_LINES),
+    verboseMetrics: process.env.ROUTA_HOOK_RUNTIME_VERBOSE_METRICS === "1",
   };
   let hasExplicitMetrics = Boolean(process.env.ROUTA_HOOK_RUNTIME_METRICS);
 
@@ -166,6 +167,14 @@ export function parseArgs(argv: string[]): CliOptions {
     }
     if (arg.startsWith("--tail-lines=")) {
       options.tailLines = parsePositiveInt(arg.slice("--tail-lines=".length), options.tailLines);
+      continue;
+    }
+    if (arg === "--verbose-metrics") {
+      options.verboseMetrics = true;
+      continue;
+    }
+    if (arg === "--concise-metrics") {
+      options.verboseMetrics = false;
       continue;
     }
   }

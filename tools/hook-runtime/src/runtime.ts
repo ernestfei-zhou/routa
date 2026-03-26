@@ -42,6 +42,7 @@ export type HookRuntimeOptions = {
   outputMode: HookRuntimeOutputMode;
   profile: HookProfileName;
   tailLines: number;
+  verboseMetrics?: boolean;
 };
 
 export type HookPhaseResult = {
@@ -415,7 +416,7 @@ async function runFitnessPhase(
           concurrency: options.jobs,
           stream: process.stdout,
           tailLines: options.tailLines,
-        })
+        }, options.verboseMetrics)
       : null;
   const startedAt = Date.now();
   let reporterClosed = false;
