@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
+import path from "node:path";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 import { isAiAgent } from "./ai.js";
 import {
@@ -416,7 +418,7 @@ async function runReviewPhase(dryRun: boolean, outputMode: "human" | "jsonl"): P
   return result;
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   const startedAt = Date.now();
 
@@ -451,24 +453,27 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error) => {
-  const { outputMode } = parseArgs(process.argv.slice(2));
+export function handleCliError(error: unknown, argv: string[] = process.argv.slice(2)): void {
+  const { outputMode } = parseArgs(argv);
+  const message = error instanceof Error ? error.message : String(error);
   emitEvent(outputMode, {
     event: "hook.error",
     status: "failed",
-    message: error instanceof Error ? error.message : String(error),
+    message,
   });
+
   if (outputMode === "human") {
-    const message = error instanceof Error ? error.message : String(error);
-    if (error instanceof Error && message.includes("CLAUDE")) {
-      console.error(message);
-      return;
-    }
-    console.error(error instanceof Error ? error.message : String(error));
-    return;
+    console.error(message);
   }
-  if (error instanceof Error && error.message.includes("CLAUDE")) {
-    return;
-  }
-  process.exit(1);
-});
+
+  process.exitCode = 1;
+}
+
+const modulePath = path.resolve(fileURLToPath(import.meta.url));
+const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : null;
+
+if (invokedPath === modulePath) {
+  void main().catch((error) => {
+    handleCliError(error);
+  });
+}
