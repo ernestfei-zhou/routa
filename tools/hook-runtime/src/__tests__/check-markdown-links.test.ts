@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import path from "node:path";
 import { mkdtempSync, rmSync, writeFileSync as writeTempFileSync } from "node:fs";
@@ -6,6 +6,15 @@ import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
 
 import { runMarkdownLinksCheck } from "../check-markdown-links.js";
+
+beforeEach(() => {
+  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function writeFakeCurl(binDir: string): { restore: () => void } {
   const originalPath = process.env.PATH ?? "";

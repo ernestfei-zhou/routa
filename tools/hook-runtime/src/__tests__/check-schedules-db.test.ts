@@ -1,10 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import path from "node:path";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 
 import { loadEnvFile, runCheckSchedulesDb, type ScheduleDbQueryRunner } from "../check-schedules-db.js";
+
+beforeEach(() => {
+  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function writeEnvFile(dir: string, content: string): string {
   const envPath = path.join(dir, ".env.local");

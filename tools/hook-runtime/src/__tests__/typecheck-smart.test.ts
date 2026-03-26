@@ -1,10 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import path from "node:path";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 
 import { runTypecheckSmart } from "../typecheck-smart.js";
+
+beforeEach(() => {
+  vi.spyOn(console, "log").mockImplementation(() => {});
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function writeFakeNpx(binDir: string, mode: "pass" | "stale" | "fail"): { restore: () => void } {
   const originalPath = process.env.PATH ?? "";

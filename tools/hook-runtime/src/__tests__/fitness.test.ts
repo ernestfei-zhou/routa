@@ -12,7 +12,7 @@ vi.mock("../process.js", async () => {
   };
 });
 
-import { runMetric } from "../fitness.js";
+import { runMetric, summarizeFailures } from "../fitness.js";
 
 function buildMetric(overrides: Partial<HookMetric> = {}): HookMetric {
   return {
@@ -51,5 +51,30 @@ describe("runMetric", () => {
     const result = await runMetric(buildMetric());
 
     expect(result.passed).toBe(true);
+  });
+});
+
+describe("summarizeFailures", () => {
+  it("prefers vitest failed test names over generic error lines", () => {
+    const results = [
+      {
+        durationMs: 25,
+        exitCode: 1,
+        metric: buildMetric({ name: "ts_test_pass" }),
+        output: [
+          "stdout | some.test.ts > prints an expected failure log",
+          "Type error: Something else",
+          "",
+          " FAIL  tools/hook-runtime/src/__tests__/actual-broken.test.ts > actual broken case",
+          "AssertionError: expected true to be false",
+        ].join("\n"),
+        passed: false,
+      },
+    ];
+
+    const [summary] = summarizeFailures(results);
+
+    expect(summary?.outputTail).toContain("FAIL  tools/hook-runtime/src/__tests__/actual-broken.test.ts > actual broken case");
+    expect(summary?.outputTail).not.toContain("Type error: Something else");
   });
 });

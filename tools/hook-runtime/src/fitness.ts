@@ -47,10 +47,41 @@ function splitOutputLines(rawOutput: string): string[] {
     .filter(Boolean);
 }
 
+function extractVitestFailureContext(lines: string[]): string[] {
+  const failedTestHeaders = lines.filter((line) => /^FAIL\s+/.test(line));
+  if (failedTestHeaders.length > 0) {
+    return failedTestHeaders;
+  }
+
+  const failedSummaryIndex = lines.findIndex((line) => /^Failed Tests\s+\d+/.test(line));
+  if (failedSummaryIndex === -1) {
+    return [];
+  }
+
+  const vitestFailureLines: string[] = [];
+  for (let index = failedSummaryIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (/^(Test Files|Tests|Start at|Duration)\b/.test(line)) {
+      break;
+    }
+    if (/^[\u2500-\u257f]+$/.test(line)) {
+      continue;
+    }
+    vitestFailureLines.push(line);
+  }
+
+  return vitestFailureLines.filter((line) => line.length > 0);
+}
+
 function extractFailureContext(rawOutput: string): string {
   const lines = splitOutputLines(rawOutput);
   if (lines.length === 0) {
     return "";
+  }
+
+  const vitestFailureContext = extractVitestFailureContext(lines);
+  if (vitestFailureContext.length > 0) {
+    return tailOutput(vitestFailureContext.join("\n"), 1500).trim();
   }
 
   const failureHints =
