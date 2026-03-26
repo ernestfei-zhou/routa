@@ -23,6 +23,7 @@ export { formatReviewPhaseLabel } from "./runtime.js";
 
 type CliOptions = HookRuntimeOptions & {
   profilePhases: readonly RuntimePhase[];
+  allowReviewUnavailable: boolean;
 };
 
 function parseOutputMode(raw: string | undefined): "human" | "jsonl" {
@@ -77,6 +78,7 @@ export function parseArgs(argv: string[]): CliOptions {
     outputMode: parseOutputMode(process.env.ROUTA_HOOK_RUNTIME_OUTPUT_MODE),
     profile: requestedProfile,
     profilePhases: profileDefinition.phases,
+    allowReviewUnavailable: process.env.ROUTA_ALLOW_REVIEW_UNAVAILABLE === "1",
     tailLines: parsePositiveInt(process.env.ROUTA_HOOK_RUNTIME_TAIL_LINES, DEFAULT_TAIL_LINES),
   };
   let hasExplicitMetrics = Boolean(process.env.ROUTA_HOOK_RUNTIME_METRICS);
@@ -106,6 +108,14 @@ export function parseArgs(argv: string[]): CliOptions {
     }
     if (arg === "--fix") {
       options.autoFix = true;
+      continue;
+    }
+    if (arg === "--allow-review-unavailable" || arg === "--allow-review-scope-mismatch") {
+      options.allowReviewUnavailable = true;
+      continue;
+    }
+    if (arg === "--disallow-review-unavailable") {
+      options.allowReviewUnavailable = false;
       continue;
     }
     if (arg === "--dry-run") {
@@ -195,6 +205,9 @@ export function handleCliError(error: unknown, argv: string[] = process.argv.sli
 
 export async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
+  if (options.allowReviewUnavailable) {
+    process.env.ROUTA_ALLOW_REVIEW_UNAVAILABLE = "1";
+  }
   await runRuntime(options, options.profile);
 }
 

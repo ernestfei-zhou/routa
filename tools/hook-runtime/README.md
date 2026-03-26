@@ -209,6 +209,7 @@ pnpm exec tsx tools/hook-runtime/src/cli.ts --tail-lines 20
 - `--no-fail-fast`：关闭 fail-fast，保留全部执行结果
 - `--jsonl` / `--output jsonl`：机器可读输出
 - `run --profile <pre-push|pre-commit|local-validate>`：显示直接运行时入口（同 `hook` 适配器的 profile 入口）
+- `--allow-review-unavailable`：在当前目录不在 git 根目录或无法运行 review 时，直接允许继续（与 `ROUTA_ALLOW_REVIEW_UNAVAILABLE=1` 等价）
 - `--dry-run`：不执行真实检查
 - `--fix`：失败后提示触发 Claude 修复（交互）
 - `--tail-lines <n>`：失败输出截断长度控制

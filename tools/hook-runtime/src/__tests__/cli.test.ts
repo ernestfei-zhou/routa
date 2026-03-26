@@ -6,6 +6,7 @@ describe("handleCliError", () => {
   const originalOutputMode = process.env.ROUTA_HOOK_RUNTIME_OUTPUT_MODE;
   const originalMetrics = process.env.ROUTA_HOOK_RUNTIME_METRICS;
   const originalProfile = process.env.ROUTA_HOOK_RUNTIME_PROFILE;
+  const originalReviewUnavailable = process.env.ROUTA_ALLOW_REVIEW_UNAVAILABLE;
 
   afterEach(() => {
     process.exitCode = undefined;
@@ -23,6 +24,11 @@ describe("handleCliError", () => {
       delete process.env.ROUTA_HOOK_RUNTIME_PROFILE;
     } else {
       process.env.ROUTA_HOOK_RUNTIME_PROFILE = originalProfile;
+    }
+    if (originalReviewUnavailable === undefined) {
+      delete process.env.ROUTA_ALLOW_REVIEW_UNAVAILABLE;
+    } else {
+      process.env.ROUTA_ALLOW_REVIEW_UNAVAILABLE = originalReviewUnavailable;
     }
     vi.restoreAllMocks();
   });
@@ -103,6 +109,13 @@ describe("parseArgs", () => {
 
     expect(options.profile).toBe("local-validate");
     expect(options.profilePhases).toEqual(["fitness", "review"]);
+  });
+
+  it("supports --allow-review-unavailable to bypass review scope gating", () => {
+    const options = parseArgs(["run", "--allow-review-unavailable", "--profile", "local-validate"]);
+
+    expect(options.allowReviewUnavailable).toBe(true);
+    expect(process.env.ROUTA_ALLOW_REVIEW_UNAVAILABLE).toBeUndefined();
   });
 });
 
