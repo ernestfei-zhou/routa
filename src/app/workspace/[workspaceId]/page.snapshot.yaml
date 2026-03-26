@@ -1,150 +1,85 @@
 # page-id: workspace
 # route: /workspace/default
 # source-page: src/app/workspace/[workspaceId]/page.tsx
-# url: http://localhost:3000/workspace/default
+# url: http://127.0.0.1:3000/workspace/default
 # title: Routa - Multi-Agent Coordinator
-# generated-at: 2026-03-25T05:36:50.925Z
-# generator: playwright-cli
-- generic [active] [ref=e1]:
-  - generic [ref=e2]:
-    - banner [ref=e3]:
-      - generic [ref=e5]:
-        - img "Routa" [ref=e6]
-        - generic [ref=e7]: Routa
-      - button "..." [ref=e10]:
-        - img [ref=e11]
-        - generic [ref=e13]: ...
-        - img [ref=e14]
-    - generic [ref=e17]:
-      - complementary [ref=e18]:
-        - navigation [ref=e19]:
-          - link "Home" [ref=e20] [cursor=pointer]:
-            - /url: /
-            - img [ref=e21]
-          - link "Overview" [ref=e23] [cursor=pointer]:
-            - /url: /workspace/default
-            - img [ref=e25]
-          - link "Kanban" [ref=e27] [cursor=pointer]:
-            - /url: /workspace/default/kanban
-            - img [ref=e28]
-          - link "Team" [ref=e30] [cursor=pointer]:
-            - /url: /workspace/default/team
-            - img [ref=e31]
-          - link "Traces" [ref=e36] [cursor=pointer]:
-            - /url: /traces
-            - img [ref=e37]
-        - link "Settings" [ref=e41] [cursor=pointer]:
-          - /url: /settings
-          - img [ref=e42]
-      - main [ref=e45]:
-        - generic [ref=e48]:
-          - generic [ref=e49]:
-            - generic [ref=e50]:
-              - generic [ref=e51]:
-                - img [ref=e52]
-                - heading "Default Workspace" [level=1] [ref=e54]
-              - generic [ref=e55]:
-                - generic [ref=e56]:
-                  - generic [ref=e57]: "Workspace:"
-                  - code [ref=e58]: default
-                - generic [ref=e59]:
-                  - generic [ref=e60]: No board
-                  - generic [ref=e61]: /
-                  - generic [ref=e62]: No recent session
-                - generic [ref=e63]:
-                  - generic [ref=e64]: Standby
-                  - generic [ref=e65]: /
-                  - generic [ref=e66]: No pending tasks
-            - generic [ref=e67]:
-              - button "Refresh" [ref=e68]
-              - button "Team" [ref=e69]
-              - button "Kanban" [ref=e70]
-              - button "Traces" [ref=e71]
-          - generic [ref=e72]:
-            - generic [ref=e73]:
-              - generic [ref=e74]:
-                - generic [ref=e75]: Sessions
-                - generic [ref=e76]: "0"
-              - generic [ref=e77]: Workspace aggregate
-            - generic [ref=e78]:
-              - generic [ref=e79]:
-                - generic [ref=e80]: Agents
-                - generic [ref=e81]: "0"
-              - generic [ref=e82]: Workspace aggregate
-            - generic [ref=e83]:
-              - generic [ref=e84]:
-                - generic [ref=e85]: Tasks
-                - generic [ref=e86]: "0"
-              - generic [ref=e87]: Workspace aggregate
-            - generic [ref=e88]:
-              - generic [ref=e89]:
-                - generic [ref=e90]: BG Tasks
-                - generic [ref=e91]: "0"
-              - generic [ref=e92]: Workspace aggregate
-          - generic [ref=e93]:
-            - generic [ref=e94]:
-              - generic [ref=e96]:
-                - generic [ref=e97]: Overview
-                - generic [ref=e98]: Recovery, routing, and workspace context.
-              - generic [ref=e100]:
-                - generic [ref=e101]:
-                  - generic [ref=e102]: Primary surface
-                  - generic [ref=e103]: Kanban board
-                  - generic [ref=e104]: Kanban is the canonical work surface for routing, queue supervision, and lane-based execution.
-                  - generic [ref=e105]:
-                    - generic [ref=e106]: 0 boards
-                    - generic [ref=e107]: 0 active tasks
-                    - generic [ref=e108]: 0 background runs
-                  - button "Go to board" [ref=e109]
-                - generic [ref=e110]:
-                  - generic [ref=e111]: Latest recovery point
-                  - generic [ref=e112]: No recent session
-                  - generic [ref=e113]: Create a new requirement from the homepage launcher, then return here for context and recovery.
-                  - generic [ref=e114]:
-                    - generic [ref=e115]: 0 recent sessions
-                    - generic [ref=e116]: 0 notes
-                    - generic [ref=e117]: 0 agents
-                  - button "Back to launcher" [ref=e118]
-            - generic [ref=e119]:
-              - generic [ref=e120]:
-                - generic [ref=e122]:
-                  - generic [ref=e123]: Activity
-                  - generic [ref=e124]: Background runs and workspace-level execution telemetry.
-                - generic [ref=e125]:
-                  - generic [ref=e126]:
-                    - heading "Background Task Queue" [level=2] [ref=e127]
-                    - generic [ref=e128]:
-                      - button "Refresh" [ref=e129]:
-                        - img [ref=e130]
-                        - text: Refresh
-                      - button "Refresh now" [ref=e132]:
-                        - img [ref=e133]
-                      - button "Dispatch Task" [ref=e135]:
-                        - img [ref=e136]
-                        - text: Dispatch Task
-                  - generic [ref=e138]:
-                    - img [ref=e139]
-                    - paragraph [ref=e141]: No background tasks yet.
-                    - paragraph [ref=e142]: Click “Dispatch Task” to enqueue one.
-              - generic [ref=e143]:
-                - generic [ref=e145]:
-                  - generic [ref=e146]: Notes
-                  - generic [ref=e147]: Workspace memory and task-level notes in parallel.
-                - generic [ref=e148]:
-                  - generic [ref=e149]:
-                    - button "Workspace Notes" [ref=e150]
-                    - button "Task Notes" [ref=e151]
-                  - generic [ref=e152]:
-                    - generic [ref=e153]:
-                      - generic [ref=e154]:
-                        - heading "Workspace Notes" [level=2] [ref=e155]
-                        - paragraph [ref=e156]: "Free-form context documents for workspace: default"
-                      - button "New Note" [ref=e158]:
-                        - img [ref=e159]
-                        - text: New Note
-                    - generic [ref=e161]:
-                      - img [ref=e162]
-                      - paragraph [ref=e164]: No workspace notes yet
-                      - paragraph [ref=e165]: Create free-form context documents for this workspace.
-  - button "Open Next.js Dev Tools" [ref=e171] [cursor=pointer]:
-    - img [ref=e172]
+# generated-at: 2026-03-26T12:21:53.918Z
+# generator: playwright
+# playwright-version: 1.58.2
+- banner:
+  - img "Routa"
+  - text: Routa
+  - button "Default Workspace":
+    - img
+    - text: Default Workspace
+    - img
+- complementary:
+  - navigation:
+    - link "Home":
+      - /url: /
+      - img
+    - link "Overview":
+      - /url: /workspace/default
+      - img
+    - link "Kanban":
+      - /url: /workspace/default/kanban
+      - img
+    - link "Team":
+      - /url: /workspace/default/team
+      - img
+    - link "Traces":
+      - /url: /traces
+      - img
+  - link "Settings":
+    - /url: /settings
+    - img
+- main:
+  - img
+  - heading "Default Workspace" [level=1]
+  - text: "Workspace:"
+  - code: default
+  - text: Default Workspace Board / Snapshot Fixture Session Standby / 1 in flight
+  - button "Refresh"
+  - button "Team"
+  - button "Kanban"
+  - button "Traces"
+  - text: Sessions 1 Workspace aggregate Agents 0 Workspace aggregate Tasks 2 1 pending BG Tasks 0 Workspace aggregate Overview Recovery, routing, and workspace context. Primary surface Default Workspace Board Kanban is the canonical work surface for routing, queue supervision, and lane-based execution. 1 board 1 active tasks 0 background runs
+  - button "Go to board"
+  - text: Latest recovery point Snapshot Fixture Session Recover the latest session from this workspace or continue task execution from the board. 1 recent sessions 0 notes 0 agents
+  - button "Open latest session"
+  - text: Recent sessions Recover execution context without reopening the Kanban surface.
+  - heading "Recent Sessions" [level=3]
+  - text: "1"
+  - button "Refresh":
+    - img
+  - button "Show All":
+    - text: Show All
+    - img
+  - img
+  - text: Snapshot Fixture Session crafter·opencode <relative-time>
+  - img
+  - text: Activity Background runs and workspace-level execution telemetry.
+  - heading "Background Task Queue" [level=2]
+  - button "Refresh":
+    - img
+    - text: Refresh
+  - button "Refresh now":
+    - img
+  - button "Dispatch Task":
+    - img
+    - text: Dispatch Task
+  - img
+  - paragraph: No background tasks yet.
+  - paragraph: Click “Dispatch Task” to enqueue one.
+  - text: Notes Workspace memory and task-level notes in parallel.
+  - button "Workspace Notes"
+  - button "Task Notes"
+  - heading "Workspace Notes" [level=2]
+  - paragraph: "Free-form context documents for workspace: default"
+  - button "New Note":
+    - img
+    - text: New Note
+  - img
+  - paragraph: No workspace notes yet
+  - paragraph: Create free-form context documents for this workspace.
+- alert
