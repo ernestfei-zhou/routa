@@ -254,6 +254,110 @@ criteria:
     expect(textReport).toContain("Blocking Gaps To Assisted");
   });
 
+  it("blocks next-level readiness behind current-level debt", async () => {
+    const repoRoot = mkdtempSync(path.join(tmpdir(), "harness-fluency-readiness-"));
+    mkdirSync(path.join(repoRoot, "docs", "fitness"), { recursive: true });
+
+    const modelPath = path.join(repoRoot, "docs", "fitness", "model.yaml");
+    const snapshotPath = path.join(repoRoot, "docs", "fitness", "latest.json");
+
+    writeFileSync(path.join(repoRoot, "README.md"), "# contract\n", "utf8");
+    writeJson(path.join(repoRoot, "package.json"), {
+      scripts: {
+        lint: "eslint .",
+        "test:run": "vitest run",
+      },
+    });
+    writeFileSync(
+      modelPath,
+      `version: 1
+levels:
+  - id: awareness
+    name: Awareness
+  - id: assisted
+    name: Assisted
+dimensions:
+  - id: collaboration
+    name: Collaboration
+criteria:
+  - id: collaboration.awareness.contract
+    level: awareness
+    dimension: collaboration
+    weight: 1
+    critical: true
+    why_it_matters: contract
+    recommended_action: add contract
+    evidence_hint: README.md
+    detector:
+      type: file_exists
+      path: README.md
+  - id: collaboration.awareness.agent_doc
+    level: awareness
+    dimension: collaboration
+    weight: 1
+    critical: false
+    why_it_matters: agent doc
+    recommended_action: add AGENTS
+    evidence_hint: AGENTS.md
+    detector:
+      type: file_exists
+      path: AGENTS.md
+  - id: collaboration.assisted.test_script
+    level: assisted
+    dimension: collaboration
+    weight: 1
+    critical: true
+    why_it_matters: tests
+    recommended_action: add tests
+    evidence_hint: package.json scripts.test:run
+    detector:
+      type: json_path_exists
+      path: package.json
+      jsonPath: [scripts, "test:run"]
+  - id: collaboration.assisted.lint_script
+    level: assisted
+    dimension: collaboration
+    weight: 1
+    critical: false
+    why_it_matters: lint
+    recommended_action: add lint
+    evidence_hint: package.json scripts.lint
+    detector:
+      type: json_path_exists
+      path: package.json
+      jsonPath: [scripts, lint]
+`,
+      "utf8",
+    );
+
+    const report = await evaluateHarnessFluency({
+      repoRoot,
+      modelPath,
+      snapshotPath,
+      compareLast: false,
+      save: false,
+    });
+
+    expect(report.overallLevel).toBe("awareness");
+    expect(report.currentLevelReadiness).toBe(0.5);
+    expect(report.nextLevel).toBe("assisted");
+    expect(report.nextLevelReadiness).toBeNull();
+    expect(report.blockingTargetLevel).toBe("awareness");
+    expect(report.blockingCriteria).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "collaboration.awareness.agent_doc",
+          status: "fail",
+        }),
+      ]),
+    );
+
+    const textReport = formatTextReport(report);
+    expect(textReport).toContain("Current Level Readiness: 50%");
+    expect(textReport).toContain("Next Level Readiness: Blocked until Awareness is stable");
+    expect(textReport).toContain("Blocking Gaps To Stabilize Awareness");
+  });
+
   it("covers remaining detector types with safe command execution", async () => {
     const repoRoot = mkdtempSync(path.join(tmpdir(), "harness-fluency-detectors-"));
     mkdirSync(path.join(repoRoot, "docs", "fitness"), { recursive: true });

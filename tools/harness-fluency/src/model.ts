@@ -174,9 +174,12 @@ export type HarnessFluencyReport = {
   snapshotPath: string;
   overallLevel: string;
   overallLevelName: string;
+  currentLevelReadiness: number;
   nextLevel: string | null;
   nextLevelName: string | null;
   nextLevelReadiness: number | null;
+  blockingTargetLevel: string | null;
+  blockingTargetLevelName: string | null;
   dimensions: Record<string, DimensionResult>;
   cells: readonly CellResult[];
   criteria: readonly CriterionResult[];

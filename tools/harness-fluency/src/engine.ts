@@ -590,6 +590,45 @@ function collectRecommendations(criteria: readonly CriterionResult[]): Recommend
     }));
 }
 
+function averageCellScores(
+  modelDimensions: readonly { id: string }[],
+  cellById: ReadonlyMap<string, CellResult>,
+  levelId: string,
+): number {
+  return (
+    modelDimensions.reduce((total, dimension) => {
+      return total + (cellById.get(buildCellId(levelId, dimension.id))?.score ?? 0);
+    }, 0) / modelDimensions.length
+  );
+}
+
+function collectFailingCriteriaForLevel(
+  modelDimensions: readonly { id: string }[],
+  cellById: ReadonlyMap<string, CellResult>,
+  levelId: string,
+): CriterionResult[] {
+  return modelDimensions.flatMap((dimension) => {
+    const cell = cellById.get(buildCellId(levelId, dimension.id));
+    if (!cell || cell.passed) {
+      return [];
+    }
+
+    return cell.criteria.filter((criterion) => criterion.status === "fail");
+  });
+}
+
+function collectFailingCriteriaForNextLevel(
+  modelDimensions: readonly { id: string }[],
+  cellById: ReadonlyMap<string, CellResult>,
+  levelId: string,
+): CriterionResult[] {
+  return modelDimensions.flatMap((dimension) => {
+    return cellById
+      .get(buildCellId(levelId, dimension.id))
+      ?.criteria.filter((criterion) => criterion.status === "fail") ?? [];
+  });
+}
+
 async function loadPreviousSnapshot(snapshotPath: string): Promise<HarnessFluencyReport | null> {
   if (!(await pathExists(snapshotPath))) {
     return null;
@@ -741,21 +780,17 @@ export async function evaluateHarnessFluency(options: EvaluateOptions): Promise<
   const overallLevelIndex = Math.min(...Object.values(dimensions).map((dimension) => dimension.levelIndex));
   const overallLevel = model.levels[overallLevelIndex];
   const nextLevel = model.levels[overallLevelIndex + 1] ?? null;
+  const currentLevelReadiness = averageCellScores(model.dimensions, cellById, overallLevel.id);
+  const currentLevelDebt = collectFailingCriteriaForLevel(model.dimensions, cellById, overallLevel.id);
   const nextLevelReadiness =
-    nextLevel === null
-      ? null
-      : model.dimensions.reduce((total, dimension) => {
-          return total + (cellById.get(buildCellId(nextLevel.id, dimension.id))?.score ?? 0);
-        }, 0) / model.dimensions.length;
-
+    nextLevel === null || currentLevelDebt.length > 0 ? null : averageCellScores(model.dimensions, cellById, nextLevel.id);
+  const blockingTargetLevel = currentLevelDebt.length > 0 ? overallLevel : nextLevel;
   const blockingCriteria =
-    nextLevel === null
+    blockingTargetLevel === null
       ? []
-      : model.dimensions.flatMap((dimension) => {
-          return cellById
-            .get(buildCellId(nextLevel.id, dimension.id))
-            ?.criteria.filter((criterion) => criterion.status === "fail") ?? [];
-        });
+      : blockingTargetLevel.id === overallLevel.id
+        ? currentLevelDebt
+        : collectFailingCriteriaForNextLevel(model.dimensions, cellById, blockingTargetLevel.id);
 
   const report: HarnessFluencyReport = {
     modelVersion: model.version,
@@ -766,9 +801,12 @@ export async function evaluateHarnessFluency(options: EvaluateOptions): Promise<
     snapshotPath: path.resolve(options.snapshotPath),
     overallLevel: overallLevel.id,
     overallLevelName: overallLevel.name,
+    currentLevelReadiness,
     nextLevel: nextLevel?.id ?? null,
     nextLevelName: nextLevel?.name ?? null,
     nextLevelReadiness,
+    blockingTargetLevel: blockingTargetLevel?.id ?? null,
+    blockingTargetLevelName: blockingTargetLevel?.name ?? null,
     dimensions,
     cells,
     criteria: criteriaResults.sort((left, right) => left.id.localeCompare(right.id)),
@@ -788,6 +826,15 @@ export async function evaluateHarnessFluency(options: EvaluateOptions): Promise<
 }
 
 export function formatTextReport(report: HarnessFluencyReport): string {
+  const nextLevelReadinessLine =
+    report.nextLevelName && report.nextLevelReadiness === null && report.blockingTargetLevel === report.overallLevel
+      ? `Next Level Readiness: Blocked until ${report.overallLevelName} is stable`
+      : `Next Level Readiness: ${formatPercent(report.nextLevelReadiness)}`;
+  const blockingHeader = report.blockingTargetLevelName
+    ? report.blockingTargetLevel === report.overallLevel
+      ? `Blocking Gaps To Stabilize ${report.blockingTargetLevelName}:`
+      : `Blocking Gaps To ${report.blockingTargetLevelName}:`
+    : "Blocking Gaps: none";
   const lines = [
     "HARNESS FLUENCY REPORT",
     "",
@@ -795,8 +842,9 @@ export function formatTextReport(report: HarnessFluencyReport): string {
     `Profile: ${report.profile}`,
     `Model Version: ${report.modelVersion}`,
     `Overall Level: ${report.overallLevelName}`,
+    `Current Level Readiness: ${formatPercent(report.currentLevelReadiness)}`,
     `Next Level: ${report.nextLevelName ?? "Reached top level"}`,
-    `Next Level Readiness: ${formatPercent(report.nextLevelReadiness)}`,
+    nextLevelReadinessLine,
     "",
     "Dimensions:",
   ];
@@ -805,8 +853,8 @@ export function formatTextReport(report: HarnessFluencyReport): string {
     lines.push(`- ${dimension.name}: ${dimension.levelName} (${formatPercent(dimension.score)})`);
   }
 
-  lines.push("", report.nextLevelName ? `Blocking Gaps To ${report.nextLevelName}:` : "Blocking Gaps: none");
-  if (report.nextLevelName) {
+  lines.push("", blockingHeader);
+  if (report.blockingTargetLevelName) {
     if (report.blockingCriteria.length === 0) {
       lines.push("- None");
     } else {
