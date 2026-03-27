@@ -258,6 +258,43 @@ describe("A2AOutboundClient", () => {
       expect(mockFetch).toHaveBeenCalledTimes(1); // Only the RPC call, no card fetch
     });
 
+    it("treats /card endpoints as Agent Card URLs", async () => {
+      let callCount = 0;
+      mockFetch.mockImplementation(async () => {
+        callCount++;
+        if (callCount === 1) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => mockAgentCard,
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            jsonrpc: "2.0",
+            id: "test-id",
+            result: {
+              task: {
+                id: "task-card-url",
+                contextId: "ctx-card-url",
+                status: { state: "submitted", timestamp: "2024-01-01T00:00:00Z" },
+                history: [],
+              },
+            },
+          }),
+        };
+      });
+
+      const task = await client.sendMessage("https://example.com/api/a2a/card", "Via card endpoint");
+
+      expect(task.id).toBe("task-card-url");
+      expect(callCount).toBe(2);
+      expect(mockFetch.mock.calls[0]?.[0]).toBe("https://example.com/api/a2a/card");
+      expect(mockFetch.mock.calls[1]?.[0]).toBe(mockRpcEndpoint);
+    });
+
     it("forwards configured request headers to both agent-card and RPC requests", async () => {
       client = new A2AOutboundClient({
         timeout: 5000,

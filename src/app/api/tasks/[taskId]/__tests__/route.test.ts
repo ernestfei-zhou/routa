@@ -5,6 +5,7 @@ import { createTask, TaskStatus, type Task } from "@/core/models/task";
 const notify = vi.fn();
 const removeCardJob = vi.fn();
 const enqueueKanbanTaskSession = vi.fn();
+const processKanbanColumnTransition = vi.fn();
 const archiveActiveTaskSession = vi.fn<(task: Task) => void>();
 const prepareTaskForColumnChange = vi.fn<(fromColumnId?: string, task?: Task) => boolean>(() => false);
 let capturedEnqueueTask: Task | undefined;
@@ -63,6 +64,7 @@ vi.mock("@/core/kanban/workflow-orchestrator-singleton", () => ({
   enqueueKanbanTaskSession: (currentSystem: typeof system, params: { task: Task }) =>
     enqueueKanbanTaskSession(currentSystem, params),
   getKanbanSessionQueue: () => ({ removeCardJob }),
+  processKanbanColumnTransition: (...args: unknown[]) => processKanbanColumnTransition(...args),
 }));
 
 import { PATCH } from "../route";
@@ -94,6 +96,7 @@ describe("/api/tasks/[taskId] PATCH", () => {
         queued: false,
       };
     });
+    processKanbanColumnTransition.mockResolvedValue(undefined);
   });
 
   it("clears the active queue entry before rerunning a task trigger", async () => {
@@ -206,5 +209,54 @@ describe("/api/tasks/[taskId] PATCH", () => {
     expect(data.error).toContain("Verifier");
     expect(taskStore.save).not.toHaveBeenCalled();
     expect(enqueueKanbanTaskSession).not.toHaveBeenCalled();
+  });
+
+  it("processes non-dev automated column transitions before returning", async () => {
+    const existingTask = createTask({
+      id: "task-1",
+      title: "Move into todo",
+      objective: "Ensure todo automation is started eagerly.",
+      workspaceId: "workspace-1",
+      boardId: "board-1",
+      columnId: "backlog",
+      status: TaskStatus.PENDING,
+    });
+    taskStore.get.mockResolvedValue(existingTask);
+    system.kanbanBoardStore.get = vi.fn().mockResolvedValue({
+      id: "board-1",
+      columns: [
+        { id: "backlog", name: "Backlog", position: 0, stage: "backlog" },
+        {
+          id: "todo",
+          name: "Todo",
+          position: 1,
+          stage: "todo",
+          automation: {
+            enabled: true,
+            steps: [{ id: "todo-a2a", transport: "a2a", role: "CRAFTER" }],
+            transitionType: "entry",
+          },
+        },
+      ],
+    });
+
+    const request = new NextRequest("http://localhost/api/tasks/task-1", {
+      method: "PATCH",
+      body: JSON.stringify({ columnId: "todo" }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const response = await PATCH(request, {
+      params: Promise.resolve({ taskId: "task-1" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(processKanbanColumnTransition).toHaveBeenCalledWith(system, expect.objectContaining({
+      cardId: "task-1",
+      boardId: "board-1",
+      fromColumnId: "backlog",
+      toColumnId: "todo",
+      toColumnName: "Todo",
+    }));
   });
 });

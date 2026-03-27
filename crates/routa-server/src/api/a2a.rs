@@ -10,8 +10,11 @@ use axum::{
     routing::get,
     Json, Router,
 };
+use chrono::Utc;
+use routa_core::models::task::{Task, TaskStatus};
 use serde::Deserialize;
 use std::convert::Infallible;
+use std::time::Duration;
 use tokio_stream::StreamExt as _;
 
 use crate::error::ServerError;
@@ -113,6 +116,7 @@ async fn rpc_handler(
     let result = match method {
         "method_list" => serde_json::json!({
             "methods": [
+                "SendMessage", "GetTask", "ListTasks", "CancelTask",
                 "method_list", "initialize",
                 "session/new", "session/prompt", "session/cancel", "session/load",
                 "list_agents", "create_agent", "delegate_task", "message_agent",
@@ -122,8 +126,112 @@ async fn rpc_handler(
         "initialize" => serde_json::json!({
             "protocolVersion": "0.3.0",
             "agentInfo": { "name": "routa-a2a-bridge", "version": "0.1.0" },
-            "capabilities": { "sessions": true, "coordination": true },
+            "capabilities": { "sessions": true, "coordination": true, "tasks": true },
         }),
+
+        "SendMessage" => {
+            let workspace_id = params
+                .get("metadata")
+                .and_then(|value| value.get("workspaceId"))
+                .and_then(|value| value.as_str())
+                .unwrap_or("default")
+                .to_string();
+            let prompt = extract_a2a_prompt(&params)?;
+            let task_id = uuid::Uuid::new_v4().to_string();
+            let context_id = params
+                .get("message")
+                .and_then(|value| value.get("contextId"))
+                .and_then(|value| value.as_str())
+                .map(ToOwned::to_owned)
+                .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+            let title = prompt
+                .lines()
+                .find(|line| !line.trim().is_empty())
+                .map(|line| truncate_text(line.trim(), 80))
+                .filter(|line| !line.is_empty())
+                .unwrap_or_else(|| "A2A task".to_string());
+
+            let task = Task::new(
+                task_id.clone(),
+                title,
+                prompt,
+                workspace_id,
+                Some(context_id.clone()),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            );
+            state.task_store.save(&task).await?;
+
+            let state_clone = state.clone();
+            let task_id_clone = task_id.clone();
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(200)).await;
+                let _ = state_clone
+                    .task_store
+                    .update_status(&task_id_clone, &TaskStatus::Completed)
+                    .await;
+            });
+
+            build_a2a_task_payload(&task, "submitted", Some(Utc::now().to_rfc3339()))
+        }
+
+        "GetTask" => {
+            let task_id = params
+                .get("id")
+                .and_then(|value| value.as_str())
+                .ok_or_else(|| ServerError::BadRequest("Missing task id".into()))?;
+            let task = state
+                .task_store
+                .get(task_id)
+                .await?
+                .ok_or_else(|| ServerError::NotFound(format!("Task {} not found", task_id)))?;
+            build_a2a_task_payload(
+                &task,
+                map_task_status_to_a2a_state(&task.status),
+                Some(task.updated_at.to_rfc3339()),
+            )
+        }
+
+        "ListTasks" => {
+            let workspace_id = params
+                .get("workspaceId")
+                .and_then(|value| value.as_str())
+                .unwrap_or("default");
+            let tasks = state.task_store.list_by_workspace(workspace_id).await?;
+            serde_json::json!({
+                "tasks": tasks
+                    .iter()
+                    .map(|task| {
+                        build_a2a_task_payload(
+                            task,
+                            map_task_status_to_a2a_state(&task.status),
+                            Some(task.updated_at.to_rfc3339()),
+                        )["task"].clone()
+                    })
+                    .collect::<Vec<_>>()
+            })
+        }
+
+        "CancelTask" => {
+            let task_id = params
+                .get("id")
+                .and_then(|value| value.as_str())
+                .ok_or_else(|| ServerError::BadRequest("Missing task id".into()))?;
+            state
+                .task_store
+                .update_status(task_id, &TaskStatus::Cancelled)
+                .await?;
+            let task = state
+                .task_store
+                .get(task_id)
+                .await?
+                .ok_or_else(|| ServerError::NotFound(format!("Task {} not found", task_id)))?;
+            build_a2a_task_payload(&task, "canceled", Some(task.updated_at.to_rfc3339()))
+        }
 
         "list_agents" => {
             let workspace_id = params
@@ -305,4 +413,72 @@ async fn update_task(
             serde_json::json!({ "updated": false, "id": id, "message": "No status change requested" }),
         ))
     }
+}
+
+fn extract_a2a_prompt(params: &serde_json::Value) -> Result<String, ServerError> {
+    let parts = params
+        .get("message")
+        .and_then(|value| value.get("parts"))
+        .and_then(|value| value.as_array())
+        .ok_or_else(|| ServerError::BadRequest("Missing message parts".into()))?;
+    let prompt = parts
+        .iter()
+        .filter_map(|part| part.get("text").and_then(|value| value.as_str()))
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n");
+    if prompt.is_empty() {
+        return Err(ServerError::BadRequest(
+            "A2A message must contain at least one text part".into(),
+        ));
+    }
+    Ok(prompt)
+}
+
+fn truncate_text(text: &str, max_len: usize) -> String {
+    if text.chars().count() <= max_len {
+        return text.to_string();
+    }
+    text.chars().take(max_len).collect()
+}
+
+fn map_task_status_to_a2a_state(status: &TaskStatus) -> &'static str {
+    match status {
+        TaskStatus::Completed => "completed",
+        TaskStatus::Cancelled => "canceled",
+        TaskStatus::Blocked | TaskStatus::NeedsFix => "failed",
+        TaskStatus::Pending => "submitted",
+        TaskStatus::InProgress | TaskStatus::ReviewRequired => "working",
+    }
+}
+
+fn build_a2a_task_payload(
+    task: &Task,
+    state: &str,
+    timestamp: Option<String>,
+) -> serde_json::Value {
+    let timestamp = timestamp.unwrap_or_else(|| Utc::now().to_rfc3339());
+    serde_json::json!({
+        "task": {
+            "id": task.id,
+            "contextId": task.session_id,
+            "status": {
+                "state": state,
+                "timestamp": timestamp,
+            },
+            "history": [{
+                "messageId": format!("msg-{}", task.id),
+                "role": "user",
+                "parts": [{ "text": task.objective }],
+                "contextId": task.session_id,
+                "taskId": task.id,
+            }],
+            "artifacts": [],
+            "metadata": {
+                "workspaceId": task.workspace_id,
+                "columnId": task.column_id,
+            }
+        }
+    })
 }

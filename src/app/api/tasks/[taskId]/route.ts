@@ -10,7 +10,11 @@ import { getDefaultWorkspaceWorktreeRoot, getEffectiveWorkspaceMetadata } from "
 import type { ArtifactType } from "@/core/models/artifact";
 import { emitColumnTransition } from "@/core/kanban/column-transition";
 import { archiveActiveTaskSession, prepareTaskForColumnChange } from "@/core/kanban/task-session-transition";
-import { enqueueKanbanTaskSession, getKanbanSessionQueue } from "@/core/kanban/workflow-orchestrator-singleton";
+import {
+  enqueueKanbanTaskSession,
+  getKanbanSessionQueue,
+  processKanbanColumnTransition,
+} from "@/core/kanban/workflow-orchestrator-singleton";
 import { buildRemainingLaneStepsMessage, resolveCurrentLaneAutomationState } from "@/core/kanban/lane-automation-state";
 
 export const dynamic = "force-dynamic";
@@ -372,7 +376,7 @@ export async function PATCH(
       const fromColumn = board.columns.find((c) => c.id === existing.columnId);
       const toColumn = board.columns.find((c) => c.id === nextTask.columnId);
 
-      emitColumnTransition(system.eventBus, {
+      const transition = {
         cardId: nextTask.id,
         cardTitle: nextTask.title,
         boardId: nextTask.boardId,
@@ -381,7 +385,11 @@ export async function PATCH(
         toColumnId: nextTask.columnId,
         fromColumnName: fromColumn?.name,
         toColumnName: toColumn?.name,
-      });
+      };
+      if (!nextTask.triggerSessionId) {
+        await processKanbanColumnTransition(system, transition);
+      }
+      emitColumnTransition(system.eventBus, transition);
     }
   }
 

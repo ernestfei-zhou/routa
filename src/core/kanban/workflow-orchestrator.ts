@@ -232,8 +232,15 @@ export class KanbanWorkflowOrchestrator {
     return this.activeAutomations.get(cardId);
   }
 
+  async processColumnTransition(data: ColumnTransitionData): Promise<void> {
+    await this.handleColumnTransitionData(data);
+  }
+
   private async handleColumnTransition(event: AgentEvent): Promise<void> {
-    const data = event.data as unknown as ColumnTransitionData;
+    await this.handleColumnTransitionData(event.data as unknown as ColumnTransitionData);
+  }
+
+  private async handleColumnTransitionData(data: ColumnTransitionData): Promise<void> {
     const board = await this.kanbanBoardStore.get(data.boardId);
     if (!board) return;
     const resolved = resolveTransitionAutomation(board, data);
@@ -253,6 +260,16 @@ export class KanbanWorkflowOrchestrator {
         stage: targetColumn.stage,
       })) ?? getDefaultKanbanDevSessionSupervision()
       : getDisabledSupervisionConfig();
+
+    const existingAutomation = this.activeAutomations.get(data.cardId);
+    if (
+      existingAutomation
+      && existingAutomation.boardId === data.boardId
+      && existingAutomation.columnId === targetColumn.id
+      && (existingAutomation.status === "queued" || existingAutomation.status === "running")
+    ) {
+      return;
+    }
 
     const automationEntry: ActiveAutomation = {
       cardId: data.cardId,

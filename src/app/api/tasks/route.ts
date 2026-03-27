@@ -20,6 +20,7 @@ import {
 import { columnIdToTaskStatus } from "@/core/models/kanban";
 import { getKanbanEventBroadcaster } from "@/core/kanban/kanban-event-broadcaster";
 import { emitColumnTransition } from "@/core/kanban/column-transition";
+import { processKanbanColumnTransition } from "@/core/kanban/workflow-orchestrator-singleton";
 import type { ArtifactType } from "@/core/models/artifact";
 
 export const dynamic = "force-dynamic";
@@ -267,7 +268,7 @@ export async function POST(request: NextRequest) {
   const board = await system.kanbanBoardStore.get(task.boardId ?? defaultBoard.id);
   const targetColumn = board?.columns.find((column) => column.id === (task.columnId ?? "backlog"));
   if (board && targetColumn?.automation?.enabled) {
-    emitColumnTransition(system.eventBus, {
+    const transition = {
       cardId: task.id,
       cardTitle: task.title,
       boardId: board.id,
@@ -276,7 +277,9 @@ export async function POST(request: NextRequest) {
       toColumnId: targetColumn.id,
       fromColumnName: "Created",
       toColumnName: targetColumn.name,
-    });
+    };
+    await processKanbanColumnTransition(system, transition);
+    emitColumnTransition(system.eventBus, transition);
   }
 
   return NextResponse.json({ task: await serializeTask(task, system) }, { status: 201 });

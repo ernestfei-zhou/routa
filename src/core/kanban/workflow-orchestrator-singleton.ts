@@ -34,6 +34,7 @@ import { upsertTaskLaneSession } from "./task-lane-history";
 import { getHttpSessionStore } from "../acp/http-session-store";
 import { consumeAcpPromptResponse } from "../acp/prompt-response";
 import { getSpecialistById } from "../orchestration/specialist-prompts";
+import type { ColumnTransitionData } from "./column-transition";
 
 // Use globalThis to survive HMR in Next.js dev mode
 const GLOBAL_KEY = "__routa_workflow_orchestrator__";
@@ -383,6 +384,16 @@ export function getWorkflowOrchestrator(system: RoutaSystem): KanbanWorkflowOrch
   const g = globalThis as Record<string, unknown>;
   let orchestrator = g[GLOBAL_KEY] as KanbanWorkflowOrchestrator | undefined;
 
+  const isCompatible = orchestrator
+    && typeof (orchestrator as KanbanWorkflowOrchestrator & { processColumnTransition?: unknown }).processColumnTransition === "function";
+
+  if (orchestrator && !isCompatible) {
+    orchestrator.stop();
+    delete g[GLOBAL_KEY];
+    delete g[STARTED_KEY];
+    orchestrator = undefined;
+  }
+
   if (!orchestrator) {
     orchestrator = new KanbanWorkflowOrchestrator(
       system.eventBus,
@@ -415,6 +426,15 @@ export function startWorkflowOrchestrator(system: RoutaSystem): void {
   orchestrator.start();
   queue.start();
   g[STARTED_KEY] = true;
+}
+
+export async function processKanbanColumnTransition(
+  system: RoutaSystem,
+  data: ColumnTransitionData,
+): Promise<void> {
+  startWorkflowOrchestrator(system);
+  const orchestrator = getWorkflowOrchestrator(system);
+  await orchestrator.processColumnTransition(data);
 }
 
 /**

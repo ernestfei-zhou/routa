@@ -214,7 +214,11 @@ export class A2AOutboundClient {
   }
 
   private async resolveRpcEndpoint(agentCardUrl: string): Promise<string> {
-    if (agentCardUrl.endsWith(".json") || agentCardUrl.endsWith("/agent-card")) {
+    if (
+      agentCardUrl.endsWith(".json")
+      || agentCardUrl.endsWith("/agent-card")
+      || agentCardUrl.endsWith("/card")
+    ) {
       const card = await this.fetchAgentCard(agentCardUrl);
       return getRpcEndpoint(card);
     }
