@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction, RefObject } from "react";
+import { useState, type Dispatch, type SetStateAction, type RefObject } from "react";
 import type { AcpProviderInfo } from "@/client/acp-client";
 import type { CodebaseData } from "@/client/hooks/use-workspaces";
 import type { UseAcpActions, UseAcpState } from "@/client/hooks/use-acp";
@@ -8,7 +8,7 @@ import { RepoPicker, type RepoSelection } from "@/client/components/repo-picker"
 import { resolveEffectiveTaskAutomation } from "@/core/kanban/effective-task-automation";
 import { KanbanCard } from "./kanban-card";
 import { KanbanCardActivityBar, KanbanCardDetail } from "./kanban-card-detail";
-import { KanbanFileChangesPanel } from "./kanban-file-changes-panel";
+import { KanbanFileChangesPanel, getKanbanFileChangesSummary } from "./kanban-file-changes-panel";
 import type { KanbanTaskAgentCopy } from "./i18n/kanban-task-agent";
 import { KanbanCreateModal, type DraftIssue } from "../kanban-create-modal";
 import { KanbanCardActivityPanel, KanbanEmptySessionPane } from "./kanban-card-activity";
@@ -133,6 +133,9 @@ export function KanbanBoardSurface({
   ) => Promise<string | null>;
   kanbanRepoSelection: RepoSelection | null;
 }) {
+  const [fileChangesOpen, setFileChangesOpen] = useState(false);
+  const fileChangesSummary = getKanbanFileChangesSummary(repoChanges);
+
   return (
     <>
       {moveError && (
@@ -218,6 +221,28 @@ export function KanbanBoardSurface({
                   )}
                 </div>
               )}
+              <button
+                type="button"
+                onClick={() => setFileChangesOpen((current) => !current)}
+                className="inline-flex h-8 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-[11px] font-medium text-slate-700 transition-colors hover:border-amber-400 hover:bg-amber-50 dark:border-slate-700 dark:bg-[#0d1018] dark:text-slate-300 dark:hover:bg-amber-900/10"
+                data-testid={fileChangesOpen ? "kanban-file-changes-close" : "kanban-file-changes-open"}
+                aria-label={fileChangesOpen ? "Close file changes drawer" : "Open file changes drawer"}
+                title={`${fileChangesSummary.changedFiles} changed file${fileChangesSummary.changedFiles === 1 ? "" : "s"}`}
+              >
+                <svg
+                  className={`h-3.5 w-3.5 text-slate-400 transition-transform ${fileChangesOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.8}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+                <span>Changes</span>
+                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-500 dark:bg-[#191c28] dark:text-slate-400">
+                  {fileChangesSummary.changedFiles}
+                </span>
+              </button>
               <KanbanRepoSyncStatus repoSync={repoSync} />
             </div>
           </div>
@@ -293,7 +318,13 @@ export function KanbanBoardSurface({
         </div>
       </div>
       <div className="flex min-h-0 flex-1 gap-4">
-        <div className={`${agentPanelOpen && agentSessionId ? "min-w-0 flex-1" : "w-full"} flex min-h-0 flex-col`}>
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+          <KanbanFileChangesPanel
+            repos={repoChanges}
+            loading={repoChangesLoading}
+            open={fileChangesOpen}
+            onClose={() => setFileChangesOpen(false)}
+          />
           <div className="flex-1 min-h-0 overflow-auto pb-2" data-testid="kanban-board-content">
             <div className="flex min-h-full min-w-max items-start gap-3 pr-4">
               {board.columns
@@ -365,8 +396,6 @@ export function KanbanBoardSurface({
             </div>
           </div>
         </div>
-
-        <KanbanFileChangesPanel repos={repoChanges} loading={repoChangesLoading} />
 
         {agentPanelOpen && agentSessionId && acp && (
           <aside

@@ -174,7 +174,7 @@ describe("KanbanTab repo sync indicator", () => {
 });
 
 describe("KanbanTab file changes panel", () => {
-  it("renders the right-side file changes panel and allows collapsing it", () => {
+  it("opens the file changes drawer from the board area and allows collapsing it", () => {
     render(
       <KanbanTab
         workspaceId="workspace-1"
@@ -208,13 +208,15 @@ describe("KanbanTab file changes panel", () => {
       />,
     );
 
+    fireEvent.click(screen.getByTestId("kanban-file-changes-open"));
+
     expect(screen.getByTestId("kanban-file-changes-panel")).toBeTruthy();
     expect(screen.getByText("File Changes")).toBeTruthy();
     expect(screen.getByText("src/app.tsx")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Hide" }));
 
-    expect(screen.getByTestId("kanban-file-changes-collapsed")).toBeTruthy();
+    expect(screen.getByTestId("kanban-file-changes-open")).toBeTruthy();
   });
 });
 
