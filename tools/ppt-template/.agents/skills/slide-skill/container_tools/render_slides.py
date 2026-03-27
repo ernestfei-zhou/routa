@@ -5,12 +5,12 @@ import os
 import re
 import subprocess
 import tempfile
-import xml.etree.ElementTree as ET
 from os import makedirs, replace
 from os.path import abspath, basename, exists, expanduser, join, splitext
 from typing import Sequence, cast
 from zipfile import ZipFile
 
+from defusedxml import ElementTree as ET
 from pdf2image import convert_from_path, pdfinfo_from_path
 
 EMU_PER_INCH: int = 914_400

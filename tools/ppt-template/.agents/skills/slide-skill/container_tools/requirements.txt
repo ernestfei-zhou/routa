@@ -1,5 +1,6 @@
 # Python packages for tools/ppt-template/gpt/container_tools
 Pillow
+defusedxml
 pdf2image
 numpy
 python-pptx
