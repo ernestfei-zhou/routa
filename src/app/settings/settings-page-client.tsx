@@ -59,10 +59,6 @@ export function SettingsPageClient() {
 function isSettingsTab(value: string | null): value is SettingsTab {
   return value === "providers"
     || value === "roles"
-    || value === "specialists"
     || value === "models"
-    || value === "mcp"
-    || value === "webhooks"
-    || value === "schedules"
-    || value === "workflows";
+    || value === "webhooks";
 }

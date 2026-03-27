@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback, useId } from "react";
 import { desktopAwareFetch } from "../utils/diagnostics";
 import { GitHubWebhookPanel } from "./github-webhook-panel";
-import { SchedulePanel } from "./schedule-panel";
 import { AgentInstallPanel } from "./agent-install-panel";
-import { WorkflowPanel } from "./workflow-panel";
 import {
   loadCustomAcpProviders,
   saveCustomAcpProviders,
@@ -14,8 +12,6 @@ import {
   type CustomAcpProvider,
 } from "../utils/custom-acp-providers";
 import { ModelsTab } from "./settings-panel-models-tab";
-import { McpServersTab } from "./settings-panel-mcp-tab";
-import { SpecialistsTab } from "./settings-panel-specialists-tab";
 import { LanguageSwitcher } from "./language-switcher";
 import { ThemeSwitcher } from "./theme-switcher";
 import {
@@ -651,14 +647,6 @@ function WebhooksTab() {
   );
 }
 
-function SchedulesTab() {
-  return (
-    <div className="h-full flex flex-col min-h-0 overflow-hidden">
-      <SchedulePanel />
-    </div>
-  );
-}
-
 // ─── Docker OpenCode auth.json storage key ────────────────────────────────────
 const DOCKER_OPENCODE_AUTH_JSON_KEY = "docker-opencode-auth-json";
 
@@ -868,12 +856,8 @@ function SettingsPanelContent({ onClose, providers, initialTab, onResetOnboardin
   const TAB_DEFS: { key: SettingsTab; label: string }[] = [
     { key: "providers", label: t.settings.providers },
     { key: "roles", label: t.settings.roles },
-    { key: "specialists", label: t.settings.specialists },
     { key: "models", label: t.settings.models },
-    { key: "mcp", label: t.settings.mcpServers },
     { key: "webhooks", label: t.settings.webhooks },
-    { key: "schedules", label: t.settings.schedules },
-    { key: "workflows", label: t.settings.workflows },
   ];
 
   return (
@@ -962,16 +946,8 @@ function SettingsPanelContent({ onClose, providers, initialTab, onResetOnboardin
               onOpenModelsTab={() => handleTabChange("models")}
             />
           )}
-          {activeTab === "specialists" && <SpecialistsTab modelDefs={modelDefs} />}
           {activeTab === "models" && <ModelsTab />}
-          {activeTab === "mcp" && <McpServersTab />}
           {activeTab === "webhooks" && <WebhooksTab />}
-          {activeTab === "schedules" && <SchedulesTab />}
-          {activeTab === "workflows" && (
-            <div className="h-full overflow-y-auto">
-              <WorkflowPanel />
-            </div>
-          )}
         </div>
 
         <SystemInfoFooter />

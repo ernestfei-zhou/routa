@@ -87,16 +87,6 @@ export function DesktopSidebar({
 
   const toolItems: NavItem[] = [
     {
-      id: "config",
-      label: "Config",
-      href: "/settings",
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 3.75h1.5m-1.5 0a2.25 2.25 0 00-2.25 2.25v.75h6V6a2.25 2.25 0 00-2.25-2.25m-1.5 0v3m-6.75 4.5h15m-15 0V18A2.25 2.25 0 006 20.25h12A2.25 2.25 0 0020.25 18v-6.75m-15 0h15" />
-        </svg>
-      ),
-    },
-    {
       id: "mcp",
       label: "MCP Servers",
       href: "/settings/mcp",
@@ -139,6 +129,16 @@ export function DesktopSidebar({
   ];
 
   const secondaryItems: NavItem[] = [
+    {
+      id: "config",
+      label: "Config",
+      href: "/settings",
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 3.75h1.5m-1.5 0a2.25 2.25 0 00-2.25 2.25v.75h6V6a2.25 2.25 0 00-2.25-2.25m-1.5 0v3m-6.75 4.5h15m-15 0V18A2.25 2.25 0 006 20.25h12A2.25 2.25 0 0020.25 18v-6.75m-15 0h15" />
+        </svg>
+      ),
+    },
     {
       id: "debug",
       label: "Debug",
