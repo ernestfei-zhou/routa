@@ -30,7 +30,6 @@ import type { RepoSelection } from "@/client/components/repo-picker";
 import type { RepoSyncState } from "./kanban-repo-sync-status";
 import type { KanbanRepoChanges } from "./kanban-file-changes-types";
 import {
-  applySpecialistLanguageToBoardColumns,
   canSelectTaskSessionInAcp,
   extractSessionLiveTail,
   getPreferredTaskSessionId,
@@ -93,7 +92,7 @@ export function KanbanTab({
   providers,
   specialists,
   specialistLanguage = "en",
-  onSpecialistLanguageChange = () => {},
+  onSpecialistLanguageChange: _onSpecialistLanguageChange,
   codebases,
   onRefresh,
   repoSync,
@@ -124,7 +123,6 @@ export function KanbanTab({
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(defaultBoardId);
   const [localTasks, setLocalTasks] = useState<TaskInfo[]>(tasks);
   const autoPatchedTasksRef = useRef(new Set<string>());
-  const boardLanguageSyncInFlightRef = useRef(new Set<string>());
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [draft, setDraft] = useState<DraftIssue>({
@@ -141,7 +139,6 @@ export function KanbanTab({
   const [agentLoading, setAgentLoading] = useState(false);
   const [agentSessionId, setAgentSessionId] = useState<string | null>(null);
   const [agentPanelOpen, setAgentPanelOpen] = useState(false);
-  const [bgAgentPanelOpen, setBgAgentPanelOpen] = useState(false);
   const [detailSplitRatio, setDetailSplitRatio] = useState(0.48);
   const [isDraggingDetailSplit, setIsDraggingDetailSplit] = useState(false);
 
@@ -182,7 +179,6 @@ export function KanbanTab({
   const [isDeleting, setIsDeleting] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
   const detailSplitContainerRef = useRef<HTMLDivElement | null>(null);
-  const bgAgentPanelRef = useRef<HTMLDivElement | null>(null);
   const sessionBackfillInFlightRef = useRef(new Set<string>());
   const emptySessionRecoveryRef = useRef<string | null>(null);
 
@@ -232,30 +228,6 @@ export function KanbanTab({
     if (!localStorageApi || typeof localStorageApi.setItem !== "function") return;
     localStorageApi.setItem(KANBAN_DETAIL_SPLIT_RATIO_KEY, String(detailSplitRatio));
   }, [detailSplitRatio]);
-
-  useEffect(() => {
-    if (!bgAgentPanelOpen) return;
-
-    const handlePointerDown = (event: MouseEvent) => {
-      const panel = bgAgentPanelRef.current;
-      if (!panel) return;
-      if (panel.contains(event.target as Node)) return;
-      setBgAgentPanelOpen(false);
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setBgAgentPanelOpen(false);
-      }
-    };
-
-    window.addEventListener("mousedown", handlePointerDown);
-    window.addEventListener("keydown", handleEscape);
-    return () => {
-      window.removeEventListener("mousedown", handlePointerDown);
-      window.removeEventListener("keydown", handleEscape);
-    };
-  }, [bgAgentPanelOpen]);
 
   useEffect(() => {
     if (!isDraggingDetailSplit) return;
@@ -521,48 +493,6 @@ export function KanbanTab({
     emptySessionRecoveryRef.current = recoveryKey;
     return scheduleKanbanRefreshBurst(onRefresh);
   }, [activeSessionId, activeTask, board?.columns, onRefresh, preferredActiveTaskSessionId, resolveSpecialist]);
-
-  const persistBoardSpecialistLanguage = useCallback(async (language: KanbanSpecialistLanguage) => {
-    if (!board) return;
-
-    const syncKey = `${board.id}:${language}`;
-    if (boardLanguageSyncInFlightRef.current.has(syncKey)) {
-      return;
-    }
-
-    const localizedBoard = applySpecialistLanguageToBoardColumns(board.columns, language);
-    if (!localizedBoard.changed) {
-      return;
-    }
-
-    boardLanguageSyncInFlightRef.current.add(syncKey);
-    try {
-      const response = await fetch(`/api/kanban/boards/${encodeURIComponent(board.id)}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ columns: localizedBoard.columns }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error ?? "Failed to sync board specialist language");
-      }
-
-      onRefresh();
-    } catch (error) {
-      console.error("[KanbanTab] Failed to sync board specialist language:", error);
-    } finally {
-      boardLanguageSyncInFlightRef.current.delete(syncKey);
-    }
-  }, [board, onRefresh]);
-
-  const handleSpecialistLanguageChange = useCallback((language: KanbanSpecialistLanguage) => {
-    if (language === specialistLanguage) {
-      return;
-    }
-    onSpecialistLanguageChange(language);
-    void persistBoardSpecialistLanguage(language);
-  }, [onSpecialistLanguageChange, persistBoardSpecialistLanguage, specialistLanguage]);
 
   // Initialize visible columns when board changes
   useEffect(() => {
@@ -1177,7 +1107,6 @@ export function KanbanTab({
     return (
       <div className="flex h-full flex-col space-y-2">
         <KanbanTabHeader
-          workspaceId={workspaceId}
           tasksCount={tasks.length}
           board={board}
           boardQueue={boardQueue}
@@ -1185,12 +1114,7 @@ export function KanbanTab({
           boards={boards}
           selectedBoardId={selectedBoardId}
           onSelectBoard={setSelectedBoardId}
-          bgAgentPanelOpen={bgAgentPanelOpen}
-          bgAgentPanelRef={bgAgentPanelRef}
-          onToggleBgAgentPanel={() => setBgAgentPanelOpen((current) => !current)}
           onOpenSettings={() => setShowSettings(true)}
-          specialistLanguage={specialistLanguage}
-          onSpecialistLanguageChange={handleSpecialistLanguageChange}
           onRefresh={onRefresh}
         />
         <div className="rounded-2xl border border-gray-200/60 bg-white p-6 text-sm text-gray-500 dark:border-[#1c1f2e] dark:bg-[#12141c] dark:text-gray-400">
@@ -1203,7 +1127,6 @@ export function KanbanTab({
   return (
     <div className="flex flex-col h-full space-y-2">
       <KanbanTabHeader
-        workspaceId={workspaceId}
         tasksCount={tasks.length}
         board={board}
         boardQueue={boardQueue}
@@ -1211,15 +1134,8 @@ export function KanbanTab({
         boards={boards}
         selectedBoardId={selectedBoardId}
         onSelectBoard={setSelectedBoardId}
-        bgAgentPanelOpen={bgAgentPanelOpen}
-        bgAgentPanelRef={bgAgentPanelRef}
-        onToggleBgAgentPanel={() => setBgAgentPanelOpen((current) => !current)}
         onOpenSettings={() => setShowSettings(true)}
-        specialistLanguage={specialistLanguage}
-        onSpecialistLanguageChange={handleSpecialistLanguageChange}
         onRefresh={onRefresh}
-        repoChanges={repoChanges}
-        repoChangesLoading={repoChangesLoading}
       />
       <KanbanBoardSurface
         moveError={moveError}

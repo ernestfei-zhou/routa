@@ -12,11 +12,39 @@
  * workspace hooks - it accepts all data as props.
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useSyncExternalStore } from "react";
 import { DesktopShellHeader } from "./desktop-shell-header";
 import { DesktopSidebar } from "./desktop-sidebar";
 
 const DESKTOP_SIDEBAR_COLLAPSED_KEY = "routa.desktop.sidebar-collapsed";
+const DESKTOP_SIDEBAR_CHANGE_EVENT = "routa:desktop-sidebar-collapsed";
+
+function getDesktopSidebarCollapsedSnapshot(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return window.localStorage.getItem(DESKTOP_SIDEBAR_COLLAPSED_KEY) === "true";
+}
+
+function getDesktopSidebarCollapsedServerSnapshot(): boolean {
+  return false;
+}
+
+function subscribeToDesktopSidebarCollapsed(onStoreChange: () => void): () => void {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  const handleChange = () => onStoreChange();
+  window.addEventListener(DESKTOP_SIDEBAR_CHANGE_EVENT, handleChange as EventListener);
+  window.addEventListener("storage", handleChange);
+
+  return () => {
+    window.removeEventListener(DESKTOP_SIDEBAR_CHANGE_EVENT, handleChange as EventListener);
+    window.removeEventListener("storage", handleChange);
+  };
+}
 
 interface DesktopAppShellProps {
   children: React.ReactNode;
@@ -36,21 +64,24 @@ export function DesktopAppShell({
   titleBarRight,
   workspaceSwitcher,
 }: DesktopAppShellProps) {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
+  const isSidebarCollapsed = useSyncExternalStore(
+    subscribeToDesktopSidebarCollapsed,
+    getDesktopSidebarCollapsedSnapshot,
+    getDesktopSidebarCollapsedServerSnapshot,
+  );
 
-    return window.localStorage.getItem(DESKTOP_SIDEBAR_COLLAPSED_KEY) === "true";
-  });
-
-  useEffect(() => {
+  const setSidebarCollapsed = useCallback((collapsed: boolean) => {
     if (typeof window === "undefined") {
       return;
     }
 
-    window.localStorage.setItem(DESKTOP_SIDEBAR_COLLAPSED_KEY, String(isSidebarCollapsed));
-  }, [isSidebarCollapsed]);
+    window.localStorage.setItem(DESKTOP_SIDEBAR_COLLAPSED_KEY, String(collapsed));
+    window.dispatchEvent(
+      new CustomEvent(DESKTOP_SIDEBAR_CHANGE_EVENT, {
+        detail: { collapsed },
+      }),
+    );
+  }, []);
 
   return (
     <div
@@ -69,7 +100,7 @@ export function DesktopAppShell({
         <DesktopSidebar
           workspaceId={workspaceId}
           collapsed={isSidebarCollapsed}
-          onToggleCollapse={() => setIsSidebarCollapsed((current) => !current)}
+          onToggleCollapse={() => setSidebarCollapsed(!isSidebarCollapsed)}
         />
 
         {/* Content */}

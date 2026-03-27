@@ -1,5 +1,7 @@
 "use client";
 
+import type { Locale } from "@/i18n";
+
 export type KanbanSpecialistLanguage = "en" | "zh-CN";
 
 export interface LocalizedSpecialistOption {
@@ -9,8 +11,6 @@ export interface LocalizedSpecialistOption {
   displayName?: string;
   defaultProvider?: string;
 }
-
-export const KANBAN_SPECIALIST_LANGUAGE_STORAGE_KEY = "routa:kanban-specialist-language";
 
 export const KANBAN_SPECIALIST_LANGUAGE_LABELS: Record<
   KanbanSpecialistLanguage,
@@ -37,6 +37,10 @@ export const KANBAN_SPECIALIST_LANGUAGE_LABELS: Record<
     noSpecialist: "不指定 specialist",
   },
 };
+
+export function mapLocaleToKanbanSpecialistLanguage(locale: Locale): KanbanSpecialistLanguage {
+  return locale === "zh" ? "zh-CN" : "en";
+}
 
 export function localizeSpecialists<T extends LocalizedSpecialistOption>(specialists: T[]): T[] {
   return specialists.map((specialist) => ({

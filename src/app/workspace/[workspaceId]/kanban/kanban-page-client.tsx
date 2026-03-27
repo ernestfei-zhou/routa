@@ -8,10 +8,11 @@ import { useWorkspaces, useCodebases } from "@/client/hooks/use-workspaces";
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
 import { DesktopAppShell } from "@/client/components/desktop-app-shell";
 import { WorkspaceSwitcher } from "@/client/components/workspace-switcher";
+import { useTranslation } from "@/i18n";
 import { KanbanTab } from "./kanban-tab";
 import {
-  KANBAN_SPECIALIST_LANGUAGE_STORAGE_KEY,
   localizeSpecialists,
+  mapLocaleToKanbanSpecialistLanguage,
   type KanbanSpecialistLanguage,
 } from "./kanban-specialist-language";
 import type { RepoSyncState } from "./kanban-repo-sync-status";
@@ -44,6 +45,7 @@ export function KanbanPageClient() {
       ? (window.location.pathname.match(/^\/workspace\/([^/]+)/)?.[1] ?? rawWorkspaceId)
       : rawWorkspaceId;
   const acp = useAcp();
+  const { locale } = useTranslation();
   const workspacesHook = useWorkspaces();
   const { codebases, fetchCodebases } = useCodebases(workspaceId);
 
@@ -53,7 +55,6 @@ export function KanbanPageClient() {
   const [specialists, setSpecialists] = useState<SpecialistOption[]>([]);
   const [repoChanges, setRepoChanges] = useState<KanbanRepoChanges[]>([]);
   const [repoChangesLoading, setRepoChangesLoading] = useState(false);
-  const [specialistLanguage, setSpecialistLanguage] = useState<KanbanSpecialistLanguage>("en");
   const [refreshKey, setRefreshKey] = useState(0);
   const [repoSync, setRepoSync] = useState<RepoSyncState>({
     status: "idle",
@@ -145,19 +146,10 @@ export function KanbanPageClient() {
     }
   }, [boards, specialists, acp.providers]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = window.localStorage.getItem(KANBAN_SPECIALIST_LANGUAGE_STORAGE_KEY);
-    if (stored === "en" || stored === "zh-CN") {
-      setSpecialistLanguage(stored);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(KANBAN_SPECIALIST_LANGUAGE_STORAGE_KEY, specialistLanguage);
-    document.cookie = `NEXT_LOCALE=${specialistLanguage}; path=/; max-age=31536000; samesite=lax`;
-  }, [specialistLanguage]);
+  const specialistLanguage: KanbanSpecialistLanguage = useMemo(
+    () => mapLocaleToKanbanSpecialistLanguage(locale),
+    [locale],
+  );
 
   // Fetch tasks
   useEffect(() => {
@@ -468,7 +460,6 @@ export function KanbanPageClient() {
             providers={acp.providers}
             specialists={localizedSpecialists}
             specialistLanguage={specialistLanguage}
-            onSpecialistLanguageChange={setSpecialistLanguage}
             codebases={codebases}
             onRefresh={handleRefresh}
             acp={acp}
