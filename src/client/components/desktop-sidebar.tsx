@@ -42,7 +42,8 @@ export function DesktopSidebar({
 }: DesktopSidebarProps) {
   const pathname = usePathname();
   const normalizedWorkspaceId = workspaceId?.trim() || null;
-  const workspaceBaseHref = normalizedWorkspaceId ? `/workspace/${normalizedWorkspaceId}` : null;
+  const fallbackWorkspaceId = normalizedWorkspaceId || "default";
+  const workspaceBaseHref = `/workspace/${fallbackWorkspaceId}`;
 
   const primaryItems: NavItem[] = [
     {
@@ -166,22 +167,14 @@ export function DesktopSidebar({
   };
 
   const renderNavItem = (item: NavItem) => {
-    const disabled = !!item.requiresWorkspace && !workspaceBaseHref;
     const active = isActive(item.href);
     const className = `relative flex items-center rounded-xl transition-colors ${
-      disabled
-        ? "cursor-default text-desktop-text-secondary/40"
-        : active
-          ? "bg-desktop-bg-active text-desktop-accent"
-          : "text-desktop-text-secondary hover:bg-desktop-bg-active/70 hover:text-desktop-text-primary"
+      active
+        ? "bg-desktop-bg-active text-desktop-accent"
+        : "text-desktop-text-secondary hover:bg-desktop-bg-active/70 hover:text-desktop-text-primary"
     } ${collapsed ? "h-10 w-10 justify-center" : "h-11 w-full gap-3 px-3 text-sm font-medium"}`;
 
-    return disabled ? (
-      <div key={item.id} className={className} title={`${item.label} unavailable`} aria-disabled="true">
-        {item.icon}
-        {!collapsed && <span className="truncate">{item.label}</span>}
-      </div>
-    ) : (
+    return (
       <Link
         key={item.id}
         href={item.href}
