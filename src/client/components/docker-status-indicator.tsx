@@ -14,7 +14,7 @@ interface DockerStatusResponse {
 
 export function DockerStatusIndicator() {
   const [status, setStatus] = useState<DockerStatusResponse | null>(null);
-  const [loading, setLoading] = useState(true); // true on mount = "Checking..."
+  const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -39,35 +39,47 @@ export function DockerStatusIndicator() {
   }, [refresh]);
 
   const available = !!status?.available;
-  const label = loading && !status
+  const isChecking = loading && !status;
+  const isRetryable = !available && !isChecking;
+  const label = isChecking
     ? "Checking Docker..."
     : available
       ? `Docker ${status?.version ?? "ready"}`
-      : "Docker unavailable";
+      : loading
+        ? "Retrying Docker..."
+        : "Docker unavailable · Retry";
+  const toneClass = isChecking
+    ? "border-gray-200 text-gray-500 bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:bg-gray-800/30"
+    : available
+      ? "border-emerald-200 text-emerald-700 bg-emerald-50 dark:border-emerald-800/60 dark:text-emerald-300 dark:bg-emerald-900/20"
+      : "border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 dark:border-amber-800/60 dark:text-amber-300 dark:bg-amber-900/20 dark:hover:bg-amber-900/30";
+  const dotClass = isChecking
+    ? "bg-gray-400 animate-pulse"
+    : available
+      ? "bg-emerald-500"
+      : loading
+        ? "bg-amber-500 animate-pulse"
+        : "bg-amber-500";
+  const title = available
+    ? status?.error ?? label
+    : loading
+      ? "Refreshing Docker status"
+      : status?.error ?? "Docker unavailable. Click to refresh status.";
 
   return (
-    <div className="flex items-center gap-1.5">
-      <span
-        className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] border ${
-          loading && !status
-            ? "border-gray-200 text-gray-500 bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:bg-gray-800/30"
-            : available
-            ? "border-emerald-200 text-emerald-700 bg-emerald-50 dark:border-emerald-800/60 dark:text-emerald-300 dark:bg-emerald-900/20"
-            : "border-amber-200 text-amber-700 bg-amber-50 dark:border-amber-800/60 dark:text-amber-300 dark:bg-amber-900/20"
-        }`}
-        title={status?.error ?? label}
-      >
-        <span className={`w-1.5 h-1.5 rounded-full ${loading && !status ? "bg-gray-400 animate-pulse" : available ? "bg-emerald-500" : "bg-amber-500"}`} />
-        <span className="max-w-[140px] truncate">{label}</span>
-      </span>
+    <div className="flex items-center">
       <button
         type="button"
-        onClick={() => void refresh()}
-        className="px-1.5 py-0.5 rounded text-[10px] text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1c1f2e]"
-        title="Refresh Docker status"
-        disabled={loading}
+        onClick={isRetryable ? () => void refresh() : undefined}
+        className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] transition-colors ${toneClass} ${
+          isRetryable ? "cursor-pointer" : "cursor-default"
+        }`}
+        title={title}
+        disabled={!isRetryable}
+        aria-disabled={!isRetryable}
       >
-        {loading ? "..." : "Refresh"}
+        <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
+        <span className="max-w-[140px] truncate">{label}</span>
       </button>
     </div>
   );
