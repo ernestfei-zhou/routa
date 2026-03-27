@@ -1,9 +1,3 @@
 {
-  "name": "@routa/pptxgenjs-helpers-local",
-  "private": true,
-  "type": "commonjs",
-  "dependencies": {
-    "mathjax-full": "^3.2.2",
-    "prismjs": "^1.29.0"
-  }
+  "type": "commonjs"
 }
