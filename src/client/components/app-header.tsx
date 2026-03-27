@@ -12,9 +12,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "./button";
 import { WorkspaceSwitcher } from "@/client/components/workspace-switcher";
-import { ProtocolBadge } from "@/app/protocol-badge";
-import { DockerStatusIndicator } from "@/client/components/docker-status-indicator";
-import { ThemeSwitcher } from "@/client/components/theme-switcher";
+import { ShellHeaderControls } from "@/client/components/shell-header-controls";
 import type { WorkspaceData } from "@/client/hooks/use-workspaces";
 
 export interface AppHeaderProps {
@@ -143,18 +141,7 @@ export function AppHeader({
       {/* ── Spacer ── */}
       <div className="flex-1" />
 
-      {/* ── Docker Status ── */}
-      <div className="hidden lg:flex items-center mr-3">
-        <DockerStatusIndicator />
-      </div>
-
-      {/* ── Protocol badges ── */}
-      <div className={`hidden lg:flex items-center gap-2 ${isDashboard ? "mr-3" : ""}`}>
-        <ProtocolBadge name="MCP" endpoint="/api/mcp" />
-        <ProtocolBadge name="ACP" endpoint="/api/acp" />
-      </div>
-
-      <ThemeSwitcher compact className="mr-2" />
+      <ShellHeaderControls className={isDashboard ? "mr-3" : "mr-2"} />
 
       {/* ── Right slot (tool toggle, links, settings, etc.) ── */}
       {rightSlot}
