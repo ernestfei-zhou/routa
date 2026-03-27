@@ -200,9 +200,10 @@ export function DesktopSidebar({
           type="button"
           onClick={onToggleCollapse}
           className={`flex items-center rounded-xl text-desktop-text-secondary transition-colors hover:bg-desktop-bg-active hover:text-desktop-text-primary ${
-            collapsed ? "h-10 w-10 justify-center" : "w-full gap-2 px-3 py-2 text-sm"
+            collapsed ? "h-10 w-10 justify-center" : "h-10 w-10 justify-center"
           }`}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
             {collapsed ? (
@@ -211,7 +212,6 @@ export function DesktopSidebar({
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 4.5 18 12l-7.5 7.5M6 4.5 13.5 12 6 19.5" />
             )}
           </svg>
-          {!collapsed && <span>导航</span>}
         </button>
       </div>
 
