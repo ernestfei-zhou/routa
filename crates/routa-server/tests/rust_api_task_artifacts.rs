@@ -807,7 +807,10 @@ async fn api_task_runs_returns_normalized_a2a_ledger_entries() {
     assert_eq!(runs[0]["status"].as_str(), Some("running"));
     assert_eq!(runs[0]["externalTaskId"].as_str(), Some("remote-task-1"));
     assert_eq!(runs[0]["contextId"].as_str(), Some("ctx-1"));
-    assert_eq!(runs[0]["resumeTarget"]["type"].as_str(), Some("external_task"));
+    assert_eq!(
+        runs[0]["resumeTarget"]["type"].as_str(),
+        Some("external_task")
+    );
     assert_eq!(
         runs[0]["resumeTarget"]["id"].as_str(),
         Some("remote-task-1")

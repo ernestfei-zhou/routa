@@ -714,7 +714,10 @@ async fn build_task_run_ledger(
 
     let mut runs = Vec::with_capacity(lane_sessions.len());
     for lane_session in lane_sessions {
-        let session = state.acp_session_store.get(&lane_session.session_id).await?;
+        let session = state
+            .acp_session_store
+            .get(&lane_session.session_id)
+            .await?;
         let is_a2a = lane_session.transport.as_deref() == Some("a2a");
         let resume_target = if is_a2a {
             lane_session
