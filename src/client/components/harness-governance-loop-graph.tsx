@@ -338,18 +338,18 @@ function buildGraph(args: {
       note: "进入远程流水线",
       active: false,
     }),
-    buildNode("post-commit", 27, 416, {
+    buildNode("metrics", 27, 416, {
       layer: "external",
-      title: "提交后阶段",
-      tone: "violet",
-      note: "远程校验 / 自动构建",
-      active: Boolean(workflowSummary),
+      title: "度量",
+      tone: "emerald",
+      note: "Evidence / Issues",
+      active: false,
     }),
-    buildNode("staging", 229, 416, {
+    buildNode("production", 229, 416, {
       layer: "external",
-      title: "预发环境",
-      tone: "violet",
-      note: "环境验证 / 验收",
+      title: "生产环境",
+      tone: "amber",
+      note: "真实流量运行",
       active: false,
     }),
     buildNode("canary", 431, 416, {
@@ -359,19 +359,19 @@ function buildGraph(args: {
       note: "小流量验证 / 渐进放量",
       active: false,
     }),
-    buildNode("production", 633, 416, {
+    buildNode("staging", 633, 416, {
       layer: "external",
-      title: "生产环境",
-      tone: "amber",
-      note: "真实流量运行",
+      title: "预发环境",
+      tone: "violet",
+      note: "环境验证 / 验收",
       active: false,
     }),
-    buildNode("metrics", 835, 416, {
+    buildNode("post-commit", 835, 416, {
       layer: "external",
-      title: "度量",
-      tone: "emerald",
-      note: "Evidence / Issues",
-      active: false,
+      title: "提交后阶段",
+      tone: "violet",
+      note: "远程校验 / 自动构建",
+      active: Boolean(workflowSummary),
     }),
   ];
 
@@ -384,14 +384,14 @@ function buildGraph(args: {
     buildEdge("precommit-review", "precommit", "review", "source-right", "target-left", "送检", "#0ea5e9"),
     buildEdge("review-commit", "review", "commit", "source-right", "target-left", "提交", "#64748b"),
 
-    buildEdge("post-commit-staging", "post-commit", "staging", "source-right", "target-left", "预发", "#8b5cf6"),
-    buildEdge("staging-canary", "staging", "canary", "source-right", "target-left", "放量", "#f59e0b"),
-    buildEdge("canary-production", "canary", "production", "source-right", "target-left", "生产", "#f59e0b"),
-    buildEdge("production-metrics", "production", "metrics", "source-right", "target-left", "", "#059669"),
+    buildEdge("post-commit-staging", "post-commit", "staging", "source-left", "target-right", "预发", "#8b5cf6"),
+    buildEdge("staging-canary", "staging", "canary", "source-left", "target-right", "放量", "#f59e0b"),
+    buildEdge("canary-production", "canary", "production", "source-left", "target-right", "生产", "#f59e0b"),
+    buildEdge("production-metrics", "production", "metrics", "source-left", "target-right", "", "#059669"),
 
     buildEdge("test-lint", "test", "lint", "source-bottom", "target-top", "", "#10b981", "6 4"),
     buildEdge("commit-post-commit", "commit", "post-commit", "source-bottom", "target-top", "", "#8b5cf6", "6 4"),
-    buildEdge("metrics-thinking", "metrics", "thinking", "source-top", "target-bottom", "", "#059669", "6 4"),
+    buildEdge("metrics-thinking", "metrics", "thinking", "source-right", "target-left", "", "#059669", "6 4"),
 
     ...(workflowSummary?.hasRepairLoop
       ? [
@@ -399,7 +399,7 @@ function buildGraph(args: {
           id: "post-commit-self-heal",
           source: "post-commit",
           target: "post-commit",
-          sourceHandle: "source-right",
+          sourceHandle: "source-left",
           targetHandle: "target-top",
           type: "smoothstep",
           label: "自动修复重试",
@@ -751,15 +751,15 @@ export function HarnessGovernanceLoopGraph({
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="relative overflow-hidden rounded-2xl border border-desktop-border bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(241,245,249,0.98))]">
               <div className="pointer-events-none absolute inset-0">
-                <div className="absolute left-[104px] top-[44px] h-[152px] w-[842px] rounded-[36px] border border-emerald-300/70 bg-emerald-50/35" />
-                <div className="absolute left-[104px] top-[214px] h-[152px] w-[842px] rounded-[36px] border border-sky-300/70 bg-sky-50/35" />
+                <div className="absolute left-[20px] top-[44px] h-[152px] w-[1068px] rounded-[36px] border border-emerald-300/70 bg-emerald-50/35" />
+                <div className="absolute left-[20px] top-[214px] h-[152px] w-[1068px] rounded-[36px] border border-sky-300/70 bg-sky-50/35" />
                 <div className="absolute left-[20px] top-[386px] h-[152px] w-[1068px] rounded-[36px] border border-violet-300/65 bg-violet-50/35" />
 
-                <div className="absolute left-[126px] top-[54px] max-w-[180px] text-left text-slate-600">
+                <div className="absolute left-[42px] top-[54px] max-w-[180px] text-left text-slate-600">
                   <div className="text-[11px] font-semibold tracking-[0.06em]">内部反馈环</div>
                 </div>
 
-                <div className="absolute left-[126px] top-[220px] max-w-[180px] text-left text-slate-600">
+                <div className="absolute left-[42px] top-[220px] max-w-[180px] text-left text-slate-600">
                   <div className="text-[11px] font-semibold tracking-[0.06em]">提交反馈环</div>
                 </div>
 
