@@ -244,8 +244,9 @@ function summarizeSignals(flows: GitHubActionsFlow[]) {
 
 function detectRepairLoop(flows: GitHubActionsFlow[]) {
   return flows.some((flow) => {
-    const name = `${flow.id} ${flow.name}`.toLowerCase();
-    return name.includes("ci-red-fixer") || name.includes("red fixer") || name.includes("repair");
+    const id = flow.id.toLowerCase();
+    const name = flow.name.toLowerCase();
+    return id === "ci-red-fixer" || name === "ci red fixer";
   });
 }
 
@@ -279,26 +280,33 @@ function buildGraph(args: {
       title: "Execution Plan",
       tone: "amber",
     }),
-    buildNode("actions", 970, 430, {
-      kind: "remote",
-      title: "GitHub Actions",
-      tone: "violet",
-    }),
     buildNode("feedback", 720, 430, {
       kind: "feedback",
       title: "Evidence",
       tone: "emerald",
     }),
+    buildNode("actions", 970, 430, {
+      kind: "remote",
+      title: "GitHub Actions",
+      tone: "violet",
+    }),
+    buildNode("issues", 970, 338, {
+      kind: "remote",
+      title: "GitHub Issues",
+      tone: "violet",
+    }),
   ];
 
   const edges: Edge[] = [
     buildEdge("instructions-fitness", "instructions", "fitness", "source-right", "target-left", "rulebook", "#64748b", "6 4"),
-    buildEdge("fitness-hook", "fitness", "hook", "source-right", "target-left", "local gate", "#3b82f6"),
-    buildEdge("fitness-plan", "fitness", "plan", "source-right", "target-left", "frontmatter", "#10b981"),
+    buildEdge("instructions-hook", "instructions", "hook", "source-right", "target-left", "submit contract", "#64748b", "6 4"),
+    buildEdge("fitness-hook", "fitness", "hook", "source-right", "target-left", "frontmatter", "#10b981"),
+    buildEdge("hook-plan", "hook", "plan", "source-right", "target-left", "local gate", "#3b82f6"),
     buildEdge("plan-actions", "plan", "actions", "source-bottom", "target-top", "dispatch", "#f59e0b"),
     buildEdge("actions-feedback", "actions", "feedback", "source-left", "target-right", "artifacts", "#8b5cf6"),
-    buildEdge("feedback-instructions", "feedback", "instructions", "source-left", "target-bottom", "tighten loop", "#059669", "6 4"),
-    buildEdge("feedback-hook", "feedback", "hook", "source-top", "target-bottom", "internal loop", "#38bdf8", "6 4"),
+    buildEdge("issues-feedback", "issues", "feedback", "source-left", "target-right", "user feedback", "#7c3aed", "6 4"),
+    buildEdge("feedback-fitness", "feedback", "fitness", "source-top", "target-bottom", "tighten loop", "#059669", "6 4"),
+    buildEdge("feedback-hook", "feedback", "hook", "source-top", "target-bottom", "runtime replay", "#38bdf8", "6 4"),
     ...(workflowSummary?.hasRepairLoop
       ? [
         {
@@ -561,17 +569,17 @@ export function HarnessGovernanceLoopGraph({
           <div className="relative overflow-hidden rounded-2xl border border-desktop-border bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(241,245,249,0.98))]">
             <div className="pointer-events-none absolute inset-0">
               <div className="absolute left-[34px] top-[10px] h-[540px] w-[1180px] rounded-[999px] border-2 border-dashed border-sky-300/60 bg-slate-100/25" />
-              <div className="absolute left-[180px] top-[92px] h-[390px] w-[920px] rounded-[999px] border-[3px] border-sky-500/80 bg-[radial-gradient(circle_at_center,rgba(253,224,71,0.30),rgba(245,158,11,0.18))]" />
+              <div className="absolute left-[610px] top-[142px] h-[236px] w-[540px] rounded-[999px] border-[3px] border-sky-500/80 bg-[radial-gradient(circle_at_center,rgba(253,224,71,0.30),rgba(245,158,11,0.18))]" />
               <div className="absolute left-[164px] top-[142px] h-[236px] w-[540px] rounded-[999px] border-2 border-dashed border-sky-400/75 bg-sky-100/20" />
 
               <div className="absolute left-[54px] top-[276px] max-w-[126px] text-left text-slate-600">
                 <div className="text-[11px] font-semibold tracking-[0.06em]">外部反馈环</div>
-                <div className="text-[9px] font-medium text-slate-500">GitHub Actions + remote evidence</div>
+                <div className="text-[9px] font-medium text-slate-500">Evidence + GitHub Issues + GitHub Actions</div>
               </div>
 
-              <div className="absolute left-[640px] top-[104px] max-w-[220px] text-left text-slate-600">
+              <div className="absolute left-[796px] top-[114px] max-w-[220px] text-left text-slate-600">
                 <div className="text-[11px] font-semibold tracking-[0.06em]">提交反馈环</div>
-                <div className="text-[9px] font-medium text-slate-500">Hook Runtime + Fitness + Execution Plan</div>
+                <div className="text-[9px] font-medium text-slate-500">AGENTS.md + Hook Runtime + Execution Plan</div>
               </div>
 
               <div className="absolute left-[342px] top-[332px] max-w-[180px] text-left text-slate-600">
