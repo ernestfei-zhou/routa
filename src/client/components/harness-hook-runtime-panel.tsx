@@ -23,6 +23,17 @@ type HookRuntimeProfileSummary = {
   hooks: string[];
 };
 
+type ReviewTriggerRuleSummary = {
+  name: string;
+  type: string;
+  severity: string;
+  action: string;
+  pathCount: number;
+  evidencePathCount: number;
+  boundaryCount: number;
+  directoryCount: number;
+};
+
 type HookFileSummary = {
   name: string;
   relativePath: string;
@@ -41,6 +52,12 @@ type HooksResponse = {
     relativePath: string;
     source: string;
     schema?: string;
+  } | null;
+  reviewTriggerFile: {
+    relativePath: string;
+    source: string;
+    ruleCount: number;
+    rules: ReviewTriggerRuleSummary[];
   } | null;
   hookFiles: HookFileSummary[];
   profiles: HookRuntimeProfileSummary[];
@@ -79,6 +96,12 @@ function formatTokenLabel(value: string): string {
     .filter(Boolean)
     .map((segment) => segment.slice(0, 1).toUpperCase() + segment.slice(1))
     .join(" ");
+}
+
+function severityTone(value: string): string {
+  if (value === "high") return "border-rose-200 bg-rose-50 text-rose-700";
+  if (value === "medium") return "border-amber-200 bg-amber-50 text-amber-800";
+  return "border-desktop-border bg-desktop-bg-primary text-desktop-text-secondary";
 }
 
 export function HarnessHookRuntimePanel({
@@ -226,6 +249,8 @@ export function HarnessHookRuntimePanel({
   );
 
   const runtimeProfile = activeHookEntry?.runtimeProfile ?? null;
+  const reviewTriggerFile = hooksState.data?.reviewTriggerFile ?? null;
+  const hasReviewPhase = Boolean(runtimeProfile?.phases.includes("review"));
 
   const hookCount = hooksState.data?.hookFiles.length ?? 0;
   const profileCount = hooksState.data?.profiles.length ?? 0;
@@ -346,6 +371,11 @@ export function HarnessHookRuntimePanel({
                             {formatTokenLabel(phase)}
                           </span>
                         ))}
+                        {profile.phases.includes("review") ? (
+                          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-800">
+                            review gate
+                          </span>
+                        ) : null}
                       </div>
                     ) : (
                       <div className="mt-1 text-[10px] text-desktop-text-secondary/55">
@@ -380,6 +410,119 @@ export function HarnessHookRuntimePanel({
                     </span>
                   </div>
                 </div>
+
+                <div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">Phase breakdown</div>
+                      <div className="mt-1 text-[11px] text-desktop-text-secondary">
+                        Runtime orchestration from `docs/fitness/runtime/hooks.yaml`
+                      </div>
+                    </div>
+                    <div className="rounded-full border border-desktop-border bg-desktop-bg-secondary px-2.5 py-1 text-[10px] text-desktop-text-secondary">
+                      {runtimeProfile.phases.length} phases
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {runtimeProfile.phases.map((phase) => (
+                      <span
+                        key={`${runtimeProfile.name}-${phase}`}
+                        className={`rounded-full border px-2.5 py-1 text-[10px] ${
+                          phase === "review"
+                            ? "border-amber-200 bg-amber-50 text-amber-800"
+                            : "border-desktop-border bg-desktop-bg-secondary text-desktop-text-secondary"
+                        }`}
+                      >
+                        {formatTokenLabel(phase)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {hasReviewPhase ? (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-800">Review gate</div>
+                        <div className="mt-1 text-sm font-semibold text-desktop-text-primary">
+                          Entrix review-trigger evaluation
+                        </div>
+                        <div className="mt-1 text-[11px] text-desktop-text-secondary">
+                          This phase evaluates diff-sensitive human review rules instead of fitness metrics.
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-[10px]">
+                        <span className="rounded-full border border-amber-200 bg-white/80 px-2.5 py-1 text-amber-800">
+                          {reviewTriggerFile?.ruleCount ?? 0} rules
+                        </span>
+                        <span className="rounded-full border border-amber-200 bg-white/80 px-2.5 py-1 text-amber-800">
+                          entrix review-trigger
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 rounded-xl border border-amber-200 bg-white/70 px-3 py-3 text-[11px] text-desktop-text-secondary">
+                      <div className="font-mono text-desktop-text-primary">
+                        {reviewTriggerFile?.relativePath ?? "docs/fitness/review-triggers.yaml"}
+                      </div>
+                      <div className="mt-2">
+                        Active for any runtime profile whose phases include `review`, which in this repo means `pre-push` and `local-validate`.
+                      </div>
+                    </div>
+
+                    {reviewTriggerFile?.rules.length ? (
+                      <div className="mt-3 space-y-2">
+                        {reviewTriggerFile.rules.map((rule) => (
+                          <div key={rule.name} className="rounded-xl border border-amber-200 bg-white/80 px-3 py-3">
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="text-[12px] font-semibold text-desktop-text-primary">{rule.name}</div>
+                                <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] text-desktop-text-secondary">
+                                  <span className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2 py-0.5">
+                                    {formatTokenLabel(rule.type)}
+                                  </span>
+                                  <span className={`rounded-full border px-2 py-0.5 ${severityTone(rule.severity)}`}>
+                                    {rule.severity}
+                                  </span>
+                                  <span className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2 py-0.5">
+                                    {formatTokenLabel(rule.action)}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5 text-[10px] text-desktop-text-secondary">
+                                {rule.pathCount > 0 ? (
+                                  <span className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2 py-0.5">
+                                    {rule.pathCount} paths
+                                  </span>
+                                ) : null}
+                                {rule.evidencePathCount > 0 ? (
+                                  <span className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2 py-0.5">
+                                    {rule.evidencePathCount} evidence paths
+                                  </span>
+                                ) : null}
+                                {rule.boundaryCount > 0 ? (
+                                  <span className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2 py-0.5">
+                                    {rule.boundaryCount} boundaries
+                                  </span>
+                                ) : null}
+                                {rule.directoryCount > 0 ? (
+                                  <span className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2 py-0.5">
+                                    {rule.directoryCount} directories
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-3 rounded-xl border border-amber-200 bg-white/80 px-3 py-3 text-[11px] text-desktop-text-secondary">
+                        Review phase is configured, but no `review_triggers` were parsed from the YAML file.
+                      </div>
+                    )}
+                  </div>
+                ) : null}
 
                 <div>
                   <div className="flex items-center justify-between gap-3">

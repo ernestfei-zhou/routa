@@ -250,7 +250,7 @@ export function HarnessGitHubActionsFlowPanel({
                       setSelectedFlowId(flow.id);
                       setSelectedJobId("");
                     }}
-                    className={`min-w-56 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                    className={`min-w-44 max-w-52 rounded-xl border px-3 py-2.5 text-left transition-colors ${
                       activeFlow.id === flow.id
                         ? "border-desktop-accent bg-desktop-bg-secondary text-desktop-text-primary"
                         : "border-desktop-border bg-desktop-bg-primary/80 text-desktop-text-secondary hover:bg-desktop-bg-secondary"
@@ -259,17 +259,11 @@ export function HarnessGitHubActionsFlowPanel({
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="truncate text-[12px] font-semibold">{flow.name}</div>
-                        <div className="mt-1 truncate text-[10px] uppercase tracking-[0.14em] text-desktop-text-secondary">{flow.event}</div>
+                        <div className="mt-1 truncate text-[10px] uppercase tracking-[0.12em] text-desktop-text-secondary">{flow.event}</div>
                       </div>
                       <span className="shrink-0 rounded-full border border-desktop-border bg-desktop-bg-primary px-2 py-0.5 text-[10px] text-desktop-text-secondary">
                         {flow.jobs.length}
                       </span>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
-                      <span className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2 py-0.5">{flow.id}</span>
-                      {flow.relativePath ? (
-                        <span className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2 py-0.5">{flow.relativePath}</span>
-                      ) : null}
                     </div>
                   </button>
                 ))}
