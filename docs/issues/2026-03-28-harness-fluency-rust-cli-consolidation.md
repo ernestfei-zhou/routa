@@ -1,7 +1,7 @@
 ---
 title: Consolidate Harness Fluency on routa-cli and retire the standalone TS engine
 date: "2026-03-28"
-status: open
+status: investigating
 severity: medium
 area: cli
 tags: [fitness, fluency, routa-cli, typescript, rust]
@@ -48,6 +48,19 @@ Harness Fluency 应该只有一个权威实现，CLI、文档、测试和后续 
 - 目前 `npm run fitness:fluency` 已直接调用 `cargo run -p routa-cli -- fitness fluency`
 - `tools/harness-fluency` 已可以改造成兼容转发层，不需要继续保留完整 TS 引擎
 - 仍需后续确认何时彻底删除兼容层，以及是否需要为发布用户保留一个过渡版本
+
+## Follow-up Progress
+
+- 已删除 `tools/harness-fluency` 中的独立 `engine.ts` / `model.ts` 业务实现，避免继续双维护
+- 旧 TS 入口现在只保留兼容转发，统一调用 `routa fitness fluency`
+- `routa-cli` 已补齐 `--json` 兼容参数，保留旧入口常用调用方式
+- Rust fluency 测试已补回关键 parity 场景：profile overlay、cyclic extends、invalid regex、snapshot compare、next-level readiness、command allowlist
+- 旧入口兼容测试已补充 `--help` 不触发 cargo 的行为
+
+## Remaining Work
+
+- 决定 `tools/harness-fluency` 兼容层的保留周期
+- 后续在合适版本删除兼容层，并同步关闭 GitHub issue
 
 ## References
 
