@@ -271,10 +271,12 @@ function buildPlanGraph(
 
   const stageY = 32;
   const rootX = 96;
-  const filterX = 380;
-  const dispatchX = 696;
-  const gatesX = 1012;
-  const reportX = 1328;
+  const stageCardWidth = 292;
+  const stageGap = 44;
+  const filterX = rootX + stageCardWidth + stageGap;
+  const dispatchX = filterX + stageCardWidth + stageGap;
+  const gatesX = dispatchX + stageCardWidth + stageGap;
+  const reportX = gatesX + stageCardWidth + stageGap;
   const dispatchCenterX = dispatchX + 146;
   const dimensionsTopY = 214;
   const dimensionColumnWidth = 260;
