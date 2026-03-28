@@ -256,6 +256,7 @@ function buildGraph(args: {
   selectedTier: TierValue;
   hookSummary: HookSummary | null;
   workflowSummary: WorkflowSummary | null;
+  instructionSummary: InstructionSummary | null;
   fitnessFileCount: number;
   dimensionCount: number;
   metricCount: number;
@@ -266,6 +267,7 @@ function buildGraph(args: {
     selectedTier,
     hookSummary,
     workflowSummary,
+    instructionSummary,
     fitnessFileCount,
     dimensionCount,
     metricCount,
@@ -273,21 +275,14 @@ function buildGraph(args: {
   } = args;
 
   const nodes: Node<LoopNodeData>[] = [
-    buildNode("instructions", -115, 175, {
+    buildNode("instructions", 96, 282, {
       kind: "spec",
-      title: "Instruction File",
-      subtitle: "CLAUDE.md first, AGENTS.md fallback.",
-      meta: ["CLAUDE.md", "AGENTS.md"],
+      title: instructionSummary?.fileName ?? "Instruction File",
+      subtitle: instructionSummary?.fallbackUsed ? "Fallback repository rulebook." : "Preferred repository rulebook.",
+      meta: instructionSummary?.fallbackUsed ? ["fallback", "hook preflight"] : ["preferred", "hook preflight"],
       tone: "neutral",
     }),
-    buildNode("core", 505, 150, {
-      kind: "core",
-      title: "Governance Loop",
-      subtitle: "Local gates, executable fitness, and CI feedback in one loop.",
-      meta: [repoLabel, `tier ${selectedTier}`],
-      tone: "neutral",
-    }),
-    buildNode("hook", 105, 175, {
+    buildNode("hook", 248, 164, {
       kind: "local",
       title: "Hook Runtime",
       subtitle: "First local gate.",
@@ -296,21 +291,21 @@ function buildGraph(args: {
         : ["loading hooks", "git bindings"],
       tone: "sky",
     }),
-    buildNode("fitness", 510, 10, {
+    buildNode("fitness", 516, 84, {
       kind: "spec",
       title: "Fitness Files",
       subtitle: "Narrative + executable specs.",
       meta: [`${fitnessFileCount} files`, `${dimensionCount} dimensions`],
       tone: "emerald",
     }),
-    buildNode("plan", 900, 175, {
+    buildNode("plan", 836, 164, {
       kind: "plan",
       title: "Execution Plan",
       subtitle: "Filter, dispatch, score.",
       meta: [`${metricCount} metrics`, `${hardGateCount} hard gates`],
       tone: "amber",
     }),
-    buildNode("actions", 760, 335, {
+    buildNode("actions", 862, 428, {
       kind: "remote",
       title: "GitHub Actions",
       subtitle: "Remote enforcement.",
@@ -319,7 +314,7 @@ function buildGraph(args: {
         : ["loading workflows", "remote checks"],
       tone: "violet",
     }),
-    buildNode("feedback", 255, 335, {
+    buildNode("feedback", 344, 438, {
       kind: "feedback",
       title: "Evidence",
       subtitle: "Scores feed back.",
@@ -329,21 +324,28 @@ function buildGraph(args: {
       ],
       tone: "emerald",
     }),
+    buildNode("core", 552, 292, {
+      kind: "core",
+      title: "Governance Loop",
+      subtitle: "Local gates, executable fitness, and CI feedback in one loop.",
+      meta: [repoLabel, `tier ${selectedTier}`],
+      tone: "neutral",
+    }),
   ];
 
   const edges: Edge[] = [
-    buildEdge("instructions-hook", "instructions", "hook", "source-right", "target-left", "repo rulebook", "#64748b", "6 4"),
-    buildEdge("core-hook", "core", "hook", "source-left", "target-right", "local gate", "#0ea5e9"),
-    buildEdge("hook-fitness", "hook", "fitness", "source-top", "target-left", "profile -> dimension", "#38bdf8"),
-    buildEdge("fitness-plan", "fitness", "plan", "source-right", "target-top", "frontmatter -> metrics", "#10b981"),
-    buildEdge("plan-actions", "plan", "actions", "source-bottom", "target-top", "dispatch remote runners", "#f59e0b"),
-    buildEdge("actions-feedback", "actions", "feedback", "source-left", "target-right", "checks + artifacts", "#8b5cf6"),
-    buildEdge("feedback-hook", "feedback", "hook", "source-top", "target-bottom", "tighten local loop", "#059669"),
-    buildEdge("fitness-feedback", "fitness", "feedback", "source-bottom", "target-top", "score evidence", "#22c55e", "6 4"),
-    buildEdge("actions-core", "actions", "core", "source-top", "target-bottom", "remote signal", "#a855f7", "6 4"),
+    buildEdge("instructions-hook", "instructions", "hook", "source-right", "target-left", "rulebook", "#64748b", "6 4"),
+    buildEdge("hook-fitness", "hook", "fitness", "source-right", "target-left", "local gate", "#3b82f6"),
+    buildEdge("fitness-plan", "fitness", "plan", "source-right", "target-top", "frontmatter", "#10b981"),
+    buildEdge("plan-actions", "plan", "actions", "source-bottom", "target-top", "dispatch", "#f59e0b"),
+    buildEdge("actions-feedback", "actions", "feedback", "source-left", "target-right", "artifacts", "#8b5cf6"),
+    buildEdge("feedback-instructions", "feedback", "instructions", "source-left", "target-bottom", "tighten loop", "#059669", "6 4"),
+    buildEdge("feedback-hook", "feedback", "hook", "source-top", "target-bottom", "internal loop", "#38bdf8", "6 4"),
+    buildEdge("actions-core", "actions", "core", "source-left", "target-right", "remote signal", "#a855f7", "6 4"),
+    buildEdge("core-hook", "core", "hook", "source-left", "target-right", "govern", "#60a5fa", "6 4"),
   ];
 
-  return { nodes, edges, minHeight: 560 };
+  return { nodes, edges, minHeight: 620 };
 }
 
 export function HarnessGovernanceLoopGraph({
@@ -510,25 +512,14 @@ export function HarnessGovernanceLoopGraph({
       selectedTier,
       hookSummary,
       workflowSummary,
+      instructionSummary,
       fitnessFileCount,
       dimensionCount,
       metricCount,
       hardGateCount,
     }),
-    [dimensionCount, fitnessFileCount, hardGateCount, hookSummary, metricCount, repoLabel, selectedTier, workflowSummary],
+    [dimensionCount, fitnessFileCount, hardGateCount, hookSummary, instructionSummary, metricCount, repoLabel, selectedTier, workflowSummary],
   );
-
-  if (instructionSummary) {
-    const instructionNode = graph.nodes.find((node) => node.id === "instructions");
-    if (instructionNode) {
-      instructionNode.data = {
-        ...instructionNode.data,
-        title: instructionSummary.fileName,
-        subtitle: instructionSummary.fallbackUsed ? "Fallback repository rulebook." : "Preferred repository rulebook.",
-        meta: instructionSummary.fallbackUsed ? ["fallback", "hook preflight"] : ["preferred", "hook preflight"],
-      };
-    }
-  }
 
   const graphIssues = [specsError, planError, hookState.error, workflowState.error, instructionsState.error].filter(Boolean);
 
@@ -585,10 +576,26 @@ export function HarnessGovernanceLoopGraph({
             </span>
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl border border-desktop-border bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.08),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(139,92,246,0.08),transparent_30%),radial-gradient(circle_at_left,rgba(14,165,233,0.08),transparent_32%)]">
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="h-[220px] w-[220px] rounded-full border border-sky-200/70 bg-sky-50/10" />
-              <div className="absolute h-[560px] w-[820px] rounded-[999px] border border-violet-200/60" />
+          <div className="relative overflow-hidden rounded-2xl border border-desktop-border bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(241,245,249,0.98))]">
+            <div className="pointer-events-none absolute inset-0">
+              <div className="absolute left-[36px] top-[18px] h-[530px] w-[1080px] rounded-[999px] border-2 border-dashed border-sky-300/60 bg-slate-100/25" />
+              <div className="absolute left-[78px] top-[54px] h-[510px] w-[640px] rounded-[999px] border-[3px] border-sky-500/80 bg-[radial-gradient(circle_at_center,rgba(253,224,71,0.30),rgba(245,158,11,0.18))]" />
+              <div className="absolute left-[122px] top-[186px] h-[230px] w-[360px] rounded-[999px] border-2 border-dashed border-sky-400/75 bg-sky-100/20" />
+
+              <div className="absolute left-[48px] top-[34px] rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 shadow-sm">
+                <div className="text-[18px] font-bold text-slate-900">外部反馈环</div>
+                <div className="text-[13px] font-semibold text-slate-600">Agent + DevOps</div>
+              </div>
+
+              <div className="absolute left-[164px] top-[78px] rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 shadow-sm">
+                <div className="text-[18px] font-bold text-slate-900">提交反馈环</div>
+                <div className="text-[13px] font-semibold text-slate-600">Agent + Hook 工具</div>
+              </div>
+
+              <div className="absolute left-[144px] top-[312px] rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 shadow-sm">
+                <div className="text-[18px] font-bold text-slate-900">内部反馈环</div>
+                <div className="text-[13px] font-semibold text-slate-600">Agent + IDE</div>
+              </div>
             </div>
             <div style={{ height: graph.minHeight }}>
               <ReactFlow
@@ -600,10 +607,10 @@ export function HarnessGovernanceLoopGraph({
                 elementsSelectable={false}
                 zoomOnScroll
                 panOnDrag
-                minZoom={0.62}
+                minZoom={0.58}
                 maxZoom={1.2}
                 fitView
-                fitViewOptions={{ padding: 0.04, minZoom: 0.66, maxZoom: 1 }}
+                fitViewOptions={{ padding: 0.06, minZoom: 0.62, maxZoom: 1 }}
                 proOptions={{ hideAttribution: true }}
               >
                 <Background color="#d7dee7" gap={20} size={1} />
