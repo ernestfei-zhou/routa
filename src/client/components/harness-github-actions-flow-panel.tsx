@@ -212,7 +212,7 @@ export function HarnessGitHubActionsFlowPanel({
       ) : null}
 
       {unsupportedMessage ? (
-        <HarnessUnsupportedState repoLabel={repoLabel} />
+        <HarnessUnsupportedState />
       ) : null}
 
       {flowState.error && !unsupportedMessage ? (

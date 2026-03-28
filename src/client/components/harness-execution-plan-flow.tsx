@@ -594,7 +594,7 @@ export function HarnessExecutionPlanFlow({
       ) : null}
 
       {unsupportedMessage ? (
-        <HarnessUnsupportedState repoLabel={repoLabel} />
+        <HarnessUnsupportedState />
       ) : null}
 
       {error && !unsupportedMessage ? (

@@ -741,7 +741,7 @@ export function HarnessGovernanceLoopGraph({
       </div>
 
       {unsupportedMessage ? (
-        <HarnessUnsupportedState repoLabel={repoLabel} />
+        <HarnessUnsupportedState />
       ) : null}
 
       {!hasContext && !unsupportedMessage ? (

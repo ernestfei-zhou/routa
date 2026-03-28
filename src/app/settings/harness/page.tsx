@@ -438,7 +438,7 @@ export default function HarnessSettingsPage() {
               ) : null}
 
               {unsupportedRepoMessage ? (
-                <HarnessUnsupportedState repoLabel={selectedRepoLabel} className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-[11px] text-amber-800" />
+                <HarnessUnsupportedState className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-[11px] text-amber-800" />
               ) : null}
 
               {specsState.error && !unsupportedRepoMessage ? (
@@ -541,7 +541,7 @@ export default function HarnessSettingsPage() {
             </div>
 
             {unsupportedRepoMessage ? (
-              <HarnessUnsupportedState repoLabel={selectedRepoLabel} />
+              <HarnessUnsupportedState />
             ) : visibleSpec ? (
               <div className="mt-4 space-y-3">
                 <div className="rounded-xl border border-desktop-border bg-desktop-bg-primary/80 px-4 py-3">

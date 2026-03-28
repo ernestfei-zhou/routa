@@ -260,7 +260,7 @@ export function HarnessHookRuntimePanel({
       ) : null}
 
       {unsupportedMessage ? (
-        <HarnessUnsupportedState repoLabel={repoLabel} />
+        <HarnessUnsupportedState />
       ) : null}
 
       {hooksState.error && !unsupportedMessage ? (

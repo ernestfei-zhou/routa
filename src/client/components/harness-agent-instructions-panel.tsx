@@ -273,7 +273,7 @@ export function HarnessAgentInstructionsPanel({
       ) : null}
 
       {unsupportedMessage ? (
-        <HarnessUnsupportedState repoLabel={repoLabel} />
+        <HarnessUnsupportedState />
       ) : null}
 
       {instructionsState.error && !unsupportedMessage ? (
