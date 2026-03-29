@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslation } from "@/i18n";
+import type { TranslationDictionary } from "@/i18n/types";
 
 import {
   clampPercent,
@@ -25,6 +27,8 @@ type FitnessAnalysisContentProps = {
   profileState: ProfilePanelState;
   report?: FitnessReport;
 };
+
+type FitnessTranslation = TranslationDictionary;
 
 type DimensionGroup = {
   key: string;
@@ -57,69 +61,82 @@ type MeasureEntry = {
 };
 
 const MEASURE_ORDER = ["collaboration", "sdlc", "harness", "governance", "context"] as const;
+type MeasureDimension = (typeof MEASURE_ORDER)[number];
 
-const MEASURE_SPECS: Record<string, MeasureSpec> = {
-  governance: {
-    title: "Verification & Guardrails",
-    subtitle: "Ownership, validation, and policy controls",
-    body: "A repository needs verifiable ownership and validation rules so agent changes can be trusted and reviewed safely.",
-    examples: ["CODEOWNERS", "docs/fitness/review-triggers.yaml", "test/lint gates"],
-    without: "Without these controls, agents can produce valid-looking changes that still violate collaboration or release safety rules.",
-  },
-  harness: {
-    title: "Workflow Loop",
-    subtitle: "Execution and verification loop",
-    body: "Agents need a reliable execution surface: commands, checks, and runtime feedback must be repeatable.",
-    examples: ["commands in package scripts", "fitness or build checks", "runtime entrypoints"],
-    without: "Without a stable loop, agents cannot verify whether code changes actually work before handoff.",
-  },
-  context: {
-    title: "Context Readiness",
-    subtitle: "Context depth and memory for execution",
-    body: "Agents rely on layered context to reduce repeated discovery and stay consistent across edits.",
-    examples: ["docs/product-specs", "docs/design-docs", "docs/exec-plans", "docs/references"],
-    without: "Without context depth, agents lose momentum and make repeated assumption-driven changes.",
-  },
-  sdlc: {
-    title: "Process Expansion",
-    subtitle: "Delivery cadence and process continuity",
-    body: "A stable process lets agents move from code edits to verification and handoff without hidden assumptions.",
-    examples: ["CI and test pipelines", "task handoff conventions", "release checks"],
-    without: "Without process clarity, fixes may compile but still block downstream workflows.",
-  },
-  collaboration: {
-    title: "Task Delegation",
-    subtitle: "Handoffs and multi-agent coordination",
-    body: "Clear delegation rules let multiple agents and people work on one repository without conflicting assumptions.",
-    examples: ["AGENTS.md", "planner/specialist commands", "handoff conventions"],
-    without: "Without coordination, parallel work becomes duplicated or stalled across agent boundaries.",
-  },
-};
+function buildMeasureSpecs(t: {
+  governance: MeasureSpec;
+  harness: MeasureSpec;
+  context: MeasureSpec;
+  sdlc: MeasureSpec;
+  collaboration: MeasureSpec;
+}): Record<MeasureDimension, MeasureSpec> {
+  return {
+    governance: {
+      title: t.governance.title,
+      subtitle: t.governance.subtitle,
+      body: t.governance.body,
+      examples: t.governance.examples,
+      without: t.governance.without,
+    },
+    harness: {
+      title: t.harness.title,
+      subtitle: t.harness.subtitle,
+      body: t.harness.body,
+      examples: t.harness.examples,
+      without: t.harness.without,
+    },
+    context: {
+      title: t.context.title,
+      subtitle: t.context.subtitle,
+      body: t.context.body,
+      examples: t.context.examples,
+      without: t.context.without,
+    },
+    sdlc: {
+      title: t.sdlc.title,
+      subtitle: t.sdlc.subtitle,
+      body: t.sdlc.body,
+      examples: t.sdlc.examples,
+      without: t.sdlc.without,
+    },
+    collaboration: {
+      title: t.collaboration.title,
+      subtitle: t.collaboration.subtitle,
+      body: t.collaboration.body,
+      examples: t.collaboration.examples,
+      without: t.collaboration.without,
+    },
+  };
+}
 
 function RecommendationCard({
   action,
   whyItMatters,
   evidenceHint,
   critical,
+  criticalLabel,
+  startFromLabel,
 }: {
   action: string;
   whyItMatters: string;
   evidenceHint: string;
   critical: boolean;
+  criticalLabel: string;
+  startFromLabel: string;
 }) {
   return (
     <article className="rounded-xl border border-desktop-border bg-white/80 p-3 dark:bg-white/6">
-      <div className="flex items-start justify-between gap-2">
-        <div className="text-sm font-semibold text-desktop-text-primary">{action}</div>
+        <div className="flex items-start justify-between gap-2">
+          <div className="text-sm font-semibold text-desktop-text-primary">{action}</div>
         {critical ? (
           <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] text-rose-700">
-            critical
+            {criticalLabel}
           </span>
         ) : null}
       </div>
       <div className="mt-2 text-[11px] leading-5 text-desktop-text-secondary">{whyItMatters}</div>
       <div className="mt-2 rounded-xl border border-desktop-border bg-desktop-bg-primary/80 px-3 py-2 text-[11px] text-desktop-text-secondary">
-        从这里开始：{evidenceHint}
+        {startFromLabel}{evidenceHint}
       </div>
     </article>
   );
@@ -169,15 +186,27 @@ function buildDimensionGroups(report: FitnessReport): DimensionGroup[] {
     });
 }
 
-function buildMeasureEntries(report: FitnessReport): MeasureEntry[] {
+function buildMeasureEntries(
+  report: FitnessReport,
+  measures: {
+    governance: MeasureSpec;
+    harness: MeasureSpec;
+    context: MeasureSpec;
+    sdlc: MeasureSpec;
+    collaboration: MeasureSpec;
+  },
+): MeasureEntry[] {
+  const measureSpecs = buildMeasureSpecs(measures);
+  const fallbackSpec: MeasureSpec = {
+    title: humanizeToken(report.overallLevel),
+    subtitle: humanizeToken(report.overallLevel),
+    body: humanizeToken("unknown"),
+    examples: [],
+    without: "",
+  };
+
   return MEASURE_ORDER.map((dimension) => {
-    const spec = MEASURE_SPECS[dimension] ?? {
-      title: humanizeToken(dimension),
-      subtitle: "Repository measure",
-      body: "This dimension captures one part of repository readiness.",
-      examples: [],
-      without: "Agents lose confidence in this area and require more manual guidance.",
-    };
+    const spec = measureSpecs[dimension] ?? fallbackSpec;
     const dimensionInfo = report.dimensions[dimension];
     const failedCriteria = report.criteria.filter((criterion) => criterion.dimension === dimension && criterion.status === "fail");
     const recommendations = report.recommendations.filter((item) => item.criterionId.startsWith(`${dimension}.`));
@@ -198,6 +227,7 @@ function buildMeasureEntries(report: FitnessReport): MeasureEntry[] {
 }
 
 function CapabilityCellCard({ cell }: { cell: CellResult }) {
+  const { t } = useTranslation();
   const score = clampPercent(cell.score);
   const failedCriteria = cell.criteria.filter((criterion) => criterion.status === "fail");
   const criticalFailures = failedCriteria.filter((criterion) => criterion.critical);
@@ -224,9 +254,9 @@ function CapabilityCellCard({ cell }: { cell: CellResult }) {
       </div>
 
       <div className="mt-3 grid gap-2 text-[11px] text-desktop-text-secondary sm:grid-cols-3">
-        <div>{cell.passedWeight}/{cell.applicableWeight} weighted checks</div>
-        <div>{failedCriteria.length} failing criteria</div>
-        <div>{criticalFailures.length} critical blockers</div>
+        <div>{cell.passedWeight}/{cell.applicableWeight} {t.fitness.overview.weightedChecks}</div>
+        <div>{failedCriteria.length} {t.fitness.overview.failingCriteriaLabel}</div>
+        <div>{criticalFailures.length} {t.fitness.overview.criticalBlockersLabel}</div>
       </div>
 
       {failedCriteria.length > 0 ? (
@@ -247,7 +277,7 @@ function CapabilityCellCard({ cell }: { cell: CellResult }) {
         </div>
       ) : (
         <div className="mt-3 rounded-xl border border-dashed border-desktop-border px-3 py-3 text-[11px] text-desktop-text-secondary">
-          No failures
+          {t.fitness.overview.noFailures}
         </div>
       )}
     </article>
@@ -256,17 +286,19 @@ function CapabilityCellCard({ cell }: { cell: CellResult }) {
 
 function OverviewView({
   report,
+  t,
 }: {
   report: FitnessReport;
+  t: FitnessTranslation;
 }) {
-  const measureEntries = useMemo(() => buildMeasureEntries(report), [report]);
+  const measureEntries = useMemo(() => buildMeasureEntries(report, t.fitness.measures), [report, t.fitness.measures]);
   const [selectedMeasure, setSelectedMeasure] = useState(measureEntries[0]?.key ?? "governance");
   const activeMeasure = measureEntries.find((entry) => entry.key === selectedMeasure) ?? measureEntries[0];
 
   if (!activeMeasure) {
     return (
       <div className="rounded-2xl border border-dashed border-desktop-border px-4 py-8 text-sm text-desktop-text-secondary">
-        当前报告没有可展示的维度数据。
+        {t.fitness.overview.noDimensionData}
       </div>
     );
   }
@@ -306,21 +338,21 @@ function OverviewView({
 
           <div className="mt-4 flex flex-wrap gap-2">
             <div className="rounded-full border border-desktop-border bg-white/80 px-3 py-2 text-[11px] text-desktop-text-secondary dark:bg-white/6">
-              Level:
+              {t.fitness.overview.levelLabel}
               <span className="ml-1 font-semibold text-desktop-text-primary">{activeMeasure.levelName}</span>
             </div>
             <div className="rounded-full border border-desktop-border bg-white/80 px-3 py-2 text-[11px] text-desktop-text-secondary dark:bg-white/6">
-              Score:
+              {t.fitness.overview.scoreLabel}
               <span className="ml-1 font-semibold text-desktop-text-primary">{clampPercent(activeMeasure.score)}%</span>
             </div>
             <div className="rounded-full border border-desktop-border bg-white/80 px-3 py-2 text-[11px] text-desktop-text-secondary dark:bg-white/6">
-              Fails:
+              {t.fitness.overview.failsLabel}
               <span className="ml-1 font-semibold text-desktop-text-primary">{activeMeasure.failedCriteria.length}</span>
             </div>
           </div>
 
           <div className="mt-5">
-            <p className="mb-2 font-mono text-[12px] uppercase tracking-[0.04em] text-desktop-text-secondary">Examples</p>
+            <p className="mb-2 font-mono text-[12px] uppercase tracking-[0.04em] text-desktop-text-secondary">{t.fitness.overview.examplesLabel}</p>
             <ul className="flex flex-col gap-1">
               {activeMeasure.examples.map((example) => (
                 <li key={example} className="flex items-baseline gap-2">
@@ -333,7 +365,7 @@ function OverviewView({
 
           <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
             <div>
-              <div className="text-[12px] font-semibold text-desktop-text-primary">Current findings</div>
+              <div className="text-[12px] font-semibold text-desktop-text-primary">{t.fitness.overview.currentFindings}</div>
               <div className="mt-3 space-y-3">
                 {activeMeasure.failedCriteria.length > 0 ? (
                   activeMeasure.failedCriteria.slice(0, 4).map((criterion) => (
@@ -345,17 +377,19 @@ function OverviewView({
                         </div>
                         {criterion.critical ? (
                           <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] text-rose-700">
-                            critical
+                            {t.fitness.overview.critical}
                           </span>
                         ) : null}
                       </div>
                       <div className="mt-2 text-[11px] leading-5 text-desktop-text-secondary">{criterion.whyItMatters}</div>
-                      <div className="mt-2 text-[11px] leading-5 text-desktop-text-secondary">Start: {criterion.evidenceHint}</div>
+                      <div className="mt-2 text-[11px] leading-5 text-desktop-text-secondary">
+                        {t.fitness.overview.startFromLabel} {criterion.evidenceHint}
+                      </div>
                     </article>
                   ))
                 ) : (
                   <div className="rounded-xl border border-dashed border-desktop-border px-4 py-6 text-sm text-desktop-text-secondary">
-                    No active blockers
+                    {t.fitness.overview.noActiveBlockers}
                   </div>
                 )}
               </div>
@@ -363,7 +397,7 @@ function OverviewView({
 
             <div className="space-y-4">
               <div className="rounded-xl border border-desktop-border bg-white/80 p-4 dark:bg-white/6">
-                <div className="text-[12px] font-semibold text-desktop-text-primary">Recommended actions</div>
+                <div className="text-[12px] font-semibold text-desktop-text-primary">{t.fitness.overview.recommendedActions}</div>
                 <div className="mt-3 space-y-2">
                   {activeMeasure.recommendations.length > 0 ? (
                     activeMeasure.recommendations.slice(0, 3).map((item) => (
@@ -374,14 +408,14 @@ function OverviewView({
                     ))
                   ) : (
                     <div className="rounded-xl border border-dashed border-desktop-border px-3 py-4 text-[11px] text-desktop-text-secondary">
-                      No actions
+                      {t.fitness.overview.noActions}
                     </div>
                   )}
                 </div>
               </div>
 
               <div className="rounded-xl border border-desktop-border bg-white/80 p-4 dark:bg-white/6">
-                <div className="text-[12px] font-semibold text-desktop-text-primary">Without this</div>
+                <div className="text-[12px] font-semibold text-desktop-text-primary">{t.fitness.overview.withoutThis}</div>
                 <p className="mt-2 text-[12px] leading-6 text-desktop-text-secondary">{activeMeasure.without}</p>
               </div>
             </div>
@@ -392,7 +426,7 @@ function OverviewView({
   );
 }
 
-function CapabilitiesView({ report }: { report: FitnessReport }) {
+function CapabilitiesView({ report, t }: { report: FitnessReport; t: FitnessTranslation }) {
   const groups = useMemo(() => buildDimensionGroups(report), [report]);
 
   return (
@@ -405,7 +439,7 @@ function CapabilitiesView({ report }: { report: FitnessReport }) {
                 {group.name}
               </div>
               <p className="mt-1 text-[11px] text-desktop-text-secondary">
-                {group.cells.length} cells · {group.failedCriteria} failing criteria · {group.criticalFailures} critical blockers
+                {group.cells.length} {t.fitness.overview.cellsDivider} · {group.failedCriteria} {t.fitness.overview.failingCriteriaLabel} · {group.criticalFailures} {t.fitness.overview.criticalBlockersLabel}
               </p>
             </div>
             <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${readinessBadgeTone(group.averageScore)}`}>
@@ -423,11 +457,11 @@ function CapabilitiesView({ report }: { report: FitnessReport }) {
   );
 }
 
-function RecommendationsView({ report }: { report: FitnessReport }) {
+function RecommendationsView({ report, t }: { report: FitnessReport; t: FitnessTranslation }) {
   if (report.recommendations.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-desktop-border px-4 py-6 text-sm text-desktop-text-secondary">
-        当前 Profile 没有建议数据。
+        {t.fitness.overview.noProfileRecommendations}
       </div>
     );
   }
@@ -441,17 +475,19 @@ function RecommendationsView({ report }: { report: FitnessReport }) {
           whyItMatters={item.whyItMatters}
           evidenceHint={item.evidenceHint}
           critical={item.critical}
+          criticalLabel={t.fitness.overview.critical}
+          startFromLabel={t.fitness.overview.startFromLabel}
         />
       ))}
     </div>
   );
 }
 
-function ChangesView({ report }: { report: FitnessReport }) {
+function ChangesView({ report, t }: { report: FitnessReport; t: FitnessTranslation }) {
   if (!report.comparison) {
     return (
       <div className="rounded-2xl border border-dashed border-desktop-border p-4 text-sm text-desktop-text-secondary">
-        当前快照未开启历史对比，或缺少历史快照。重新运行时勾选“与上次对比”即可补充。
+        {t.fitness.overview.noComparisonHint}
       </div>
     );
   }
@@ -461,18 +497,22 @@ function ChangesView({ report }: { report: FitnessReport }) {
   return (
     <div className="space-y-4">
       <article className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/60 p-4">
-        <div className="text-sm text-desktop-text-primary">与上次对比：{formatTime(comp.previousGeneratedAt)}</div>
+        <div className="text-sm text-desktop-text-primary">
+          {t.fitness.overview.fromLast}: {formatTime(comp.previousGeneratedAt)}
+        </div>
         <div className="mt-2 text-xs text-desktop-text-secondary">
-          上次总体：{comp.previousOverallLevel} → 当前总体：{report.overallLevel}
+          {t.fitness.overview.lastOverall}: {comp.previousOverallLevel} {t.fitness.overview.directionSame} {t.fitness.overview.currentOverall}: {report.overallLevel}
           <span className={`ml-2 font-semibold ${levelChangeTone(comp.overallChange)}`}>
-            {comp.overallChange === "up" ? "上升" : comp.overallChange === "down" ? "下降" : "持平"}
+            {comp.overallChange === "up" ? t.fitness.overview.directionUp : comp.overallChange === "down" ? t.fitness.overview.directionDown : t.fitness.overview.directionSame}
           </span>
         </div>
       </article>
 
       <section className="grid gap-4 xl:grid-cols-2">
         <div className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/60 p-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">维度变化</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">
+            {t.fitness.overview.dimensionChangesTitle}
+          </div>
           {comp.dimensionChanges.length > 0 ? (
             <ul className="mt-3 space-y-2">
               {comp.dimensionChanges.map((item) => (
@@ -487,24 +527,26 @@ function ChangesView({ report }: { report: FitnessReport }) {
               ))}
             </ul>
           ) : (
-            <p className="mt-3 text-xs text-desktop-text-secondary">当前未检测到维度变化。</p>
+            <p className="mt-3 text-xs text-desktop-text-secondary">{t.fitness.overview.noDimensionChanges}</p>
           )}
         </div>
         <div className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/60 p-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">关键项状态变化</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">
+            {t.fitness.overview.criteriaChangesTitle}
+          </div>
           {comp.criteriaChanges.length > 0 ? (
             <ul className="mt-3 space-y-2 text-sm">
               {comp.criteriaChanges.slice(0, 8).map((item) => (
                 <li key={item.id} className="rounded-xl border border-desktop-border bg-white/85 p-3 dark:bg-white/6">
                   <div className="font-mono text-[11px] text-desktop-text-secondary">{item.id}</div>
-                  <div className="mt-1 text-xs text-desktop-text-secondary">
-                    {item.previousStatus ?? "unknown"} → {item.currentStatus ?? "unknown"}
+                    <div className="mt-1 text-xs text-desktop-text-secondary">
+                    {item.previousStatus ?? t.fitness.status.noData} {t.fitness.panel.to} {item.currentStatus ?? t.fitness.status.noData}
                   </div>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="mt-3 text-xs text-desktop-text-secondary">暂无关键项状态变化。</p>
+            <p className="mt-3 text-xs text-desktop-text-secondary">{t.fitness.overview.noCriteriaChanges}</p>
           )}
         </div>
       </section>
@@ -518,27 +560,31 @@ export function FitnessAnalysisContent({
   profileState,
   report,
 }: FitnessAnalysisContentProps) {
+  const { t } = useTranslation();
+  const selectedProfileLabel = selectedProfile === "generic" ? t.fitness.panel.genericProfile : t.fitness.panel.orchestratorProfile;
+  const profileMissingText = t.fitness.overview.noProfileErrorText.replace("{profile}", selectedProfileLabel);
+
   if (!report) {
     return (
       <div className="rounded-2xl border border-dashed border-desktop-border px-4 py-8 text-sm text-desktop-text-secondary">
         {profileState.state === "loading"
-          ? "正在生成 fluency 报告。"
-          : profileState.error ?? `当前还没有 ${selectedProfile} 的报告，先运行一次分析。`}
+          ? t.fitness.overview.noReportTextLoading
+          : profileState.error ?? profileMissingText}
       </div>
     );
   }
 
   if (viewMode === "capabilities") {
-    return <CapabilitiesView report={report} />;
+    return <CapabilitiesView report={report} t={t} />;
   }
 
   if (viewMode === "recommendations") {
-    return <RecommendationsView report={report} />;
+    return <RecommendationsView report={report} t={t} />;
   }
 
   if (viewMode === "changes") {
-    return <ChangesView report={report} />;
+    return <ChangesView report={report} t={t} />;
   }
 
-  return <OverviewView report={report} />;
+  return <OverviewView report={report} t={t} />;
 }

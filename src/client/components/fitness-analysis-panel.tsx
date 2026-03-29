@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
+import type { TranslationDictionary } from "@/i18n/types";
+import { useTranslation } from "@/i18n";
 
 import { FitnessAnalysisContent } from "./fitness-analysis-content";
 import {
@@ -57,61 +59,30 @@ const LEVEL_INDEX: Record<string, number> = {
   agent_first: 4,
 };
 
-const MATRIX_COLUMNS: MatrixColumn[] = [
-  {
-    key: "collaboration",
-    title: ["Human-AI Collaboration"],
-    subtitle: "（人机协作）",
-    color: "#0D4E63",
-  },
-  {
-    key: "sdlc",
-    title: ["AI SDLC Coverage"],
-    subtitle: "（生命周期覆盖度）",
-    color: "#53A8B7",
-  },
-  {
-    key: "harness",
-    title: ["AI Engineering Harness"],
-    subtitle: "（工程化支撑）",
-    color: "#EF6A82",
-  },
-  {
-    key: "governance",
-    title: ["Governance & Quality"],
-    subtitle: "（质量与治理）",
-    color: "#6C548F",
-  },
-  {
-    key: "context",
-    title: ["Context Engineering"],
-    subtitle: "（上下文工程）",
-    color: "#D28A07",
-  },
-];
+const MATRIX_COLUMN_KEYS = ["collaboration", "sdlc", "harness", "governance", "context"] as const;
+const MATRIX_ROW_KEYS = ["awareness", "assistedCoding", "structuredAiCoding", "agentCentric", "agentFirst"] as const;
 
-const MATRIX_ROWS: MatrixRow[] = [
-  {
-    title: ["Awareness"],
-    subtitle: "认识/意识唤醒",
-  },
-  {
-    title: ["Assisted", "Coding"],
-    subtitle: "Chat、代码补全",
-  },
-  {
-    title: ["Structured AI", "Coding"],
-    subtitle: "Spec → Code → Test",
-  },
-  {
-    title: ["Agent-Centric"],
-    subtitle: "Code Agent、PR Agent",
-  },
-  {
-    title: ["Agent-First"],
-    subtitle: "Ralph Loop Agent",
-  },
-];
+function buildMatrixColumns(matrix: TranslationDictionary["fitness"]["matrix"]): MatrixColumn[] {
+  return MATRIX_COLUMN_KEYS.map((key) => ({
+    key,
+    title: matrix[key].title,
+    subtitle: matrix[key].subtitle,
+    color: {
+      collaboration: "#0D4E63",
+      sdlc: "#53A8B7",
+      harness: "#EF6A82",
+      governance: "#6C548F",
+      context: "#D28A07",
+    }[key],
+  }));
+}
+
+function buildMatrixRows(matrix: TranslationDictionary["fitness"]["matrix"]): MatrixRow[] {
+  return MATRIX_ROW_KEYS.map((key) => ({
+    title: matrix[key].title,
+    subtitle: matrix[key].subtitle,
+  }));
+}
 
 function SvgMultilineText({
   x,
@@ -165,7 +136,17 @@ function CapabilityPin({ x, y, color, size = 22 }: { x: number; y: number; color
   );
 }
 
-function FitnessMatrix({ selectedReport }: { selectedReport?: { dimensions?: Record<string, { level?: string | null }> } | undefined }) {
+function FitnessMatrix({
+  selectedReport,
+  matrixColumns,
+  matrixRows,
+  noDataText,
+}: {
+  selectedReport?: { dimensions?: Record<string, { level?: string | null }> } | undefined;
+  matrixColumns: MatrixColumn[];
+  matrixRows: MatrixRow[];
+  noDataText: string;
+}) {
   const matrixWidth = 1400;
   const matrixHeight = 320;
   const margin = { top: 52, right: 14, bottom: 16, left: 152 };
@@ -173,15 +154,15 @@ function FitnessMatrix({ selectedReport }: { selectedReport?: { dimensions?: Rec
   const plotY = margin.top;
   const plotW = matrixWidth - margin.left - margin.right;
   const plotH = matrixHeight - margin.top - margin.bottom;
-  const colCount = MATRIX_COLUMNS.length;
-  const rowCount = MATRIX_ROWS.length;
+  const colCount = matrixColumns.length;
+  const rowCount = matrixRows.length;
   const colW = plotW / colCount;
   const rowH = plotH / rowCount;
   const toX = (value: number) => plotX + value * colW;
   const toY = (value: number) => plotY + value * rowH;
 
   const dimensionMap = selectedReport?.dimensions ?? {};
-  const points: MatrixPoint[] = MATRIX_COLUMNS.flatMap((column, index) => {
+  const points: MatrixPoint[] = matrixColumns.flatMap((column, index) => {
     const level = dimensionMap[column.key]?.level ?? null;
     const levelIndex = level ? LEVEL_INDEX[level] : undefined;
     if (levelIndex === undefined) {
@@ -199,7 +180,11 @@ function FitnessMatrix({ selectedReport }: { selectedReport?: { dimensions?: Rec
   const polylinePoints = points.map((point) => `${toX(point.x)},${toY(point.y)}`).join(" ");
 
   if (!selectedReport) {
-    return <div className="mt-2 rounded-xl border border-dashed border-desktop-border px-3 py-2 text-[11px] text-desktop-text-secondary">No report yet.</div>;
+    return (
+      <div className="mt-2 rounded-xl border border-dashed border-desktop-border px-3 py-2 text-[11px] text-desktop-text-secondary">
+        {matrixRows.length ? noDataText : null}
+      </div>
+    );
   }
 
   return (
@@ -248,7 +233,7 @@ function FitnessMatrix({ selectedReport }: { selectedReport?: { dimensions?: Rec
             );
           })}
 
-          {MATRIX_COLUMNS.map((column, index) => {
+          {matrixColumns.map((column, index) => {
             const cx = plotX + (index + 0.5) * colW;
             return (
               <g key={column.key}>
@@ -278,7 +263,7 @@ function FitnessMatrix({ selectedReport }: { selectedReport?: { dimensions?: Rec
             );
           })}
 
-          {MATRIX_ROWS.map((row, index) => {
+          {matrixRows.map((row, index) => {
             const cy = plotY + (index + 0.5) * rowH;
             const labelX = plotX - 28;
             return (
@@ -331,13 +316,19 @@ function FitnessMatrix({ selectedReport }: { selectedReport?: { dimensions?: Rec
   );
 }
 
-function StatusBadge({ state }: { state: FitnessProfileState }) {
+function StatusBadge({
+  state,
+  t,
+}: {
+  state: FitnessProfileState;
+  t: Pick<TranslationDictionary["fitness"]["panel"], "statusIdle" | "statusLoading" | "statusReady" | "statusEmpty" | "statusError">;
+}) {
   const labels: Record<FitnessProfileState, string> = {
-    idle: "Idle",
-    loading: "Running",
-    ready: "Ready",
-    empty: "Empty",
-    error: "Error",
+    idle: t.statusIdle,
+    loading: t.statusLoading,
+    ready: t.statusReady,
+    empty: t.statusEmpty,
+    error: t.statusError,
   };
 
   return (
@@ -353,6 +344,8 @@ export function FitnessAnalysisPanel({
   repoPath,
   codebaseLabel,
 }: FitnessAnalysisPanelProps) {
+  const { t } = useTranslation();
+  const fitness = t.fitness;
   const [profiles, setProfiles] = useState<Record<FitnessProfile, ProfilePanelState>>(EMPTY_STATE);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const hasContext = Boolean(workspaceId?.trim() || codebaseId?.trim() || repoPath?.trim());
@@ -361,12 +354,15 @@ export function FitnessAnalysisPanel({
     { workspaceId, codebaseId, repoPath },
     { mode: "deterministic" },
   );
-  const contextLabel = codebaseLabel || repoPath || null;
   const compareLast = true;
   const noSave = false;
 
   const selectedProfile: FitnessProfile = "generic";
   const selectedState = profiles.generic;
+  const matrixColumns = buildMatrixColumns(fitness.matrix);
+  const matrixRows = buildMatrixRows(fitness.matrix);
+  const noDataText = fitness.panel.noData;
+  const contextLabel = codebaseLabel || repoPath || fitness.panel.noContext;
 
   const applyProfiles = useCallback((entries: ReturnType<typeof normalizeApiResponse>) => {
     setProfiles((current) => {
@@ -379,7 +375,7 @@ export function FitnessAnalysisPanel({
           next[profile] = {
             ...next[profile],
             state: "empty",
-            error: `${new Date().toLocaleTimeString()} 未返回结果`,
+            error: `${new Date().toLocaleTimeString()} ${fitness.action.noAction}`,
           };
           continue;
         }
@@ -399,7 +395,7 @@ export function FitnessAnalysisPanel({
           next[profile] = {
             state: "empty",
             source: entry.source,
-            error: entry.error ?? "暂无快照",
+            error: entry.error ?? fitness.action.noSnapshots,
           };
           continue;
         }
@@ -408,7 +404,7 @@ export function FitnessAnalysisPanel({
           state: "error",
           source: entry.source,
           durationMs: entry.durationMs,
-          error: entry.error ?? "分析失败",
+          error: entry.error ?? fitness.action.analyzeFailed,
         };
       }
 
@@ -416,12 +412,16 @@ export function FitnessAnalysisPanel({
     });
 
     setGlobalError(null);
-  }, []);
+  }, [
+    fitness.action.analyzeFailed,
+    fitness.action.noAction,
+    fitness.action.noSnapshots,
+  ]);
 
   const syncProfiles = useCallback(async () => {
     if (!hasContext) {
       setProfiles(EMPTY_STATE);
-      setGlobalError("请先选择要分析的 Workspace 与 Repository");
+      setGlobalError(fitness.panel.noWorkspaceSelected);
       return;
     }
 
@@ -433,16 +433,22 @@ export function FitnessAnalysisPanel({
 
       if (!response.ok) {
         const body = await response.text();
-        setGlobalError(`获取快照失败: ${response.status} ${body}`);
+        setGlobalError(`${fitness.panel.fetchSnapshotFailed}${response.status} ${body}`);
         return;
       }
 
       const raw = await response.json().catch(() => null);
       applyProfiles(normalizeApiResponse(raw));
     } catch (error) {
-      setGlobalError(`获取快照失败: ${toMessage(error)}`);
+      setGlobalError(`${fitness.panel.fetchSnapshotFailed}${toMessage(error)}`);
     }
-  }, [applyProfiles, contextQuery, hasContext]);
+  }, [
+    applyProfiles,
+    contextQuery,
+    hasContext,
+    fitness.panel.fetchSnapshotFailed,
+    fitness.panel.noWorkspaceSelected,
+  ]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -456,7 +462,7 @@ export function FitnessAnalysisPanel({
     }
 
     if (!hasContext) {
-      const message = "请先在上方选择 Workspace 与 Repository";
+      const message = fitness.panel.noWorkspaceAction;
       setGlobalError(message);
       setProfiles((current) => {
         const next = { ...current };
@@ -503,7 +509,7 @@ export function FitnessAnalysisPanel({
 
       if (!response.ok) {
         const body = await response.text();
-        const message = `执行失败: ${response.status} ${body || "空响应"}`;
+        const message = `${fitness.panel.analyzeFailedPrefix}${response.status} ${body || fitness.panel.noAnalyzeResponse}`;
         setGlobalError(message);
         setProfiles((current) => {
           const next = { ...current };
@@ -527,7 +533,7 @@ export function FitnessAnalysisPanel({
 
       applyProfiles(normalizeApiResponse(payload));
     } catch (error) {
-      const message = `执行失败: ${toMessage(error)}`;
+      const message = `${fitness.panel.analyzeFailedPrefix}${toMessage(error)}`;
       setGlobalError(message);
       setProfiles((current) => {
         const next = { ...current };
@@ -541,7 +547,16 @@ export function FitnessAnalysisPanel({
         return next;
       });
     }
-  }, [applyProfiles, compareLast, contextPayload, hasContext, noSave]);
+  }, [
+    applyProfiles,
+    compareLast,
+    contextPayload,
+    hasContext,
+    noSave,
+    fitness.panel.analyzeFailedPrefix,
+    fitness.panel.noAnalyzeResponse,
+    fitness.panel.noWorkspaceAction,
+  ]);
 
   const onRunSelectedProfile = useCallback(() => {
     void runProfiles([selectedProfile]);
@@ -550,14 +565,15 @@ export function FitnessAnalysisPanel({
   const selectedReport = selectedState.report;
   const blockers = selectedReport?.blockingCriteria ?? [];
   const failedCriteria = selectedReport?.criteria.filter((criterion) => criterion.status === "fail") ?? [];
-  const heroModel = buildHeroModel(selectedReport, selectedProfile, selectedState.state);
-  const primaryActionLabel = buildPrimaryActionLabel(selectedReport, selectedState.state);
+  const heroModel = buildHeroModel(selectedReport, selectedProfile, selectedState.state, fitness);
+  const primaryActionLabel = buildPrimaryActionLabel(selectedReport, selectedState.state, fitness);
   const reportSource = selectedState.source === "analysis"
-    ? "Live"
+    ? fitness.panel.reportSourceLive
     : selectedState.source === "snapshot"
-      ? "Snapshot"
-      : "No data";
-  const reportReadiness = selectedReport ? `${Math.round(selectedReport.currentLevelReadiness * 100)}%` : "N/A";
+      ? fitness.panel.reportSourceSnapshot
+      : fitness.panel.reportSourceNone;
+  const reportReadiness = selectedReport ? `${Math.round(selectedReport.currentLevelReadiness * 100)}%` : noDataText;
+  const reportSourceLabel = selectedReport ? reportSource : fitness.panel.noContextReport;
 
   return (
     <div className="space-y-3">
@@ -565,17 +581,17 @@ export function FitnessAnalysisPanel({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="truncate text-[11px] uppercase tracking-[0.14em] text-desktop-text-secondary">
-              Generic report · Repo <span className="text-desktop-text-primary">{contextLabel ?? "未设置"}</span>
+              {heroModel.title} {fitness.panel.to} {fitness.panel.repoLabel} <span className="text-desktop-text-primary">{contextLabel}</span>
             </div>
             <div className="mt-1 truncate text-[11px] leading-tight text-desktop-text-secondary">
               {heroModel.currentLevel} → {heroModel.targetLevel}
               <span className="text-desktop-text-secondary"> · {heroModel.confidenceSummary}</span>
-              <span className="text-desktop-text-secondary"> · Blockers {selectedReport ? blockers.length : "N/A"}</span>
-              <span className="text-desktop-text-secondary"> · Failed {selectedReport ? failedCriteria.length : "N/A"}</span>
-              <span className="text-desktop-text-secondary"> · {reportSource}</span>
+              <span className="text-desktop-text-secondary"> · {fitness.panel.blockers} {selectedReport ? blockers.length : noDataText}</span>
+              <span className="text-desktop-text-secondary"> · {fitness.panel.failed} {selectedReport ? failedCriteria.length : noDataText}</span>
+              <span className="text-desktop-text-secondary"> · {reportSourceLabel}</span>
             </div>
           </div>
-          <StatusBadge state={selectedState.state} />
+          <StatusBadge state={selectedState.state} t={fitness.panel} />
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -593,16 +609,21 @@ export function FitnessAnalysisPanel({
             disabled={!hasContext}
             className="h-7 rounded-full border border-desktop-border px-3 text-[12px] font-semibold leading-none text-desktop-text-primary hover:bg-desktop-bg-primary/80 disabled:opacity-60"
           >
-            Refresh latest report
+            {fitness.panel.refresh}
           </button>
           <span className="ml-auto inline-flex items-center rounded-full border border-desktop-border px-2 py-0.5 text-[11px] text-desktop-text-secondary">
-            Fit {reportReadiness}
+            {fitness.panel.fit} {reportReadiness}
           </span>
         </div>
 
         <div className="mt-1 border-t border-desktop-border/80 pt-1">
-          <div className="text-[10px] uppercase tracking-[0.1em] text-desktop-text-secondary">Capability Matrix</div>
-          <FitnessMatrix selectedReport={selectedReport} />
+          <div className="text-[10px] uppercase tracking-[0.1em] text-desktop-text-secondary">{fitness.panel.capabilityMatrix}</div>
+          <FitnessMatrix
+            selectedReport={selectedReport}
+            matrixColumns={matrixColumns}
+            matrixRows={matrixRows}
+            noDataText={fitness.panel.matrixNoPoint}
+          />
         </div>
 
         {globalError ? (

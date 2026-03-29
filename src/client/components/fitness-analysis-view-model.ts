@@ -9,6 +9,7 @@ import {
   type FitnessReport,
   type FluencyRunMode,
 } from "./fitness-analysis-types";
+import type { TranslationDictionary } from "@/i18n/types";
 
 export type FluencyHeroModel = {
   title: string;
@@ -44,76 +45,80 @@ export type FluencyScoringExplainer = Array<{
   description: string;
 }>;
 
-function getCapabilitySummary(levelName: string | undefined) {
+function getCapabilitySummary(levelName: string | undefined, t: TranslationDictionary["fitness"]["levels"]) {
   switch (levelName) {
     case "Awareness":
-      return "需要人工带路";
+      return t.awareness;
     case "Assisted-Coding":
-      return "可做局部改动";
+      return t.assistedCoding;
     case "Structured-AI-Coding":
-      return "可稳定跑固定流程";
+      return t.structuredCoding;
     case "Agent-Centric":
-      return "可完成大多数常规任务";
+      return t.agentCentric;
     case "Agent-First":
-      return "适合持续自治";
+      return t.agentFirst;
     default:
-      return "等待报告";
+      return t.waitingReport;
   }
 }
 
-function inferFailureMode(criterion: CriterionResult) {
+function inferFailureMode(criterion: CriterionResult, t: TranslationDictionary["fitness"]) {
   if (criterion.dimension === "governance") {
-    return "Guardrails are too weak for autonomous changes";
+    return t.status.noData;
   }
   if (criterion.dimension === "context") {
-    return "Agents lack enough durable context to make safe decisions";
+    return t.scoring.compareDisabled;
   }
   if (criterion.dimension === "harness") {
-    return "Feedback loops are too slow or too implicit";
+    return t.scoring.nonDeterministicMode;
   }
   if (criterion.dimension === "collaboration") {
-    return "Delegation and handoff surfaces are under-specified";
+    return t.scoring.fromUnknown;
   }
   if (criterion.dimension === "sdlc") {
-    return "Delivery process still depends on manual knowledge";
+    return t.scoring.sourceFromRun;
   }
-  return `${humanizeToken(criterion.dimension)} is limiting agent throughput`;
+  return `${humanizeToken(criterion.dimension)} ${t.overview.failingCriteriaLabel.toLowerCase()}`;
 }
 
-function buildImpactSummary(criterion: CriterionResult) {
-  const base = inferFailureMode(criterion);
-  const severity = criterion.critical ? "This is a critical gate" : "This is slowing the next level unlock";
-  return `${base}. ${severity}.`;
+function buildImpactSummary(criterion: CriterionResult, t: TranslationDictionary["fitness"]) {
+  const base = inferFailureMode(criterion, t);
+  const severity = criterion.critical ? t.status.critical : t.status.priorityFix;
+  return `${base} ${severity}.`;
 }
 
 export function buildHeroModel(
   report: FitnessReport | undefined,
   profile: FitnessProfile,
   state: FitnessProfileState,
+  t: TranslationDictionary["fitness"],
 ): FluencyHeroModel {
   if (!report) {
     return {
-      title: profile === "generic" ? "Generic" : "Orchestrator",
+      title: profile === "generic" ? t.panel.genericProfile : t.panel.orchestratorProfile,
       subtitle: "",
-      currentLevel: "No report",
-      targetLevel: "Run first",
-      capabilitySummary: "等待报告",
-      confidenceSummary: state === "loading" ? "Running" : "No data",
+      currentLevel: t.panel.noReport,
+      targetLevel: state === "loading" ? t.panel.runningReport : t.panel.runFirstReport,
+      capabilitySummary: t.levels.waitingReport,
+      confidenceSummary: state === "loading" ? t.panel.statusLoading : t.panel.statusEmpty,
     };
   }
 
-  const confidence = `Fit ${Math.round(report.currentLevelReadiness * 100)}%`;
+  const confidence = `${t.panel.fit} ${Math.round(report.currentLevelReadiness * 100)}%`;
   return {
-    title: profile === "generic" ? "Generic" : "Orchestrator",
+    title: profile === "generic" ? t.panel.genericProfile : t.panel.orchestratorProfile,
     subtitle: "",
     currentLevel: report.overallLevelName,
-    targetLevel: report.nextLevelName ?? "Current max",
-    capabilitySummary: getCapabilitySummary(report.overallLevelName),
+    targetLevel: report.nextLevelName ?? t.scoring.noLevelUnlock,
+    capabilitySummary: getCapabilitySummary(report.overallLevelName, t.levels),
     confidenceSummary: confidence,
   };
 }
 
-export function buildBlockerCards(report: FitnessReport | undefined): FluencyBlockerCard[] {
+export function buildBlockerCards(
+  report: FitnessReport | undefined,
+  t: TranslationDictionary["fitness"],
+): FluencyBlockerCard[] {
   if (!report) {
     return [];
   }
@@ -121,12 +126,12 @@ export function buildBlockerCards(report: FitnessReport | undefined): FluencyBlo
   return (report.blockingCriteria ?? []).slice(0, 4).map((criterion) => ({
     id: criterion.id,
     title: criterionShortLabel(criterion.id),
-    impactSummary: buildImpactSummary(criterion),
+    impactSummary: buildImpactSummary(criterion, t),
     whyItMatters: criterion.whyItMatters,
     evidenceHint: criterion.evidenceHint,
     recommendedAction: criterion.recommendedAction,
     critical: criterion.critical,
-    severityLabel: criterion.critical ? "Critical gate" : "Priority fix",
+    severityLabel: criterion.critical ? t.status.critical : t.status.priorityFix,
   }));
 }
 
@@ -150,40 +155,39 @@ export function buildScoringExplainer(
   runMode: FluencyRunMode,
   compareLast: boolean,
   profileState: FitnessProfileState,
+  t: TranslationDictionary["fitness"],
 ): FluencyScoringExplainer {
   const sourceLine = report
-    ? `当前结果来自${profileState === "ready" ? "已生成报告" : "本次运行"}，当前 level 命中度为 ${Math.round(report.currentLevelReadiness * 100)}%。`
-    : "没有报告时不会显示 level 命中度，也不会解锁 blocker 与 remediation 视图。";
+    ? `${t.scoring.sourceFromReport} ${Math.round(report.currentLevelReadiness * 100)}%。`
+    : t.scoring.noReadinessInfo;
 
   return [
     {
-      title: "What the score means",
+      title: t.scoring.title,
       description: sourceLine,
     },
     {
-      title: "How levels unlock",
+      title: t.scoring.title,
       description: report?.nextLevelName
-        ? `当前目标是 ${report.nextLevelName}。你需要先清掉关键 blocker，才能继续解锁下一层 agent capability。`
-        : "当前报告已经处在最高层，没有新的 level 需要继续解锁。",
+        ? `${t.scoring.levelUnlockPrefix}${report.nextLevelName}${t.scoring.levelUnlockSuffix}`
+        : t.scoring.noLevelUnlock,
     },
     {
-      title: "Why rerun vs compare",
-      description: compareLast
-        ? `当前开启了历史对比。重跑后可以直接看到这次结果相对上次的变化，适合验证修复是否生效。`
-        : "当前未开启历史对比。适合先快速得到静态结论，再决定是否保留历史差异。",
+      title: compareLast ? t.scoring.compareEnabled : t.scoring.compareDisabled,
+      description: compareLast ? t.scoring.compareEnabled : t.scoring.compareDisabled,
     },
     {
-      title: "Analysis mode",
+      title: profileState === "ready" ? t.scoring.deterministicMode : t.scoring.nonDeterministicMode,
       description: runMode === "deterministic"
-        ? "Deterministic 适合做稳定基线。Hybrid 和 AI 模式更适合补证据和排查争议项。"
-        : "当前不是 deterministic 模式，结果会更偏向证据准备和深入诊断，而不是最轻量的基线扫描。",
+        ? t.scoring.deterministicMode
+        : t.scoring.nonDeterministicMode,
     },
   ];
 }
 
-export function buildPrimaryActionLabel(report: FitnessReport | undefined, profileState: FitnessProfileState) {
+export function buildPrimaryActionLabel(report: FitnessReport | undefined, profileState: FitnessProfileState, t: TranslationDictionary["fitness"]) {
   if (profileState === "loading") {
-    return "Running report...";
+    return t.panel.runningReport;
   }
-  return report ? "Re-run report" : "Run first report";
+  return report ? t.panel.rerunReport : t.panel.runFirstReport;
 }

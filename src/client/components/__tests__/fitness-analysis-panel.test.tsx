@@ -128,7 +128,7 @@ describe("FitnessAnalysisPanel", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Generic report/)).toBeTruthy();
+      expect(screen.getByText(/Generic/)).toBeTruthy();
     });
 
     expect(screen.getByText("routa-js")).toBeTruthy();

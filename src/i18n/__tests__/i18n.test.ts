@@ -43,8 +43,19 @@ describe("i18n translations", () => {
         for (const part of parts) {
           value = (value as Record<string, unknown>)[part];
         }
-        expect(value, `${locale}.${key} should be a non-empty string`).toBeTruthy();
-        expect(typeof value, `${locale}.${key} should be a string`).toBe("string");
+        if (typeof value === "string") {
+          expect(value, `${locale}.${key} should be a non-empty string`).toBeTruthy();
+          continue;
+        }
+        if (Array.isArray(value)) {
+          expect(value.length, `${locale}.${key} should contain at least one item`).toBeGreaterThan(0);
+          value.forEach((item, index) => {
+            expect(typeof item, `${locale}.${key}[${index}] should be a string`).toBe("string");
+            expect(item, `${locale}.${key}[${index}] should be non-empty`).toBeTruthy();
+          });
+          continue;
+        }
+        expect(false, `${locale}.${key} should be either a string or array`).toBeTruthy();
       }
     };
 
