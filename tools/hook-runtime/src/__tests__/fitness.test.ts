@@ -201,8 +201,34 @@ describe("summarizeFailures", () => {
 
     const [summary] = summarizeFailures(results);
 
+    expect(summary?.focusLine).toBe("/Users/phodal/ai/routa-js/src/client/components/fitness-analysis-charts.tsx");
     expect(summary?.outputTail).toContain("/Users/phodal/ai/routa-js/src/client/components/fitness-analysis-charts.tsx");
     expect(summary?.outputTail).toContain("215:0  error  Parsing error: '}' expected");
     expect(summary?.outputTail).toContain("✖ 1 problem (1 error, 0 warnings)");
+  });
+
+  it("ignores successful stdout logs that contain '0 errors'", () => {
+    const results = [
+      {
+        durationMs: 25,
+        exitCode: 1,
+        metric: buildMetric({ name: "ts_test_pass", command: "npm run test:run 2>&1" }),
+        output: [
+          "stdout | src/core/storage/__tests__/local-providers.test.ts > MigrationTool > migrates legacy traces to new location",
+          "[Migration] Completed: 1 files migrated, 0 errors",
+          "FAIL  src/core/acp/__tests__/actual-broken.test.ts > actual broken case",
+          "AssertionError: expected true to be false",
+        ].join("\n"),
+        passed: false,
+      },
+    ];
+
+    const [summary] = summarizeFailures(results);
+
+    expect(summary?.focusLine).toBe("src/core/acp/__tests__/actual-broken.test.ts > actual broken case");
+    expect(summary?.outputTail).toContain("FAIL  src/core/acp/__tests__/actual-broken.test.ts > actual broken case");
+    expect(summary?.outputTail).toContain("AssertionError: expected true to be false");
+    expect(summary?.outputTail).not.toContain("MigrationTool > migrates legacy traces to new location");
+    expect(summary?.outputTail).not.toContain("[Migration] Completed: 1 files migrated, 0 errors");
   });
 });

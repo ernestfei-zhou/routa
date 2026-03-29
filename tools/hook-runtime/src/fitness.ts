@@ -18,6 +18,7 @@ export type MetricFailureSummary = {
   sourceFile: string;
   command: string;
   durationMs: number;
+  focusLine: string;
   outputTail: string;
 };
 
@@ -26,9 +27,37 @@ export function formatDuration(durationMs: number): string {
 }
 
 const ANSI_ESCAPE_PATTERN = new RegExp(`${String.fromCharCode(27)}(?:[@-Z\\\\-_]|\\[[0-?]*[ -/]*[@-~])`, "g");
+const ANSI_RESET = "\u001B[0m";
+const ANSI_RED = "\u001B[31m";
+const ANSI_DIM = "\u001B[2m";
+const ANSI_CYAN = "\u001B[36m";
 
 function stripAnsi(input: string): string {
   return input.replace(ANSI_ESCAPE_PATTERN, "");
+}
+
+function shouldUseColor(stream?: NodeJS.WriteStream): boolean {
+  if (!stream?.isTTY) {
+    return false;
+  }
+
+  if (process.env.NO_COLOR === "1") {
+    return false;
+  }
+
+  if (process.env.FORCE_COLOR === "0") {
+    return false;
+  }
+
+  return true;
+}
+
+function colorize(stream: NodeJS.WriteStream | undefined, color: string, text: string): string {
+  if (!shouldUseColor(stream)) {
+    return text;
+  }
+
+  return `${color}${text}${ANSI_RESET}`;
 }
 
 function evaluateMetric(metric: HookMetric, exitCode: number, output: string): boolean {
@@ -82,15 +111,21 @@ function isVitestBoundaryLine(line: string): boolean {
 }
 
 function isLikelyTestNameLine(line: string): boolean {
+  if (/^(stdout|stderr)\s+\|/.test(line)) {
+    return false;
+  }
   return /(?:^|\s|\|)[\w./-]+\.test\.[cm]?[jt]sx?\s*>/.test(line);
 }
 
 function isLikelyFailureDetailLine(line: string): boolean {
+  if (/\b0 errors?\b/i.test(line)) {
+    return false;
+  }
   return /^AssertionError\b/.test(line)
     || /^TypeError\b/.test(line)
     || /^ReferenceError\b/.test(line)
     || /^Error:\s/.test(line)
-    || /^\[[^\]]+\]\s.*(?:Error|failed|fail|timeout|denied|refused)/i.test(line)
+    || /^\[[^\]]+\]\s.*\b(?:Error|failed|fail|timeout|denied|refused)\b/i.test(line)
     || /^at\s.+:\d+:\d+\)?$/.test(line)
     || /^Caused by:/i.test(line)
     || /^Expected:/i.test(line)
@@ -253,12 +288,60 @@ function extractFailureContext(rawOutput: string): string {
   }
 
   const failureHints =
-    /error|failed|fail|fatal|exception|assert|panic|timed out|timeout|not found|invalid|denied|refused|permission/i;
+    /\b(?:error|failed|fail|fatal|exception|assert|panic|invalid|denied|refused|permission)\b|timed out|timeout|not found/i;
 
   const hinted = lines.filter((line) => failureHints.test(line));
   const linesToShow = hinted.length > 0 ? hinted : lines;
   const tail = trimLinesToCharBudget(linesToShow, 1500).trim();
   return tail.length > 0 ? tail : trimLinesToCharBudget(lines, 1500).trim();
+}
+
+function normalizeFocusLine(line: string): string {
+  return line
+    .replace(/^FAIL\s+/, "")
+    .replace(/^(stdout|stderr)\s+\|\s*/, "")
+    .replace(/^\|\s*/, "")
+    .trim();
+}
+
+function extractFailureFocusLine(outputTail: string): string {
+  const lines = outputTail
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) {
+    return "";
+  }
+
+  const failLine = lines.find((line) => /^FAIL\s+/.test(line));
+  if (failLine) {
+    return normalizeFocusLine(failLine);
+  }
+
+  const diagnosticPath = lines.find((line) => isPathOnlyLine(line));
+  if (diagnosticPath) {
+    return diagnosticPath;
+  }
+
+  const likelyTestLine = lines.find((line) => isLikelyTestNameLine(line));
+  if (likelyTestLine) {
+    return normalizeFocusLine(likelyTestLine);
+  }
+
+  return lines[0];
+}
+
+function emphasizeFailureLine(line: string): string {
+  if (isPathOnlyLine(line)) {
+    return colorize(process.stdout, ANSI_CYAN, line);
+  }
+  if (/^FAIL\s+/.test(line) || isLikelyTestNameLine(line) || isLikelyFailureDetailLine(line) || isDiagnosticDetailLine(line)) {
+    return colorize(process.stdout, ANSI_RED, line);
+  }
+  if (isProblemSummaryLine(line)) {
+    return colorize(process.stdout, ANSI_DIM, line);
+  }
+  return line;
 }
 
 export async function runMetric(
@@ -282,13 +365,17 @@ export async function runMetric(
 
 export function summarizeFailures(results: MetricExecution[]): MetricFailureSummary[] {
   const failures = results.filter((result) => !result.passed);
-  return failures.map((failure) => ({
-    name: failure.metric.name,
-    sourceFile: failure.metric.sourceFile,
-    command: failure.metric.command,
-    durationMs: failure.durationMs,
-    outputTail: extractFailureContext(failure.output),
-  }));
+  return failures.map((failure) => {
+    const outputTail = extractFailureContext(failure.output);
+    return {
+      name: failure.metric.name,
+      sourceFile: failure.metric.sourceFile,
+      command: failure.metric.command,
+      durationMs: failure.durationMs,
+      outputTail,
+      focusLine: extractFailureFocusLine(outputTail),
+    };
+  });
 }
 
 export function printFailureSummary(results: MetricExecution[]): void {
@@ -306,10 +393,13 @@ export function printFailureSummary(results: MetricExecution[]): void {
     console.log(`- ${failure.name} (${formatDuration(failure.durationMs)})`);
     console.log(`  source: ${failure.sourceFile}`);
     console.log(`  cmd: ${failure.command}`);
+    if (failure.focusLine) {
+      console.log(`  failed target: ${colorize(process.stdout, ANSI_RED, failure.focusLine)}`);
+    }
     if (failure.outputTail) {
       console.log("  failed test excerpt:");
       for (const line of failure.outputTail.split("\n")) {
-        console.log(`    ${line}`);
+        console.log(`    ${emphasizeFailureLine(line)}`);
       }
     } else {
       console.log("  failed test excerpt: unavailable");
