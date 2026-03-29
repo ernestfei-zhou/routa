@@ -1,9 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-
-vi.mock("../terminal/terminal-bubble", () => ({
-  TerminalBubble: () => <div>terminal</div>,
-}));
 
 import { FitnessAnalysisContent } from "../fitness-analysis-content";
 import type { FitnessReport } from "../fitness-analysis-types";
@@ -107,7 +103,7 @@ const report: FitnessReport = {
 };
 
 describe("FitnessAnalysisContent overview", () => {
-  it("renders the repair workbench structure for overview mode", () => {
+  it("renders the single-report what-we-measure inspector for overview mode", () => {
     render(
       <FitnessAnalysisContent
         selectedProfile="generic"
@@ -117,14 +113,17 @@ describe("FitnessAnalysisContent overview", () => {
       />,
     );
 
-    expect(screen.getByText("Repair workbench")).toBeTruthy();
-    expect(screen.getByText("Why blocked")).toBeTruthy();
-    expect(screen.getByText("Do next")).toBeTruthy();
-    expect(screen.getByText("Cross-check")).toBeTruthy();
-    expect(screen.getByText("How scoring works")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Task Delegation" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Process Expansion" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Workflow Loop" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Verification & Guardrails" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Context Readiness" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Verification & Guardrails" }));
+    expect(screen.getByText("Current findings")).toBeTruthy();
+    expect(screen.getByText("Recommended actions")).toBeTruthy();
+    expect(screen.getByText("Without this")).toBeTruthy();
     expect(screen.getByText("Pair review-trigger rules with CODEOWNERS or Renovate")).toBeTruthy();
-    expect(screen.getByText("Start here")).toBeTruthy();
-    expect(screen.getByText("Fix next")).toBeTruthy();
-    expect(screen.getByText("What the score means")).toBeTruthy();
+    expect(screen.getByText("CODEOWNERS")).toBeTruthy();
+    expect(screen.getByText(/Machine-readable guardrails and validation rules|A repository needs verifiable ownership/i)).toBeTruthy();
   });
 });

@@ -128,13 +128,15 @@ describe("FitnessAnalysisPanel", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Report Controls")).toBeTruthy();
+      expect(screen.getByText("Generic report")).toBeTruthy();
     });
 
     expect(screen.getByText("Repository")).toBeTruthy();
-    expect(screen.getAllByText("Generic").length).toBeGreaterThan(0);
+    expect(screen.getByText("routa-js")).toBeTruthy();
     expect(screen.getByText(/Blockers:/i)).toBeTruthy();
     expect(screen.getByTestId("fitness-analysis-content").textContent).toBe("overview");
-    expect(screen.queryByText("Advanced Debug")).toBeNull();
+    expect(screen.queryByText("Report Controls")).toBeNull();
+    expect(screen.queryByText("Mode")).toBeNull();
+    expect(screen.queryByText("Views")).toBeNull();
   });
 });

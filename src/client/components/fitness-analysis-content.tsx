@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import {
   clampPercent,
@@ -13,23 +13,17 @@ import {
   readinessBarTone,
   type CellResult,
   type CriterionResult,
+  type FitnessRecommendation,
   type FitnessProfile,
   type FitnessReport,
   type ProfilePanelState,
   type ViewMode,
 } from "./fitness-analysis-types";
-import {
-  buildBlockerCards,
-  buildRemediationChecklist,
-  buildScoringExplainer,
-} from "./fitness-analysis-view-model";
-
 type FitnessAnalysisContentProps = {
   selectedProfile: FitnessProfile;
   viewMode: ViewMode;
   profileState: ProfilePanelState;
   report?: FitnessReport;
-  peerReport?: FitnessReport;
 };
 
 type DimensionGroup = {
@@ -39,6 +33,67 @@ type DimensionGroup = {
   failedCriteria: number;
   criticalFailures: number;
   averageScore: number;
+};
+
+type MeasureSpec = {
+  title: string;
+  subtitle: string;
+  body: string;
+  examples: string[];
+  without: string;
+};
+
+type MeasureEntry = {
+  key: string;
+  title: string;
+  subtitle: string;
+  body: string;
+  examples: string[];
+  without: string;
+  levelName: string;
+  score: number;
+  failedCriteria: CriterionResult[];
+  recommendations: FitnessRecommendation[];
+};
+
+const MEASURE_ORDER = ["collaboration", "sdlc", "harness", "governance", "context"] as const;
+
+const MEASURE_SPECS: Record<string, MeasureSpec> = {
+  governance: {
+    title: "Verification & Guardrails",
+    subtitle: "Ownership, validation, and policy controls",
+    body: "A repository needs verifiable ownership and validation rules so agent changes can be trusted and reviewed safely.",
+    examples: ["CODEOWNERS", "docs/fitness/review-triggers.yaml", "test/lint gates"],
+    without: "Without these controls, agents can produce valid-looking changes that still violate collaboration or release safety rules.",
+  },
+  harness: {
+    title: "Workflow Loop",
+    subtitle: "Execution and verification loop",
+    body: "Agents need a reliable execution surface: commands, checks, and runtime feedback must be repeatable.",
+    examples: ["commands in package scripts", "fitness or build checks", "runtime entrypoints"],
+    without: "Without a stable loop, agents cannot verify whether code changes actually work before handoff.",
+  },
+  context: {
+    title: "Context Readiness",
+    subtitle: "Context depth and memory for execution",
+    body: "Agents rely on layered context to reduce repeated discovery and stay consistent across edits.",
+    examples: ["docs/product-specs", "docs/design-docs", "docs/exec-plans", "docs/references"],
+    without: "Without context depth, agents lose momentum and make repeated assumption-driven changes.",
+  },
+  sdlc: {
+    title: "Process Expansion",
+    subtitle: "Delivery cadence and process continuity",
+    body: "A stable process lets agents move from code edits to verification and handoff without hidden assumptions.",
+    examples: ["CI and test pipelines", "task handoff conventions", "release checks"],
+    without: "Without process clarity, fixes may compile but still block downstream workflows.",
+  },
+  collaboration: {
+    title: "Task Delegation",
+    subtitle: "Handoffs and multi-agent coordination",
+    body: "Clear delegation rules let multiple agents and people work on one repository without conflicting assumptions.",
+    examples: ["AGENTS.md", "planner/specialist commands", "handoff conventions"],
+    without: "Without coordination, parallel work becomes duplicated or stalled across agent boundaries.",
+  },
 };
 
 function RecommendationCard({
@@ -114,6 +169,34 @@ function buildDimensionGroups(report: FitnessReport): DimensionGroup[] {
     });
 }
 
+function buildMeasureEntries(report: FitnessReport): MeasureEntry[] {
+  return MEASURE_ORDER.map((dimension) => {
+    const spec = MEASURE_SPECS[dimension] ?? {
+      title: humanizeToken(dimension),
+      subtitle: "Repository measure",
+      body: "This dimension captures one part of repository readiness.",
+      examples: [],
+      without: "Agents lose confidence in this area and require more manual guidance.",
+    };
+    const dimensionInfo = report.dimensions[dimension];
+    const failedCriteria = report.criteria.filter((criterion) => criterion.dimension === dimension && criterion.status === "fail");
+    const recommendations = report.recommendations.filter((item) => item.criterionId.startsWith(`${dimension}.`));
+
+    return {
+      key: dimension,
+      title: spec.title,
+      subtitle: spec.subtitle,
+      body: spec.body,
+      examples: spec.examples,
+      without: spec.without,
+      levelName: dimensionInfo?.levelName ?? "Not reached",
+      score: dimensionInfo?.score ?? 0,
+      failedCriteria,
+      recommendations,
+    };
+  });
+}
+
 function CapabilityCellCard({ cell }: { cell: CellResult }) {
   const score = clampPercent(cell.score);
   const failedCriteria = cell.criteria.filter((criterion) => criterion.status === "fail");
@@ -171,261 +254,141 @@ function CapabilityCellCard({ cell }: { cell: CellResult }) {
   );
 }
 
-function CriterionList({ criteria }: { criteria: CriterionResult[] }) {
-  if (criteria.length === 0) {
+function OverviewView({
+  report,
+}: {
+  report: FitnessReport;
+}) {
+  const measureEntries = useMemo(() => buildMeasureEntries(report), [report]);
+  const [selectedMeasure, setSelectedMeasure] = useState(measureEntries[0]?.key ?? "governance");
+  const activeMeasure = measureEntries.find((entry) => entry.key === selectedMeasure) ?? measureEntries[0];
+
+  if (!activeMeasure) {
     return (
-      <div className="rounded-2xl border border-dashed border-desktop-border px-4 py-6 text-sm text-desktop-text-secondary">
-        当前没有阻塞 criterion。
+      <div className="rounded-2xl border border-dashed border-desktop-border px-4 py-8 text-sm text-desktop-text-secondary">
+        当前报告没有可展示的维度数据。
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {criteria.map((criterion) => (
-        <article key={criterion.id} className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/60 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-sm font-semibold text-desktop-text-primary">{criterionShortLabel(criterion.id)}</div>
-              <div className="mt-1 font-mono text-[10px] text-desktop-text-secondary">{criterion.id}</div>
-            </div>
-            <div className="flex flex-wrap justify-end gap-1.5">
-              {criterion.critical ? (
-                <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] text-rose-700">
-                  critical
-                </span>
-              ) : null}
-              <span className={`rounded-full border px-2 py-0.5 text-[10px] ${criterionStatusTone(criterion.status)}`}>
-                {criterion.status}
-              </span>
-            </div>
-          </div>
-          <p className="mt-2 text-[11px] leading-5 text-desktop-text-secondary">{criterion.whyItMatters}</p>
-          <div className="mt-3 grid gap-2 lg:grid-cols-2">
-            <div className="rounded-xl border border-desktop-border bg-white/75 px-3 py-2 text-[11px] leading-5 text-desktop-text-secondary dark:bg-white/6">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">建议动作</div>
-              <div className="mt-1">{criterion.recommendedAction}</div>
-            </div>
-            <div className="rounded-xl border border-desktop-border bg-desktop-bg-primary/80 px-3 py-2 text-[11px] leading-5 text-desktop-text-secondary">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">查看线索</div>
-              <div className="mt-1">{criterion.evidenceHint}</div>
-            </div>
-          </div>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function OverviewView({
-  report,
-  peerReport,
-  profileState,
-}: {
-  report: FitnessReport;
-  peerReport?: FitnessReport;
-  profileState: ProfilePanelState;
-}) {
-  const blockers = report.blockingCriteria ?? [];
-  const failedCriteria = report.criteria.filter((criterion) => criterion.status === "fail");
-  const evidencePackCount = report.evidencePacks?.length ?? 0;
-  const blockerCards = buildBlockerCards(report);
-  const remediationItems = buildRemediationChecklist(report);
-  const scoringExplainer = buildScoringExplainer(report, (report.mode as "deterministic" | "hybrid" | "ai") ?? "deterministic", Boolean(report.comparison), profileState.state);
-  const capabilityHighlights = buildDimensionGroups(report)
-    .map((group) => group.cells[0])
-    .filter((cell): cell is CellResult => Boolean(cell))
-    .slice(0, 6);
-  const peerDelta = peerReport
-    ? clampPercent(report.currentLevelReadiness) - clampPercent(peerReport.currentLevelReadiness)
-    : null;
-
-  return (
-    <div className="space-y-4">
-      <section className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/60 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">Repair workbench</div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <div className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1 text-[10px] text-desktop-text-secondary">
-              blocker {blockers.length}
-            </div>
-            <div className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1 text-[10px] text-desktop-text-secondary">
-              failed {failedCriteria.length}
-            </div>
-            {peerDelta !== null ? (
-              <div className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1 text-[10px] text-desktop-text-secondary">
-                peer {peerDelta >= 0 ? "+" : ""}
-                {peerDelta}%
-              </div>
-            ) : null}
-          </div>
+    <section className="border border-desktop-border bg-desktop-bg-secondary/60 my-2 overflow-hidden rounded-2xl">
+      <div className="flex flex-col lg:flex-row">
+        <div className="border-desktop-border flex w-full shrink-0 flex-col border-b lg:w-60 lg:border-r lg:border-b-0">
+          {measureEntries.map((entry) => {
+            const active = entry.key === activeMeasure.key;
+            return (
+              <button
+                key={entry.key}
+                type="button"
+                onClick={() => setSelectedMeasure(entry.key)}
+                className={`border-desktop-border flex w-full items-center gap-3 border-b px-3 py-3 text-left transition-colors last:border-b-0 ${
+                  active ? "bg-desktop-accent/8" : "hover:bg-desktop-bg-primary/80"
+                }`}
+              >
+                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${entry.failedCriteria.length > 0 ? "bg-amber-400" : "bg-emerald-400"}`} />
+                <span className="min-w-0 flex-1 truncate text-[13px] text-desktop-text-primary">{entry.title}</span>
+              </button>
+            );
+          })}
         </div>
 
-        <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-          <div className="space-y-3">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">Why blocked</div>
-            {blockerCards.length > 0 ? (
-              <div className="space-y-3">
-                {blockerCards.map((card) => (
-                  <article key={card.id} className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/60 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold text-desktop-text-primary">{card.title}</div>
-                        <div className="mt-1 font-mono text-[10px] text-desktop-text-secondary">{card.id}</div>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        <span className={`rounded-full border px-2 py-0.5 text-[10px] ${card.critical ? "border-rose-200 bg-rose-50 text-rose-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>
-                          {card.severityLabel}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="mt-2 text-[11px] leading-5 text-desktop-text-secondary">{card.impactSummary}</p>
-                    <div className="mt-3 grid gap-2 lg:grid-cols-2">
-                      <div className="rounded-xl border border-desktop-border bg-white/75 px-3 py-2 text-[11px] leading-5 text-desktop-text-secondary dark:bg-white/6">
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">Why it matters</div>
-                        <div className="mt-1">{card.whyItMatters}</div>
-                      </div>
-                      <div className="rounded-xl border border-desktop-border bg-desktop-bg-primary/80 px-3 py-2 text-[11px] leading-5 text-desktop-text-secondary">
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">Start here</div>
-                        <div className="mt-1">{card.evidenceHint}</div>
-                      </div>
-                    </div>
-                    <div className="mt-2 rounded-xl border border-desktop-border bg-white/75 px-3 py-2 text-[11px] leading-5 text-desktop-text-secondary dark:bg-white/6">
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">Fix next</div>
-                      <div className="mt-1">{card.recommendedAction}</div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <CriterionList criteria={blockers.slice(0, 4)} />
-            )}
+        <div className="min-w-0 flex-1 p-5">
+          <div className="mb-4 flex items-start gap-3">
+            <span className={`mt-1 h-3 w-3 shrink-0 rounded-full ${activeMeasure.failedCriteria.length > 0 ? "bg-amber-400" : "bg-emerald-400"}`} />
+            <div className="min-w-0">
+              <div className="text-[15px] font-semibold text-desktop-text-primary">{activeMeasure.title}</div>
+              <div className="mt-1 text-[12px] text-desktop-text-secondary">{activeMeasure.subtitle}</div>
+            </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-desktop-border bg-white/80 p-4 dark:bg-white/6">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">Do next</div>
-              {remediationItems.length > 0 ? (
-                <div className="mt-3 space-y-2">
-                  {remediationItems.map((item) => (
-                    <article key={item.id} className="rounded-xl border border-desktop-border bg-desktop-bg-primary/80 p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="text-sm font-semibold text-desktop-text-primary">{item.title}</div>
-                        {item.critical ? (
+          <p className="text-[13px] leading-6 text-desktop-text-secondary">{activeMeasure.body}</p>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <div className="rounded-full border border-desktop-border bg-white/80 px-3 py-2 text-[11px] text-desktop-text-secondary dark:bg-white/6">
+              Level:
+              <span className="ml-1 font-semibold text-desktop-text-primary">{activeMeasure.levelName}</span>
+            </div>
+            <div className="rounded-full border border-desktop-border bg-white/80 px-3 py-2 text-[11px] text-desktop-text-secondary dark:bg-white/6">
+              Score:
+              <span className="ml-1 font-semibold text-desktop-text-primary">{clampPercent(activeMeasure.score)}%</span>
+            </div>
+            <div className="rounded-full border border-desktop-border bg-white/80 px-3 py-2 text-[11px] text-desktop-text-secondary dark:bg-white/6">
+              Fails:
+              <span className="ml-1 font-semibold text-desktop-text-primary">{activeMeasure.failedCriteria.length}</span>
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <p className="mb-2 font-mono text-[12px] uppercase tracking-[0.04em] text-desktop-text-secondary">Examples</p>
+            <ul className="flex flex-col gap-1">
+              {activeMeasure.examples.map((example) => (
+                <li key={example} className="flex items-baseline gap-2">
+                  <span className="text-[10px] leading-none text-desktop-text-secondary">•</span>
+                  <span className="font-mono text-[12px] text-desktop-text-primary">{example}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
+            <div>
+              <div className="text-[12px] font-semibold text-desktop-text-primary">Current findings</div>
+              <div className="mt-3 space-y-3">
+                {activeMeasure.failedCriteria.length > 0 ? (
+                  activeMeasure.failedCriteria.slice(0, 4).map((criterion) => (
+                    <article key={criterion.id} className="rounded-xl border border-desktop-border bg-white/80 p-3 dark:bg-white/6">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-desktop-text-primary">{criterionShortLabel(criterion.id)}</div>
+                          <div className="mt-1 font-mono text-[10px] text-desktop-text-secondary">{criterion.id}</div>
+                        </div>
+                        {criterion.critical ? (
                           <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] text-rose-700">
                             critical
                           </span>
                         ) : null}
                       </div>
-                      <div className="mt-2 text-[11px] leading-5 text-desktop-text-secondary">{item.impactSummary}</div>
-                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                        <div className="rounded-xl border border-desktop-border bg-white/80 px-3 py-2 text-[11px] leading-5 text-desktop-text-secondary dark:bg-white/6">
-                          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">Starting point</div>
-                          <div className="mt-1">{item.startingPoint}</div>
-                        </div>
-                        <div className="rounded-xl border border-desktop-border bg-white/80 px-3 py-2 text-[11px] leading-5 text-desktop-text-secondary dark:bg-white/6">
-                          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">Unlocks toward</div>
-                          <div className="mt-1">{item.targetLevel}</div>
-                        </div>
-                      </div>
+                      <div className="mt-2 text-[11px] leading-5 text-desktop-text-secondary">{criterion.whyItMatters}</div>
+                      <div className="mt-2 text-[11px] leading-5 text-desktop-text-secondary">Start: {criterion.evidenceHint}</div>
                     </article>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-3 text-sm text-desktop-text-secondary">当前没有建议动作。</p>
-              )}
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-dashed border-desktop-border px-4 py-6 text-sm text-desktop-text-secondary">
+                    No active blockers
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="rounded-2xl border border-desktop-border bg-white/80 p-4 dark:bg-white/6">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">Cross-check</div>
-              <div className="mt-3 space-y-2 text-[11px] text-desktop-text-secondary">
-                <div className="rounded-xl border border-desktop-border bg-desktop-bg-primary/80 px-3 py-2">
-                  下一目标：<span className="font-semibold text-desktop-text-primary">{report.nextLevelName ?? "当前已到最高级"}</span>
+            <div className="space-y-4">
+              <div className="rounded-xl border border-desktop-border bg-white/80 p-4 dark:bg-white/6">
+                <div className="text-[12px] font-semibold text-desktop-text-primary">Recommended actions</div>
+                <div className="mt-3 space-y-2">
+                  {activeMeasure.recommendations.length > 0 ? (
+                    activeMeasure.recommendations.slice(0, 3).map((item) => (
+                      <article key={item.criterionId} className="rounded-xl border border-desktop-border bg-desktop-bg-primary/80 p-3">
+                        <div className="text-sm font-semibold text-desktop-text-primary">{item.action}</div>
+                        <div className="mt-2 text-[11px] leading-5 text-desktop-text-secondary">{item.evidenceHint}</div>
+                      </article>
+                    ))
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-desktop-border px-3 py-4 text-[11px] text-desktop-text-secondary">
+                      No actions
+                    </div>
+                  )}
                 </div>
-                <div className="rounded-xl border border-desktop-border bg-desktop-bg-primary/80 px-3 py-2">
-                  与另一 profile 的差值：
-                  <span className="ml-1 font-semibold text-desktop-text-primary">
-                    {peerDelta === null ? "N/A" : `${peerDelta >= 0 ? "+" : ""}${peerDelta}%`}
-                  </span>
-                </div>
+              </div>
+
+              <div className="rounded-xl border border-desktop-border bg-white/80 p-4 dark:bg-white/6">
+                <div className="text-[12px] font-semibold text-desktop-text-primary">Without this</div>
+                <p className="mt-2 text-[12px] leading-6 text-desktop-text-secondary">{activeMeasure.without}</p>
               </div>
             </div>
           </div>
         </div>
-      </section>
-
-      <section className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/60 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">How scoring works</div>
-          </div>
-          <div className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1 text-[10px] text-desktop-text-secondary">
-            report interpretation
-          </div>
-        </div>
-        <div className="mt-4 grid gap-3 xl:grid-cols-2">
-          {scoringExplainer.map((item) => (
-            <article key={item.title} className="rounded-xl border border-desktop-border bg-white/80 p-4 dark:bg-white/6">
-              <div className="text-sm font-semibold text-desktop-text-primary">{item.title}</div>
-              <p className="mt-2 text-[11px] leading-5 text-desktop-text-secondary">{item.description}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/60 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">Capability hotspots</div>
-          </div>
-          <div className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1 text-[10px] text-desktop-text-secondary">
-            按 cell 粒度排序
-          </div>
-        </div>
-        <div className="mt-4 grid gap-3 xl:grid-cols-2">
-          {capabilityHighlights.map((cell) => (
-            <CapabilityCellCard key={cell.id} cell={cell} />
-          ))}
-        </div>
-      </section>
-
-      {evidencePackCount > 0 ? (
-        <section className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/60 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">Adjudication prep</div>
-              <h3 className="mt-1 text-sm font-semibold text-desktop-text-primary">已准备可供后续 AI 裁决的证据包</h3>
-            </div>
-            <div className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1 text-[10px] text-desktop-text-secondary">
-              {report.mode ?? "deterministic"}
-            </div>
-          </div>
-          <div className="mt-4 grid gap-3 xl:grid-cols-2">
-            {report.evidencePacks?.slice(0, 4).map((pack) => (
-              <article key={pack.criterionId} className="rounded-xl border border-desktop-border bg-white/80 p-3 dark:bg-white/6">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="text-sm font-semibold text-desktop-text-primary">{criterionShortLabel(pack.criterionId)}</div>
-                    <div className="mt-1 font-mono text-[10px] text-desktop-text-secondary">{pack.criterionId}</div>
-                  </div>
-                  <span className={`rounded-full border px-2 py-0.5 text-[10px] ${criterionStatusTone(pack.status)}`}>
-                    {pack.status}
-                  </span>
-                </div>
-                <div className="mt-2 text-[11px] text-desktop-text-secondary">
-                  选择原因：{pack.selectionReasons.join(" / ")}
-                </div>
-                <div className="mt-2 text-[11px] text-desktop-text-secondary">
-                  证据：{pack.evidence.slice(0, 3).join(", ") || pack.evidenceHint}
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
-    </div>
+      </div>
+    </section>
   );
 }
 
@@ -554,7 +517,6 @@ export function FitnessAnalysisContent({
   viewMode,
   profileState,
   report,
-  peerReport,
 }: FitnessAnalysisContentProps) {
   if (!report) {
     return (
@@ -578,5 +540,5 @@ export function FitnessAnalysisContent({
     return <ChangesView report={report} />;
   }
 
-  return <OverviewView report={report} peerReport={peerReport} profileState={profileState} />;
+  return <OverviewView report={report} />;
 }
