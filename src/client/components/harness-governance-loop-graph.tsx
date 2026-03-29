@@ -329,6 +329,9 @@ function buildGraph(args: {
       });
     }
   };
+  const externalRowStartX = 108;
+  const externalRowStep = 202;
+  const externalRowY = 446;
 
   const nodes: Node<LoopNodeData>[] = [
     buildNode("thinking", 128, 86, {
@@ -455,7 +458,7 @@ function buildGraph(args: {
         handleNavigate("commit", direction);
       },
     }),
-    buildNode("metrics", 27, 416, {
+    buildNode("metrics", externalRowStartX, externalRowY, {
       nodeId: "metrics",
       layer: "external",
       title: "度量",
@@ -470,7 +473,7 @@ function buildGraph(args: {
         handleNavigate("metrics", direction);
       },
     }),
-    buildNode("production", 229, 416, {
+    buildNode("production", externalRowStartX + externalRowStep, externalRowY, {
       nodeId: "production",
       layer: "external",
       title: "生产环境",
@@ -485,7 +488,7 @@ function buildGraph(args: {
         handleNavigate("production", direction);
       },
     }),
-    buildNode("canary", 431, 416, {
+    buildNode("canary", externalRowStartX + externalRowStep * 2, externalRowY, {
       nodeId: "canary",
       layer: "external",
       title: "金丝雀发布",
@@ -500,7 +503,7 @@ function buildGraph(args: {
         handleNavigate("canary", direction);
       },
     }),
-    buildNode("staging", 633, 416, {
+    buildNode("staging", externalRowStartX + externalRowStep * 3, externalRowY, {
       nodeId: "staging",
       layer: "external",
       title: "预发环境",
@@ -515,7 +518,7 @@ function buildGraph(args: {
         handleNavigate("staging", direction);
       },
     }),
-    buildNode("post-commit", 835, 416, {
+    buildNode("post-commit", externalRowStartX + externalRowStep * 4, externalRowY, {
       nodeId: "post-commit",
       layer: "external",
       title: "CI/CD",
