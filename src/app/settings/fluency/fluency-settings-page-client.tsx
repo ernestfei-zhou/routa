@@ -83,9 +83,9 @@ export function FluencySettingsPageClient({ defaultRepoPath }: FluencySettingsPa
 
   return (
     <SettingsRouteShell
-      title="Fluency（试验性）"
-      description="Experimental fluency analysis for generic and orchestrator profiles."
-      badgeLabel="Experimental"
+      title="Fluency"
+      description="Analyze repository fluency, blockers, and next actions across the default profiles."
+      badgeLabel="Diagnostics beta"
       workspaceId={workspaceId}
       workspaceTitle={activeWorkspaceTitle}
       workspaceSwitcher={(
@@ -113,11 +113,11 @@ export function FluencySettingsPageClient({ defaultRepoPath }: FluencySettingsPa
     >
       <div className="space-y-4">
         <SettingsPageHeader
-          title="Fluency（试验性）"
-          description="把 fluency 从 Harness 里拆出来单独看，避免和 fitness governance 混在一起。"
+          title="Fluency"
+          description="评估仓库当前的 fluency maturity，先给出结论和 blocker，再在需要时下钻到调试数据。"
           metadata={[
-            { label: "Profiles", value: "Generic + Agent Orchestrator" },
-            { label: "Status", value: "Experimental / unreliable" },
+            { label: "Profiles", value: "Generic / Agent Orchestrator" },
+            { label: "Workflow", value: "Summary first, debug second" },
           ]}
           extra={(
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px]">

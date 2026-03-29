@@ -85,7 +85,7 @@ function SummaryMetric({
 }) {
   return (
     <article className="rounded-2xl border border-desktop-border bg-white/80 p-4 dark:bg-white/6">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">{label}</div>
+      <div className="text-[10px] font-semibold tracking-[0.08em] text-desktop-text-secondary">{label}</div>
       <div className="mt-2 text-lg font-semibold text-desktop-text-primary">{value}</div>
       <p className="mt-2 text-[11px] leading-5 text-desktop-text-secondary">{detail}</p>
     </article>
@@ -353,6 +353,11 @@ export function FitnessAnalysisPanel({
   const blockers = selectedReport?.blockingCriteria ?? [];
   const failedCriteria = selectedReport?.criteria.filter((criterion) => criterion.status === "fail") ?? [];
   const topRecommendation = selectedReport?.recommendations[0] ?? null;
+  const summarizedAction = topRecommendation
+    ? topRecommendation.action.length > 56
+      ? `${topRecommendation.action.slice(0, 53)}...`
+      : topRecommendation.action
+    : "先运行分析";
   const peerDelta = useMemo(() => {
     if (!selectedReport || !peerReport) {
       return null;
@@ -582,21 +587,21 @@ export function FitnessAnalysisPanel({
 
           <div className="mt-5 grid gap-3 xl:grid-cols-4">
             <SummaryMetric
-              label="Current Maturity"
+              label="当前成熟度"
               value={selectedReport?.overallLevelName ?? "未生成"}
               detail={selectedReport
                 ? `当前结论来自 ${selectedState.source === "analysis" ? "本次运行" : "最近快照"}。`
                 : "先运行一次分析，页面才会给出当前 maturity level。"}
             />
             <SummaryMetric
-              label="Confidence"
+              label="当前 level 置信度"
               value={selectedReport ? `${clampPercent(selectedReport.currentLevelReadiness)}%` : "N/A"}
               detail={selectedReport
                 ? "这里表示当前 level 的命中程度，不等于整个功能或仓库已经“完全可用”。"
                 : "没有报告时不显示置信度。"}
             />
             <SummaryMetric
-              label="Main Blockers"
+              label="主要阻塞项"
               value={selectedReport ? String(blockers.length) : "N/A"}
               detail={selectedReport
                 ? blockers.length > 0
@@ -605,8 +610,8 @@ export function FitnessAnalysisPanel({
                 : "先生成报告才能识别 blocker。"}
             />
             <SummaryMetric
-              label="Next Action"
-              value={topRecommendation?.action ?? "先运行分析"}
+              label="推荐下一步"
+              value={summarizedAction}
               detail={topRecommendation?.whyItMatters ?? "建议动作会在有结果后出现，并尽量给出明确的修复线索。"}
             />
           </div>
@@ -666,12 +671,12 @@ export function FitnessAnalysisPanel({
 
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <SummaryMetric
-                  label="Failed Criteria"
+                  label="失败 criterion"
                   value={selectedReport ? String(failedCriteria.length) : "N/A"}
                   detail="这表示当前报告里失败的 criterion 总数。"
                 />
                 <SummaryMetric
-                  label="Evidence Packs"
+                  label="证据包数量"
                   value={selectedReport ? String(selectedReport.evidencePacks?.length ?? 0) : "N/A"}
                   detail="只有 Hybrid / AI 路径准备了额外证据时，这里才会增加。"
                 />

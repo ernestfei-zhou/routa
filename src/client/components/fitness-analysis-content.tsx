@@ -37,6 +37,35 @@ type DimensionGroup = {
   averageScore: number;
 };
 
+function RecommendationCard({
+  action,
+  whyItMatters,
+  evidenceHint,
+  critical,
+}: {
+  action: string;
+  whyItMatters: string;
+  evidenceHint: string;
+  critical: boolean;
+}) {
+  return (
+    <article className="rounded-xl border border-desktop-border bg-white/80 p-3 dark:bg-white/6">
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-sm font-semibold text-desktop-text-primary">{action}</div>
+        {critical ? (
+          <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] text-rose-700">
+            critical
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-2 text-[11px] leading-5 text-desktop-text-secondary">{whyItMatters}</div>
+      <div className="mt-2 rounded-xl border border-desktop-border bg-desktop-bg-primary/80 px-3 py-2 text-[11px] text-desktop-text-secondary">
+        从这里开始：{evidenceHint}
+      </div>
+    </article>
+  );
+}
+
 function sortCells(left: CellResult, right: CellResult) {
   if (left.passed !== right.passed) {
     return left.passed ? 1 : -1;
@@ -166,10 +195,16 @@ function CriterionList({ criteria }: { criteria: CriterionResult[] }) {
             </div>
           </div>
           <p className="mt-2 text-[11px] leading-5 text-desktop-text-secondary">{criterion.whyItMatters}</p>
-          <div className="mt-2 rounded-xl border border-desktop-border bg-white/75 px-3 py-2 text-[11px] text-desktop-text-secondary dark:bg-white/6">
-            动作：{criterion.recommendedAction}
+          <div className="mt-3 grid gap-2 lg:grid-cols-2">
+            <div className="rounded-xl border border-desktop-border bg-white/75 px-3 py-2 text-[11px] leading-5 text-desktop-text-secondary dark:bg-white/6">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">建议动作</div>
+              <div className="mt-1">{criterion.recommendedAction}</div>
+            </div>
+            <div className="rounded-xl border border-desktop-border bg-desktop-bg-primary/80 px-3 py-2 text-[11px] leading-5 text-desktop-text-secondary">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">查看线索</div>
+              <div className="mt-1">{criterion.evidenceHint}</div>
+            </div>
           </div>
-          <div className="mt-2 text-[11px] text-desktop-text-secondary">证据线索：{criterion.evidenceHint}</div>
         </article>
       ))}
     </div>
@@ -180,6 +215,7 @@ function OverviewView({ report, peerReport }: { report: FitnessReport; peerRepor
   const blockers = report.blockingCriteria ?? [];
   const failedCriteria = report.criteria.filter((criterion) => criterion.status === "fail");
   const evidencePackCount = report.evidencePacks?.length ?? 0;
+  const topRecommendations = report.recommendations.slice(0, 4);
   const capabilityHighlights = buildDimensionGroups(report)
     .map((group) => group.cells[0])
     .filter((cell): cell is CellResult => Boolean(cell))
@@ -220,10 +256,79 @@ function OverviewView({ report, peerReport }: { report: FitnessReport; peerRepor
       </section>
 
       <section className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/60 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">Repair workbench</div>
+            <h3 className="mt-1 text-sm font-semibold text-desktop-text-primary">先理解为什么卡住，再决定先修哪一条</h3>
+            <p className="mt-2 max-w-3xl text-[11px] leading-5 text-desktop-text-secondary">
+              这一区把 blocker、推荐动作和对照信息放在一起，方便你先完成一次高信号排查，而不是在多个视图之间来回切换。
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <div className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1 text-[10px] text-desktop-text-secondary">
+              blocker {blockers.length}
+            </div>
+            <div className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1 text-[10px] text-desktop-text-secondary">
+              failed {failedCriteria.length}
+            </div>
+            <div className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1 text-[10px] text-desktop-text-secondary">
+              evidence {evidencePackCount}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+          <div className="space-y-3">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">Why blocked</div>
+            <CriterionList criteria={blockers.slice(0, 4)} />
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-desktop-border bg-white/80 p-4 dark:bg-white/6">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">Do next</div>
+              {topRecommendations.length > 0 ? (
+                <div className="mt-3 space-y-2">
+                  {topRecommendations.map((item) => (
+                    <RecommendationCard
+                      key={item.criterionId}
+                      action={item.action}
+                      whyItMatters={item.whyItMatters}
+                      evidenceHint={item.evidenceHint}
+                      critical={item.critical}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-desktop-text-secondary">当前没有建议动作。</p>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-desktop-border bg-white/80 p-4 dark:bg-white/6">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">Cross-check</div>
+              <div className="mt-3 space-y-2 text-[11px] text-desktop-text-secondary">
+                <div className="rounded-xl border border-desktop-border bg-desktop-bg-primary/80 px-3 py-2">
+                  下一目标：<span className="font-semibold text-desktop-text-primary">{report.nextLevelName ?? "当前已到最高级"}</span>
+                </div>
+                <div className="rounded-xl border border-desktop-border bg-desktop-bg-primary/80 px-3 py-2">
+                  与另一 profile 的差值：
+                  <span className="ml-1 font-semibold text-desktop-text-primary">
+                    {peerDelta === null ? "N/A" : `${peerDelta >= 0 ? "+" : ""}${peerDelta}%`}
+                  </span>
+                </div>
+                <div className="rounded-xl border border-desktop-border bg-desktop-bg-primary/80 px-3 py-2">
+                  建议：如果 blocker 已经清楚，再切到“能力项”看受影响最大的 cell。
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/60 p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">Capability hotspots</div>
-            <h3 className="mt-1 text-sm font-semibold text-desktop-text-primary">当前最需要盯住的细粒度能力项</h3>
+            <h3 className="mt-1 text-sm font-semibold text-desktop-text-primary">再看哪些细粒度能力项最值得盯住</h3>
           </div>
           <div className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1 text-[10px] text-desktop-text-secondary">
             按 cell 粒度排序
@@ -233,38 +338,6 @@ function OverviewView({ report, peerReport }: { report: FitnessReport; peerRepor
           {capabilityHighlights.map((cell) => (
             <CapabilityCellCard key={cell.id} cell={cell} />
           ))}
-        </div>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-        <div className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/60 p-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">Blocking signals</div>
-          <div className="mt-3">
-            <CriterionList criteria={blockers.slice(0, 6)} />
-          </div>
-        </div>
-        <div className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/60 p-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">Top recommendations</div>
-          {report.recommendations.length > 0 ? (
-            <div className="mt-3 space-y-2">
-              {report.recommendations.slice(0, 5).map((item) => (
-                <article key={item.criterionId} className="rounded-xl border border-desktop-border bg-white/80 p-3 dark:bg-white/6">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="text-sm font-semibold text-desktop-text-primary">{item.action}</div>
-                    {item.critical ? (
-                      <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] text-rose-700">
-                        critical
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="mt-2 text-[11px] text-desktop-text-secondary">{item.whyItMatters}</div>
-                  <div className="mt-2 text-[11px] text-desktop-text-secondary">证据线索：{item.evidenceHint}</div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-3 text-sm text-desktop-text-secondary">当前没有建议项。</p>
-          )}
         </div>
       </section>
 
@@ -349,20 +422,13 @@ function RecommendationsView({ report }: { report: FitnessReport }) {
   return (
     <div className="space-y-3">
       {report.recommendations.map((item) => (
-        <article key={item.criterionId} className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/60 p-4">
-          <div className="flex items-start justify-between gap-2">
-            <h4 className="text-sm font-semibold text-desktop-text-primary">{item.action}</h4>
-            {item.critical ? (
-              <span className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 text-[10px] text-rose-700">
-                Critical
-              </span>
-            ) : null}
-          </div>
-          <p className="mt-2 text-xs leading-5 text-desktop-text-secondary">{item.whyItMatters}</p>
-          <div className="mt-2 rounded-xl border border-desktop-border bg-white/80 px-3 py-2 text-[11px] text-desktop-text-secondary dark:bg-white/6">
-            从这里开始：{item.evidenceHint}
-          </div>
-        </article>
+        <RecommendationCard
+          key={item.criterionId}
+          action={item.action}
+          whyItMatters={item.whyItMatters}
+          evidenceHint={item.evidenceHint}
+          critical={item.critical}
+        />
       ))}
     </div>
   );
