@@ -58,6 +58,26 @@ pub fn format_text_report(report: &HarnessFluencyReport) -> String {
         ));
     }
 
+    if !report.capability_groups.is_empty() {
+        lines.push(String::new());
+        lines.push("Capability Groups:".to_string());
+        let mut capability_groups = report
+            .capability_groups
+            .values()
+            .cloned()
+            .collect::<Vec<_>>();
+        capability_groups.sort_by(|left, right| left.name.cmp(&right.name));
+        for group in capability_groups {
+            lines.push(format!(
+                "- {}: {} ({} criteria, {} critical failures)",
+                group.name,
+                format_percent(Some(group.score)),
+                group.criterion_count,
+                group.critical_failures
+            ));
+        }
+    }
+
     lines.push(String::new());
     lines.push(blocking_header);
     if report.blocking_target_level_name.is_some() {

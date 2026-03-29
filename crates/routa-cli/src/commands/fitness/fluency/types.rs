@@ -40,9 +40,19 @@ pub struct EvaluateOptions {
     pub repo_root: PathBuf,
     pub model_path: PathBuf,
     pub profile: String,
+    pub mode: FluencyMode,
     pub snapshot_path: PathBuf,
     pub compare_last: bool,
     pub save: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum FluencyMode {
+    #[default]
+    Deterministic,
+    Hybrid,
+    Ai,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -149,15 +159,44 @@ pub(super) struct FluencyDimension {
 }
 
 #[derive(Clone, Debug)]
+pub(super) struct FluencyCapabilityGroup {
+    pub id: String,
+    pub name: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum EvidenceMode {
+    #[default]
+    Static,
+    Runtime,
+    Hybrid,
+    Manual,
+    Ai,
+}
+
+#[allow(dead_code)]
+#[derive(Clone, Debug)]
+pub(super) struct FluencyAiCheck {
+    pub prompt_template: String,
+    pub requires: Vec<String>,
+}
+
+#[derive(Clone, Debug)]
 pub(super) struct FluencyCriterion {
     pub id: String,
     pub level: String,
     pub dimension: String,
+    pub capability_group: String,
     pub weight: u32,
     pub critical: bool,
+    pub profiles: Vec<String>,
+    pub evidence_mode: EvidenceMode,
     pub why_it_matters: String,
     pub recommended_action: String,
     pub evidence_hint: String,
+    #[allow(dead_code)]
+    pub ai_check: Option<FluencyAiCheck>,
     pub detector: DetectorDefinition,
 }
 
@@ -166,6 +205,7 @@ pub(super) struct FluencyModel {
     pub version: u32,
     pub levels: Vec<FluencyLevel>,
     pub dimensions: Vec<FluencyDimension>,
+    pub capability_groups: Vec<FluencyCapabilityGroup>,
     pub criteria: Vec<FluencyCriterion>,
 }
 
@@ -175,10 +215,18 @@ pub struct CriterionResult {
     pub id: String,
     pub level: String,
     pub dimension: String,
+    #[serde(default)]
+    pub capability_group: Option<String>,
+    #[serde(default)]
+    pub capability_group_name: Option<String>,
     pub weight: u32,
     pub critical: bool,
     pub status: CriterionStatus,
     pub detector_type: String,
+    #[serde(default)]
+    pub profiles: Vec<String>,
+    #[serde(default)]
+    pub evidence_mode: EvidenceMode,
     pub detail: String,
     pub evidence: Vec<String>,
     pub why_it_matters: String,
@@ -255,10 +303,28 @@ pub struct ReportComparison {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CapabilityGroupResult {
+    pub capability_group: String,
+    pub name: String,
+    pub score: f64,
+    pub criterion_count: usize,
+    pub passing_criteria: usize,
+    pub failing_criteria: usize,
+    pub critical_failures: usize,
+    pub applicable_weight: u32,
+    pub passed_weight: u32,
+    #[serde(default)]
+    pub evidence_modes: HashMap<String, usize>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct HarnessFluencyReport {
     pub model_version: u32,
     pub model_path: String,
     pub profile: String,
+    #[serde(default)]
+    pub mode: FluencyMode,
     pub repo_root: String,
     pub generated_at: String,
     pub snapshot_path: String,
@@ -271,9 +337,28 @@ pub struct HarnessFluencyReport {
     pub blocking_target_level: Option<String>,
     pub blocking_target_level_name: Option<String>,
     pub dimensions: HashMap<String, DimensionResult>,
+    #[serde(default)]
+    pub capability_groups: HashMap<String, CapabilityGroupResult>,
     pub cells: Vec<CellResult>,
     pub criteria: Vec<CriterionResult>,
     pub blocking_criteria: Vec<CriterionResult>,
     pub recommendations: Vec<Recommendation>,
     pub comparison: Option<ReportComparison>,
+}
+
+impl DetectorDefinition {
+    pub(super) fn default_evidence_mode(&self) -> EvidenceMode {
+        match self {
+            Self::FileExists { .. }
+            | Self::FileContainsRegex { .. }
+            | Self::AnyFileExists { .. }
+            | Self::GlobCount { .. }
+            | Self::GlobContainsRegex { .. }
+            | Self::JsonPathExists { .. }
+            | Self::YamlPathExists { .. } => EvidenceMode::Static,
+            Self::CommandExitCode { .. } | Self::CommandOutputRegex { .. } => EvidenceMode::Runtime,
+            Self::ManualAttestation { .. } => EvidenceMode::Manual,
+            Self::AnyOf { .. } => EvidenceMode::Hybrid,
+        }
+    }
 }

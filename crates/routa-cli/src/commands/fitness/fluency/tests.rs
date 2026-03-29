@@ -1,5 +1,5 @@
 use super::model::load_fluency_model;
-use super::types::{CriterionStatus, LevelChange};
+use super::types::{CriterionStatus, EvidenceMode, FluencyMode, LevelChange};
 use super::{evaluate_harness_fluency, format_text_report, EvaluateOptions};
 use serde_json::json;
 use std::fs::{create_dir_all, write};
@@ -137,6 +137,89 @@ criteria:
 }
 
 #[test]
+fn parses_capability_groups_profiles_and_ai_metadata() {
+    let repo = tempdir().unwrap();
+    let model_path = repo.path().join("model.yaml");
+    write(
+        &model_path,
+        r#"version: 3
+capability_groups:
+  - id: execution_surface
+    name: Execution Surface
+  - id: workflow_automation
+    name: Workflow Automation
+levels:
+  - id: awareness
+    name: Awareness
+dimensions:
+  - id: collaboration
+    name: Collaboration
+criteria:
+  - id: collaboration.awareness.cli_surface
+    level: awareness
+    dimension: collaboration
+    capability_group: execution_surface
+    profiles: [generic, agent_orchestrator]
+    weight: 1
+    critical: true
+    evidence_mode: hybrid
+    why_it_matters: cli
+    recommended_action: cli
+    evidence_hint: package.json
+    ai_check:
+      prompt_template: fluency-capability-scorer
+      requires: [code_excerpt, runtime_surface]
+    detector:
+      type: any_of
+      detectors:
+        - type: file_exists
+          path: package.json
+  - id: collaboration.awareness.docs
+    level: awareness
+    dimension: collaboration
+    weight: 1
+    critical: false
+    why_it_matters: docs
+    recommended_action: docs
+    evidence_hint: README.md
+    detector:
+      type: file_exists
+      path: README.md
+"#,
+    )
+    .unwrap();
+
+    let model = load_fluency_model(&model_path).expect("model");
+    assert_eq!(model.capability_groups.len(), 2);
+
+    let cli_surface = model
+        .criteria
+        .iter()
+        .find(|criterion| criterion.id == "collaboration.awareness.cli_surface")
+        .expect("cli surface criterion");
+    assert_eq!(cli_surface.capability_group, "execution_surface");
+    assert_eq!(
+        cli_surface.profiles,
+        vec!["generic".to_string(), "agent_orchestrator".to_string()]
+    );
+    assert_eq!(cli_surface.evidence_mode, EvidenceMode::Hybrid);
+    let ai_check = cli_surface.ai_check.as_ref().expect("ai check");
+    assert_eq!(ai_check.prompt_template, "fluency-capability-scorer");
+    assert_eq!(
+        ai_check.requires,
+        vec!["code_excerpt".to_string(), "runtime_surface".to_string()]
+    );
+
+    let docs = model
+        .criteria
+        .iter()
+        .find(|criterion| criterion.id == "collaboration.awareness.docs")
+        .expect("docs criterion");
+    assert_eq!(docs.capability_group, "collaboration");
+    assert!(docs.profiles.is_empty());
+}
+
+#[test]
 fn evaluates_snapshots_commands_and_manual_attestation() {
     let repo = tempdir().unwrap();
     let repo_root = repo.path();
@@ -232,6 +315,7 @@ criteria:
         repo_root: repo_root.to_path_buf(),
         model_path,
         profile: "generic".to_string(),
+        mode: FluencyMode::Deterministic,
         snapshot_path,
         compare_last: false,
         save: false,
@@ -361,6 +445,7 @@ criteria:
         repo_root: repo_root.to_path_buf(),
         model_path,
         profile: "generic".to_string(),
+        mode: FluencyMode::Deterministic,
         snapshot_path,
         compare_last: false,
         save: false,
@@ -553,6 +638,7 @@ criteria:
         repo_root: repo_root.to_path_buf(),
         model_path,
         profile: "generic".to_string(),
+        mode: FluencyMode::Deterministic,
         snapshot_path,
         compare_last: true,
         save: false,
@@ -653,6 +739,7 @@ criteria:
         repo_root: repo_root.to_path_buf(),
         model_path,
         profile: "generic".to_string(),
+        mode: FluencyMode::Deterministic,
         snapshot_path,
         compare_last: false,
         save: false,
@@ -761,6 +848,7 @@ criteria:
         repo_root: repo_root.to_path_buf(),
         model_path,
         profile: "generic".to_string(),
+        mode: FluencyMode::Deterministic,
         snapshot_path,
         compare_last: false,
         save: false,
@@ -829,6 +917,7 @@ criteria:
         repo_root: repo_root.to_path_buf(),
         model_path,
         profile: "generic".to_string(),
+        mode: FluencyMode::Deterministic,
         snapshot_path,
         compare_last: false,
         save: false,
@@ -894,6 +983,7 @@ criteria:
         repo_root: repo_root.to_path_buf(),
         model_path,
         profile: "generic".to_string(),
+        mode: FluencyMode::Deterministic,
         snapshot_path,
         compare_last: false,
         save: false,
@@ -907,4 +997,100 @@ criteria:
                 .detail
                 .contains("must be a bare allowlisted name")
     }));
+}
+
+#[test]
+fn evaluates_capability_group_summary_and_profile_filtering() {
+    let repo = tempdir().unwrap();
+    let repo_root = repo.path();
+    create_dir_all(repo_root.join("docs/fitness")).unwrap();
+    write(repo_root.join("README.md"), "# repo\n").unwrap();
+
+    let model_path = repo_root.join("docs/fitness/model.yaml");
+    let snapshot_path = repo_root.join("docs/fitness/latest.json");
+    write(
+        &model_path,
+        r#"version: 3
+capability_groups:
+  - id: execution_surface
+    name: Execution Surface
+  - id: workflow_automation
+    name: Workflow Automation
+levels:
+  - id: awareness
+    name: Awareness
+dimensions:
+  - id: collaboration
+    name: Collaboration
+criteria:
+  - id: collaboration.awareness.repo_docs
+    level: awareness
+    dimension: collaboration
+    capability_group: execution_surface
+    profiles: [generic]
+    weight: 2
+    critical: true
+    why_it_matters: docs
+    recommended_action: docs
+    evidence_hint: README.md
+    detector:
+      type: file_exists
+      path: README.md
+  - id: collaboration.awareness.workflow_docs
+    level: awareness
+    dimension: collaboration
+    capability_group: workflow_automation
+    profiles: [agent_orchestrator]
+    weight: 1
+    critical: false
+    evidence_mode: ai
+    why_it_matters: workflows
+    recommended_action: workflows
+    evidence_hint: .github/workflows
+    ai_check:
+      prompt_template: fluency-capability-scorer
+    detector:
+      type: file_exists
+      path: .github/workflows/ci.yml
+"#,
+    )
+    .unwrap();
+
+    let report = evaluate_harness_fluency(&EvaluateOptions {
+        repo_root: repo_root.to_path_buf(),
+        model_path,
+        profile: "generic".to_string(),
+        mode: FluencyMode::Deterministic,
+        snapshot_path,
+        compare_last: false,
+        save: false,
+    })
+    .expect("report");
+
+    assert_eq!(report.criteria.len(), 1);
+    let criterion = report.criteria.first().expect("criterion");
+    assert_eq!(criterion.capability_group.as_deref(), Some("execution_surface"));
+    assert_eq!(
+        criterion.capability_group_name.as_deref(),
+        Some("Execution Surface")
+    );
+    assert_eq!(criterion.evidence_mode, super::types::EvidenceMode::Static);
+
+    let execution_surface = report
+        .capability_groups
+        .get("execution_surface")
+        .expect("execution surface");
+    assert_eq!(execution_surface.name, "Execution Surface");
+    assert_eq!(execution_surface.criterion_count, 1);
+    assert_eq!(execution_surface.passing_criteria, 1);
+    assert_eq!(execution_surface.failing_criteria, 0);
+    assert_eq!(execution_surface.critical_failures, 0);
+    assert_eq!(execution_surface.applicable_weight, 2);
+    assert_eq!(execution_surface.passed_weight, 2);
+    assert_eq!(execution_surface.score, 1.0);
+    assert_eq!(
+        execution_surface.evidence_modes.get("static").copied(),
+        Some(1)
+    );
+    assert!(!report.capability_groups.contains_key("workflow_automation"));
 }

@@ -5,7 +5,8 @@ use std::path::{Path, PathBuf};
 
 use super::support::build_regex;
 use super::types::{
-    DetectorDefinition, FluencyCriterion, FluencyDimension, FluencyLevel, FluencyModel, PathSegment,
+    DetectorDefinition, EvidenceMode, FluencyAiCheck, FluencyCapabilityGroup, FluencyCriterion,
+    FluencyDimension, FluencyLevel, FluencyModel, PathSegment,
 };
 
 pub(super) fn load_fluency_model(model_path: &Path) -> Result<FluencyModel, String> {
@@ -71,6 +72,35 @@ pub(super) fn load_fluency_model(model_path: &Path) -> Result<FluencyModel, Stri
         return Err("harness fluency model.dimensions contains duplicate ids".to_string());
     }
 
+    let capability_groups = match root.get("capability_groups") {
+        Some(value) => {
+            let capability_groups_raw = expect_array(value, "model.capability_groups")?;
+            let mut groups = Vec::with_capacity(capability_groups_raw.len());
+            for (index, entry) in capability_groups_raw.iter().enumerate() {
+                let record = expect_object(entry, &format!("capability_groups[{index}]"))?;
+                groups.push(FluencyCapabilityGroup {
+                    id: expect_string(
+                        get_required(record, "id", &format!("capability_groups[{index}].id"))?,
+                        &format!("capability_groups[{index}].id"),
+                    )?,
+                    name: expect_string(
+                        get_required(record, "name", &format!("capability_groups[{index}].name"))?,
+                        &format!("capability_groups[{index}].name"),
+                    )?,
+                });
+            }
+            groups
+        }
+        None => Vec::new(),
+    };
+    let capability_group_ids = capability_groups
+        .iter()
+        .map(|group| group.id.clone())
+        .collect::<HashSet<_>>();
+    if capability_group_ids.len() != capability_groups.len() {
+        return Err("harness fluency model.capability_groups contains duplicate ids".to_string());
+    }
+
     let criteria_raw = expect_array(
         get_required(root, "criteria", "model.criteria")?,
         "model.criteria",
@@ -99,6 +129,18 @@ pub(super) fn load_fluency_model(model_path: &Path) -> Result<FluencyModel, Stri
                 "criteria[{index}].dimension references unknown dimension \"{dimension}\""
             ));
         }
+        let capability_group = match record.get("capability_group") {
+            Some(value) => expect_string(value, &format!("criteria[{index}].capability_group"))?,
+            None => dimension.clone(),
+        };
+        if !capability_group_ids.is_empty()
+            && !capability_group_ids.contains(&capability_group)
+            && !dimension_ids.contains(&capability_group)
+        {
+            return Err(format!(
+                "criteria[{index}].capability_group references unknown group \"{capability_group}\""
+            ));
+        }
 
         criteria.push(FluencyCriterion {
             id: expect_string(
@@ -107,6 +149,7 @@ pub(super) fn load_fluency_model(model_path: &Path) -> Result<FluencyModel, Stri
             )?,
             level,
             dimension,
+            capability_group,
             weight: expect_u32(
                 record.get("weight"),
                 &format!("criteria[{index}].weight"),
@@ -116,6 +159,15 @@ pub(super) fn load_fluency_model(model_path: &Path) -> Result<FluencyModel, Stri
                 record.get("critical"),
                 &format!("criteria[{index}].critical"),
                 false,
+            )?,
+            profiles: match record.get("profiles") {
+                Some(value) => parse_string_array(value, &format!("criteria[{index}].profiles"))?,
+                None => Vec::new(),
+            },
+            evidence_mode: parse_evidence_mode(
+                record.get("evidence_mode"),
+                &format!("criteria[{index}].evidence_mode"),
+                record.get("detector"),
             )?,
             why_it_matters: expect_string(
                 get_required(
@@ -141,6 +193,10 @@ pub(super) fn load_fluency_model(model_path: &Path) -> Result<FluencyModel, Stri
                 )?,
                 &format!("criteria[{index}].evidence_hint"),
             )?,
+            ai_check: match record.get("ai_check") {
+                Some(value) => Some(parse_ai_check(value, &format!("criteria[{index}].ai_check"))?),
+                None => None,
+            },
             detector: parse_detector(
                 get_required(record, "detector", &format!("criteria[{index}].detector"))?,
                 &format!("criteria[{index}].detector"),
@@ -177,6 +233,7 @@ pub(super) fn load_fluency_model(model_path: &Path) -> Result<FluencyModel, Stri
         version: expect_u32(root.get("version"), "model.version", 1)?,
         levels,
         dimensions,
+        capability_groups,
         criteria,
     })
 }
@@ -403,6 +460,44 @@ fn parse_regex_settings(
     };
     let _ = build_regex(&pattern, &flags, label)?;
     Ok((pattern, flags))
+}
+
+fn parse_evidence_mode(
+    value: Option<&JsonValue>,
+    label: &str,
+    detector: Option<&JsonValue>,
+) -> Result<EvidenceMode, String> {
+    match value {
+        Some(value) => match expect_string(value, label)?.as_str() {
+            "static" => Ok(EvidenceMode::Static),
+            "runtime" => Ok(EvidenceMode::Runtime),
+            "hybrid" => Ok(EvidenceMode::Hybrid),
+            "manual" => Ok(EvidenceMode::Manual),
+            "ai" | "ai_only" => Ok(EvidenceMode::Ai),
+            _ => Err(format!(
+                "{label} must be one of static, runtime, hybrid, manual, ai"
+            )),
+        },
+        None => match detector {
+            Some(value) => parse_detector(value, &format!("{label}.detector_default"))
+                .map(|detector| detector.default_evidence_mode()),
+            None => Ok(EvidenceMode::Static),
+        },
+    }
+}
+
+fn parse_ai_check(value: &JsonValue, label: &str) -> Result<FluencyAiCheck, String> {
+    let record = expect_object(value, label)?;
+    Ok(FluencyAiCheck {
+        prompt_template: expect_string(
+            get_required(record, "prompt_template", &format!("{label}.prompt_template"))?,
+            &format!("{label}.prompt_template"),
+        )?,
+        requires: match record.get("requires") {
+            Some(value) => parse_string_array(value, &format!("{label}.requires"))?,
+            None => Vec::new(),
+        },
+    })
 }
 
 fn parse_detector(value: &JsonValue, label: &str) -> Result<DetectorDefinition, String> {

@@ -7,9 +7,9 @@ use super::snapshot::{
     build_comparison, can_compare_reports, load_previous_snapshot, persist_snapshot,
 };
 use super::types::{
-    CellResult, CriterionResult, CriterionStatus, DimensionResult, EvaluateOptions,
-    FluencyDimension, FluencyLevel, HarnessFluencyReport, Recommendation, CELL_PASS_THRESHOLD,
-    MAX_RECOMMENDATIONS,
+    CapabilityGroupResult, CellResult, CriterionResult, CriterionStatus, DimensionResult,
+    EvaluateOptions, FluencyDimension, FluencyLevel, HarnessFluencyReport, Recommendation,
+    CELL_PASS_THRESHOLD, MAX_RECOMMENDATIONS,
 };
 
 struct MutableCellAccumulator {
@@ -19,6 +19,18 @@ struct MutableCellAccumulator {
     dimension: String,
     dimension_name: String,
     criteria: Vec<CriterionResult>,
+}
+
+struct MutableCapabilityGroupAccumulator {
+    id: String,
+    name: String,
+    criterion_count: usize,
+    passing_criteria: usize,
+    failing_criteria: usize,
+    critical_failures: usize,
+    applicable_weight: u32,
+    passed_weight: u32,
+    evidence_modes: HashMap<String, usize>,
 }
 
 pub fn evaluate_harness_fluency(options: &EvaluateOptions) -> Result<HarnessFluencyReport, String> {
@@ -50,8 +62,19 @@ pub fn evaluate_harness_fluency(options: &EvaluateOptions) -> Result<HarnessFlue
 
     let mut context = EvaluationContext::new(options.repo_root.clone())?;
     let mut criteria_results = Vec::with_capacity(model.criteria.len());
+    let capability_group_names = build_capability_group_names(&model);
     for criterion in &model.criteria {
-        criteria_results.push(evaluate_criterion(criterion, &mut context)?);
+        if !criterion.profiles.is_empty() && !criterion.profiles.iter().any(|profile| profile == &options.profile)
+        {
+            continue;
+        }
+
+        let mut result = evaluate_criterion(criterion, &mut context)?;
+        result.capability_group_name = Some(resolve_capability_group_name(
+            &capability_group_names,
+            &criterion.capability_group,
+        ));
+        criteria_results.push(result);
     }
 
     let mut cell_accumulators: HashMap<String, MutableCellAccumulator> = HashMap::new();
@@ -124,6 +147,7 @@ pub fn evaluate_harness_fluency(options: &EvaluateOptions) -> Result<HarnessFlue
         .cloned()
         .map(|cell| (cell.id.clone(), cell))
         .collect();
+    let capability_groups = build_capability_group_results(&criteria_results, &capability_group_names);
     let mut dimensions = HashMap::new();
     for dimension in &model.dimensions {
         let mut achieved_index: isize = -1;
@@ -198,6 +222,7 @@ pub fn evaluate_harness_fluency(options: &EvaluateOptions) -> Result<HarnessFlue
         model_version: model.version,
         model_path: options.model_path.display().to_string(),
         profile: options.profile.clone(),
+        mode: options.mode.clone(),
         repo_root: options.repo_root.display().to_string(),
         generated_at: Utc::now().to_rfc3339(),
         snapshot_path: options.snapshot_path.display().to_string(),
@@ -210,6 +235,7 @@ pub fn evaluate_harness_fluency(options: &EvaluateOptions) -> Result<HarnessFlue
         blocking_target_level: blocking_target_level.map(|level| level.id.clone()),
         blocking_target_level_name: blocking_target_level.map(|level| level.name.clone()),
         dimensions,
+        capability_groups,
         cells,
         criteria: criteria_results,
         blocking_criteria: blocking_criteria.clone(),
@@ -232,6 +258,101 @@ pub fn evaluate_harness_fluency(options: &EvaluateOptions) -> Result<HarnessFlue
 
 fn build_cell_id(level: &str, dimension: &str) -> String {
     format!("{dimension}:{level}")
+}
+
+fn build_capability_group_names(model: &super::types::FluencyModel) -> HashMap<String, String> {
+    let mut names = model
+        .capability_groups
+        .iter()
+        .map(|group| (group.id.clone(), group.name.clone()))
+        .collect::<HashMap<_, _>>();
+    for dimension in &model.dimensions {
+        names
+            .entry(dimension.id.clone())
+            .or_insert_with(|| dimension.name.clone());
+    }
+    names
+}
+
+fn resolve_capability_group_name(
+    capability_group_names: &HashMap<String, String>,
+    capability_group: &str,
+) -> String {
+    capability_group_names
+        .get(capability_group)
+        .cloned()
+        .unwrap_or_else(|| capability_group.to_string())
+}
+
+fn build_capability_group_results(
+    criteria_results: &[CriterionResult],
+    capability_group_names: &HashMap<String, String>,
+) -> HashMap<String, CapabilityGroupResult> {
+    let mut accumulators = HashMap::<String, MutableCapabilityGroupAccumulator>::new();
+
+    for criterion in criteria_results {
+        let Some(group_id) = criterion.capability_group.clone() else {
+            continue;
+        };
+        let evidence_mode = format!("{:?}", criterion.evidence_mode).to_lowercase();
+        let accumulator = accumulators
+            .entry(group_id.clone())
+            .or_insert_with(|| MutableCapabilityGroupAccumulator {
+                id: group_id.clone(),
+                name: resolve_capability_group_name(capability_group_names, &group_id),
+                criterion_count: 0,
+                passing_criteria: 0,
+                failing_criteria: 0,
+                critical_failures: 0,
+                applicable_weight: 0,
+                passed_weight: 0,
+                evidence_modes: HashMap::new(),
+            });
+        accumulator.criterion_count += 1;
+        *accumulator.evidence_modes.entry(evidence_mode).or_insert(0) += 1;
+
+        match criterion.status {
+            CriterionStatus::Pass => {
+                accumulator.passing_criteria += 1;
+                accumulator.applicable_weight += criterion.weight;
+                accumulator.passed_weight += criterion.weight;
+            }
+            CriterionStatus::Fail => {
+                accumulator.failing_criteria += 1;
+                accumulator.applicable_weight += criterion.weight;
+                if criterion.critical {
+                    accumulator.critical_failures += 1;
+                }
+            }
+            CriterionStatus::Skipped => {}
+        }
+    }
+
+    accumulators
+        .into_iter()
+        .map(|(group_id, accumulator)| {
+            let score = if accumulator.applicable_weight == 0 {
+                0.0
+            } else {
+                accumulator.passed_weight as f64 / accumulator.applicable_weight as f64
+            };
+            (
+                group_id,
+                CapabilityGroupResult {
+                    capability_group: accumulator.id,
+                    name: accumulator.name,
+                    score,
+                    criterion_count: accumulator.criterion_count,
+                    passing_criteria: accumulator.passing_criteria,
+                    failing_criteria: accumulator.failing_criteria,
+                    critical_failures: accumulator.critical_failures,
+                    applicable_weight: accumulator.applicable_weight,
+                    passed_weight: accumulator.passed_weight,
+                    evidence_modes: accumulator.evidence_modes,
+                },
+            )
+        })
+        .collect()
 }
 
 fn deterministic_priority(detector_type: &str) -> u8 {

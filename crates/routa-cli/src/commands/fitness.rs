@@ -5,7 +5,7 @@ mod fluency;
 use clap::{Args, Subcommand, ValueEnum};
 use std::path::{Path, PathBuf};
 
-use self::fluency::{evaluate_harness_fluency, format_text_report, EvaluateOptions};
+use self::fluency::{evaluate_harness_fluency, format_text_report, EvaluateOptions, FluencyMode};
 
 const DEFAULT_MODEL_RELATIVE_PATH: &str = "docs/fitness/harness-fluency.model.yaml";
 const AGENT_ORCHESTRATOR_MODEL_RELATIVE_PATH: &str =
@@ -98,6 +98,7 @@ fn run_fluency(args: &FluencyArgs) -> Result<(), String> {
         repo_root,
         model_path,
         profile: args.profile.as_cli_value().to_string(),
+        mode: FluencyMode::Deterministic,
         snapshot_path,
         compare_last: args.compare_last,
         save: !args.no_save,
