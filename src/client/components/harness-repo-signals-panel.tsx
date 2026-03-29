@@ -2,41 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { HarnessUnsupportedState } from "@/client/components/harness-support-state";
-
-type ScriptCategory = "build" | "dev" | "bundle" | "unit" | "e2e" | "quality" | "coverage";
-type HarnessSignalsMode = "build" | "test";
-
-type ScriptSignal = {
-  name: string;
-  command: string;
-  category: ScriptCategory;
-};
-
-type FileSignal = {
-  relativePath: string;
-  exists: boolean;
-};
-
-type RepoSignalsResponse = {
-  generatedAt: string;
-  repoRoot: string;
-  packageManager: string | null;
-  lockfiles: string[];
-  build: {
-    scripts: ScriptSignal[];
-    manifests: FileSignal[];
-    configFiles: FileSignal[];
-    outputDirs: FileSignal[];
-    platformTargets: string[];
-  };
-  test: {
-    scripts: ScriptSignal[];
-    configFiles: FileSignal[];
-    artifactDirs: FileSignal[];
-    evidenceFiles: FileSignal[];
-  };
-  warnings: string[];
-};
+import type {
+  HarnessRepoSignalsResponse,
+  HarnessScriptSignal,
+  HarnessSignalsMode,
+} from "@/core/harness/repo-signals-types";
 
 type HarnessRepoSignalsPanelProps = {
   workspaceId: string;
@@ -51,7 +21,7 @@ type HarnessRepoSignalsPanelProps = {
 type QueryState = {
   loading: boolean;
   error: string | null;
-  data: RepoSignalsResponse | null;
+  data: HarnessRepoSignalsResponse | null;
 };
 
 function categoryTone(mode: HarnessSignalsMode) {
@@ -70,27 +40,6 @@ function categoryTone(mode: HarnessSignalsMode) {
     };
 }
 
-function groupScripts(scripts: ScriptSignal[]) {
-  const order: ScriptCategory[] = ["dev", "build", "bundle", "unit", "e2e", "quality", "coverage"];
-  const labels: Record<ScriptCategory, string> = {
-    dev: "Dev flow",
-    build: "Build flow",
-    bundle: "Bundle / release",
-    unit: "Unit / component",
-    e2e: "Browser / integration",
-    quality: "Contract / quality",
-    coverage: "Coverage",
-  };
-
-  return order
-    .map((category) => ({
-      category,
-      label: labels[category],
-      scripts: scripts.filter((script) => script.category === category),
-    }))
-    .filter((entry) => entry.scripts.length > 0);
-}
-
 function summarizeItems(items: string[], limit = 4) {
   if (items.length <= limit) {
     return items;
@@ -98,11 +47,7 @@ function summarizeItems(items: string[], limit = 4) {
   return [...items.slice(0, limit), `+${items.length - limit} more`];
 }
 
-function summarizeFileSignals(items: FileSignal[], limit = 5) {
-  return summarizeItems(items.filter((item) => item.exists).map((item) => item.relativePath), limit);
-}
-
-function summarizeScripts(items: ScriptSignal[], limit = 2) {
+function summarizeScripts(items: HarnessScriptSignal[], limit = 2) {
   return summarizeItems(items.map((item) => item.name), limit);
 }
 
@@ -150,7 +95,7 @@ export function HarnessRepoSignalsPanel({
           setState({
             loading: false,
             error: null,
-            data: payload as RepoSignalsResponse,
+            data: payload as HarnessRepoSignalsResponse,
           });
         }
       } catch (error) {
@@ -173,56 +118,21 @@ export function HarnessRepoSignalsPanel({
   const compactMode = variant === "compact";
   const tone = categoryTone(mode);
   const focus = state.data?.[mode];
-  const scriptGroups = useMemo(() => groupScripts(focus?.scripts ?? []), [focus?.scripts]);
+  const scriptGroups = useMemo(() => focus?.entrypointGroups ?? [], [focus]);
   const title = mode === "build" ? "构建反馈环" : "测试反馈环";
-  const summaryText = mode === "build"
+  const summaryText = focus?.summary ?? (mode === "build"
     ? "把 package manager、workspace manifests 和发布目标放在一个视图里。"
-    : "把测试脚本、配置文件和 coverage / reports 证据放在一个视图里。";
+    : "把测试脚本、配置文件和 coverage / reports 证据放在一个视图里。");
   const summaryRows = useMemo(() => {
-    if (!state.data || !focus) {
-      return [];
-    }
-
-    if (mode === "build") {
-      return [
-        {
-          label: "Repository",
-          values: summarizeItems(state.data.lockfiles, 3),
-        },
-        {
-          label: "Targets",
-          values: summarizeItems(state.data.build.platformTargets, 4),
-        },
-        {
-          label: "Evidence",
-          values: summarizeFileSignals([...state.data.build.manifests, ...state.data.build.configFiles], 6),
-        },
-        {
-          label: "Outputs",
-          values: summarizeFileSignals(state.data.build.outputDirs, 4),
-        },
-      ];
-    }
-
-    return [
-      {
-        label: "Repository",
-        values: summarizeItems(state.data.lockfiles, 3),
-      },
-      {
-        label: "Config",
-        values: summarizeFileSignals(state.data.test.configFiles, 5),
-      },
-      {
-        label: "Evidence",
-        values: summarizeFileSignals(state.data.test.evidenceFiles, 5),
-      },
-      {
-        label: "Artifacts",
-        values: summarizeFileSignals(state.data.test.artifactDirs, 4),
-      },
-    ];
-  }, [focus, mode, state.data]);
+    return focus?.overviewRows.map((row) => ({
+      label: row.label,
+      values: row.items,
+    })) ?? [];
+  }, [focus]);
+  const totalScripts = useMemo(
+    () => scriptGroups.reduce((count, group) => count + group.scripts.length, 0),
+    [scriptGroups],
+  );
 
   return (
     <section className={`rounded-2xl border p-4 shadow-sm ${compactMode ? tone.panel : tone.panel}`}>
@@ -236,7 +146,7 @@ export function HarnessRepoSignalsPanel({
           {state.data?.packageManager ? (
             <span className={`rounded-full border px-2.5 py-1 ${tone.badge}`}>{state.data.packageManager}</span>
           ) : null}
-          <span className={`rounded-full border px-2.5 py-1 ${tone.badge}`}>{focus?.scripts.length ?? 0} scripts</span>
+          <span className={`rounded-full border px-2.5 py-1 ${tone.badge}`}>{totalScripts} scripts</span>
           <span className={`rounded-full border px-2.5 py-1 ${tone.badge}`}>{scriptGroups.length} groups</span>
         </div>
       </div>
