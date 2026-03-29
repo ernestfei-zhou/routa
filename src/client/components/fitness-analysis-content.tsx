@@ -179,6 +179,7 @@ function CriterionList({ criteria }: { criteria: CriterionResult[] }) {
 function OverviewView({ report, peerReport }: { report: FitnessReport; peerReport?: FitnessReport }) {
   const blockers = report.blockingCriteria ?? [];
   const failedCriteria = report.criteria.filter((criterion) => criterion.status === "fail");
+  const evidencePackCount = report.evidencePacks?.length ?? 0;
   const capabilityHighlights = buildDimensionGroups(report)
     .map((group) => group.cells[0])
     .filter((cell): cell is CellResult => Boolean(cell))
@@ -205,6 +206,10 @@ function OverviewView({ report, peerReport }: { report: FitnessReport; peerRepor
         <div className="rounded-full border border-desktop-border bg-desktop-bg-secondary/60 px-3 py-2 text-[11px] text-desktop-text-secondary">
           Failed criteria:
           <span className="ml-1 font-semibold text-desktop-text-primary">{failedCriteria.length}</span>
+        </div>
+        <div className="rounded-full border border-desktop-border bg-desktop-bg-secondary/60 px-3 py-2 text-[11px] text-desktop-text-secondary">
+          Evidence packs:
+          <span className="ml-1 font-semibold text-desktop-text-primary">{evidencePackCount}</span>
         </div>
         <div className="rounded-full border border-desktop-border bg-desktop-bg-secondary/60 px-3 py-2 text-[11px] text-desktop-text-secondary">
           Peer delta:
@@ -262,6 +267,41 @@ function OverviewView({ report, peerReport }: { report: FitnessReport; peerRepor
           )}
         </div>
       </section>
+
+      {evidencePackCount > 0 ? (
+        <section className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/60 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">Adjudication prep</div>
+              <h3 className="mt-1 text-sm font-semibold text-desktop-text-primary">已准备可供后续 AI 裁决的证据包</h3>
+            </div>
+            <div className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1 text-[10px] text-desktop-text-secondary">
+              {report.mode ?? "deterministic"}
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 xl:grid-cols-2">
+            {report.evidencePacks?.slice(0, 4).map((pack) => (
+              <article key={pack.criterionId} className="rounded-xl border border-desktop-border bg-white/80 p-3 dark:bg-white/6">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="text-sm font-semibold text-desktop-text-primary">{criterionShortLabel(pack.criterionId)}</div>
+                    <div className="mt-1 font-mono text-[10px] text-desktop-text-secondary">{pack.criterionId}</div>
+                  </div>
+                  <span className={`rounded-full border px-2 py-0.5 text-[10px] ${criterionStatusTone(pack.status)}`}>
+                    {pack.status}
+                  </span>
+                </div>
+                <div className="mt-2 text-[11px] text-desktop-text-secondary">
+                  选择原因：{pack.selectionReasons.join(" / ")}
+                </div>
+                <div className="mt-2 text-[11px] text-desktop-text-secondary">
+                  证据：{pack.evidence.slice(0, 3).join(", ") || pack.evidenceHint}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

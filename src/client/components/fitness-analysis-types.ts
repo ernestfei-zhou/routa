@@ -1,6 +1,7 @@
 "use client";
 
 export type FitnessProfile = "generic" | "agent_orchestrator";
+export type FluencyRunMode = "deterministic" | "hybrid" | "ai";
 export type ViewMode = "overview" | "capabilities" | "recommendations" | "changes" | "console" | "raw";
 
 export type FitnessProfileState = "idle" | "loading" | "ready" | "empty" | "error";
@@ -105,11 +106,36 @@ export type FitnessReport = {
   blockingTargetLevelName?: string | null;
   dimensions: Record<string, FitnessDimensionResult>;
   capabilityGroups?: Record<string, unknown>;
+  evidencePacks?: FitnessEvidencePack[];
   cells: CellResult[];
   criteria: CriterionResult[];
   recommendations: FitnessRecommendation[];
   comparison?: FitnessComparison;
   blockingCriteria?: CriterionResult[];
+};
+
+export type FitnessEvidenceExcerpt = {
+  path: string;
+  content: string;
+  truncated: boolean;
+};
+
+export type FitnessEvidencePack = {
+  criterionId: string;
+  capabilityGroup: string;
+  capabilityGroupName: string;
+  status: CriterionStatus;
+  evidenceMode: string;
+  detectorType: string;
+  selectionReasons: string[];
+  detail: string;
+  evidence: string[];
+  excerpts: FitnessEvidenceExcerpt[];
+  whyItMatters: string;
+  recommendedAction: string;
+  evidenceHint: string;
+  aiPromptTemplate?: string | null;
+  aiRequires?: string[];
 };
 
 export type ApiProfileEntry = {
@@ -144,7 +170,16 @@ export type FitnessAnalysisContext = {
   repoPath?: string;
 };
 
+export type FitnessAnalysisOptions = {
+  mode?: FluencyRunMode;
+};
+
 export const PROFILE_ORDER: FitnessProfile[] = ["generic", "agent_orchestrator"];
+export const FLUENCY_MODES: Array<{ id: FluencyRunMode; label: string; description: string }> = [
+  { id: "deterministic", label: "Deterministic", description: "只跑静态/运行时基线评分" },
+  { id: "hybrid", label: "Hybrid", description: "在基线之上准备证据包，供后续 AI 裁决" },
+  { id: "ai", label: "AI", description: "扩大证据准备范围，面向 AI 评估" },
+];
 
 export const PROFILE_DEFS: Array<{
   id: FitnessProfile;
@@ -222,12 +257,15 @@ export function buildAnalysisQuery(context: FitnessAnalysisContext): string {
   return params.toString();
 }
 
-export function buildAnalysisPayload(context: FitnessAnalysisContext) {
+export function buildAnalysisPayload(context: FitnessAnalysisContext, options?: FitnessAnalysisOptions) {
   const payload: FitnessAnalysisContext = {};
   if (context.workspaceId?.trim()) payload.workspaceId = context.workspaceId.trim();
   if (context.codebaseId?.trim()) payload.codebaseId = context.codebaseId.trim();
   if (context.repoPath?.trim()) payload.repoPath = context.repoPath.trim();
-  return payload;
+  return {
+    ...payload,
+    ...(options?.mode ? { mode: options.mode } : {}),
+  };
 }
 
 export function toMessage(error: unknown): string {

@@ -6,6 +6,7 @@ import { desktopAwareFetch } from "@/client/utils/diagnostics";
 
 import { FitnessAnalysisContent } from "./fitness-analysis-content";
 import {
+  FLUENCY_MODES,
   PROFILE_DEFS,
   PROFILE_ORDER,
   VIEW_MODES,
@@ -20,6 +21,7 @@ import {
   type AnalyzeResponse,
   type FitnessProfile,
   type FitnessProfileState,
+  type FluencyRunMode,
   type ProfilePanelState,
   type ViewMode,
   toMessage,
@@ -61,6 +63,7 @@ export function FitnessAnalysisPanel({
 }: FitnessAnalysisPanelProps) {
   const [selectedProfile, setSelectedProfile] = useState<FitnessProfile>("generic");
   const [viewMode, setViewMode] = useState<ViewMode>("overview");
+  const [runMode, setRunMode] = useState<FluencyRunMode>("deterministic");
   const [compareLast, setCompareLast] = useState(true);
   const [noSave, setNoSave] = useState(false);
   const [profiles, setProfiles] = useState<Record<FitnessProfile, ProfilePanelState>>(EMPTY_STATE);
@@ -69,7 +72,7 @@ export function FitnessAnalysisPanel({
 
   const hasContext = Boolean(workspaceId?.trim() || codebaseId?.trim() || repoPath?.trim());
   const contextQuery = buildAnalysisQuery({ workspaceId, codebaseId, repoPath });
-  const contextPayload = buildAnalysisPayload({ workspaceId, codebaseId, repoPath });
+  const contextPayload = buildAnalysisPayload({ workspaceId, codebaseId, repoPath }, { mode: runMode });
   const contextLabel = codebaseLabel || repoPath || null;
 
   const selectedState = profiles[selectedProfile];
@@ -263,10 +266,12 @@ export function FitnessAnalysisPanel({
   }, [applyProfiles, compareLast, contextPayload, hasContext, noSave]);
 
   const onRunSelectedProfile = useCallback(() => {
+    setViewMode("console");
     void runProfiles([selectedProfile]);
   }, [runProfiles, selectedProfile]);
 
   const onRunAllProfiles = useCallback(() => {
+    setViewMode("console");
     void runProfiles([...PROFILE_ORDER]);
   }, [runProfiles]);
 
@@ -352,6 +357,28 @@ export function FitnessAnalysisPanel({
               刷新快照
             </button>
           </div>
+          <div className="mt-4">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">
+              Mode
+            </div>
+            <div className="mt-2 space-y-2">
+              {FLUENCY_MODES.map((mode) => (
+                <button
+                  key={mode.id}
+                  type="button"
+                  onClick={() => setRunMode(mode.id)}
+                  className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
+                    runMode === mode.id
+                      ? "border-desktop-accent bg-desktop-bg-primary"
+                      : "border-desktop-border bg-white/70 hover:bg-desktop-bg-primary/80 dark:bg-white/5"
+                  }`}
+                >
+                  <div className="text-sm font-semibold text-desktop-text-primary">{mode.label}</div>
+                  <div className="mt-1 text-[11px] leading-5 text-desktop-text-secondary">{mode.description}</div>
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="mt-4 space-y-2 text-[11px] text-desktop-text-secondary">
             <label className="flex items-center gap-2">
               <input
@@ -429,6 +456,12 @@ export function FitnessAnalysisPanel({
               </span>
             </div>
             <div className="rounded-full border border-desktop-border bg-white/80 px-3 py-2 text-[11px] text-desktop-text-secondary dark:bg-white/6">
+              Mode:
+              <span className="ml-1 font-semibold text-desktop-text-primary">
+                {selectedReport?.mode ?? runMode}
+              </span>
+            </div>
+            <div className="rounded-full border border-desktop-border bg-white/80 px-3 py-2 text-[11px] text-desktop-text-secondary dark:bg-white/6">
               Source:
               <span className="ml-1 font-semibold text-desktop-text-primary">
                 {selectedState.source === "analysis" ? "实时分析" : selectedState.source === "snapshot" ? "快照" : "未运行"}
@@ -458,6 +491,12 @@ export function FitnessAnalysisPanel({
               Console:
               <span className="ml-1 font-semibold text-desktop-text-primary">
                 {selectedState.console?.data ? "Captured" : "N/A"}
+              </span>
+            </div>
+            <div className="rounded-full border border-desktop-border bg-white/80 px-3 py-2 text-[11px] text-desktop-text-secondary dark:bg-white/6">
+              Evidence packs:
+              <span className="ml-1 font-semibold text-desktop-text-primary">
+                {selectedReport?.evidencePacks?.length ?? 0}
               </span>
             </div>
           </div>
