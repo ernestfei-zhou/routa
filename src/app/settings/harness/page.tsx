@@ -336,13 +336,9 @@ export default function HarnessSettingsPage() {
 
         <HarnessGovernanceLoopGraph
           repoPath={activeRepoPath}
-          repoLabel={selectedRepoLabel}
           selectedTier={selectedTier}
-          specsLoading={specsState.loading}
           specsError={specsState.error}
-          fitnessFileCount={specFiles.length}
           dimensionCount={dimensionSpecs.length}
-          planLoading={planState.loading}
           planError={planState.error}
           metricCount={planState.data?.metricCount ?? 0}
           hardGateCount={planState.data?.hardGateCount ?? 0}

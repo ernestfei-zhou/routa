@@ -50,13 +50,9 @@ type LoopDetailSection = {
 
 type HarnessGovernanceLoopGraphProps = {
   repoPath?: string;
-  repoLabel: string;
   selectedTier: TierValue;
-  specsLoading: boolean;
   specsError: string | null;
-  fitnessFileCount: number;
   dimensionCount: number;
-  planLoading: boolean;
   planError: string | null;
   metricCount: number;
   hardGateCount: number;
@@ -681,12 +677,9 @@ function buildDetailSections(args: {
 
 export function HarnessGovernanceLoopGraph({
   repoPath,
-  repoLabel,
   selectedTier,
-  specsLoading,
   specsError,
   dimensionCount,
-  planLoading,
   planError,
   metricCount,
   hardGateCount,
@@ -782,23 +775,6 @@ export function HarnessGovernanceLoopGraph({
 
   return (
     <section className="space-y-0">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-desktop-text-secondary">Governance loop</div>
-        </div>
-        <div className="flex flex-wrap gap-2 text-[10px]">
-          <span className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1 text-desktop-text-secondary">
-            {repoLabel}
-          </span>
-          <span className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1 text-desktop-text-secondary">
-            tier {selectedTier}
-          </span>
-          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-700">
-            layered feedback
-          </span>
-        </div>
-      </div>
-
       {unsupportedMessage ? (
         <HarnessUnsupportedState />
       ) : null}
@@ -820,20 +796,7 @@ export function HarnessGovernanceLoopGraph({
       ) : null}
 
       {hasContext && !unsupportedMessage ? (
-        <div className="mt-3 space-y-3">
-          <div className="flex flex-wrap gap-2 text-[10px] text-desktop-text-secondary">
-            <span className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1">
-              {hookSummary ? `${hookSummary.hookCount} hooks` : "loading hooks"}
-            </span>
-            <span className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1">
-              {specsLoading || planLoading ? "loading fitness" : `${dimensionCount} dimensions`}
-            </span>
-            <span className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1">
-              {planLoading ? "loading plan" : `${metricCount} metrics`}
-            </span>
-          </div>
-
-          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <div className="relative overflow-hidden rounded-2xl border border-desktop-border bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(241,245,249,0.98))]">
               <div className="pointer-events-none absolute inset-0">
                 <div className="absolute left-[20px] right-[20px] top-[44px] h-[152px] rounded-[36px] border border-emerald-300/70 bg-emerald-50/35" />
@@ -903,8 +866,6 @@ export function HarnessGovernanceLoopGraph({
               )}
             </aside>
           </div>
-
-        </div>
       ) : null}
     </section>
   );
