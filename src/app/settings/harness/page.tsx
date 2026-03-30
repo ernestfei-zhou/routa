@@ -104,6 +104,7 @@ export default function HarnessSettingsPage() {
       return null;
     }
     return specFiles.find((file) => file.name === selectedSpecName)
+      ?? specFiles.find((file) => file.name.toLowerCase() === "readme.md")
       ?? specFiles.find((file) => file.kind === "dimension")
       ?? specFiles[0]
       ?? null;

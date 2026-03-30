@@ -118,6 +118,16 @@ vi.mock("@/client/hooks/use-harness-settings-data", () => ({
       data: {
         files: [
           {
+            name: "README.md",
+            relativePath: "docs/fitness/README.md",
+            kind: "rulebook",
+            language: "markdown",
+            metricCount: 0,
+            metrics: [],
+            source: "# Fitness README\n\n```bash\nentrix run --tier fast\n```",
+            frontmatterSource: undefined,
+          },
+          {
             name: "code-quality.md",
             relativePath: "docs/fitness/code-quality.md",
             kind: "dimension",
@@ -192,5 +202,12 @@ describe("HarnessSettingsPage", () => {
     expect(screen.getByTestId("selected-node-id").textContent).toBe("release");
     expect(screen.getByTestId("context-panel-state").textContent).toBe("present");
     expect(within(screen.getByTestId("governance-loop-graph")).getByTestId("github-actions-flow-panel").textContent).toBe("Release");
+  });
+
+  it("defaults the fitness source view to README when no spec is selected", () => {
+    render(<HarnessSettingsPage />);
+
+    expect(screen.getByRole("heading", { name: "README.md" })).not.toBeNull();
+    expect(screen.getByText(/Entrix loader skips README/i)).not.toBeNull();
   });
 });
