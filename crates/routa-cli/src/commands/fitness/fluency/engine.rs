@@ -65,7 +65,11 @@ pub fn evaluate_harness_fluency(options: &EvaluateOptions) -> Result<HarnessFlue
     let mut criteria_results = Vec::with_capacity(model.criteria.len());
     let capability_group_names = build_capability_group_names(&model);
     for criterion in &model.criteria {
-        if !criterion.profiles.is_empty() && !criterion.profiles.iter().any(|profile| profile == &options.profile)
+        if !criterion.profiles.is_empty()
+            && !criterion
+                .profiles
+                .iter()
+                .any(|profile| profile == &options.profile)
         {
             continue;
         }
@@ -148,9 +152,14 @@ pub fn evaluate_harness_fluency(options: &EvaluateOptions) -> Result<HarnessFlue
         .cloned()
         .map(|cell| (cell.id.clone(), cell))
         .collect();
-    let capability_groups = build_capability_group_results(&criteria_results, &capability_group_names);
-    let evidence_packs =
-        build_evidence_packs(&options.repo_root, &model.criteria, &criteria_results, &options.mode);
+    let capability_groups =
+        build_capability_group_results(&criteria_results, &capability_group_names);
+    let evidence_packs = build_evidence_packs(
+        &options.repo_root,
+        &model.criteria,
+        &criteria_results,
+        &options.mode,
+    );
     let mut dimensions = HashMap::new();
     for dimension in &model.dimensions {
         let mut achieved_index: isize = -1;
@@ -299,9 +308,8 @@ fn build_capability_group_results(
             continue;
         };
         let evidence_mode = format!("{:?}", criterion.evidence_mode).to_lowercase();
-        let accumulator = accumulators
-            .entry(group_id.clone())
-            .or_insert_with(|| MutableCapabilityGroupAccumulator {
+        let accumulator = accumulators.entry(group_id.clone()).or_insert_with(|| {
+            MutableCapabilityGroupAccumulator {
                 id: group_id.clone(),
                 name: resolve_capability_group_name(capability_group_names, &group_id),
                 criterion_count: 0,
@@ -311,7 +319,8 @@ fn build_capability_group_results(
                 applicable_weight: 0,
                 passed_weight: 0,
                 evidence_modes: HashMap::new(),
-            });
+            }
+        });
         accumulator.criterion_count += 1;
         *accumulator.evidence_modes.entry(evidence_mode).or_insert(0) += 1;
 

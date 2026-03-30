@@ -64,7 +64,10 @@ async fn analyze_fitness(
         "缺少 fitness 分析上下文，请提供 workspaceId / codebaseId / repoPath 之一",
     )
     .await
-    .map_err(map_context_error("Fitness 分析上下文无效", "Fitness 分析调用失败"))?;
+    .map_err(map_context_error(
+        "Fitness 分析上下文无效",
+        "Fitness 分析调用失败",
+    ))?;
 
     let profiles = normalize_profiles(&body);
     let compare_last = body.compare_last.unwrap_or(true);
@@ -94,7 +97,10 @@ async fn get_fitness_report(
         "缺少 fitness 上下文，请提供 workspaceId / codebaseId / repoPath 之一",
     )
     .await
-    .map_err(map_context_error("Fitness 快照上下文无效", "获取 Fitness 快照失败"))?;
+    .map_err(map_context_error(
+        "Fitness 快照上下文无效",
+        "获取 Fitness 快照失败",
+    ))?;
 
     let profiles = FITNESS_PROFILES
         .iter()
@@ -150,13 +156,16 @@ async fn get_fitness_plan(
         "缺少 fitness 上下文，请提供 workspaceId / codebaseId / repoPath 之一",
     )
     .await
-    .map_err(map_context_error("Fitness plan 上下文无效", "构建 Fitness plan 失败"))?;
+    .map_err(map_context_error(
+        "Fitness plan 上下文无效",
+        "构建 Fitness plan 失败",
+    ))?;
 
     let tier = parse_tier(query.tier.as_deref());
     let scope = parse_scope(query.scope.as_deref());
     let fitness_dir = repo_root.join("docs/fitness");
-    let entries = std::fs::read_dir(&fitness_dir)
-        .map_err(map_io_error("构建 Fitness plan 失败"))?;
+    let entries =
+        std::fs::read_dir(&fitness_dir).map_err(map_io_error("构建 Fitness plan 失败"))?;
 
     let mut markdown_by_path = BTreeMap::new();
     let mut manifest_entries = Vec::new();
@@ -269,11 +278,14 @@ async fn get_fitness_specs(
         "缺少 fitness 上下文，请提供 workspaceId / codebaseId / repoPath 之一",
     )
     .await
-    .map_err(map_context_error("Fitness specs 上下文无效", "读取 Fitness specs 失败"))?;
+    .map_err(map_context_error(
+        "Fitness specs 上下文无效",
+        "读取 Fitness specs 失败",
+    ))?;
 
     let fitness_dir = repo_root.join("docs/fitness");
-    let entries = std::fs::read_dir(&fitness_dir)
-        .map_err(map_io_error("读取 Fitness specs 失败"))?;
+    let entries =
+        std::fs::read_dir(&fitness_dir).map_err(map_io_error("读取 Fitness specs 失败"))?;
 
     let mut files = Vec::new();
     let mut by_path = BTreeMap::<String, Value>::new();
@@ -312,7 +324,10 @@ async fn get_fitness_specs(
     let mut seen = HashSet::new();
     let mut push = |spec: Option<&Value>| {
         if let Some(spec) = spec {
-            let key = spec["relativePath"].as_str().unwrap_or_default().to_string();
+            let key = spec["relativePath"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string();
             if !key.is_empty() && seen.insert(key) {
                 ordered.push(spec.clone());
             }
@@ -349,7 +364,10 @@ fn normalize_profiles(body: &AnalyzeRequest) -> Vec<String> {
         }
     }
     if body.run_both == Some(true) && configured.is_empty() {
-        return FITNESS_PROFILES.iter().map(|value| value.to_string()).collect();
+        return FITNESS_PROFILES
+            .iter()
+            .map(|value| value.to_string())
+            .collect();
     }
 
     let mut deduped = Vec::new();
@@ -445,11 +463,13 @@ async fn run_fitness_profile(
 }
 
 fn profile_snapshot_path(repo_root: &Path, profile: &str) -> PathBuf {
-    repo_root.join("docs/fitness/reports").join(if profile == "generic" {
-        "harness-fluency-latest.json"
-    } else {
-        "harness-fluency-agent-orchestrator-latest.json"
-    })
+    repo_root
+        .join("docs/fitness/reports")
+        .join(if profile == "generic" {
+            "harness-fluency-latest.json"
+        } else {
+            "harness-fluency-agent-orchestrator-latest.json"
+        })
 }
 
 fn extract_json_output(raw: &str) -> Result<String, String> {
@@ -716,9 +736,10 @@ fn map_context_error(
     internal_error: &'static str,
 ) -> impl Fn(ServerError) -> (StatusCode, Json<Value>) + Clone {
     move |error| match error {
-        ServerError::BadRequest(details) => {
-            (StatusCode::BAD_REQUEST, Json(json_error(public_error, details)))
-        }
+        ServerError::BadRequest(details) => (
+            StatusCode::BAD_REQUEST,
+            Json(json_error(public_error, details)),
+        ),
         other => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json_error(internal_error, other.to_string())),

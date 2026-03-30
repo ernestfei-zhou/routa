@@ -194,7 +194,10 @@ pub(super) fn load_fluency_model(model_path: &Path) -> Result<FluencyModel, Stri
                 &format!("criteria[{index}].evidence_hint"),
             )?,
             ai_check: match record.get("ai_check") {
-                Some(value) => Some(parse_ai_check(value, &format!("criteria[{index}].ai_check"))?),
+                Some(value) => Some(parse_ai_check(
+                    value,
+                    &format!("criteria[{index}].ai_check"),
+                )?),
                 None => None,
             },
             detector: parse_detector(
@@ -490,7 +493,11 @@ fn parse_ai_check(value: &JsonValue, label: &str) -> Result<FluencyAiCheck, Stri
     let record = expect_object(value, label)?;
     Ok(FluencyAiCheck {
         prompt_template: expect_string(
-            get_required(record, "prompt_template", &format!("{label}.prompt_template"))?,
+            get_required(
+                record,
+                "prompt_template",
+                &format!("{label}.prompt_template"),
+            )?,
             &format!("{label}.prompt_template"),
         )?,
         requires: match record.get("requires") {

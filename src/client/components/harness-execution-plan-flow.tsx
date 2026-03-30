@@ -504,6 +504,7 @@ export function HarnessExecutionPlanFlow({
   unsupportedMessage,
   variant = "full",
 }: HarnessExecutionPlanFlowProps) {
+  const compactMode = variant === "compact";
   const [expandedState, setExpandedState] = useState<{
     planKey: string | null;
     names: Set<string>;
@@ -519,6 +520,14 @@ export function HarnessExecutionPlanFlow({
     return `${plan.repoRoot}:${plan.tier}:${plan.scope}:${plan.generatedAt}`;
   }, [plan]);
 
+  const defaultExpandedDimensions = useMemo(() => {
+    if (!plan || compactMode) {
+      return new Set<string>();
+    }
+
+    return new Set(plan.dimensions.slice(0, 1).map((dimension) => dimension.name));
+  }, [compactMode, plan]);
+
   const expandedDimensions = useMemo(() => {
     if (!plan) {
       return new Set<string>();
@@ -526,8 +535,8 @@ export function HarnessExecutionPlanFlow({
     if (expandedState.planKey === planKey) {
       return expandedState.names;
     }
-    return new Set(plan.dimensions.slice(0, 1).map((dimension) => dimension.name));
-  }, [expandedState.names, expandedState.planKey, plan, planKey]);
+    return defaultExpandedDimensions;
+  }, [defaultExpandedDimensions, expandedState.names, expandedState.planKey, plan, planKey]);
 
   const graph = useMemo(() => {
     if (!plan) {
@@ -542,7 +551,16 @@ export function HarnessExecutionPlanFlow({
     });
   }, [expandedDimensions, plan, planKey, variant]);
 
-  const compactMode = variant === "compact";
+  const compactMinZoom = compactMode ? 0.18 : 0.58;
+  const fitViewOptions = useMemo(
+    () => ({
+      padding: compactMode ? 0.12 : 0.055,
+      minZoom: compactMode ? 0.18 : 0.58,
+      maxZoom: compactMode ? 0.9 : 0.94,
+    }),
+    [compactMode],
+  );
+  const flowKey = `${variant}:${planKey ?? "empty"}:${[...expandedDimensions].sort().join("|")}`;
 
   return (
     <section className={variant === "compact"
@@ -572,24 +590,26 @@ export function HarnessExecutionPlanFlow({
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (!plan) {
-                return;
-              }
-              setExpandedState((current) => {
-                const base = current.planKey === planKey ? current.names : expandedDimensions;
-                return {
-                  planKey,
-                  names: base.size > 0 ? new Set<string>() : new Set(plan.dimensions.slice(0, 1).map((dimension) => dimension.name)),
-                };
-              });
-            }}
-            className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1 text-[10px] text-desktop-text-secondary"
-          >
-            {expandedDimensions.size > 0 ? "Hide metrics" : "Show metrics"}
-          </button>
+          {!compactMode ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (!plan) {
+                  return;
+                }
+                setExpandedState((current) => {
+                  const base = current.planKey === planKey ? current.names : expandedDimensions;
+                  return {
+                    planKey,
+                    names: base.size > 0 ? new Set<string>() : new Set(plan.dimensions.slice(0, 1).map((dimension) => dimension.name)),
+                  };
+                });
+              }}
+              className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1 text-[10px] text-desktop-text-secondary"
+            >
+              {expandedDimensions.size > 0 ? "Hide metrics" : "Show metrics"}
+            </button>
+          ) : null}
           <div className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1 text-[10px] text-desktop-text-secondary">
             {repoLabel}
           </div>
@@ -623,6 +643,8 @@ export function HarnessExecutionPlanFlow({
           <div className="overflow-hidden rounded-2xl border border-desktop-border bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.08),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.08),transparent_28%)]">
             <div style={{ height: graph.minHeight }}>
               <ReactFlow
+                key={flowKey}
+                id={compactMode ? "harness-execution-plan-compact" : "harness-execution-plan-full"}
                 nodes={graph.nodes}
                 edges={graph.edges}
                 nodeTypes={nodeTypes}
@@ -631,18 +653,20 @@ export function HarnessExecutionPlanFlow({
                 elementsSelectable={!compactMode}
                 zoomOnScroll
                 panOnDrag
-                minZoom={compactMode ? 0.42 : 0.58}
+                minZoom={compactMinZoom}
                 maxZoom={1.2}
                 fitView
-                fitViewOptions={{
-                  padding: compactMode ? 0.08 : 0.055,
-                  minZoom: compactMode ? 0.42 : 0.58,
-                  maxZoom: compactMode ? 0.82 : 0.94,
-                }}
+                fitViewOptions={fitViewOptions}
                 proOptions={{ hideAttribution: true }}
               >
                 <Background color="#d7dee7" gap={20} size={1} />
-                {!compactMode ? <Controls showInteractive={false} position="bottom-right" /> : null}
+                <Controls
+                  showInteractive={false}
+                  showZoom
+                  showFitView
+                  fitViewOptions={fitViewOptions}
+                  position="bottom-right"
+                />
               </ReactFlow>
             </div>
           </div>

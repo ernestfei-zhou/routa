@@ -188,7 +188,9 @@ fn validate_repo_root(repo_root: PathBuf) -> Result<PathBuf, String> {
             repo_root.display()
         ));
     }
-    if !repo_root.join("docs/fitness/harness-fluency.model.yaml").exists()
+    if !repo_root
+        .join("docs/fitness/harness-fluency.model.yaml")
+        .exists()
         || !repo_root.join("crates/routa-cli").exists()
     {
         return Err(format!(

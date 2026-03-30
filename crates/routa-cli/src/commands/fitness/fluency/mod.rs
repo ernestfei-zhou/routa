@@ -1,6 +1,6 @@
 mod detector;
-mod evidence_pack;
 mod engine;
+mod evidence_pack;
 mod model;
 mod report;
 mod snapshot;

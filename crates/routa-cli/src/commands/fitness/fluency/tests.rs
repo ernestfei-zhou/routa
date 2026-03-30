@@ -751,11 +751,9 @@ criteria:
     assert_eq!(report.next_level.as_deref(), Some("assisted"));
     assert_eq!(report.next_level_readiness, None);
     assert_eq!(report.blocking_target_level.as_deref(), Some("awareness"));
-    assert!(report
-        .blocking_criteria
-        .iter()
-        .any(|criterion| criterion.id == "collaboration.awareness.agent_doc"
-            && criterion.status == CriterionStatus::Fail));
+    assert!(report.blocking_criteria.iter().any(|criterion| criterion.id
+        == "collaboration.awareness.agent_doc"
+        && criterion.status == CriterionStatus::Fail));
 
     let text = format_text_report(&report);
     assert!(text.contains("Current Level Readiness: 50%"));
@@ -993,9 +991,7 @@ criteria:
     assert!(report.criteria.iter().any(|criterion| {
         criterion.id == "collaboration.awareness.command"
             && criterion.status == CriterionStatus::Fail
-            && criterion
-                .detail
-                .contains("must be a bare allowlisted name")
+            && criterion.detail.contains("must be a bare allowlisted name")
     }));
 }
 
@@ -1069,7 +1065,10 @@ criteria:
 
     assert_eq!(report.criteria.len(), 1);
     let criterion = report.criteria.first().expect("criterion");
-    assert_eq!(criterion.capability_group.as_deref(), Some("execution_surface"));
+    assert_eq!(
+        criterion.capability_group.as_deref(),
+        Some("execution_surface")
+    );
     assert_eq!(
         criterion.capability_group_name.as_deref(),
         Some("Execution Surface")
@@ -1172,7 +1171,10 @@ criteria:
     assert_eq!(criterion.status, CriterionStatus::Pass);
     assert_eq!(criterion.detector_type, "all_of");
     assert!(criterion.evidence.iter().any(|value| value == "README.md"));
-    assert!(criterion.evidence.iter().any(|value| value == "package.json"));
+    assert!(criterion
+        .evidence
+        .iter()
+        .any(|value| value == "package.json"));
 }
 
 #[test]
@@ -1240,9 +1242,18 @@ criteria:
     assert_eq!(report.evidence_packs.len(), 1);
     let pack = report.evidence_packs.first().expect("evidence pack");
     assert_eq!(pack.criterion_id, "collaboration.awareness.hybrid_signal");
-    assert!(pack.selection_reasons.iter().any(|reason| reason == "non_static_evidence"));
-    assert!(pack.selection_reasons.iter().any(|reason| reason == "ai_check_requested"));
-    assert_eq!(pack.ai_prompt_template.as_deref(), Some("fluency-capability-scorer"));
+    assert!(pack
+        .selection_reasons
+        .iter()
+        .any(|reason| reason == "non_static_evidence"));
+    assert!(pack
+        .selection_reasons
+        .iter()
+        .any(|reason| reason == "ai_check_requested"));
+    assert_eq!(
+        pack.ai_prompt_template.as_deref(),
+        Some("fluency-capability-scorer")
+    );
     assert_eq!(pack.ai_requires, vec!["code_excerpt".to_string()]);
     assert_eq!(pack.excerpts.len(), 1);
     assert_eq!(pack.excerpts[0].path, "README.md");

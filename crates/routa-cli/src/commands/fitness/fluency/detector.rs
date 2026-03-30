@@ -315,7 +315,11 @@ fn evaluate_detector(
                     CriterionStatus::Fail => {
                         return Ok(DetectorResult {
                             status: CriterionStatus::Fail,
-                            detail: format!("required {} failed: {}", nested.detector_type(), result.detail),
+                            detail: format!(
+                                "required {} failed: {}",
+                                nested.detector_type(),
+                                result.detail
+                            ),
                             evidence,
                         });
                     }

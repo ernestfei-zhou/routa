@@ -22,7 +22,9 @@ pub fn normalize_context_value(value: Option<&str>) -> Option<String> {
 }
 
 pub fn is_routa_repo_root(repo_root: &Path) -> bool {
-    repo_root.join("docs/fitness/harness-fluency.model.yaml").exists()
+    repo_root
+        .join("docs/fitness/harness-fluency.model.yaml")
+        .exists()
         && repo_root.join("crates/routa-cli").exists()
 }
 
@@ -56,12 +58,13 @@ pub async fn resolve_repo_root(
     }
 
     let Some(workspace_id) = workspace_id else {
-        return Err(ServerError::BadRequest(
-            missing_context_message.to_string(),
-        ));
+        return Err(ServerError::BadRequest(missing_context_message.to_string()));
     };
 
-    let codebases = state.codebase_store.list_by_workspace(&workspace_id).await?;
+    let codebases = state
+        .codebase_store
+        .list_by_workspace(&workspace_id)
+        .await?;
     if codebases.is_empty() {
         return Err(ServerError::BadRequest(format!(
             "Workspace 下没有配置 codebase: {workspace_id}"

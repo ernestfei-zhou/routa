@@ -235,8 +235,8 @@ export function SpecialistsTab({ modelDefs }: SpecialistsTabProps) {
         </div>
       ) : null}
 
-      <div className="grid gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
-        <aside className="rounded-[24px] border border-desktop-border bg-desktop-bg-secondary p-4">
+      <div className="grid items-start gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
+        <aside className="self-start rounded-[24px] border border-desktop-border bg-desktop-bg-secondary p-4">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>

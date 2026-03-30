@@ -216,7 +216,9 @@ fn detect_surface_signals(
     scripts: &[ScriptEntry],
     warnings: &mut Vec<String>,
 ) -> Result<HarnessSurfaceSignals, String> {
-    let config_path = PathBuf::from("docs").join("harness").join(format!("{surface}.yml"));
+    let config_path = PathBuf::from("docs")
+        .join("harness")
+        .join(format!("{surface}.yml"));
     let config = load_surface_config(repo_root, &config_path)?;
 
     Ok(HarnessSurfaceSignals {
@@ -287,7 +289,10 @@ fn build_overview_rows(
                     })
                     .collect::<Vec<_>>(),
                 other => {
-                    warnings.push(format!("Unsupported overview source '{other}' in {}", row.id));
+                    warnings.push(format!(
+                        "Unsupported overview source '{other}' in {}",
+                        row.id
+                    ));
                     Vec::new()
                 }
             };
@@ -510,7 +515,10 @@ entrypointGroups:
 
         let report = detect_repo_signals(repo_root).expect("report");
         assert_eq!(report.package_manager.as_deref(), Some("pnpm"));
-        assert_eq!(report.build.overview_rows[0].items, vec!["package.json", "pnpm-lock.yaml"]);
+        assert_eq!(
+            report.build.overview_rows[0].items,
+            vec!["package.json", "pnpm-lock.yaml"]
+        );
         assert_eq!(report.build.overview_rows[1].items, vec!["Next.js web"]);
         assert_eq!(report.build.entrypoint_groups[0].scripts[0].name, "dev");
         assert_eq!(report.test.entrypoint_groups.len(), 2);

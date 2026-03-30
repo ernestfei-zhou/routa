@@ -3,8 +3,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use super::types::{
-    CriterionResult, CriterionStatus, EvidenceExcerpt, EvidenceMode, EvidencePack, FluencyCriterion,
-    FluencyMode,
+    CriterionResult, CriterionStatus, EvidenceExcerpt, EvidenceMode, EvidencePack,
+    FluencyCriterion, FluencyMode,
 };
 
 const MAX_EVIDENCE_FILES: usize = 3;

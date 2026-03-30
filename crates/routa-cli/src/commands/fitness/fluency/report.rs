@@ -82,7 +82,10 @@ pub fn format_text_report(report: &HarnessFluencyReport) -> String {
     if !report.evidence_packs.is_empty() {
         lines.push(String::new());
         lines.push("Evidence Packs Prepared:".to_string());
-        lines.push(format!("- {} packs ready for adjudication", report.evidence_packs.len()));
+        lines.push(format!(
+            "- {} packs ready for adjudication",
+            report.evidence_packs.len()
+        ));
     }
 
     lines.push(String::new());

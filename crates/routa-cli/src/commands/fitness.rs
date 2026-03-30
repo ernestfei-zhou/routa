@@ -341,7 +341,10 @@ mod tests {
             FluencyRunMode::Deterministic.into_fluency_mode(),
             FluencyMode::Deterministic
         );
-        assert_eq!(FluencyRunMode::Hybrid.into_fluency_mode(), FluencyMode::Hybrid);
+        assert_eq!(
+            FluencyRunMode::Hybrid.into_fluency_mode(),
+            FluencyMode::Hybrid
+        );
         assert_eq!(FluencyRunMode::Ai.into_fluency_mode(), FluencyMode::Ai);
     }
 }
