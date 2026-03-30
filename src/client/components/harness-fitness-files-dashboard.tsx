@@ -115,8 +115,8 @@ export function HarnessFitnessFilesDashboard({
             </div>
 
             {model.dimensions.length > 0 ? (
-              <div className="mt-4 h-[360px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="mt-4 h-[360px] w-full min-w-0">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <RadarChart data={model.dimensions} outerRadius="70%">
                     <PolarGrid stroke="#d8dee8" />
                     <PolarAngleAxis dataKey="label" tick={{ fontSize: 11, fill: "#1f2937" }} />

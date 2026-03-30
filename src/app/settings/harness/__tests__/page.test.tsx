@@ -1,0 +1,181 @@
+import type { ReactNode } from "react";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+
+import HarnessSettingsPage from "../page";
+
+vi.mock("@/client/components/settings-route-shell", () => ({
+  SettingsRouteShell: ({ children }: { children: ReactNode }) => (
+    <div data-testid="settings-route-shell">{children}</div>
+  ),
+}));
+
+vi.mock("@/client/components/settings-page-header", () => ({
+  SettingsPageHeader: () => <div data-testid="settings-page-header" />,
+}));
+
+vi.mock("@/client/components/workspace-switcher", () => ({
+  WorkspaceSwitcher: () => <div data-testid="workspace-switcher" />,
+}));
+
+vi.mock("@/client/components/codemirror/code-viewer", () => ({
+  CodeViewer: ({ value }: { value: string }) => <pre data-testid="code-viewer">{value}</pre>,
+}));
+
+vi.mock("@/client/components/repo-picker", () => ({
+  RepoPicker: () => <div data-testid="repo-picker" />,
+}));
+
+vi.mock("@/client/components/harness-execution-plan-flow", () => ({
+  HarnessExecutionPlanFlow: () => <div data-testid="execution-plan-flow" />,
+}));
+
+vi.mock("@/client/components/harness-agent-instructions-panel", () => ({
+  HarnessAgentInstructionsPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
+    <div data-testid={`instruction-panel-${variant}`}>Instruction file</div>
+  ),
+}));
+
+vi.mock("@/client/components/harness-fitness-files-dashboard", () => ({
+  HarnessFitnessFilesDashboard: () => <div data-testid="fitness-files-dashboard" />,
+}));
+
+vi.mock("@/client/components/harness-governance-loop-graph", () => ({
+  HarnessGovernanceLoopGraph: ({
+    contextPanel,
+    selectedNodeId,
+  }: {
+    contextPanel?: ReactNode;
+    selectedNodeId?: string;
+  }) => (
+    <div data-testid="governance-loop-graph">
+      <div data-testid="selected-node-id">{selectedNodeId}</div>
+      <div data-testid="context-panel-state">{contextPanel ? "present" : "absent"}</div>
+      {contextPanel}
+    </div>
+  ),
+}));
+
+vi.mock("@/client/components/harness-github-actions-flow-panel", () => ({
+  HarnessGitHubActionsFlowPanel: () => <div data-testid="github-actions-flow-panel" />,
+}));
+
+vi.mock("@/client/components/harness-hook-runtime-panel", () => ({
+  HarnessHookRuntimePanel: () => <div data-testid="hook-runtime-panel" />,
+}));
+
+vi.mock("@/client/components/harness-repo-signals-panel", () => ({
+  HarnessRepoSignalsPanel: () => <div data-testid="repo-signals-panel" />,
+}));
+
+vi.mock("@/client/components/harness-review-triggers-panel", () => ({
+  HarnessReviewTriggersPanel: () => <div data-testid="review-triggers-panel" />,
+}));
+
+vi.mock("@/client/components/harness-support-state", () => ({
+  HarnessUnsupportedState: () => <div data-testid="unsupported-state" />,
+  getHarnessUnsupportedRepoMessage: () => null,
+}));
+
+vi.mock("@/client/hooks/use-workspaces", () => ({
+  useWorkspaces: () => ({
+    workspaces: [
+      {
+        id: "default",
+        title: "Default Workspace",
+        status: "active",
+        metadata: {},
+        createdAt: "2026-03-29T00:00:00.000Z",
+        updatedAt: "2026-03-29T00:00:00.000Z",
+      },
+    ],
+    loading: false,
+    fetchWorkspaces: vi.fn(async () => {}),
+  }),
+  useCodebases: () => ({
+    codebases: [
+      {
+        id: "cb-1",
+        label: "phodal/routa",
+        repoPath: "/Users/phodal/ai/routa-js",
+        branch: "main",
+      },
+    ],
+    fetchCodebases: vi.fn(async () => {}),
+  }),
+}));
+
+vi.mock("@/client/hooks/use-harness-settings-data", () => ({
+  useHarnessSettingsData: () => ({
+    specsState: {
+      loading: false,
+      error: null,
+      data: {
+        files: [
+          {
+            name: "code-quality.md",
+            relativePath: "docs/fitness/code-quality.md",
+            kind: "dimension",
+            language: "markdown",
+            dimension: "code_quality",
+            weight: 24,
+            thresholdPass: 90,
+            thresholdWarn: 80,
+            metricCount: 2,
+            metrics: [],
+            source: "# Code quality",
+            frontmatterSource: "---",
+          },
+        ],
+      },
+    },
+    planState: {
+      loading: false,
+      error: null,
+      data: {
+        metricCount: 2,
+        hardGateCount: 1,
+        dimensions: [],
+      },
+    },
+    hooksState: {
+      loading: false,
+      error: null,
+      data: {
+        profiles: [],
+        hookFiles: [],
+      },
+    },
+    instructionsState: {
+      loading: false,
+      error: null,
+      data: {
+        generatedAt: "2026-03-29T00:00:00.000Z",
+        repoRoot: "/Users/phodal/ai/routa-js",
+        fileName: "CLAUDE.md",
+        relativePath: "CLAUDE.md",
+        source: "# Routa.js",
+        fallbackUsed: false,
+      },
+    },
+    githubActionsState: {
+      loading: false,
+      error: null,
+      data: {
+        flows: [],
+      },
+    },
+  }),
+}));
+
+describe("HarnessSettingsPage", () => {
+  it("does not inject a duplicate compact instruction panel into the governance loop build context", () => {
+    render(<HarnessSettingsPage />);
+
+    expect(screen.getByTestId("selected-node-id").textContent).toBe("build");
+    expect(screen.getByTestId("context-panel-state").textContent).toBe("absent");
+    expect(screen.getAllByText("Instruction file")).toHaveLength(1);
+    expect(screen.getByTestId("instruction-panel-full")).not.toBeNull();
+    expect(screen.queryByTestId("instruction-panel-compact")).toBeNull();
+  });
+});

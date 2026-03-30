@@ -121,19 +121,7 @@ export default function HarnessSettingsPage() {
   const governanceContextPanel = useMemo(() => {
     switch (selectedGovernanceNodeId) {
       case "build":
-        return (
-          <HarnessAgentInstructionsPanel
-            workspaceId={workspaceId}
-            codebaseId={activeRepoCodebaseId}
-            repoPath={activeRepoPath}
-            repoLabel={selectedRepoLabel}
-            unsupportedMessage={unsupportedRepoMessage}
-            data={instructionsState.data}
-            loading={instructionsState.loading}
-            error={instructionsState.error}
-            variant="compact"
-          />
-        );
+        return null;
       case "lint":
       case "precommit":
         return (
@@ -216,9 +204,6 @@ export default function HarnessSettingsPage() {
     hooksState.data,
     hooksState.error,
     hooksState.loading,
-    instructionsState.data,
-    instructionsState.error,
-    instructionsState.loading,
     planState.data,
     planState.error,
     planState.loading,
