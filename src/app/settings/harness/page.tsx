@@ -358,8 +358,9 @@ export default function HarnessSettingsPage() {
             unsupportedMessage={unsupportedRepoMessage}
           />
 
-          <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-            <div className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/55 p-3 shadow-sm">
+          <div className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/55 p-3 shadow-sm">
+            <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+              <div className="min-w-0 xl:border-r xl:border-desktop-border xl:pr-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-desktop-text-secondary">Discovery</div>
@@ -457,9 +458,9 @@ export default function HarnessSettingsPage() {
                   </details>
                 ) : null}
               </div>
-            </div>
+              </div>
 
-            <div className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/55 p-4 shadow-sm">
+              <div className="min-w-0 px-1 xl:px-0 xl:pl-1">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-desktop-text-secondary">Source view</div>
@@ -636,6 +637,7 @@ export default function HarnessSettingsPage() {
                 Select a repository and a fitness file to inspect its frontmatter and metric mapping.
               </div>
             )}
+              </div>
             </div>
           </div>
         </section>
