@@ -55,13 +55,21 @@ async function writeJson(relativePath, data) {
 async function updateTomlVersion(relativePath, version) {
   const absolutePath = path.join(repoRoot, relativePath);
   const content = await fs.readFile(absolutePath, "utf8");
+
+  // Check if version is already correct
+  const versionMatch = content.match(/^version = "(.+)"$/m);
+  if (versionMatch && versionMatch[1] === version) {
+    console.log(`${relativePath} already at version ${version}`);
+    return;
+  }
+
   const updated = content.replace(
     /^version = ".*"$/m,
     `version = "${version}"`,
   );
 
   if (updated === content) {
-    throw new Error(`Failed to update version in ${relativePath}`);
+    throw new Error(`Failed to update version in ${relativePath} - no version field found`);
   }
 
   await fs.writeFile(absolutePath, updated, "utf8");
@@ -69,6 +77,13 @@ async function updateTomlVersion(relativePath, version) {
 
 async function updateJsonVersion(relativePath, version) {
   const { data } = await readJson(relativePath);
+
+  // Check if version is already correct
+  if (data.version === version) {
+    console.log(`${relativePath} already at version ${version}`);
+    return;
+  }
+
   data.version = version;
   await writeJson(relativePath, data);
 }
