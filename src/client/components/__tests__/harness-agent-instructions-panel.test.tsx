@@ -77,6 +77,12 @@ describe("HarnessAgentInstructionsPanel", () => {
     expect(screen.getByText("preferred CLAUDE.md")).not.toBeNull();
     expect(screen.getByText("16/20")).not.toBeNull();
     expect(screen.getAllByText("4/5").length).toBeGreaterThanOrEqual(4);
+    expect(screen.getByText("渐进式暴露")).not.toBeNull();
+    expect(screen.getByText("负面约束优先")).not.toBeNull();
+    expect(screen.getByText("反重复机制")).not.toBeNull();
+    expect(screen.getByText("确定性验证")).not.toBeNull();
+    expect(screen.getByLabelText("渐进式暴露 说明")).not.toBeNull();
+    expect(screen.getByText("按任务阶段按需加载最小上下文，先定位，再展开，避免一次性灌入全部背景。")).not.toBeNull();
     expect(screen.getByText((content) => content.includes("# Routa.js"))).not.toBeNull();
   });
 
@@ -92,7 +98,7 @@ describe("HarnessAgentInstructionsPanel", () => {
       />,
     );
 
-    const rerunButton = screen.getByRole("button", { name: "Re-run" });
+    const rerunButton = screen.getByRole("button", { name: /Re-run audit/i });
     fireEvent.click(rerunButton);
     expect(onAuditRerun).toHaveBeenCalledTimes(1);
   });

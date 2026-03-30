@@ -38,6 +38,28 @@ type HarnessAgentInstructionsPanelProps = {
   onAuditRerun?: () => void;
 };
 
+const AUDIT_PRINCIPLE_META = {
+  routing: {
+    label: "渐进式暴露",
+    description: "按任务阶段按需加载最小上下文，先定位，再展开，避免一次性灌入全部背景。",
+  },
+  protection: {
+    label: "负面约束优先",
+    description: "先定义禁止项、权限边界和升级条件，再定义可执行动作，降低越权和漂移风险。",
+  },
+  reflection: {
+    label: "反重复机制",
+    description: "出现失败信号后先分析原因并切换策略，避免机械重试同一路径。",
+  },
+  verification: {
+    label: "确定性验证",
+    description: "完成前必须经过客观、可复现的检查，并以明确结果或证据作为收口条件。",
+  },
+} satisfies Record<
+  "routing" | "protection" | "reflection" | "verification",
+  { label: string; description: string }
+>;
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -119,6 +141,42 @@ function getScoreCardClass(score: number | null, maxScore: number) {
     return "border-amber-200 bg-amber-50/70 text-amber-800";
   }
   return "border-red-200 bg-red-50/80 text-red-800";
+}
+
+function AuditScoreCard({
+  label,
+  description,
+  value,
+  maxScore,
+}: {
+  label: string;
+  description?: string;
+  value: number | null;
+  maxScore: number;
+}) {
+  return (
+    <div className={`group relative rounded-lg border px-2.5 py-2 ${getScoreCardClass(value, maxScore)}`}>
+      <div className="flex items-center gap-1.5">
+        <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">{label}</div>
+        {description ? (
+          <>
+            <span
+              aria-label={`${label} 说明`}
+              className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-current/20 text-[9px] font-semibold text-current/70"
+            >
+              ?
+            </span>
+            <div className="pointer-events-none absolute left-2.5 top-full z-20 mt-2 w-52 rounded-lg border border-slate-200 bg-slate-950 px-3 py-2 text-[10px] font-medium leading-4 text-white opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+              {description}
+            </div>
+          </>
+        ) : null}
+      </div>
+      <div className="mt-1 text-sm font-semibold">
+        {value == null ? "—" : `${value}/${maxScore}`}
+      </div>
+    </div>
+  );
 }
 
 export function HarnessAgentInstructionsPanel({
@@ -342,9 +400,13 @@ export function HarnessAgentInstructionsPanel({
                   type="button"
                   onClick={handleRerunAudit}
                   disabled={resolvedInstructionsState.loading}
-                  className="rounded-full border border-desktop-border bg-desktop-bg-primary px-2.5 py-1 text-[10px] font-semibold text-desktop-text-secondary transition-colors hover:bg-desktop-bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center gap-1 rounded-full border border-desktop-accent/40 bg-desktop-accent/12 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-desktop-accent transition-colors hover:bg-desktop-accent/20 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Re-run
+                  <svg className="h-3 w-3" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <path d="M16 10a6 6 0 10-1.76 4.24" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d="M16 6.5V10h-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  {resolvedInstructionsState.loading ? "Running..." : "Re-run audit"}
                 </button>
               ) : null}
               <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${getAuditStatusClass(auditSummary.status)}`}>
@@ -372,36 +434,31 @@ export function HarnessAgentInstructionsPanel({
           ) : (
             <>
               <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-                <div className={`rounded-lg border px-2.5 py-2 ${getScoreCardClass(auditSummary.totalScore, 20)}`}>
-                  <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">Total</div>
-                  <div className="mt-1 text-sm font-semibold">
-                    {auditSummary.totalScore == null ? "—" : `${auditSummary.totalScore}/20`}
-                  </div>
-                </div>
-                <div className={`rounded-lg border px-2.5 py-2 ${getScoreCardClass(auditSummary.principles.routing, 5)}`}>
-                  <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">Routing</div>
-                  <div className="mt-1 text-sm font-semibold">
-                    {auditSummary.principles.routing == null ? "—" : `${auditSummary.principles.routing}/5`}
-                  </div>
-                </div>
-                <div className={`rounded-lg border px-2.5 py-2 ${getScoreCardClass(auditSummary.principles.protection, 5)}`}>
-                  <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">Protection</div>
-                  <div className="mt-1 text-sm font-semibold">
-                    {auditSummary.principles.protection == null ? "—" : `${auditSummary.principles.protection}/5`}
-                  </div>
-                </div>
-                <div className={`rounded-lg border px-2.5 py-2 ${getScoreCardClass(auditSummary.principles.reflection, 5)}`}>
-                  <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">Reflection</div>
-                  <div className="mt-1 text-sm font-semibold">
-                    {auditSummary.principles.reflection == null ? "—" : `${auditSummary.principles.reflection}/5`}
-                  </div>
-                </div>
-                <div className={`rounded-lg border px-2.5 py-2 ${getScoreCardClass(auditSummary.principles.verification, 5)}`}>
-                  <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">Verification</div>
-                  <div className="mt-1 text-sm font-semibold">
-                    {auditSummary.principles.verification == null ? "—" : `${auditSummary.principles.verification}/5`}
-                  </div>
-                </div>
+                <AuditScoreCard label="总分" value={auditSummary.totalScore} maxScore={20} />
+                <AuditScoreCard
+                  label={AUDIT_PRINCIPLE_META.routing.label}
+                  description={AUDIT_PRINCIPLE_META.routing.description}
+                  value={auditSummary.principles.routing}
+                  maxScore={5}
+                />
+                <AuditScoreCard
+                  label={AUDIT_PRINCIPLE_META.protection.label}
+                  description={AUDIT_PRINCIPLE_META.protection.description}
+                  value={auditSummary.principles.protection}
+                  maxScore={5}
+                />
+                <AuditScoreCard
+                  label={AUDIT_PRINCIPLE_META.reflection.label}
+                  description={AUDIT_PRINCIPLE_META.reflection.description}
+                  value={auditSummary.principles.reflection}
+                  maxScore={5}
+                />
+                <AuditScoreCard
+                  label={AUDIT_PRINCIPLE_META.verification.label}
+                  description={AUDIT_PRINCIPLE_META.verification.description}
+                  value={auditSummary.principles.verification}
+                  maxScore={5}
+                />
               </div>
               <div className="mt-2 text-[11px] text-desktop-text-secondary">
                 {auditSummary.overall ? `结论：${auditSummary.overall}` : "结论：—"}
