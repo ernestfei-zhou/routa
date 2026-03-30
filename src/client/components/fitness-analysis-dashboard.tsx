@@ -333,6 +333,7 @@ function Heatmap({
   dimensions,
   cells,
   matrix,
+  missingText,
   emptyText,
 }: {
   levels: string[];
@@ -348,6 +349,7 @@ function Heatmap({
     applicableWeight: number;
   }>;
   matrix: TranslationDictionary["fitness"]["matrix"];
+  missingText: string;
   emptyText: string;
 }) {
   const orderedDimensions = HEATMAP_DIMENSIONS.filter(({ key }) => dimensions.includes(key));
@@ -410,13 +412,15 @@ function Heatmap({
               return (
                 <div
                   key={`${dimensionKey}:${key}`}
-                  className="rounded-2xl border border-desktop-border px-3 py-3 text-center"
-                  style={{ backgroundColor: gridTone(cell?.score ?? 0) }}
+                  className={`rounded-2xl border px-3 py-3 text-center ${cell ? "border-desktop-border" : "border-dashed border-desktop-border/80"}`}
+                  style={{ backgroundColor: cell ? gridTone(cell.score) : "rgba(148, 163, 184, 0.08)" }}
                   role="cell"
                 >
-                  <div className="text-lg font-semibold text-desktop-text-primary">{cell ? `${cell.score}%` : "0%"}</div>
+                  <div className={`text-lg font-semibold ${cell ? "text-desktop-text-primary" : "text-desktop-text-secondary"}`}>
+                    {cell ? `${cell.score}%` : missingText}
+                  </div>
                   <div className="mt-1 text-[11px] text-desktop-text-secondary">
-                    {cell ? `${cell.passedWeight}/${cell.applicableWeight}` : "0/0"}
+                    {cell ? `${cell.passedWeight}/${cell.applicableWeight}` : "—"}
                   </div>
                 </div>
               );
@@ -545,6 +549,7 @@ export function FitnessAnalysisDashboard({ report }: FitnessAnalysisDashboardPro
           dimensions={model.heatmapDimensions}
           cells={model.heatmapCells}
           matrix={t.fitness.matrix}
+          missingText={dashboard.notAvailable}
           emptyText={dashboard.noReport}
         />
       </Section>
