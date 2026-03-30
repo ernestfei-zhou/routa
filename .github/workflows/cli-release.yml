@@ -188,7 +188,7 @@ jobs:
 
       - name: Stage npm tarballs
         run: |
-          node scripts/stage-routa-cli-npm.mjs \
+          node scripts/release/stage-routa-cli-npm.mjs \
             --version "${{ steps.version.outputs.value }}" \
             --artifacts dist/cli-artifacts \
             --out dist/npm
