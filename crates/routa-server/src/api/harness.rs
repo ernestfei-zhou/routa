@@ -1105,7 +1105,7 @@ fn load_agent_hook_config(repo_root: &Path) -> (Vec<Value>, Value, Vec<String>) 
             None => continue,
         };
 
-        let event = match yaml_str(mapping.get(&serde_yaml::Value::String("event".into()))) {
+        let event = match yaml_str(mapping.get(serde_yaml::Value::String("event".into()))) {
             Some(e) if !e.trim().is_empty() => e.trim(),
             _ => {
                 warnings.push("Skipped hook entry with missing event field.".to_string());
@@ -1121,7 +1121,7 @@ fn load_agent_hook_config(repo_root: &Path) -> (Vec<Value>, Value, Vec<String>) 
             continue;
         }
 
-        let hook_type = yaml_str(mapping.get(&serde_yaml::Value::String("type".into())))
+        let hook_type = yaml_str(mapping.get(serde_yaml::Value::String("type".into())))
             .map(str::trim)
             .unwrap_or("command");
 
@@ -1134,7 +1134,7 @@ fn load_agent_hook_config(repo_root: &Path) -> (Vec<Value>, Value, Vec<String>) 
         }
 
         let blocking_raw = mapping
-            .get(&serde_yaml::Value::String("blocking".into()))
+            .get(serde_yaml::Value::String("blocking".into()))
             .and_then(serde_yaml::Value::as_bool)
             .unwrap_or(false);
 
@@ -1145,18 +1145,17 @@ fn load_agent_hook_config(repo_root: &Path) -> (Vec<Value>, Value, Vec<String>) 
         }
         let blocking = blocking_raw && blockable_events.contains(event);
 
-        let timeout = yaml_i64(mapping.get(&serde_yaml::Value::String("timeout".into())))
+        let timeout = yaml_i64(mapping.get(serde_yaml::Value::String("timeout".into())))
             .filter(|t| *t > 0)
             .unwrap_or(10);
 
-        let matcher = yaml_str(mapping.get(&serde_yaml::Value::String("matcher".into())))
+        let matcher = yaml_str(mapping.get(serde_yaml::Value::String("matcher".into())))
             .map(|s| s.trim())
             .filter(|s| !s.is_empty());
-        let command = yaml_str(mapping.get(&serde_yaml::Value::String("command".into())));
-        let url = yaml_str(mapping.get(&serde_yaml::Value::String("url".into())));
-        let prompt = yaml_str(mapping.get(&serde_yaml::Value::String("prompt".into())));
-        let description =
-            yaml_str(mapping.get(&serde_yaml::Value::String("description".into())));
+        let command = yaml_str(mapping.get(serde_yaml::Value::String("command".into())));
+        let url = yaml_str(mapping.get(serde_yaml::Value::String("url".into())));
+        let prompt = yaml_str(mapping.get(serde_yaml::Value::String("prompt".into())));
+        let description = yaml_str(mapping.get(serde_yaml::Value::String("description".into())));
 
         let mut hook = json!({
             "event": event,
