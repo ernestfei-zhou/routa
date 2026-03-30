@@ -230,7 +230,8 @@ export function HarnessAgentInstructionsPanel({
           query.set("codebaseId", codebaseId);
         }
         query.set("repoPath", repoPath);
-        query.set("includeAudit", "1");
+        // Disable audit by default - it requires a configured provider and can cause long delays
+        query.set("includeAudit", "0");
 
         const response = await fetch(`/api/harness/instructions?${query.toString()}`);
         const payload = await response.json().catch(() => ({}));

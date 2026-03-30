@@ -284,7 +284,25 @@ async fn execute_auditor_command(
     source: &str,
     provider: &str,
 ) -> Result<String, String> {
+    // Quick pre-check: verify specialist binary exists before attempting execution
     let local_binary_path = repo_root.join("target/debug/routa");
+
+    // If we're using local binary, check if it exists
+    if local_binary_path.is_file() {
+        // Quick check if specialist exists by running --help
+        let check = Command::new(&local_binary_path)
+            .args(["specialist", "run", "--help"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .await;
+
+        // If basic help command fails, bail early
+        if check.is_err() {
+            return Err("Local routa binary is not functional".to_string());
+        }
+    }
+
     let specialist_args = vec![
         "specialist".to_string(),
         "run".to_string(),
@@ -363,6 +381,26 @@ pub(crate) async fn run_instruction_audit(
 ) -> Value {
     let started = std::time::Instant::now();
     let to_duration_ms = || u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
+
+    // Fast-fail: If provider requires an API key and it's not configured, skip execution
+    let requires_api_key = matches!(provider, "codex" | "claude" | "openai" | "anthropic");
+    if requires_api_key {
+        let api_key_configured = match provider {
+            "codex" => std::env::var("CODEX_API_KEY").is_ok(),
+            "claude" | "anthropic" => std::env::var("ANTHROPIC_API_KEY").is_ok(),
+            "openai" => std::env::var("OPENAI_API_KEY").is_ok(),
+            _ => false,
+        };
+
+        if !api_key_configured {
+            return build_heuristic_audit(
+                source,
+                to_duration_ms(),
+                provider,
+                Some(&format!("Provider '{}' API key not configured, using heuristic fallback", provider)),
+            );
+        }
+    }
 
     match execute_auditor_command(repo_root, workspace_id, source, provider).await {
         Ok(stdout) => match extract_json_output(&stdout) {

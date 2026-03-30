@@ -382,7 +382,8 @@ export function useHarnessSettingsData({
       setInstructionsState((current) => ({ ...current, loading: true, error: null }));
       try {
         const query = new URLSearchParams(baseQuery);
-        query.set("includeAudit", "1");
+        // Disable audit by default - it requires a configured provider and can cause long delays
+        query.set("includeAudit", "0");
         const response = await fetch(`/api/harness/instructions?${query.toString()}`);
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
