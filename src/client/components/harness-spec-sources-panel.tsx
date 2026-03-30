@@ -59,7 +59,7 @@ const SYSTEM_ICONS: Record<string, string> = {
   bmad: "B",
 };
 
-const TYPE_LABELS: Record<string, string> = {
+const _TYPE_LABELS: Record<string, string> = {
   requirements: "Requirements",
   design: "Design",
   tasks: "Tasks",

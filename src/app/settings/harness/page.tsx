@@ -48,7 +48,7 @@ export default function HarnessSettingsPage() {
   });
   const [selectedTier, setSelectedTier] = useState<TierValue>("normal");
   const [selectedSpecName, setSelectedSpecName] = useState("");
-  const [selectedGovernanceNodeId, setSelectedGovernanceNodeId] = useState("build");
+  const [selectedGovernanceNodeId, setSelectedGovernanceNodeId] = useState<string | null>(null);
 
   const persistedRepoSelection = useMemo(
     () => loadRepoSelection("harness", workspaceId),
@@ -145,15 +145,12 @@ export default function HarnessSettingsPage() {
     saveRepoSelection("harness", workspaceId, activeRepoSelection);
   }, [activeRepoSelection, workspaceId]);
 
-  // Auto-select "thinking" node when spec sources are detected
-  useEffect(() => {
-    const sources = specSourcesState.data?.sources;
-    if (sources && sources.length > 0 && selectedGovernanceNodeId === "build") {
-      setSelectedGovernanceNodeId("thinking");
-    }
-  }, [specSourcesState.data, selectedGovernanceNodeId]);
+
 
   const governanceContextPanel = useMemo(() => {
+    if (selectedGovernanceNodeId === null) {
+      return null;
+    }
     switch (selectedGovernanceNodeId) {
       case "thinking":
         return (
@@ -167,7 +164,20 @@ export default function HarnessSettingsPage() {
           />
         );
       case "build":
-        return null;
+        return (
+          <HarnessAgentInstructionsPanel
+            workspaceId={workspaceId}
+            codebaseId={activeRepoCodebaseId}
+            repoPath={activeRepoPath}
+            repoLabel={selectedRepoLabel}
+            unsupportedMessage={unsupportedRepoMessage}
+            data={instructionsState.data}
+            loading={instructionsState.loading}
+            error={instructionsState.error}
+            onAuditRerun={reloadInstructions}
+            variant="compact"
+          />
+        );
       case "lint":
       case "precommit":
         return (
@@ -265,9 +275,13 @@ export default function HarnessSettingsPage() {
     hooksState.data,
     hooksState.error,
     hooksState.loading,
+    instructionsState.data,
+    instructionsState.error,
+    instructionsState.loading,
     planState.data,
     planState.error,
     planState.loading,
+    reloadInstructions,
     selectedGovernanceNodeId,
     selectedRepoLabel,
     selectedTier,
@@ -376,7 +390,7 @@ export default function HarnessSettingsPage() {
           instructionsData={instructionsState.data}
           instructionsError={instructionsState.error}
           fitnessFiles={specFiles}
-          selectedNodeId={selectedGovernanceNodeId}
+          selectedNodeId={selectedGovernanceNodeId ?? "build"}
           onSelectedNodeChange={setSelectedGovernanceNodeId}
           contextPanel={governanceContextPanel}
         />
