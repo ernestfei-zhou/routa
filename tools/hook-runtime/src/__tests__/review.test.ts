@@ -20,6 +20,9 @@ describe("runReviewTriggerPhase", () => {
 
   beforeEach(() => {
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    // Clear environment variables before each test to ensure clean state
+    delete process.env.ROUTA_ALLOW_REVIEW_TRIGGER_PUSH;
+    delete process.env.ROUTA_ALLOW_REVIEW_UNAVAILABLE;
   });
 
   afterEach(() => {
@@ -36,12 +39,6 @@ describe("runReviewTriggerPhase", () => {
       delete process.env.ROUTA_ALLOW_REVIEW_UNAVAILABLE;
     } else {
       process.env.ROUTA_ALLOW_REVIEW_UNAVAILABLE = originalAllowReviewUnavailable;
-    }
-
-    if (originalAllowReviewTriggerPush === undefined) {
-      delete process.env.ROUTA_ALLOW_REVIEW_TRIGGER_PUSH;
-    } else {
-      process.env.ROUTA_ALLOW_REVIEW_TRIGGER_PUSH = originalAllowReviewTriggerPush;
     }
   });
 
