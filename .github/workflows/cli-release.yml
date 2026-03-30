@@ -107,7 +107,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: routa-cli-${{ inputs.version || github.event.inputs.version || 'snapshot' }}-${{ matrix.key }}
+          name: routa-cli-${{ matrix.key }}
           path: dist/${{ matrix.key }}
           if-no-files-found: error
 
