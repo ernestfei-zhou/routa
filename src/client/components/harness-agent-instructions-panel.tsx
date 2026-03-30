@@ -105,6 +105,21 @@ function getAuditStatusClass(status: "ok" | "heuristic" | "error") {
   return "border-red-200 bg-red-50 text-red-700";
 }
 
+function getScoreCardClass(score: number | null, maxScore: number) {
+  if (score == null) {
+    return "border-desktop-border bg-desktop-bg-primary/80 text-desktop-text-primary";
+  }
+
+  const ratio = maxScore > 0 ? score / maxScore : 0;
+  if (ratio >= 0.8) {
+    return "border-emerald-200 bg-emerald-50/70 text-emerald-800";
+  }
+  if (ratio >= 0.6) {
+    return "border-amber-200 bg-amber-50/70 text-amber-800";
+  }
+  return "border-red-200 bg-red-50/80 text-red-800";
+}
+
 export function HarnessAgentInstructionsPanel({
   workspaceId,
   codebaseId,
@@ -333,33 +348,33 @@ export function HarnessAgentInstructionsPanel({
           ) : (
             <>
               <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-                <div className="rounded-lg border border-desktop-border bg-desktop-bg-primary/80 px-2.5 py-2">
+                <div className={`rounded-lg border px-2.5 py-2 ${getScoreCardClass(auditSummary.totalScore, 20)}`}>
                   <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">Total</div>
-                  <div className="mt-1 text-sm font-semibold text-desktop-text-primary">
+                  <div className="mt-1 text-sm font-semibold">
                     {auditSummary.totalScore == null ? "—" : `${auditSummary.totalScore}/20`}
                   </div>
                 </div>
-                <div className="rounded-lg border border-desktop-border bg-desktop-bg-primary/80 px-2.5 py-2">
+                <div className={`rounded-lg border px-2.5 py-2 ${getScoreCardClass(auditSummary.principles.routing, 5)}`}>
                   <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">Routing</div>
-                  <div className="mt-1 text-sm font-semibold text-desktop-text-primary">
+                  <div className="mt-1 text-sm font-semibold">
                     {auditSummary.principles.routing == null ? "—" : `${auditSummary.principles.routing}/5`}
                   </div>
                 </div>
-                <div className="rounded-lg border border-desktop-border bg-desktop-bg-primary/80 px-2.5 py-2">
+                <div className={`rounded-lg border px-2.5 py-2 ${getScoreCardClass(auditSummary.principles.protection, 5)}`}>
                   <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">Protection</div>
-                  <div className="mt-1 text-sm font-semibold text-desktop-text-primary">
+                  <div className="mt-1 text-sm font-semibold">
                     {auditSummary.principles.protection == null ? "—" : `${auditSummary.principles.protection}/5`}
                   </div>
                 </div>
-                <div className="rounded-lg border border-desktop-border bg-desktop-bg-primary/80 px-2.5 py-2">
+                <div className={`rounded-lg border px-2.5 py-2 ${getScoreCardClass(auditSummary.principles.reflection, 5)}`}>
                   <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">Reflection</div>
-                  <div className="mt-1 text-sm font-semibold text-desktop-text-primary">
+                  <div className="mt-1 text-sm font-semibold">
                     {auditSummary.principles.reflection == null ? "—" : `${auditSummary.principles.reflection}/5`}
                   </div>
                 </div>
-                <div className="rounded-lg border border-desktop-border bg-desktop-bg-primary/80 px-2.5 py-2">
+                <div className={`rounded-lg border px-2.5 py-2 ${getScoreCardClass(auditSummary.principles.verification, 5)}`}>
                   <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">Verification</div>
-                  <div className="mt-1 text-sm font-semibold text-desktop-text-primary">
+                  <div className="mt-1 text-sm font-semibold">
                     {auditSummary.principles.verification == null ? "—" : `${auditSummary.principles.verification}/5`}
                   </div>
                 </div>
