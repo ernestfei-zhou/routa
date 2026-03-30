@@ -288,7 +288,6 @@ async fn execute_auditor_command(
     let specialist_args = vec![
         "specialist".to_string(),
         "run".to_string(),
-        AUDIT_SPECIALIST_ID.to_string(),
         "--json".to_string(),
         "--workspace-id".to_string(),
         workspace_id.to_string(),
@@ -300,6 +299,7 @@ async fn execute_auditor_command(
         "0".to_string(),
         "-p".to_string(),
         source.to_string(),
+        AUDIT_SPECIALIST_ID.to_string(),
     ];
 
     let mut command = if local_binary_path.is_file() {

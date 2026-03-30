@@ -254,7 +254,7 @@ export function useHarnessSettingsData({
     return () => {
       cancelled = true;
     };
-  }, [baseQuery, instructionsRefreshToken]);
+  }, [baseQuery]);
 
   useEffect(() => {
     if (!baseQuery) {
@@ -335,7 +335,7 @@ export function useHarnessSettingsData({
     return () => {
       cancelled = true;
     };
-  }, [baseQuery]);
+  }, [baseQuery, instructionsRefreshToken]);
 
   useEffect(() => {
     if (!baseQuery) {

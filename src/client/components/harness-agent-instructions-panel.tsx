@@ -400,6 +400,7 @@ export function HarnessAgentInstructionsPanel({
                   type="button"
                   onClick={handleRerunAudit}
                   disabled={resolvedInstructionsState.loading}
+                  aria-busy={resolvedInstructionsState.loading}
                   className="inline-flex items-center gap-1 rounded-full border border-desktop-accent/40 bg-desktop-accent/12 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-desktop-accent transition-colors hover:bg-desktop-accent/20 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <svg className="h-3 w-3" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -419,6 +420,11 @@ export function HarnessAgentInstructionsPanel({
               <span className="text-[10px] text-desktop-text-secondary">
                 {auditSummary.provider} · {(auditSummary.durationMs / 1000).toFixed(1)}s
               </span>
+              {resolvedInstructionsState.loading ? (
+                <span className="rounded-full border border-desktop-accent/30 bg-desktop-accent/10 px-2 py-1 text-[10px] font-medium text-desktop-accent">
+                  Running specialist audit...
+                </span>
+              ) : null}
             </div>
           </div>
 

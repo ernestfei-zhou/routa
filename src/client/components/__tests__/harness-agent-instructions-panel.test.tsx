@@ -102,4 +102,18 @@ describe("HarnessAgentInstructionsPanel", () => {
     fireEvent.click(rerunButton);
     expect(onAuditRerun).toHaveBeenCalledTimes(1);
   });
+
+  it("shows explicit running feedback while audit is refreshing", () => {
+    render(
+      <HarnessAgentInstructionsPanel
+        workspaceId="default"
+        repoPath="/Users/phodal/ai/routa-js"
+        repoLabel="phodal/routa"
+        data={instructionsData}
+        loading
+      />,
+    );
+
+    expect(screen.getByText("Running specialist audit...")).not.toBeNull();
+  });
 });

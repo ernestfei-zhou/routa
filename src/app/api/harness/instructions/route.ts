@@ -1,7 +1,7 @@
-import { spawn } from "child_process";
 import { promises as fsp } from "fs";
 import * as path from "path";
 import { NextRequest, NextResponse } from "next/server";
+import { safeSpawn } from "@/core/utils/safe-exec";
 import { isContextError, parseContext, resolveRepoRoot } from "../hooks/shared";
 
 type AuditStatus = "ok" | "heuristic" | "error";
@@ -236,7 +236,6 @@ async function executeAuditorCommand(repoRoot: string, workspaceId: string, sour
   let args = [
     "specialist",
     "run",
-    AUDIT_SPECIALIST_ID,
     "--json",
     "--workspace-id",
     workspaceId,
@@ -248,6 +247,7 @@ async function executeAuditorCommand(repoRoot: string, workspaceId: string, sour
     "0",
     "-p",
     source,
+    AUDIT_SPECIALIST_ID,
   ];
 
   try {
@@ -258,10 +258,9 @@ async function executeAuditorCommand(repoRoot: string, workspaceId: string, sour
   }
 
   return await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-    const child = spawn(command, args, {
+    const child = safeSpawn(command, args, {
       cwd: repoRoot,
       stdio: ["ignore", "pipe", "pipe"],
-      shell: false,
     });
 
     let stdout = "";
