@@ -65,7 +65,7 @@ describe("HarnessSpecSourcesPanel", () => {
     expect(screen.queryByText("bmad")).toBeNull();
   });
 
-  it("expands source cards and feature content by default", () => {
+  it("keeps Kiro docs collapsed by default while leaving source cards expanded", () => {
     render(
       <HarnessSpecSourcesPanel
         repoLabel="repo"
@@ -74,7 +74,7 @@ describe("HarnessSpecSourcesPanel", () => {
     );
 
     expect(screen.getByText("Feature Tree")).not.toBeNull();
-    expect(screen.getByText(".kiro/specs/feature/requirements.md")).not.toBeNull();
+    expect(screen.queryByText(".kiro/specs/feature/requirements.md")).toBeNull();
     expect(screen.getByText("docs/prd.md")).not.toBeNull();
   });
 });

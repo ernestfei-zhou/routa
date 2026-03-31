@@ -136,16 +136,12 @@ function ChevronIcon({ expanded, className }: { expanded: boolean; className?: s
 }
 
 function KiroFeatureTree({ features }: { features: SpecFeature[] }) {
-  const allFeatureNames = useMemo(
-    () => features.map((feature) => feature.name),
-    [features],
-  );
   const [expandedFeatures, setExpandedFeatures] = useState<Set<string> | null>(null);
-  const activeExpandedFeatures = expandedFeatures ?? new Set(allFeatureNames);
+  const activeExpandedFeatures = expandedFeatures ?? new Set<string>();
 
   const toggle = (name: string) => {
     setExpandedFeatures((prev) => {
-      const next = new Set(prev ?? allFeatureNames);
+      const next = new Set(prev ?? []);
       if (next.has(name)) next.delete(name); else next.add(name);
       return next;
     });
