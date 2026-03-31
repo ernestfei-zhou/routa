@@ -22,7 +22,7 @@ If Poppler fails outright:
 - Try rendering with `pypdfium2`:
 
 ```bash
-python /home/oai/skills/pdfs/scripts/render_pdf.py input.pdf --engine pdfium
+python3 tools/pdfs/scripts/render_pdf.py input.pdf --engine pdfium
 ```
 
 ## OCR errors / `ocrmypdf` refuses
@@ -30,7 +30,7 @@ python /home/oai/skills/pdfs/scripts/render_pdf.py input.pdf --engine pdfium
 - If `ocrmypdf` complains about Ghostscript regressions in `--skip-text` or `--redo-ocr` modes, use `--force-ocr` for image-only PDFs:
 
 ```bash
-python /home/oai/skills/pdfs/scripts/ocr_pdf.py input.pdf -o out.pdf --force
+python3 tools/pdfs/scripts/ocr_pdf.py input.pdf -o out.pdf --force
 ```
 
 - If OCR quality is poor, render the page to a higher DPI image first and re-OCR (sometimes helps for tiny fonts).

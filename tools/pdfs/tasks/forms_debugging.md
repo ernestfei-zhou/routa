@@ -11,7 +11,7 @@ Use this when:
 ## Golden path: inspect widgets and acceptable values
 
 ```bash
-python /home/oai/skills/pdfs/scripts/pdf_extract.py forms input.pdf --out /mnt/data/fields.json --include_widgets
+python3 tools/pdfs/scripts/pdf_extract.py forms input.pdf --out /tmp/fields.json --include_widgets
 ```
 
 What to look for in the JSON:
@@ -55,8 +55,8 @@ Fix:
 At minimum, render with one engine. For tricky docs, compare engines:
 
 ```bash
-python /home/oai/skills/pdfs/scripts/render_pdf.py filled.pdf --engine pdftoppm --out_dir /mnt/data/_r1
-python /home/oai/skills/pdfs/scripts/render_pdf.py filled.pdf --engine pdfium  --out_dir /mnt/data/_r2
+python3 tools/pdfs/scripts/render_pdf.py filled.pdf --engine pdftoppm --out_dir /tmp/_r1
+python3 tools/pdfs/scripts/render_pdf.py filled.pdf --engine pdfium --out_dir /tmp/_r2
 ```
 
 If it looks different, prefer flattening.
