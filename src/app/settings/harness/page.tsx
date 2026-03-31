@@ -333,7 +333,7 @@ export default function HarnessSettingsPage() {
       <div className="space-y-4">
         <SettingsPageHeader
           title="Harness"
-          description=""
+          description="把 Spec Sources、Instruction file、Hook systems、Review triggers、Fitness files 与 CI/CD 串成一张仓库治理总览。"
           metadata={[
             { label: "fitness", value: specsState.loading ? "..." : `${dimensionSpecs.length} dimensions` },
             { label: "dispatch", value: planState.loading ? "..." : `${planState.data?.metricCount ?? 0} metrics` },

@@ -375,10 +375,7 @@ export function HarnessSpecSourcesPanel({
       <div className="rounded-2xl border border-desktop-border bg-desktop-bg-secondary/55 p-3 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-desktop-text-secondary">
-              Governance Loop
-            </div>
-            <h3 className="mt-1 text-sm font-semibold text-desktop-text-primary">Spec Sources</h3>
+            <h3 className="text-sm font-semibold text-desktop-text-primary">Spec Sources</h3>
             <p className="mt-0.5 text-[10px] text-desktop-text-secondary">
               Detected AI Coding spec tools, methodology frameworks, and tool integrations for <span className="font-medium text-desktop-text-primary">{repoLabel}</span>
             </p>

@@ -43,7 +43,7 @@ function PanelStateFrame({
 }) {
   return (
     <section className={panelClassName(variant)}>
-      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Repository workflows</div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">CI/CD</div>
       <h2 className="mt-2 text-[24px] font-semibold tracking-[-0.04em] text-slate-950">
         GitHub Actions Flow Gallery
       </h2>
