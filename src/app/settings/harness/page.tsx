@@ -13,6 +13,7 @@ import {
 } from "@/client/components/harness-execution-plan-flow";
 import { HarnessSectionCard } from "@/client/components/harness-section-card";
 import { HarnessAgentInstructionsPanel } from "@/client/components/harness-agent-instructions-panel";
+import { HarnessDesignDecisionPanel } from "@/client/components/harness-design-decision-panel";
 import { HarnessFitnessFilesDashboard } from "@/client/components/harness-fitness-files-dashboard";
 import { HarnessGovernanceLoopGraph } from "@/client/components/harness-governance-loop-graph";
 import { HarnessGitHubActionsFlowPanel } from "@/client/components/harness-github-actions-flow-panel";
@@ -26,6 +27,7 @@ import { HarnessFloatingNav, type HarnessNavSection } from "@/client/components/
 import { useHarnessSettingsData } from "@/client/hooks/use-harness-settings-data";
 import { useCodebases, useWorkspaces } from "@/client/hooks/use-workspaces";
 import { loadRepoSelection, saveRepoSelection } from "@/client/utils/repo-selection-storage";
+import { useTranslation } from "@/i18n";
 
 function extractMarkdownCodeBlocks(source: string) {
   const matches = [...source.matchAll(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g)];
@@ -37,6 +39,7 @@ function extractMarkdownCodeBlocks(source: string) {
 }
 
 export default function HarnessSettingsPage() {
+  const { t } = useTranslation();
   const workspacesHook = useWorkspaces();
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const workspaceId = selectedWorkspaceId || workspacesHook.workspaces[0]?.id || "";
@@ -110,6 +113,7 @@ export default function HarnessSettingsPage() {
     instructionsState,
     githubActionsState,
     specSourcesState,
+    designDecisionsState,
     reloadInstructions,
   } = useHarnessSettingsData({
     workspaceId,
@@ -138,7 +142,15 @@ export default function HarnessSettingsPage() {
   const auxiliaryFiles = specFiles.filter((file) => !primaryFiles.includes(file));
   const selectedRepoLabel = activeRepoSelection?.name ?? "None";
   const selectedRepo = activeRepoSelection;
-  const unsupportedRepoMessage = getHarnessUnsupportedRepoMessage(specsState.error, planState.error);
+  const unsupportedRepoMessage = getHarnessUnsupportedRepoMessage(
+    specsState.error,
+    planState.error,
+    designDecisionsState.error,
+  );
+  const hasArchitectureOrAdrSignal = useMemo(
+    () => (designDecisionsState.data?.sources.length ?? 0) > 0,
+    [designDecisionsState.data],
+  );
   const visibleSpecCodeBlocks = useMemo(
     () => (visibleSpec && visibleSpec.language === "markdown" ? extractMarkdownCodeBlocks(visibleSpec.source) : []),
     [visibleSpec],
@@ -150,14 +162,15 @@ export default function HarnessSettingsPage() {
 
   // 定义导航 sections
   const navSections: HarnessNavSection[] = useMemo(() => [
-    { id: "governance-loop", label: "Governance Loop" },
-    { id: "spec-sources", label: "Spec Sources" },
-    { id: "agent-instructions", label: "Agent Instructions" },
-    { id: "repo-signals", label: "Repository Signals" },
-    { id: "hook-systems", label: "Hook Systems" },
-    { id: "review-triggers", label: "Review Triggers" },
-    { id: "entrix-fitness", label: "Entrix Fitness" },
-  ], []);
+    { id: "governance-loop", label: t.settings.harness.governanceLoop },
+    { id: "spec-sources", label: t.settings.harness.specSources },
+    { id: "agent-instructions", label: t.settings.harness.agentInstructions },
+    { id: "repo-signals", label: t.settings.harness.repositorySignals },
+    { id: "hook-systems", label: t.settings.harness.hookSystems },
+    { id: "review-triggers", label: t.settings.harness.reviewTriggers },
+    { id: "entrix-fitness", label: t.settings.harness.entrixFitness },
+    { id: "ci-cd", label: t.settings.harness.ciCd },
+  ], [t.settings.harness.agentInstructions, t.settings.harness.ciCd, t.settings.harness.entrixFitness, t.settings.harness.governanceLoop, t.settings.harness.hookSystems, t.settings.harness.repositorySignals, t.settings.harness.reviewTriggers, t.settings.harness.specSources]);
 
   const governanceContextPanel = useMemo(() => {
     if (selectedGovernanceNodeId === null) {
@@ -172,6 +185,17 @@ export default function HarnessSettingsPage() {
             data={specSourcesState.data}
             loading={specSourcesState.loading}
             error={specSourcesState.error}
+            variant="compact"
+          />
+        );
+      case "coding":
+        return (
+          <HarnessDesignDecisionPanel
+            repoLabel={selectedRepoLabel}
+            unsupportedMessage={unsupportedRepoMessage}
+            data={designDecisionsState.data}
+            loading={designDecisionsState.loading}
+            error={designDecisionsState.error}
             variant="compact"
           />
         );
@@ -273,7 +297,7 @@ export default function HarnessSettingsPage() {
               </div>
             </div>
             <div className="rounded-xl border border-desktop-border bg-desktop-bg-primary/80 p-3 text-[11px] text-desktop-text-secondary">
-              选择 `编码实现`、`本地验证`、`变更门禁`、`代码评审` 或 `持续交付` 节点，可以在这里直接查看对应组件的上下文视图。
+              选择 `设计决策`、`编码实现`、`本地验证`、`变更门禁`、`代码评审` 或 `持续交付` 节点，可以在这里直接查看对应组件的上下文视图。
             </div>
           </div>
         );
@@ -300,14 +324,17 @@ export default function HarnessSettingsPage() {
     specSourcesState.data,
     specSourcesState.error,
     specSourcesState.loading,
+    designDecisionsState.data,
+    designDecisionsState.error,
+    designDecisionsState.loading,
     unsupportedRepoMessage,
     workspaceId,
   ]);
 
   return (
     <SettingsRouteShell
-      title="Harness"
-      description=""
+      title={t.settings.harness.title}
+      description={t.settings.harness.shellDescription}
       badgeLabel="AI Health"
       contentClassName="flex min-h-full w-full flex-col px-3 py-4 md:px-4 md:py-5"
       workspaceId={workspaceId}
@@ -337,14 +364,14 @@ export default function HarnessSettingsPage() {
       )}
       icon={<HarnessMark className="h-5 w-5" />}
       summary={[
-        { label: "Order", value: "Thinking -> Commit -> Delivery" },
-        { label: "Focus", value: "Stage-driven feedback loops" },
+        { label: t.settings.harness.summaryOrderLabel, value: t.settings.harness.summaryOrderValue },
+        { label: t.settings.harness.summaryFocusLabel, value: t.settings.harness.summaryFocusValue },
       ]}
     >
       <div className="space-y-4">
         <SettingsPageHeader
-          title="Harness"
-          description="把 Spec Sources、Instruction file - CLAUDE.md、Hook systems、Review triggers、Entrix Fitness 与 CI/CD 串成一张仓库治理总览。"
+          title={t.settings.harness.title}
+          description={t.settings.harness.pageDescription}
           metadata={[
             { label: "fitness", value: specsState.loading ? "..." : `${dimensionSpecs.length} dimensions` },
             { label: "dispatch", value: planState.loading ? "..." : `${planState.data?.metricCount ?? 0} metrics` },
@@ -352,7 +379,7 @@ export default function HarnessSettingsPage() {
           extra={(
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px]">
               <div className="flex min-w-0 items-center gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">Repository</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">{t.settings.harness.repositoryLabel}</span>
                 <RepoPicker
                   value={selectedRepo}
                   onChange={(selection) => {
@@ -399,6 +426,7 @@ export default function HarnessSettingsPage() {
             instructionsData={instructionsState.data}
             instructionsError={instructionsState.error}
             fitnessFiles={specFiles}
+            designDecisionNodeEnabled={hasArchitectureOrAdrSignal}
             selectedNodeId={selectedGovernanceNodeId}
             onSelectedNodeChange={setSelectedGovernanceNodeId}
             contextPanel={governanceContextPanel}
@@ -800,16 +828,18 @@ export default function HarnessSettingsPage() {
           </HarnessSectionCard>
         </div>
 
-        <HarnessGitHubActionsFlowPanel
-          workspaceId={workspaceId}
-          codebaseId={activeRepoCodebaseId}
-          repoPath={activeRepoPath}
-          repoLabel={selectedRepoLabel}
-          unsupportedMessage={unsupportedRepoMessage}
-          data={githubActionsState.data}
-          loading={githubActionsState.loading}
-          error={githubActionsState.error}
-        />
+        <div id="ci-cd">
+          <HarnessGitHubActionsFlowPanel
+            workspaceId={workspaceId}
+            codebaseId={activeRepoCodebaseId}
+            repoPath={activeRepoPath}
+            repoLabel={selectedRepoLabel}
+            unsupportedMessage={unsupportedRepoMessage}
+            data={githubActionsState.data}
+            loading={githubActionsState.loading}
+            error={githubActionsState.error}
+          />
+        </div>
       </div>
 
       {/* 浮动导航 */}
