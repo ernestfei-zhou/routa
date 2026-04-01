@@ -15,9 +15,9 @@ on:
         type: string
 
 jobs:
-  publish-tauri:
+  build-tauri:
     permissions:
-      contents: write
+      contents: read
 
     strategy:
       fail-fast: false
@@ -26,15 +26,19 @@ jobs:
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
             arch: 'arm64'
+            key: 'darwin-arm64'
           - platform: 'macos-latest'
             args: '--target x86_64-apple-darwin'
             arch: 'x64'
+            key: 'darwin-x64'
           - platform: 'ubuntu-22.04'
             args: ''
             arch: 'x64'
+            key: 'linux-x64'
           - platform: 'windows-latest'
             args: ''
             arch: 'x64'
+            key: 'windows-x64'
 
     runs-on: ${{ matrix.platform }}
 
@@ -138,22 +142,12 @@ jobs:
       - name: Install Entrix
         run: python -m pip install -e tools/entrix
 
-      - name: Build and release Tauri app
+      - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: apps/desktop
-          tagName: v${{ inputs.version || github.event.inputs.version }}
-          releaseName: Routa Desktop v${{ inputs.version || github.event.inputs.version }}
-          releaseBody: |
-            See the assets to download and install Routa Desktop.
-
-            CLI install:
-            - `npm install -g routa-cli`
-            - `npx -p routa-cli routa --help`
-          releaseDraft: true
-          prerelease: false
           args: ${{ matrix.args }}
 
       - name: Generate release manifest
@@ -163,7 +157,7 @@ jobs:
             --tauri-bundle-dir apps/desktop/src-tauri/target \
             --static-dir apps/desktop/src-tauri/frontend \
             --channel latest \
-            --out dist/release/manifest-${{ matrix.arch }}.json
+            --out dist/release/manifest-${{ matrix.key }}.json
 
       - name: Fetch baseline manifest
         shell: bash
@@ -173,26 +167,107 @@ jobs:
           python scripts/release/fetch-release-baseline.py \
             --repo phodal/routa \
             --workflow tauri-release.yml \
-            --artifact-name routa-release-manifest-tauri-${{ matrix.arch }} \
+            --artifact-name routa-release-manifest-tauri-${{ matrix.key }} \
             --exclude-run-id "${{ github.run_id }}" \
-            --out dist/release/baseline-manifest-${{ matrix.arch }}.json
+            --out dist/release/baseline-manifest-${{ matrix.key }}.json
 
       - name: Guard release surface
         shell: bash
         run: |
-          if [[ -f dist/release/baseline-manifest-${{ matrix.arch }}.json ]]; then
+          if [[ -f dist/release/baseline-manifest-${{ matrix.key }}.json ]]; then
             entrix release-trigger \
-              --manifest dist/release/manifest-${{ matrix.arch }}.json \
-              --baseline-manifest dist/release/baseline-manifest-${{ matrix.arch }}.json \
+              --manifest dist/release/manifest-${{ matrix.key }}.json \
+              --baseline-manifest dist/release/baseline-manifest-${{ matrix.key }}.json \
               --fail-on-trigger
           else
             entrix release-trigger \
-              --manifest dist/release/manifest-${{ matrix.arch }}.json \
+              --manifest dist/release/manifest-${{ matrix.key }}.json \
               --fail-on-trigger
           fi
+
+      - name: Upload bundled assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-release-assets-${{ matrix.key }}
+          path: |
+            apps/desktop/src-tauri/target/release/bundle/**/*.dmg
+            apps/desktop/src-tauri/target/release/bundle/**/*.app
+            apps/desktop/src-tauri/target/release/bundle/**/*.deb
+            apps/desktop/src-tauri/target/release/bundle/**/*.AppImage
+            apps/desktop/src-tauri/target/release/bundle/**/*.msi
+            apps/desktop/src-tauri/target/release/bundle/**/*.exe
+          if-no-files-found: error
 
       - name: Upload release manifest
         uses: actions/upload-artifact@v4
         with:
-          name: routa-release-manifest-tauri-${{ matrix.arch }}
-          path: dist/release/manifest-${{ matrix.arch }}.json
+          name: routa-release-manifest-tauri-${{ matrix.key }}
+          path: dist/release/manifest-${{ matrix.key }}.json
+
+  verify-tauri:
+    name: Verify staged desktop release
+    needs: build-tauri
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download release manifests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: routa-release-manifest-tauri-*
+          path: dist/release/manifests
+          merge-multiple: true
+
+      - name: Install Entrix
+        run: python -m pip install -e tools/entrix
+
+      - name: Verify all release manifests
+        shell: bash
+        run: |
+          shopt -s nullglob
+          manifests=(dist/release/manifests/*.json)
+          if [[ ${#manifests[@]} -eq 0 ]]; then
+            echo "No Tauri release manifests found" >&2
+            exit 1
+          fi
+          for manifest in "${manifests[@]}"; do
+            echo "Verifying ${manifest}"
+            entrix release-trigger --manifest "${manifest}" --fail-on-trigger
+          done
+
+  publish-tauri:
+    name: Publish desktop release
+    permissions:
+      contents: write
+    needs:
+      - build-tauri
+      - verify-tauri
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download bundled assets
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tauri-release-assets-*
+          path: dist/tauri-release
+          merge-multiple: true
+
+      - name: Publish draft GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version || github.event.inputs.version }}
+          name: Routa Desktop v${{ inputs.version || github.event.inputs.version }}
+          body: |
+            See the assets to download and install Routa Desktop.
+
+            CLI install:
+            - `npm install -g routa-cli`
+            - `npx -p routa-cli routa --help`
+          draft: true
+          prerelease: false
+          files: |
+            dist/tauri-release/**/*.dmg
+            dist/tauri-release/**/*.app
+            dist/tauri-release/**/*.deb
+            dist/tauri-release/**/*.AppImage
+            dist/tauri-release/**/*.msi
+            dist/tauri-release/**/*.exe

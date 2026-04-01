@@ -240,11 +240,60 @@ jobs:
           name: routa-cli-npm-${{ steps.version.outputs.value }}
           path: dist/npm
 
+  verify:
+    name: Verify staged CLI release
+    needs:
+      - build
+      - stage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download npm artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: routa-cli-npm-${{ needs.stage.outputs.version }}
+          path: dist/npm
+
+      - name: Download release manifest
+        uses: actions/download-artifact@v4
+        with:
+          name: routa-release-manifest-cli
+          path: dist/release
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Entrix
+        run: python -m pip install -e tools/entrix
+
+      - name: Re-check release surface
+        run: |
+          entrix release-trigger \
+            --manifest dist/release/manifest.json \
+            --fail-on-trigger
+
+      - name: Verify install smoke
+        run: |
+          node scripts/release/verify-cli-tarballs.mjs \
+            --tarball-dir dist/npm \
+            --platform linux-x64 \
+            --out dist/release/cli-verification.json
+
+      - name: Upload verification report
+        uses: actions/upload-artifact@v4
+        with:
+          name: routa-cli-release-verification
+          path: dist/release/cli-verification.json
+
   publish:
     name: Publish to npm
     needs:
       - build
       - stage
+      - verify
     if: |
       github.event_name == 'workflow_call' ||
       github.event.inputs.publish == 'true' ||
