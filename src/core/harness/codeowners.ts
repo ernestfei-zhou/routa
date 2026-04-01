@@ -3,15 +3,22 @@ import * as fs from "fs";
 import { promises as fsp } from "fs";
 import * as path from "path";
 import { minimatch } from "minimatch";
-import yaml from "js-yaml";
 import type {
+  CodeownersCorrelationReport,
   CodeownersOwner,
   CodeownersResponse,
   CodeownersRule,
   OwnerGroupSummary,
   OwnerKind,
+  OwnershipRoutingContext,
   OwnershipMatch,
+  TriggerOwnershipCorrelation,
 } from "./codeowners-types";
+import {
+  loadReviewTriggerRules,
+  matchFilesForReviewTrigger,
+  type ReviewTriggerRule,
+} from "./review-triggers";
 
 const CODEOWNERS_CANDIDATES = [".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS"];
 
@@ -128,30 +135,6 @@ function isSensitivePath(filePath: string): boolean {
   );
 }
 
-function loadSensitivePathsFromTriggers(repoRoot: string, warnings: string[]): string[] {
-  const triggersPath = path.join(repoRoot, "docs", "fitness", "review-triggers.yaml");
-  if (!fs.existsSync(triggersPath)) return [];
-
-  try {
-    const raw = fs.readFileSync(triggersPath, "utf-8");
-    const parsed = yaml.load(raw) as { review_triggers?: Array<{ paths?: string[] }> } | null;
-    if (!parsed?.review_triggers) return [];
-
-    const paths = new Set<string>();
-    for (const trigger of parsed.review_triggers) {
-      if (trigger.paths) {
-        for (const p of trigger.paths) {
-          paths.add(p.replace(/\*\*.*$/, "").replace(/\*$/, ""));
-        }
-      }
-    }
-    return [...paths].filter((p) => p.length > 0);
-  } catch {
-    warnings.push("Failed to parse review-triggers.yaml for sensitive path extraction.");
-    return [];
-  }
-}
-
 function collectTrackedFiles(repoRoot: string, warnings: string[]): string[] {
   try {
     const output = execSync("git ls-files", { cwd: repoRoot, encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 });
@@ -162,12 +145,158 @@ function collectTrackedFiles(repoRoot: string, warnings: string[]): string[] {
   }
 }
 
-export async function detectCodeowners(repoRoot: string): Promise<CodeownersResponse> {
-  const warnings: string[] = [];
-
+export async function loadCodeownersRules(repoRoot: string): Promise<{
+  codeownersFile: string | null;
+  rules: CodeownersRule[];
+  warnings: string[];
+}> {
   const codeownersFile = CODEOWNERS_CANDIDATES.find((candidate) =>
     fs.existsSync(path.join(repoRoot, candidate)),
   ) ?? null;
+
+  if (!codeownersFile) {
+    return {
+      codeownersFile: null,
+      rules: [],
+      warnings: ["No CODEOWNERS file found. Checked: " + CODEOWNERS_CANDIDATES.join(", ")],
+    };
+  }
+
+  const content = await fsp.readFile(path.join(repoRoot, codeownersFile), "utf-8");
+  const { rules, warnings } = parseCodeownersContent(content);
+  return {
+    codeownersFile,
+    rules,
+    warnings,
+  };
+}
+
+function uniqueSorted(values: string[]): string[] {
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+}
+
+function getHighRiskUnownedFiles(files: string[]): string[] {
+  return uniqueSorted(files.filter(isSensitivePath));
+}
+
+export function buildOwnershipRoutingContext(params: {
+  changedFiles: string[];
+  matches: OwnershipMatch[];
+  triggerRules: ReviewTriggerRule[];
+  matchedTriggerNames?: string[];
+}): OwnershipRoutingContext {
+  const changedFiles = uniqueSorted(params.changedFiles);
+  const matchesByFile = new Map(params.matches.map((match) => [match.filePath, match]));
+  const matchedTriggerNameSet = params.matchedTriggerNames ? new Set(params.matchedTriggerNames) : null;
+  const relevantTriggerRules = params.triggerRules.filter((rule) => (
+    matchedTriggerNameSet ? matchedTriggerNameSet.has(rule.name) : true
+  ));
+
+  const touchedOwners = uniqueSorted(
+    params.matches.flatMap((match) => match.owners.map((owner) => owner.name)),
+  );
+  const unownedChangedFiles = uniqueSorted(
+    params.matches.filter((match) => !match.covered).map((match) => match.filePath),
+  );
+  const overlappingChangedFiles = uniqueSorted(
+    params.matches.filter((match) => match.overlap).map((match) => match.filePath),
+  );
+
+  const triggerCorrelations: TriggerOwnershipCorrelation[] = relevantTriggerRules
+    .map((rule) => {
+      const touchedFiles = matchFilesForReviewTrigger(rule, changedFiles);
+      const relevantMatches = touchedFiles
+        .map((filePath) => matchesByFile.get(filePath))
+        .filter((value): value is OwnershipMatch => Boolean(value));
+      const ownerGroups = uniqueSorted(
+        relevantMatches.flatMap((match) => match.owners.map((owner) => owner.name)),
+      );
+      const unownedPaths = uniqueSorted(
+        relevantMatches.filter((match) => !match.covered).map((match) => match.filePath),
+      );
+      const overlappingPaths = uniqueSorted(
+        relevantMatches.filter((match) => match.overlap).map((match) => match.filePath),
+      );
+
+      return {
+        triggerName: rule.name,
+        severity: rule.severity,
+        action: rule.action,
+        ownerGroups,
+        ownerGroupCount: ownerGroups.length,
+        touchedFileCount: touchedFiles.length,
+        unownedPaths,
+        overlappingPaths,
+        spansMultipleOwnerGroups: ownerGroups.length > 1,
+        hasOwnershipGap: unownedPaths.length > 0,
+      } satisfies TriggerOwnershipCorrelation;
+    })
+    .filter((correlation) => correlation.touchedFileCount > 0);
+
+  return {
+    changedFiles,
+    touchedOwners,
+    touchedOwnerGroupsCount: touchedOwners.length,
+    unownedChangedFiles,
+    overlappingChangedFiles,
+    highRiskUnownedFiles: getHighRiskUnownedFiles(unownedChangedFiles),
+    crossOwnerTriggers: uniqueSorted(
+      triggerCorrelations
+        .filter((correlation) => correlation.spansMultipleOwnerGroups)
+        .map((correlation) => correlation.triggerName),
+    ),
+    triggerCorrelations,
+  };
+}
+
+function buildCodeownersCorrelationReport(params: {
+  trackedFiles: string[];
+  matches: OwnershipMatch[];
+  reviewTriggerFile: string | null;
+  triggerRules: ReviewTriggerRule[];
+}): CodeownersCorrelationReport {
+  const routing = buildOwnershipRoutingContext({
+    changedFiles: params.trackedFiles,
+    matches: params.matches,
+    triggerRules: params.triggerRules,
+  });
+
+  const hotspots = routing.triggerCorrelations.flatMap((correlation) => {
+    const entries: CodeownersCorrelationReport["hotspots"] = [];
+    if (correlation.hasOwnershipGap) {
+      entries.push({
+        triggerName: correlation.triggerName,
+        reason: "Trigger-covered paths have no explicit owner coverage.",
+        samplePaths: correlation.unownedPaths.slice(0, 5),
+      });
+    }
+    if (correlation.spansMultipleOwnerGroups) {
+      entries.push({
+        triggerName: correlation.triggerName,
+        reason: "Trigger spans multiple owner groups and may need cross-team review routing.",
+        samplePaths: correlation.overlappingPaths.slice(0, 5),
+      });
+    }
+    if (correlation.overlappingPaths.length > 0) {
+      entries.push({
+        triggerName: correlation.triggerName,
+        reason: "Trigger touches overlapping ownership rules that should be shown explicitly.",
+        samplePaths: correlation.overlappingPaths.slice(0, 5),
+      });
+    }
+    return entries;
+  });
+
+  return {
+    reviewTriggerFile: params.reviewTriggerFile,
+    triggerCorrelations: routing.triggerCorrelations,
+    hotspots,
+  };
+}
+
+export async function detectCodeowners(repoRoot: string): Promise<CodeownersResponse> {
+  const warnings: string[] = [];
+  const { codeownersFile, rules, warnings: parseWarnings } = await loadCodeownersRules(repoRoot);
 
   if (!codeownersFile) {
     return {
@@ -181,16 +310,19 @@ export async function detectCodeowners(repoRoot: string): Promise<CodeownersResp
         overlappingFiles: [],
         sensitiveUnownedFiles: [],
       },
-      warnings: ["No CODEOWNERS file found. Checked: " + CODEOWNERS_CANDIDATES.join(", ")],
+      correlation: {
+        reviewTriggerFile: null,
+        triggerCorrelations: [],
+        hotspots: [],
+      },
+      warnings: parseWarnings,
     };
   }
-
-  const content = await fsp.readFile(path.join(repoRoot, codeownersFile), "utf-8");
-  const { rules, warnings: parseWarnings } = parseCodeownersContent(content);
   warnings.push(...parseWarnings);
 
   const trackedFiles = collectTrackedFiles(repoRoot, warnings);
   const matches = resolveOwnership(trackedFiles, rules);
+  const { relativePath: reviewTriggerFile, rules: reviewTriggerRules } = await loadReviewTriggerRules(repoRoot);
 
   const ownerCounts = new Map<string, { kind: OwnerKind; count: number }>();
   for (const match of matches) {
@@ -218,16 +350,13 @@ export async function detectCodeowners(repoRoot: string): Promise<CodeownersResp
 
   const sensitiveUnownedFiles = unownedFiles.filter(isSensitivePath);
 
-  const dynamicSensitivePrefixes = loadSensitivePathsFromTriggers(repoRoot, warnings);
-  for (const file of unownedFiles) {
-    if (!sensitiveUnownedFiles.includes(file)) {
-      if (dynamicSensitivePrefixes.some((prefix) => file.startsWith(prefix))) {
-        sensitiveUnownedFiles.push(file);
-      }
-    }
-  }
-
   const MAX_REPORT_FILES = 50;
+  const correlation = buildCodeownersCorrelationReport({
+    trackedFiles,
+    matches,
+    reviewTriggerFile,
+    triggerRules: reviewTriggerRules,
+  });
 
   return {
     generatedAt: new Date().toISOString(),
@@ -245,6 +374,7 @@ export async function detectCodeowners(repoRoot: string): Promise<CodeownersResp
       overlappingFiles: overlappingFiles.slice(0, MAX_REPORT_FILES),
       sensitiveUnownedFiles,
     },
+    correlation,
     warnings,
   };
 }

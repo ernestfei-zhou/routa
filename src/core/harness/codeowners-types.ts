@@ -34,6 +34,42 @@ export type OwnershipCoverageReport = {
   ownerGroups: OwnerGroupSummary[];
 };
 
+export type TriggerOwnershipCorrelation = {
+  triggerName: string;
+  severity: string;
+  action: string;
+  ownerGroups: string[];
+  ownerGroupCount: number;
+  touchedFileCount: number;
+  unownedPaths: string[];
+  overlappingPaths: string[];
+  spansMultipleOwnerGroups: boolean;
+  hasOwnershipGap: boolean;
+};
+
+export type OwnershipRoutingContext = {
+  changedFiles: string[];
+  touchedOwners: string[];
+  touchedOwnerGroupsCount: number;
+  unownedChangedFiles: string[];
+  overlappingChangedFiles: string[];
+  highRiskUnownedFiles: string[];
+  crossOwnerTriggers: string[];
+  triggerCorrelations: TriggerOwnershipCorrelation[];
+};
+
+export type CodeownersTriggerHotspot = {
+  triggerName: string;
+  reason: string;
+  samplePaths: string[];
+};
+
+export type CodeownersCorrelationReport = {
+  reviewTriggerFile: string | null;
+  triggerCorrelations: TriggerOwnershipCorrelation[];
+  hotspots: CodeownersTriggerHotspot[];
+};
+
 export type CodeownersResponse = {
   generatedAt: string;
   repoRoot: string;
@@ -50,5 +86,6 @@ export type CodeownersResponse = {
     overlappingFiles: string[];
     sensitiveUnownedFiles: string[];
   };
+  correlation?: CodeownersCorrelationReport;
   warnings: string[];
 };

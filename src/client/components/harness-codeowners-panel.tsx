@@ -43,6 +43,14 @@ function ListBlock({
   );
 }
 
+function formatTriggerLabel(value: string): string {
+  return value
+    .split(/[_-]/u)
+    .filter(Boolean)
+    .map((segment) => segment.slice(0, 1).toUpperCase() + segment.slice(1))
+    .join(" ");
+}
+
 export function HarnessCodeownersPanel({
   repoLabel,
   unsupportedMessage,
@@ -156,6 +164,75 @@ export function HarnessCodeownersPanel({
             items={data.coverage.sensitiveUnownedFiles}
             tone="rose"
           />
+
+          {data.correlation?.triggerCorrelations.length ? (
+            <div className="space-y-3">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">
+                Trigger Correlation
+              </div>
+              <div className="space-y-2">
+                {data.correlation.triggerCorrelations.map((correlation) => (
+                  <div
+                    key={correlation.triggerName}
+                    className="rounded-xl border border-desktop-border bg-desktop-bg-primary/80 px-3 py-2"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-desktop-text-primary">
+                        {formatTriggerLabel(correlation.triggerName)}
+                      </span>
+                      <span className="rounded-full border border-desktop-border bg-desktop-bg-secondary px-2 py-0.5 text-[10px] text-desktop-text-secondary">
+                        {correlation.severity}
+                      </span>
+                      <span className="text-[10px] text-desktop-text-secondary">
+                        {correlation.touchedFileCount} files
+                      </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-desktop-text-secondary">
+                      <span>{correlation.ownerGroupCount} owner groups</span>
+                      {correlation.hasOwnershipGap ? (
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-800">
+                          ownership gap
+                        </span>
+                      ) : null}
+                      {correlation.spansMultipleOwnerGroups ? (
+                        <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-sky-700">
+                          cross-owner
+                        </span>
+                      ) : null}
+                    </div>
+                    {correlation.ownerGroups.length ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {correlation.ownerGroups.map((owner) => (
+                          <span
+                            key={`${correlation.triggerName}-${owner}`}
+                            className="rounded-full border border-desktop-border bg-desktop-bg-secondary px-2 py-0.5 text-[10px] text-desktop-text-primary"
+                          >
+                            {owner}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {data.correlation?.hotspots.length ? (
+            <div className="rounded-xl border border-rose-200 bg-rose-50/60 px-3 py-2">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-800">Governance hotspots</div>
+              <ul className="mt-1.5 space-y-1 text-[11px] text-rose-900">
+                {data.correlation.hotspots.map((hotspot) => (
+                  <li key={`${hotspot.triggerName}-${hotspot.reason}`}>
+                    <span className="font-medium">{formatTriggerLabel(hotspot.triggerName)}</span>
+                    {": "}
+                    {hotspot.reason}
+                    {hotspot.samplePaths.length ? ` (${hotspot.samplePaths.join(", ")})` : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </HarnessSectionCard>

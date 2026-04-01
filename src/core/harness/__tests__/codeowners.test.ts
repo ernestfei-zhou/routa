@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildOwnershipRoutingContext,
   matchFileToRule,
   parseCodeownersContent,
   resolveOwnership,
 } from "../codeowners";
+import { parseReviewTriggerConfig } from "../review-triggers";
 
 describe("parseCodeownersContent", () => {
   it("parses rules with single owner", () => {
@@ -137,5 +139,55 @@ describe("resolveOwnership", () => {
     const matches = resolveOwnership(["src/index.ts"], rules);
 
     expect(matches[0].overlap).toBe(false);
+  });
+
+  it("builds trigger-aware ownership routing context", () => {
+    const { rules } = parseCodeownersContent([
+      "src/core/** @arch-team",
+      "crates/** @platform-team",
+    ].join("\n"));
+    const matches = resolveOwnership([
+      "src/core/review.ts",
+      "crates/routa-server/src/api/harness.rs",
+      "api-contract.yaml",
+    ], rules);
+    const triggerRules = parseReviewTriggerConfig([
+      "review_triggers:",
+      "  - name: cross_boundary_change_web_rust",
+      "    type: cross_boundary_change",
+      "    severity: medium",
+      "    action: require_human_review",
+      "    boundaries:",
+      "      web:",
+      "        - src/**",
+      "      rust:",
+      "        - crates/**",
+      "  - name: sensitive_contract_or_governance_change",
+      "    type: sensitive_file_change",
+      "    severity: high",
+      "    action: require_human_review",
+      "    paths:",
+      "      - api-contract.yaml",
+    ].join("\n"));
+
+    const routing = buildOwnershipRoutingContext({
+      changedFiles: [
+        "src/core/review.ts",
+        "crates/routa-server/src/api/harness.rs",
+        "api-contract.yaml",
+      ],
+      matches,
+      triggerRules,
+      matchedTriggerNames: [
+        "cross_boundary_change_web_rust",
+        "sensitive_contract_or_governance_change",
+      ],
+    });
+
+    expect(routing.touchedOwners).toEqual(["@arch-team", "@platform-team"]);
+    expect(routing.unownedChangedFiles).toEqual(["api-contract.yaml"]);
+    expect(routing.highRiskUnownedFiles).toEqual(["api-contract.yaml"]);
+    expect(routing.crossOwnerTriggers).toEqual(["cross_boundary_change_web_rust"]);
+    expect(routing.triggerCorrelations).toHaveLength(2);
   });
 });
