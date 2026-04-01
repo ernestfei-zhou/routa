@@ -6,6 +6,7 @@ import { ProtocolBadge } from "@/app/protocol-badge";
 
 import { DockerStatusIndicator } from "./docker-status-indicator";
 import { LanguageSwitcher } from "./language-switcher";
+import { McpStatusIndicator } from "./mcp-status-indicator";
 import { ThemeSwitcher } from "./theme-switcher";
 
 interface ShellHeaderControlsProps {
@@ -22,9 +23,11 @@ export function ShellHeaderControls({
       <div className="hidden lg:flex">
         <DockerStatusIndicator />
       </div>
+      <div className="hidden lg:flex">
+        <McpStatusIndicator />
+      </div>
       {showProtocolBadges ? (
         <div className="hidden lg:flex items-center gap-2">
-          <ProtocolBadge name="MCP" endpoint="/api/mcp" />
           <ProtocolBadge name="ACP" endpoint="/api/acp" />
         </div>
       ) : null}
