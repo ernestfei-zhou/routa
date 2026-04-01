@@ -89,6 +89,8 @@ Version: 1.2.0 (from `pptxgenjs_helpers/index.js`)
 - `testing-approach`: testing approach / delivery workflow diagram
 - `integrated-design`: integrated design / layered ecosystem diagram
 
+These diagram renderers are reference patterns rebuilt for this repository. Treat them as reusable composition examples, not as third-party branded templates. When adapting them for deliverables, use the local project palette and neutral/source-accurate footer and notes content.
+
 ## Page size
 
 - Set the page size to 16:9 (13 1/3 × 7.5 inches, PptxGenJS `LAYOUT_WIDE`) by default, unless a

@@ -1,6 +1,8 @@
-# Thoughtworks diagram renderers — slide-skill integrated
+# Reference diagram renderers — slide-skill integrated
 
-This version turns a selected subset of the user-provided Thoughtworks `Diagram library` into maintainable PptxGenJS renderers, but now follows the OpenAI slide-skill conventions directly.
+This package contains reusable diagram patterns adapted from reference slides and rebuilt as maintainable PptxGenJS renderers for the local slide-skill bundle.
+
+The diagrams are included as reference composition patterns, not as branded third-party deliverables. Default branding, footer text, and palette choices are normalized to the local Routa slide environment.
 
 ## What changed vs. the previous codekit
 
@@ -9,19 +11,19 @@ This version turns a selected subset of the user-provided Thoughtworks `Diagram 
 - Uses `autoFontSize` / `calcTextBox` for text fitting
 - Runs `warnIfSlideHasOverlaps` and `warnIfSlideElementsOutOfBounds` during build
 - Organizes code into a **renderer registry + JSON examples**
-- Keeps the output close to the original deck, while still being editable as code
+- Keeps the output close to the underlying diagram pattern, while still being editable as code
 
 ## Package structure
 
 - `build-demo.js` — builds the demo PPT
 - `registry.js` — maps slide kinds to renderers
-- `theme.js` — page size, fonts, palette
+- `theme.js` — page size, fonts, palette aligned to the Routa token system
 - `runtime/slide-skill.js` — bridge to the local slide-skill helper bundle
 - `runtime/base.js` — shared slide primitives
 - `renderers/*.js` — diagram-specific renderers
 - `examples/*.json` — editable data for each diagram slide
 - `tools/export_selected_slides.py` — export PPT shape metadata to JSON for bootstrapping new renderers
-- `thoughtworks_slide_skill_demo.pptx` — generated demo deck
+- `diagram_renderer_demo.pptx` — generated demo deck
 
 ## Included demo slides
 
@@ -31,7 +33,7 @@ This version turns a selected subset of the user-provided Thoughtworks `Diagram 
 - Risk status matrix - sample
 - Agile planning onion diagram
 - Our approach to testing
-- Thoughtworks integrated design
+- Integrated design
 
 ## Build
 
@@ -42,7 +44,7 @@ node .agents/skills/slide-skill/diagram_renderers/build-demo.js
 Optional output override:
 
 ```bash
-node .agents/skills/slide-skill/diagram_renderers/build-demo.js /tmp/thoughtworks_slide_skill_demo.pptx
+node .agents/skills/slide-skill/diagram_renderers/build-demo.js /tmp/diagram_renderer_demo.pptx
 ```
 
 ## Notes

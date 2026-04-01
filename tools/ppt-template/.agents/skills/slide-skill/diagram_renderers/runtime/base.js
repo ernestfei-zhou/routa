@@ -9,6 +9,10 @@ function noLine() {
   return { color: COLORS.white, transparency: 100 };
 }
 
+function getSlideMeta(slide) {
+  return slide && slide.__diagramRenderData ? slide.__diagramRenderData : {};
+}
+
 function setSlideDefaults(slide) {
   slide.background = { color: COLORS.white };
 }
@@ -51,35 +55,66 @@ function addSubtitle(slide, subtitle, opts = {}) {
 }
 
 function addFooter(slide, pageNumber) {
-  slide.addText('© 2026 Thoughtworks  |  Confidential', {
-    x: MARGINS.left,
-    y: PAGE.height - 0.34,
-    w: 2.8,
-    h: 0.12,
-    fontFace: FONTS.body,
-    fontSize: 5.5,
-    color: COLORS.footer,
-    margin: 0,
-    breakLine: false,
-  });
-  slide.addText(String(pageNumber), {
-    x: PAGE.width - 0.4,
-    y: PAGE.height - 0.34,
-    w: 0.22,
-    h: 0.12,
-    fontFace: FONTS.body,
-    fontSize: 7,
-    color: COLORS.footer,
-    margin: 0,
-    align: 'right',
-    breakLine: false,
-  });
+  const meta = getSlideMeta(slide);
+  const footerText = typeof meta.footerText === 'string' ? meta.footerText.trim() : '';
+  const footerLabel = meta.footerLabel ?? pageNumber;
+  const showPageNumber = meta.showPageNumber !== false;
+
+  if (footerText) {
+    slide.addText(footerText, {
+      x: MARGINS.left,
+      y: PAGE.height - 0.34,
+      w: 3.4,
+      h: 0.12,
+      fontFace: FONTS.body,
+      fontSize: 5.8,
+      color: COLORS.footer,
+      margin: 0,
+      breakLine: false,
+    });
+  }
+
+  if (showPageNumber && footerLabel !== undefined && footerLabel !== null && String(footerLabel).length > 0) {
+    slide.addText(String(footerLabel), {
+      x: PAGE.width - 0.46,
+      y: PAGE.height - 0.34,
+      w: 0.28,
+      h: 0.12,
+      fontFace: FONTS.body,
+      fontSize: 7,
+      color: COLORS.footer,
+      margin: 0,
+      align: 'right',
+      breakLine: false,
+    });
+  }
 }
 
 function addSourceNotes(slide, data) {
-  const title = data.title || 'Untitled';
-  const slideNo = data.sourceSlide || '?';
-  slide.addNotes(`[Sources]\n- Derived from the user-provided "Diagram library" deck, slide ${slideNo} (${title}).`);
+  const meta = getSlideMeta(slide);
+  if (meta.disableSourceNotes === true || data.disableSourceNotes === true) {
+    return;
+  }
+
+  const sourceNotes = Array.isArray(data.sourceNotes)
+    ? data.sourceNotes
+    : Array.isArray(meta.sourceNotes)
+      ? meta.sourceNotes
+      : [];
+  if (sourceNotes.length > 0) {
+    slide.addNotes(`[Sources]\n${sourceNotes.map((line) => `- ${line}`).join('\n')}`);
+    return;
+  }
+
+  const sourceNoteOverride =
+    typeof data.sourceNoteOverride === 'string' && data.sourceNoteOverride.trim().length > 0
+      ? data.sourceNoteOverride.trim()
+      : typeof meta.sourceNoteOverride === 'string' && meta.sourceNoteOverride.trim().length > 0
+        ? meta.sourceNoteOverride.trim()
+        : '';
+  if (sourceNoteOverride) {
+    slide.addNotes(`[Sources]\n- ${sourceNoteOverride}`);
+  }
 }
 
 function addParagraph(slide, text, opts = {}) {

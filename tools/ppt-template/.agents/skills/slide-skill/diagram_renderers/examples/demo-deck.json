@@ -1,7 +1,7 @@
 {
-  "title": "Thoughtworks diagram renderers - slide-skill integrated demo",
-  "subject": "Maintainable Thoughtworks-style diagrams built with PptxGenJS and slide-skill helpers",
-  "output": "thoughtworks_slide_skill_demo.pptx",
+  "title": "Reference diagram renderers - slide-skill integrated demo",
+  "subject": "Maintainable reusable diagram patterns built with PptxGenJS and slide-skill helpers",
+  "output": "diagram_renderer_demo.pptx",
   "slides": [
     { "kind": "lean-value-tree", "file": "examples/lean-value-tree.json" },
     { "kind": "process-flow", "file": "examples/process-flow.json" },

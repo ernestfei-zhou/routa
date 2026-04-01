@@ -2,7 +2,7 @@
   "sourceSlide": 89,
   "title": "Risk status matrix - sample",
   "notePanel": { "x": 7.5, "w": 2.5 },
-  "note": "Thoughtworks will\nagree the Risk\nStatus Dashboard\nduring inception\nand then report so\nthat you can…..",
+  "note": "Agree the risk dashboard during inception and keep it updated as delivery assumptions, dependencies, and release confidence evolve.",
   "matrix": {
     "x": 0.84,
     "y": 1.32,

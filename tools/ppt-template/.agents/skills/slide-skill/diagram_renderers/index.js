@@ -8,7 +8,12 @@ function renderDiagramSlide(slide, pptx, kind, data) {
   if (!renderer) {
     throw new Error(`Unknown diagram renderer kind: ${kind}`);
   }
-  return renderer(slide, pptx, data);
+  slide.__diagramRenderData = data || {};
+  try {
+    return renderer(slide, pptx, data || {});
+  } finally {
+    delete slide.__diagramRenderData;
+  }
 }
 
 module.exports = {
