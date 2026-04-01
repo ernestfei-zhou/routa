@@ -60,7 +60,7 @@ export function DesktopShellHeader({
 
       <div className="flex-1 app-drag-region h-full" />
 
-      <ShellHeaderControls className="px-2" showProtocolBadges={false} />
+      <ShellHeaderControls className="px-2" showProtocolBadges={false} showSettingsMenu={false} />
 
       {titleBarRight && (
         <div className="flex items-center gap-1 px-2">

@@ -14,7 +14,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "@/i18n";
 import { HarnessMark } from "./harness-mark";
-import { ChevronLeft, CircleUser, Columns2, LayoutGrid, Settings, Server, Calendar, Workflow, House, Share2, MonitorUp, Monitor } from "lucide-react";
+import { SettingsPopupMenu } from "./settings-popup-menu";
+import { ChevronLeft, CircleUser, Columns2, LayoutGrid, Server, Calendar, Workflow, House, Share2, MonitorUp, Monitor } from "lucide-react";
 
 
 interface NavItem {
@@ -145,14 +146,6 @@ export function DesktopSidebar({
 
   const secondaryItems: NavItem[] = [
     {
-      id: "config",
-      label: t.nav.settings,
-      href: "/settings",
-      icon: (
-        <Settings className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
-      ),
-    },
-    {
       id: "debug",
       label: t.nav.debug,
       href: "/traces",
@@ -161,6 +154,7 @@ export function DesktopSidebar({
       ),
     },
   ];
+  const settingsActive = pathname === "/settings" || pathname.startsWith("/settings/");
 
   const isActive = (href: string) => {
     const hrefPath = href.split("?")[0]?.split("#")[0] ?? href;
@@ -242,6 +236,13 @@ export function DesktopSidebar({
       <div className={`${collapsed ? "mx-3" : "mx-2"} border-t border-desktop-border`} />
 
       <div className={`py-3 ${collapsed ? "flex flex-col items-center gap-1" : "px-2 space-y-1"}`}>
+        <SettingsPopupMenu
+          position="sidebar"
+          showLabel={!collapsed}
+          isActive={settingsActive}
+          className="w-full"
+          buttonClassName={collapsed ? "h-10 w-10 px-0 py-0 justify-center" : "h-11 w-full gap-3 px-3 py-0 text-sm font-medium"}
+        />
         {secondaryItems.map(renderNavItem)}
       </div>
     </aside>
