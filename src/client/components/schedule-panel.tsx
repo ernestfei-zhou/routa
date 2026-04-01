@@ -13,7 +13,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Select } from "./select";
 import { useTranslation } from "@/i18n";
-import { Check, Clock, Plus, SquarePen, Trash2 } from "lucide-react";
+import { Check, Clock, Plus, SquarePen, Trash2, Play } from "lucide-react";
 
 
 // ─── Client-side cron description (no node-cron dependency) ─────────────────
@@ -700,9 +700,7 @@ function ScheduleCard({ schedule, onEdit, onDelete, onToggle, onRunNow, isRunnin
           {isRunning ? (
             <span className="w-3 h-3 border border-white/50 dark:border-slate-900/50 border-t-white dark:border-t-slate-900 rounded-full animate-spin" />
           ) : (
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
-            </svg>
+            <Play className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}/>
           )}
           {isRunning ? `${t.common.running}…` : t.schedules.runNow}
         </button>

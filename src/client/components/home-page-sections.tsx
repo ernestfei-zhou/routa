@@ -7,7 +7,7 @@ import { RepoPicker, type RepoSelection } from "@/client/components/repo-picker"
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
 import type { OnboardingMode } from "@/client/utils/onboarding";
 import { useTranslation } from "@/i18n";
-import { ChevronDown, Columns2, Plus, SquareArrowOutUpRight } from "lucide-react";
+import { ChevronDown, Columns2, Plus, SquareArrowOutUpRight, Folder } from "lucide-react";
 
 
 interface FeaturedSkill {
@@ -703,9 +703,7 @@ export function OnboardingCard({
     return (
       <div className="w-full max-w-xl rounded-[32px] border border-sky-200/75 bg-[linear-gradient(180deg,rgba(250,253,255,0.96),rgba(237,244,255,0.92))] px-8 py-10 shadow-[0_36px_100px_-60px_rgba(37,99,235,0.28)] dark:border-[#223049] dark:bg-[linear-gradient(180deg,rgba(10,15,26,0.98),rgba(12,18,30,0.95))]">
         <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-linear-to-br from-[#0f62d6] to-[#38bdf8] shadow-lg shadow-sky-500/20">
-          <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" />
-          </svg>
+          <Folder className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}/>
         </div>
         <h2 className="mb-1.5 text-center font-['Avenir_Next_Condensed','Avenir_Next','Segoe_UI','Helvetica_Neue',sans-serif] text-[2rem] font-semibold tracking-[-0.05em] text-slate-900 dark:text-white">
           {t.onboarding.title}
@@ -1041,9 +1039,7 @@ export function WorkspaceCards({
                 onClick={() => setShowWorkspacesMenu(false)}
                 className="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-[#1a1d2c]"
               >
-                <svg className="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" />
-                </svg>
+                <Folder className="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
                 All Workspaces
               </Link>
               <Link

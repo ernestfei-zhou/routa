@@ -193,6 +193,47 @@ jobs:
             --artifacts dist/cli-artifacts \
             --out dist/npm
 
+      - name: Generate release manifest
+        run: |
+          node scripts/release/generate-release-manifest.mjs \
+            --cli-artifacts dist/cli-artifacts \
+            --npm-dir dist/npm \
+            --channel latest \
+            --out dist/release/manifest.json
+
+      - name: Fetch baseline manifest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/release/fetch-release-baseline.py \
+            --repo phodal/routa \
+            --workflow cli-release.yml \
+            --artifact-name routa-release-manifest-cli \
+            --exclude-run-id "${{ github.run_id }}" \
+            --out dist/release/baseline-manifest.json
+
+      - name: Install Entrix
+        run: python -m pip install -e tools/entrix
+
+      - name: Guard release surface
+        run: |
+          if [[ -f dist/release/baseline-manifest.json ]]; then
+            entrix release-trigger \
+              --manifest dist/release/manifest.json \
+              --baseline-manifest dist/release/baseline-manifest.json \
+              --fail-on-trigger
+          else
+            entrix release-trigger \
+              --manifest dist/release/manifest.json \
+              --fail-on-trigger
+          fi
+
+      - name: Upload release manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: routa-release-manifest-cli
+          path: dist/release/manifest.json
+
       - name: Upload npm artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -221,6 +262,21 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org/
+
+      - name: Download release manifest
+        uses: actions/download-artifact@v4
+        with:
+          name: routa-release-manifest-cli
+          path: dist/release
+
+      - name: Install Entrix
+        run: python -m pip install -e tools/entrix
+
+      - name: Re-check release surface before publish
+        run: |
+          entrix release-trigger \
+            --manifest dist/release/manifest.json \
+            --fail-on-trigger
 
       - name: Publish tarballs
         env:

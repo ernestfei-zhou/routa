@@ -3,6 +3,8 @@
 import { SettingsRouteShell } from "@/client/components/settings-route-shell";
 import { SettingsPageHeader } from "@/client/components/settings-page-header";
 import { McpServersTab } from "@/client/components/settings-panel-mcp-tab";
+import { Server } from "lucide-react";
+
 
 export default function McpSettingsPage() {
   return (
@@ -11,9 +13,7 @@ export default function McpSettingsPage() {
       description="Manage Model Context Protocol servers, transports, and local integration points for your workspace."
       badgeLabel="Integration"
       icon={(
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 7.5h10.5M6.75 12h10.5M6.75 16.5h6.75M4.5 4.5h15A2.25 2.25 0 0121.75 6.75v10.5A2.25 2.25 0 0119.5 19.5h-15A2.25 2.25 0 012.25 17.25V6.75A2.25 2.25 0 014.5 4.5z" />
-        </svg>
+        <Server className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}/>
       )}
       summary={[
         { label: "Transport", value: "stdio / http / sse" },

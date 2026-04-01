@@ -6,6 +6,8 @@ import { ModelDropdown } from "./model-dropdown";
 import { RepoPicker } from "../../repo-picker";
 import { Select } from "../../select";
 import type { SetupViewProps } from "../types";
+import { Sparkles } from "lucide-react";
+
 
 export function SetupView({
   setupInput,
@@ -132,9 +134,7 @@ function SetupHeader() {
   return (
     <div className="text-center">
       <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500/20 to-blue-400/20">
-        <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-        </svg>
+        <Sparkles className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
       </div>
       <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">What would you like to work on?</h2>
       <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">Describe your task and choose your mode.</p>

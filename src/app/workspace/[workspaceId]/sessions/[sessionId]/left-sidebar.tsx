@@ -8,7 +8,7 @@ import {MarkdownViewer} from "@/client/components/markdown/markdown-viewer";
 import type {ParsedTask} from "@/client/utils/task-block-parser";
 import type {RepoSelection} from "@/client/components/repo-picker";
 import type {NoteData} from "@/client/hooks/use-notes";
-import { FileText, Folder, Plus, X } from "lucide-react";
+import { FileText, Folder, Plus, X, MessageSquareMore, ClipboardCheck, ChevronsRight, ChevronsLeft } from "lucide-react";
 
 
 type SidebarTab = "sessions" | "spec" | "tasks";
@@ -570,9 +570,7 @@ export function LeftSidebar({
               className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
               title="Expand sidebar"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-              </svg>
+              <ChevronsRight className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}/>
             </button>
 
             {/* New session */}
@@ -591,9 +589,7 @@ export function LeftSidebar({
               className={`p-1.5 rounded-md transition-colors ${activeTab === "sessions" ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
               title="Sessions"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-              </svg>
+              <MessageSquareMore className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}/>
             </button>
 
             {/* Spec */}
@@ -611,9 +607,7 @@ export function LeftSidebar({
               className={`relative p-1.5 rounded-md transition-colors ${activeTab === "tasks" ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
               title="Tasks"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
+              <ClipboardCheck className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}/>
               {taskCount > 0 && (
                 <span className={`absolute -top-0.5 -right-0.5 w-3.5 h-3.5 flex items-center justify-center rounded-full text-white text-[8px] font-bold ${hasRunningTasks ? "bg-amber-400 animate-pulse" : "bg-emerald-500"}`}>
                   {taskCount > 9 ? "9+" : taskCount}
@@ -639,9 +633,7 @@ export function LeftSidebar({
                   className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors shrink-0"
                   title={showMobileSidebar ? "Close sidebar" : "Collapse sidebar"}
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7M18 19l-7-7 7-7" />
-                  </svg>
+                  <ChevronsLeft className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}/>
                 </button>
                 {codebases.length > 0 && repoSelection && (
                   <>
@@ -675,9 +667,7 @@ export function LeftSidebar({
                 label="Sessions"
                 onClick={() => setActiveTab("sessions")}
                 icon={
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                  </svg>
+                  <MessageSquareMore className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}/>
                 }
               />
               <TabButton
@@ -695,9 +685,7 @@ export function LeftSidebar({
                 badgePulse={hasRunningTasks}
                 onClick={() => setActiveTab("tasks")}
                 icon={
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                  </svg>
+                  <ClipboardCheck className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}/>
                 }
               />
             </div>

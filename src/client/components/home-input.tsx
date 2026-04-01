@@ -21,7 +21,7 @@ import { storePendingPrompt } from "../utils/pending-prompt";
 import { loadProviderConnectionConfig, getModelDefinitionByAlias, DockerConfigModal } from "./settings-panel";
 import { desktopAwareFetch } from "../utils/diagnostics";
 import { useTranslation } from "@/i18n";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Folder } from "lucide-react";
 
 
 type AgentRole = "ROUTA" | "CRAFTER" | "DEVELOPER";
@@ -466,19 +466,7 @@ export function HomeInput({
                   onClick={() => setShowWorkspaceDropdown((v) => !v)}
                   className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1c1f2e] border border-transparent hover:border-slate-200 dark:hover:border-[#2a2d3d] transition-all"
                 >
-                  <svg
-                    className="w-3.5 h-3.5 opacity-50"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={1.5}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776"
-                    />
-                  </svg>
+                  <Folder className="w-3.5 h-3.5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
                   <span className="max-w-[120px] truncate">
                     {activeWorkspace?.title ?? t.workspace.workspaces}
                   </span>
@@ -498,19 +486,7 @@ export function HomeInput({
                               : "text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#1f2233]"
                           }`}
                         >
-                          <svg
-                            className="w-3.5 h-3.5 opacity-50"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={1.5}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776"
-                            />
-                          </svg>
+                          <Folder className="w-3.5 h-3.5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
                           {ws.title}
                           {ws.id === selectedWorkspaceId && (
                             <Check className="w-3.5 h-3.5 ml-auto text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}/>

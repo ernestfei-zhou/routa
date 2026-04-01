@@ -135,6 +135,9 @@ jobs:
       - name: Prepare frontend for Tauri bundling
         run: node scripts/prepare-frontend.mjs
 
+      - name: Install Entrix
+        run: python -m pip install -e tools/entrix
+
       - name: Build and release Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
@@ -152,3 +155,44 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Generate release manifest
+        shell: bash
+        run: |
+          node scripts/release/generate-release-manifest.mjs \
+            --tauri-bundle-dir apps/desktop/src-tauri/target \
+            --static-dir apps/desktop/src-tauri/frontend \
+            --channel latest \
+            --out dist/release/manifest-${{ matrix.arch }}.json
+
+      - name: Fetch baseline manifest
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/release/fetch-release-baseline.py \
+            --repo phodal/routa \
+            --workflow tauri-release.yml \
+            --artifact-name routa-release-manifest-tauri-${{ matrix.arch }} \
+            --exclude-run-id "${{ github.run_id }}" \
+            --out dist/release/baseline-manifest-${{ matrix.arch }}.json
+
+      - name: Guard release surface
+        shell: bash
+        run: |
+          if [[ -f dist/release/baseline-manifest-${{ matrix.arch }}.json ]]; then
+            entrix release-trigger \
+              --manifest dist/release/manifest-${{ matrix.arch }}.json \
+              --baseline-manifest dist/release/baseline-manifest-${{ matrix.arch }}.json \
+              --fail-on-trigger
+          else
+            entrix release-trigger \
+              --manifest dist/release/manifest-${{ matrix.arch }}.json \
+              --fail-on-trigger
+          fi
+
+      - name: Upload release manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: routa-release-manifest-tauri-${{ matrix.arch }}
+          path: dist/release/manifest-${{ matrix.arch }}.json

@@ -16,7 +16,7 @@ import { CodeEditor } from "@/client/components/codemirror";
 import { DashboardCard, AgentRoleIcon, AgentStatusDot } from "./ui-components";
 import type { NoteData } from "@/client/hooks/use-notes";
 import type { SessionInfo, BackgroundTaskInfo, TaskInfo, TraceInfo } from "./types";
-import { Columns2, LayoutGrid, Plus, X } from "lucide-react";
+import { Columns2, LayoutGrid, Plus, X, CodeXml, Download, CircleUser, ChartColumn } from "lucide-react";
 
 
 interface OverviewA2UITabProps {
@@ -301,9 +301,7 @@ export function OverviewA2UITab({
             onClick={exportJson}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#191c28] transition-colors"
           >
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-            </svg>
+            <Download className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
             Export
           </button>
           <button
@@ -313,9 +311,7 @@ export function OverviewA2UITab({
                 : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#191c28]"
               }`}
           >
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
-            </svg>
+            <CodeXml className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}/>
             Source
           </button>
         </div>
@@ -354,9 +350,7 @@ export function OverviewA2UITab({
                 title: t.a2ui.agentMonitor,
                 description: t.a2ui.agentMonitorDesc,
                 icon: (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
+                  <CircleUser className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
                 ),
                 accent: "text-blue-500 dark:text-blue-400",
                 bg: "bg-blue-50 dark:bg-blue-900/20",
@@ -380,9 +374,7 @@ export function OverviewA2UITab({
                 title: t.a2ui.workspaceSummary,
                 description: t.a2ui.workspaceSummaryDesc,
                 icon: (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" />
-                  </svg>
+                  <ChartColumn className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
                 ),
                 accent: "text-amber-500 dark:text-amber-400",
                 bg: "bg-amber-50 dark:bg-amber-900/20",
