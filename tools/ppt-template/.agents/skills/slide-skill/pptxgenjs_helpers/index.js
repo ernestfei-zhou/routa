@@ -10,6 +10,7 @@ const latex = require("./latex");
 const code = require("./code");
 const layout = require("./layout");
 const layoutBuilders = require("./layout_builders");
+const diagramRenderers = require("./diagram_renderers");
 const util = require("./util");
 
 module.exports = {
@@ -28,6 +29,8 @@ module.exports = {
   ...layout,
   // slide layout builders
   ...layoutBuilders,
+  // opinionated diagram renderers
+  ...diagramRenderers,
   // text layout helpers and utilities
   ...util,
 };

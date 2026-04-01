@@ -110,7 +110,6 @@ function estimateWrappedLines(text, width, fontSize) {
       if (units > capacity) {
         if (currentUnits > 0) {
           lines += 1;
-          currentUnits = 0;
         }
         lines += Math.ceil(units / capacity);
         currentUnits = units % capacity;

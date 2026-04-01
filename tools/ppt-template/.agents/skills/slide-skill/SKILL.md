@@ -14,6 +14,7 @@ Contents of the `slides/` skill folder:
 - `container_tools/`: Standalone python scripts for slides and relevant asset manipulation.
 - `artifact_tool/`: API documentation and coding examples for the artifact tool library.
 - `pptxgenjs_helpers/`: JavaScript helpers for PptxGenJS.
+- `diagram_renderers/`: Opinionated reusable diagram/chart renderers built on top of the helper bundle.
 - `slide_templates/`: Optional slide templates to use; see `slide_templates/Overview.png` to get started.
 
 ## Implementation
@@ -73,6 +74,20 @@ Version: 1.2.0 (from `pptxgenjs_helpers/index.js`)
   - Usage: `alignSlideElements(slide, indices, "left"|"right"|"top"|"bottom"|"hcenter"|"vcenter")`
 - distributeSlideElements: Evenly space selected elements horizontally/vertically.
   - Usage: `distributeSlideElements(slide, indices, "horizontal"|"vertical")`
+- diagramRendererRegistry / renderDiagramSlide: Registry and entrypoint for the built-in diagram pack.
+  - Usage: `const { renderDiagramSlide } = require(".../pptxgenjs_helpers"); renderDiagramSlide(slide, pptx, "process-flow", data)`
+
+## Built-in diagram pack
+
+`diagram_renderers/` currently includes 7 reusable diagram types. Each type has a stable renderer kind and a corresponding visual pattern:
+
+- `lean-value-tree`: lean value tree / value hierarchy diagram
+- `process-flow`: staged process flow diagram
+- `project-plan`: project plan timeline / gantt-like plan view
+- `risk-matrix`: probability-impact risk matrix
+- `planning-onion`: agile planning onion diagram
+- `testing-approach`: testing approach / delivery workflow diagram
+- `integrated-design`: integrated design / layered ecosystem diagram
 
 ## Page size
 
