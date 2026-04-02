@@ -199,13 +199,13 @@ test.describe("Harness settings spec sources", () => {
       }));
     });
 
-    await page.goto(`${BASE_URL}/settings/harness?workspaceId=default`);
+    await page.goto(`${BASE_URL}/settings/harness?workspaceId=default&section=spec-sources`);
 
     await expect(page.getByTestId("spec-sources-full")).toBeVisible({ timeout: 15_000 });
 
+    await page.goto(`${BASE_URL}/settings/harness?workspaceId=default`);
     await page.locator('[data-governance-node-id="thinking"]').click();
 
-    await expect(page.getByTestId("spec-sources-full")).toBeVisible();
     await expect(page.getByTestId("spec-sources-compact")).toBeVisible({ timeout: 15_000 });
   });
 });

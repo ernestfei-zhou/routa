@@ -256,7 +256,7 @@ export default function HarnessConsolePage() {
     designDecisionsState.error,
   );
   const hasArchitectureOrAdrSignal = useMemo(
-    () => (designDecisionsState.data?.sources.length ?? 0) > 0,
+    () => (designDecisionsState.data?.sources?.length ?? 0) > 0,
     [designDecisionsState.data],
   );
   const visibleSpecCodeBlocks = useMemo(

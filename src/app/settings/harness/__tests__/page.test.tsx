@@ -474,6 +474,41 @@ describe("HarnessSettingsPage", () => {
     expect(within(bottomPanel).getByTestId("spec-sources-compact")).not.toBeNull();
   });
 
+  it("does not crash when design decision data is missing sources during spec sources render", () => {
+    currentSearchParams = new URLSearchParams("section=spec-sources");
+    mockHarnessSettingsData.designDecisionsState = {
+      loading: false,
+      error: null,
+      data: {
+        generatedAt: "2026-03-30T00:00:00.000Z",
+        repoRoot: "/Users/phodal/ai/routa-js",
+        warnings: [],
+      } as never,
+    };
+    mockHarnessSettingsData.specSourcesState = {
+      loading: false,
+      error: null,
+      data: createSpecSourcesData({
+        sources: [
+          {
+            kind: "framework",
+            system: "bmad",
+            rootPath: "docs",
+            confidence: "low",
+            status: "legacy",
+            evidence: ["docs/prd.md"],
+            children: [{ type: "prd", path: "docs/prd.md" }],
+          },
+        ],
+      }),
+    };
+
+    render(<HarnessSettingsPage />);
+
+    expect(screen.getByTestId("spec-sources-full")).not.toBeNull();
+    expect(screen.getByRole("button", { name: /Spec Sources/i })).not.toBeNull();
+  });
+
   it("resizes the explorer pane via the drag handle", () => {
     render(<HarnessSettingsPage />);
 
