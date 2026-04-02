@@ -10,7 +10,6 @@ use axum::{
 };
 use regex::Regex;
 use routa_core::codeowners::detect_codeowners;
-use routa_core::harness::detect_repo_signals;
 use routa_core::spec_detector::detect_spec_sources;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -20,6 +19,7 @@ use crate::api::harness_hook_preview_events::{
     parse_json_lines, to_metric_results, to_phase_results,
 };
 use crate::api::harness_instructions_audit::run_instruction_audit;
+use crate::api::harness_repo_views::{get_harness_automations, get_harness_repo_signals};
 use crate::api::repo_context::{
     extract_frontmatter, json_error, read_to_string, resolve_repo_root, RepoContextQuery,
 };
@@ -29,6 +29,7 @@ use crate::state::AppState;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/agent-hooks", get(get_agent_hooks))
+        .route("/automations", get(get_harness_automations))
         .route("/codeowners", get(get_codeowners))
         .route("/design-decisions", get(get_design_decisions))
         .route("/github-actions", get(get_github_actions))
@@ -120,25 +121,6 @@ async fn get_codeowners(
     let report = detect_codeowners(&repo_root).map_err(ServerError::Internal)?;
     Ok(Json(serde_json::to_value(report).map_err(|error| {
         ServerError::Internal(format!("Failed to serialize CODEOWNERS report: {error}"))
-    })?))
-}
-
-async fn get_harness_repo_signals(
-    State(state): State<AppState>,
-    Query(query): Query<RepoContextQuery>,
-) -> Result<Json<Value>, ServerError> {
-    let repo_root = resolve_repo_root(
-        &state,
-        query.workspace_id.as_deref(),
-        query.codebase_id.as_deref(),
-        query.repo_path.as_deref(),
-        "Missing harness repo context. Provide workspaceId, codebaseId, or repoPath.",
-    )
-    .await?;
-
-    let report = detect_repo_signals(&repo_root).map_err(ServerError::Internal)?;
-    Ok(Json(serde_json::to_value(report).map_err(|error| {
-        ServerError::Internal(format!("Failed to serialize report: {error}"))
     })?))
 }
 

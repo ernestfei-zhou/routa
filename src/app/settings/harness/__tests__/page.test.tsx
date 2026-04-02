@@ -115,6 +115,19 @@ const mockHarnessSettingsData = {
       flows: [],
     },
   },
+  automationsState: {
+    loading: false,
+    error: null,
+    data: {
+      generatedAt: "2026-03-30T00:00:00.000Z",
+      repoRoot: "/Users/phodal/ai/routa-js",
+      configFile: null,
+      definitions: [],
+      pendingSignals: [],
+      recentRuns: [],
+      warnings: [],
+    },
+  },
   specSourcesState: {
     loading: false,
     error: null,
@@ -207,6 +220,12 @@ vi.mock("@/client/components/harness-design-decision-panel", () => ({
   ),
 }));
 
+vi.mock("@/client/components/harness-automation-panel", () => ({
+  HarnessAutomationPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
+    <div data-testid={`automation-panel-${variant}`}>Automations</div>
+  ),
+}));
+
 vi.mock("@/client/components/harness-fitness-files-dashboard", () => ({
   HarnessFitnessFilesDashboard: () => <div data-testid="fitness-files-dashboard" />,
 }));
@@ -249,6 +268,12 @@ vi.mock("@/client/components/harness-agent-hook-panel", () => ({
 vi.mock("@/client/components/harness-repo-signals-panel", () => ({
   HarnessRepoSignalsPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
     <div data-testid={`repo-signals-panel-${variant}`}>Repo signals</div>
+  ),
+}));
+
+vi.mock("@/client/components/harness-automation-panel", () => ({
+  HarnessAutomationPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
+    <div data-testid={`automation-panel-${variant}`}>Repo automations</div>
   ),
 }));
 

@@ -10,6 +10,7 @@ import {
   type TierValue,
 } from "@/client/components/harness-execution-plan-flow";
 import { HarnessAgentInstructionsPanel } from "@/client/components/harness-agent-instructions-panel";
+import { HarnessAutomationPanel } from "@/client/components/harness-automation-panel";
 import { HarnessDesignDecisionPanel } from "@/client/components/harness-design-decision-panel";
 import { HarnessFitnessFilesDashboard } from "@/client/components/harness-fitness-files-dashboard";
 import { HarnessGovernanceLoopGraph } from "@/client/components/harness-governance-loop-graph";
@@ -36,6 +37,7 @@ type SectionId =
   | "agent-instructions"
   | "design-decisions"
   | "repo-signals"
+  | "automations"
   | "hook-systems"
   | "review-triggers"
   | "release-triggers"
@@ -62,7 +64,8 @@ const SECTIONS: SectionDef[] = [
   { id: "spec-sources", label: "Spec Sources", shortLabel: "Specs", code: "SP" },
   { id: "agent-instructions", label: "Agent Instructions", shortLabel: "Instructions", code: "AI" },
   { id: "design-decisions", label: "Design Decisions", shortLabel: "ADR", code: "DD" },
-  { id: "repo-signals", label: "Repository Signals", shortLabel: "Signals", code: "RS" },
+  { id: "repo-signals", label: "Test Feedback", shortLabel: "Feedback", code: "RS" },
+  { id: "automations", label: "Automations", shortLabel: "Automation", code: "AT" },
   { id: "hook-systems", label: "Hook Systems", shortLabel: "Hooks", code: "HK" },
   { id: "review-triggers", label: "Review Triggers", shortLabel: "Review", code: "RV" },
   { id: "release-triggers", label: "Release Triggers", shortLabel: "Release", code: "RL" },
@@ -187,6 +190,7 @@ export default function HarnessConsolePage() {
     specSourcesState,
     designDecisionsState,
     codeownersState,
+    automationsState,
     reloadInstructions,
   } = useHarnessSettingsData({
     workspaceId,
@@ -318,6 +322,7 @@ export default function HarnessConsolePage() {
     map.set("spec-sources", specSourcesState.data ? { label: `${specSourcesState.data.sources?.length ?? 0} sources` } : null);
     map.set("agent-instructions", instructionsState.data ? { label: instructionsState.data.fileName, tone: instructionsState.data.fallbackUsed ? "warning" : "success" } : null);
     map.set("design-decisions", designDecisionsState.data ? { label: `${designDecisionsState.data.sources?.length ?? 0} docs` } : null);
+    map.set("automations", automationsState.data ? { label: `${automationsState.data.definitions.length} defs` } : null);
     map.set("hook-systems", hookCount > 0 ? { label: `${hookCount} hooks` } : null);
     map.set("review-triggers", hooksState.data?.reviewTriggerFile ? { label: `${hooksState.data.reviewTriggerFile.ruleCount} rules` } : null);
     map.set("release-triggers", hooksState.data?.releaseTriggerFile ? { label: `${hooksState.data.releaseTriggerFile.ruleCount} rules` } : null);
@@ -332,6 +337,7 @@ export default function HarnessConsolePage() {
     return map;
   }, [
     designDecisionsState.data,
+    automationsState.data,
     dimensionSpecs.length,
     hookCount,
     hooksState.data,
@@ -652,6 +658,8 @@ export default function HarnessConsolePage() {
         return <HarnessDesignDecisionPanel {...sharedProps} data={designDecisionsState.data} loading={designDecisionsState.loading} error={designDecisionsState.error} />;
       case "repo-signals":
         return <HarnessRepoSignalsPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...sharedProps} mode="test" />;
+      case "automations":
+        return <HarnessAutomationPanel {...sharedProps} data={automationsState.data} loading={automationsState.loading} error={automationsState.error} />;
       case "hook-systems":
         return (
           <div className="space-y-4">
@@ -726,6 +734,8 @@ export default function HarnessConsolePage() {
       <button type="button" className="desktop-btn desktop-btn-secondary" onClick={() => openBottomPanel("fitness")}>Fitness</button>
     </div>
   );
+
+  const automationCount = automationsState.data?.definitions.length ?? 0;
 
   return (
     <DesktopAppShell
@@ -933,6 +943,7 @@ export default function HarnessConsolePage() {
               <span>{activeWorkspaceTitle ?? "-"}</span>
             </div>
             <div className="flex items-center gap-3">
+              <span>{automationCount} automations</span>
               <span>{hookCount} hooks</span>
               <span>{workflowCount} workflows</span>
             </div>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { PlanResponse, TierValue } from "@/client/components/harness-execution-plan-flow";
+import type { HarnessAutomationResponse } from "@/core/harness/automation-types";
 import type { DesignDecisionResponse } from "@/core/harness/design-decision-types";
 import type { CodeownersResponse } from "@/core/harness/codeowners-types";
 import type { SpecDetectionResponse } from "@/core/harness/spec-detector-types";
@@ -283,6 +284,7 @@ export function useHarnessSettingsData({
   const [specSourcesState, setSpecSourcesState] = useState<QueryState<SpecDetectionResponse>>(emptyQueryState);
   const [designDecisionsState, setDesignDecisionsState] = useState<QueryState<DesignDecisionResponse>>(emptyQueryState);
   const [codeownersState, setCodeownersState] = useState<QueryState<CodeownersResponse>>(emptyQueryState);
+  const [automationsState, setAutomationsState] = useState<QueryState<HarnessAutomationResponse>>(emptyQueryState);
   const [instructionsRefreshState, setInstructionsRefreshState] = useState<InstructionRefreshState>({
     contextKey: "",
     token: 0,
@@ -656,6 +658,45 @@ export function useHarnessSettingsData({
     };
   }, [baseQuery]);
 
+  useEffect(() => {
+    if (!baseQuery) {
+      setAutomationsState(emptyQueryState());
+      return;
+    }
+
+    let cancelled = false;
+    const fetchAutomations = async () => {
+      setAutomationsState((current) => ({ ...current, loading: true, error: null }));
+      try {
+        const response = await fetch(`/api/harness/automations?${baseQuery.toString()}`);
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(typeof payload?.details === "string" ? payload.details : "Failed to load repo-defined automations");
+        }
+        if (!cancelled) {
+          setAutomationsState({
+            loading: false,
+            error: null,
+            data: payload as HarnessAutomationResponse,
+          });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAutomationsState({
+            loading: false,
+            error: error instanceof Error ? error.message : String(error),
+            data: null,
+          });
+        }
+      }
+    };
+
+    void fetchAutomations();
+    return () => {
+      cancelled = true;
+    };
+  }, [baseQuery]);
+
   return {
     specsState,
     planState,
@@ -666,6 +707,7 @@ export function useHarnessSettingsData({
     specSourcesState,
     designDecisionsState,
     codeownersState,
+    automationsState,
     reloadInstructions,
   };
 }

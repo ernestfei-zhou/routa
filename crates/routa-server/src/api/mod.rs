@@ -18,6 +18,7 @@ pub mod github;
 pub mod harness;
 pub(crate) mod harness_hook_preview_events;
 pub(crate) mod harness_instructions_audit;
+pub(crate) mod harness_repo_views;
 pub mod kanban;
 pub mod mcp_routes;
 pub mod mcp_server_mgmt;
