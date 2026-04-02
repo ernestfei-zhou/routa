@@ -14,7 +14,7 @@ interface McpToolDefinition {
   };
 }
 
-type ToolCategory = "Task" | "Agent" | "Note" | "Workspace" | "Git";
+type ToolCategory = "Task" | "Agent" | "Note" | "Workspace" | "Kanban" | "Git";
 
 interface CategoryConfig {
   name: ToolCategory;
@@ -44,6 +44,11 @@ const CATEGORIES: CategoryConfig[] = [
     panelClass: "border-amber-200 bg-amber-50/80 dark:border-amber-900/40 dark:bg-amber-900/10",
   },
   {
+    name: "Kanban",
+    toneClass: "text-cyan-700 dark:text-cyan-300",
+    panelClass: "border-cyan-200 bg-cyan-50/80 dark:border-cyan-900/40 dark:bg-cyan-900/10",
+  },
+  {
     name: "Git",
     toneClass: "text-rose-700 dark:text-rose-300",
     panelClass: "border-rose-200 bg-rose-50/80 dark:border-rose-900/40 dark:bg-rose-900/10",
@@ -51,9 +56,24 @@ const CATEGORIES: CategoryConfig[] = [
 ];
 
 const ESSENTIAL_TOOLS_COUNT = 7;
+const KANBAN_TOOL_NAMES = new Set([
+  "create_board",
+  "list_boards",
+  "get_board",
+  "create_card",
+  "move_card",
+  "update_card",
+  "delete_card",
+  "search_cards",
+  "list_cards_by_column",
+  "request_previous_lane_handoff",
+  "submit_lane_handoff",
+  "decompose_tasks",
+]);
 
 function getToolCategory(name: string): ToolCategory {
   if (name.includes("task") && !name.includes("agent")) return "Task";
+  if (KANBAN_TOOL_NAMES.has(name)) return "Kanban";
   if (
     name.includes("agent") ||
     name === "delegate_task" ||
