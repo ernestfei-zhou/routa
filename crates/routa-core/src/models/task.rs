@@ -803,7 +803,9 @@ pub fn build_task_story_readiness_checks(task: &Task) -> TaskStoryReadinessCheck
         .ok()
         .flatten()
         .and_then(|story| story.story.dependencies_and_sequencing)
-        .is_some_and(|dependencies| !normalize_text(dependencies.unblock_condition.as_deref()).is_empty());
+        .is_some_and(|dependencies| {
+            !normalize_text(dependencies.unblock_condition.as_deref()).is_empty()
+        });
     let objective = format!(
         "{}\n{}",
         normalize_text(Some(task.objective.as_str())),

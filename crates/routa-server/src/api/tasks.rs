@@ -237,12 +237,22 @@ async fn get_task_changes(
     let label = codebase
         .as_ref()
         .and_then(|item| item.label.clone())
-        .unwrap_or_else(|| repo_label_from_path(if repo_path.is_empty() { "repo" } else { &repo_path }));
+        .unwrap_or_else(|| {
+            repo_label_from_path(if repo_path.is_empty() {
+                "repo"
+            } else {
+                &repo_path
+            })
+        });
     let branch = codebase
         .as_ref()
         .and_then(|item| item.branch.clone())
         .unwrap_or_else(|| "unknown".to_string());
-    let source = if worktree.is_some() { "worktree" } else { "repo" };
+    let source = if worktree.is_some() {
+        "worktree"
+    } else {
+        "repo"
+    };
 
     if repo_path.is_empty() {
         return Ok(Json(serde_json::json!({

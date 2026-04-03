@@ -381,9 +381,13 @@ mod tests {
 
     fn tmp_dir() -> PathBuf {
         #[cfg(unix)]
-        { PathBuf::from("/tmp") }
+        {
+            PathBuf::from("/tmp")
+        }
         #[cfg(windows)]
-        { std::env::temp_dir() }
+        {
+            std::env::temp_dir()
+        }
     }
 
     #[test]
@@ -401,7 +405,11 @@ mod tests {
     #[test]
     fn test_run_pattern_match() {
         let runner = ShellRunner::new(&tmp_dir());
-        let cmd = if cfg!(windows) { "echo Tests 42 passed" } else { "echo 'Tests 42 passed'" };
+        let cmd = if cfg!(windows) {
+            "echo Tests 42 passed"
+        } else {
+            "echo 'Tests 42 passed'"
+        };
         let mut m = Metric::new("pattern_test", cmd);
         m.pattern = r"Tests\s+\d+\s+passed".to_string();
         let result = runner.run(&m, false);
@@ -411,7 +419,11 @@ mod tests {
     #[test]
     fn test_run_pattern_no_match() {
         let runner = ShellRunner::new(&tmp_dir());
-        let cmd = if cfg!(windows) { "echo Tests 0 failed" } else { "echo 'Tests 0 failed'" };
+        let cmd = if cfg!(windows) {
+            "echo Tests 0 failed"
+        } else {
+            "echo 'Tests 0 failed'"
+        };
         let mut m = Metric::new("pattern_fail", cmd);
         m.pattern = r"Tests\s+\d+\s+passed".to_string();
         let result = runner.run(&m, false);
