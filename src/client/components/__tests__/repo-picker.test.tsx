@@ -102,8 +102,9 @@ describe("RepoPicker", () => {
     );
 
     const trigger = screen.getByRole("button", {
-      name: "issue-cf7f1e28-feat-kanban-very-long-worktree-name",
+      name: /issue-cf7f1e28-feat.*name/i,
     });
+    expect(trigger.textContent).toContain("...");
     expect(trigger.getAttribute("title")).toBe(
       "issue-cf7f1e28-feat-kanban-very-long-worktree-name\n/Users/phodal/.routa/workspace/default/default/fcfe6cca-4de0-43da-b869-8641df9625e4/issue-cf7f1e28-feat-kanban-very-long-worktree-name",
     );

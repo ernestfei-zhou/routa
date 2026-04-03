@@ -12,7 +12,7 @@ import {v4 as uuidv4} from "uuid";
 import type {UseAcpActions, UseAcpState} from "../hooks/use-acp";
 import {type InputContext, TiptapInput} from "./tiptap-input";
 import type {SkillSummary} from "../skill-client";
-import {type RepoSelection} from "./repo-picker";
+import { shortenRepoPath, type RepoSelection } from "./repo-picker";
 import {SetupView} from "./chat-panel/components";
 import {useChatMessages} from "./chat-panel/hooks";
 import {type ParsedTask,} from "../utils/task-block-parser";
@@ -591,7 +591,7 @@ export function ChatPanel({
                     {t.sessions.repoPath}
                   </span>
                   <span className="truncate font-mono" title={repoSelection.path}>
-                    {repoSelection.path}
+                    {shortenRepoPath(repoSelection.path)}
                   </span>
                 </div>
               )}

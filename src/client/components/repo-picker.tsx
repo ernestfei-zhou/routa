@@ -71,7 +71,7 @@ interface RepoActionResult {
   branch?: string;
 }
 
-function shortenRepoPath(path: string): string {
+export function shortenRepoPath(path: string): string {
   const trimmed = path.trim();
   if (!trimmed) return path;
 
@@ -87,6 +87,15 @@ function shortenRepoPath(path: string): string {
 
   const tail = segments.slice(-3).join("/");
   return normalized.startsWith("~") ? `~/.../${tail}` : `.../${tail}`;
+}
+
+export function shortenRepoName(name: string, maxHead = 20, maxTail = 10): string {
+  const trimmed = name.trim();
+  if (!trimmed) return name;
+  if (trimmed.length <= maxHead + maxTail + 1) {
+    return trimmed;
+  }
+  return `${trimmed.slice(0, maxHead)}...${trimmed.slice(-maxTail)}`;
 }
 
 function buildRepoHoverTitle(selection: RepoSelection): string {
@@ -777,6 +786,7 @@ function SelectedRepoPill({
   const showMutedPath = pathDisplay === "below-muted";
   const [copied, setCopied] = useState(false);
   const repoTitle = buildRepoHoverTitle(value);
+  const shortName = shortenRepoName(value.name);
   const shortPath = shortenRepoPath(value.path);
 
   const handleCopyPath = useCallback(() => {
@@ -800,7 +810,7 @@ function SelectedRepoPill({
           className="text-xs font-medium text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate max-w-[200px]"
           title={repoTitle}
         >
-          {value.name}
+          {shortName}
         </button>
 
         <div className="shrink-0">
