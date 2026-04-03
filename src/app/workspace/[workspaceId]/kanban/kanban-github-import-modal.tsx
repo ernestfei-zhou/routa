@@ -63,7 +63,6 @@ export function KanbanGitHubImportModal({
   const [submitting, setSubmitting] = useState(false);
   const [reloadNonce, setReloadNonce] = useState(0);
 
-  const fallbackLoadError = activeTab === "issues" ? t.kanbanImport.loadFailed : t.kanbanImport.loadPullsFailed;
   const fallbackImportError = activeTab === "issues" ? t.kanbanImport.importFailed : t.kanbanImport.importPullsFailed;
 
   useEffect(() => {
@@ -129,7 +128,8 @@ export function KanbanGitHubImportModal({
         setSelectedItemIds([]);
       } catch (fetchError) {
         if (controller.signal.aborted) return;
-        setError(fetchError instanceof Error ? fetchError.message : fallbackLoadError);
+        const loadFallback = activeTab === "issues" ? t.kanbanImport.loadFailed : t.kanbanImport.loadPullsFailed;
+        setError(fetchError instanceof Error ? fetchError.message : loadFallback);
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
@@ -138,7 +138,7 @@ export function KanbanGitHubImportModal({
     })();
 
     return () => controller.abort();
-  }, [activeTab, reloadNonce, selectedCodebaseId, show, t.kanbanImport.loadFailed, t.kanbanImport.loadPullsFailed, workspaceId, fallbackLoadError]);
+  }, [activeTab, reloadNonce, selectedCodebaseId, show, t.kanbanImport.loadFailed, t.kanbanImport.loadPullsFailed, workspaceId]);
 
   // Reset selection when tab changes
   useEffect(() => {
