@@ -34,9 +34,9 @@ describe("/api/fitness/specs route", () => {
     expect(data.files.slice(0, 5).map((file: { name: string }) => file.name)).toEqual([
       "README.md",
       "manifest.yaml",
+      "backend-architecture.md",
       "code-quality.md",
       "engineering-governance.md",
-      "unit-test.md",
     ]);
 
     const codeQuality = data.files.find((file: { dimension?: string }) => file.dimension === "code_quality");
