@@ -229,4 +229,63 @@ describe("KanbanSessionQueue", () => {
 
     queue.stop();
   });
+
+  it("drops stale running cards that no longer exist before counting board capacity", async () => {
+    await taskStore.save(createTask({
+      id: "task-2",
+      title: "Second task",
+      objective: "Second task",
+      workspaceId: "default",
+      boardId: "board-1",
+      columnId: "backlog",
+      status: TaskStatus.PENDING,
+    }));
+
+    const startGhost = vi.fn().mockResolvedValue({ sessionId: "session-ghost" });
+    const startSecond = vi.fn().mockResolvedValue({ sessionId: "session-2" });
+    const queue = new KanbanSessionQueue(eventBus, taskStore, async () => 1);
+    queue.start();
+
+    await queue.enqueue({
+      cardId: "task-ghost",
+      cardTitle: "Ghost task",
+      boardId: "board-1",
+      workspaceId: "default",
+      columnId: "backlog",
+      start: startGhost,
+    });
+
+    await expect(queue.getBoardSnapshot("board-1")).resolves.toEqual({
+      boardId: "board-1",
+      runningCount: 0,
+      runningCards: [],
+      queuedCount: 0,
+      queuedCardIds: [],
+      queuedCards: [],
+      queuedPositions: {},
+    });
+
+    const second = await queue.enqueue({
+      cardId: "task-2",
+      cardTitle: "Second task",
+      boardId: "board-1",
+      workspaceId: "default",
+      columnId: "backlog",
+      start: startSecond,
+    });
+
+    expect(second).toEqual({ sessionId: "session-2", queued: false });
+    expect(startSecond).toHaveBeenCalledTimes(1);
+    await expect(queue.getBoardSnapshot("board-1")).resolves.toEqual({
+      boardId: "board-1",
+      runningCount: 1,
+      runningCards: [{ cardId: "task-2", cardTitle: "Second task" }],
+      queuedCount: 0,
+      queuedCardIds: [],
+      queuedCards: [],
+      queuedPositions: {},
+    });
+
+    queue.stop();
+  });
 });

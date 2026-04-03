@@ -76,7 +76,7 @@ export class KanbanSessionQueue {
   }
 
   async enqueue(job: KanbanSessionQueueJob): Promise<{ sessionId?: string; queued: boolean; error?: string }> {
-    await this.reconcileQueuedEntries(job.boardId);
+    await this.reconcileBoardEntries(job.boardId);
 
     const existing = this.jobsByCardId.get(job.cardId);
     if (existing?.status === "running") {
@@ -111,7 +111,7 @@ export class KanbanSessionQueue {
   }
 
   async getBoardSnapshot(boardId: string): Promise<KanbanBoardQueueSnapshot> {
-    await this.reconcileQueuedEntries(boardId);
+    await this.reconcileBoardEntries(boardId);
 
     const queuedEntries = this.queuedByBoard.get(boardId) ?? [];
     const queuedPositions = Object.fromEntries(
@@ -129,6 +129,32 @@ export class KanbanSessionQueue {
       queuedCards: queuedEntries.map((entry) => ({ cardId: entry.cardId, cardTitle: entry.cardTitle })),
       queuedPositions,
     };
+  }
+
+  private async reconcileBoardEntries(boardId: string): Promise<void> {
+    await this.reconcileRunningEntries(boardId);
+    await this.reconcileQueuedEntries(boardId);
+  }
+
+  private async reconcileRunningEntries(boardId: string): Promise<void> {
+    const runningEntries = Array.from(this.jobsByCardId.values())
+      .filter((entry) => entry.boardId === boardId && entry.status === "running");
+
+    for (const entry of runningEntries) {
+      const currentEntry = this.jobsByCardId.get(entry.cardId);
+      if (currentEntry !== entry || currentEntry.status !== "running") {
+        continue;
+      }
+
+      const task = await this.taskStore.get(entry.cardId);
+      const isStale = !task
+        || task.boardId !== boardId
+        || (entry.columnId !== undefined && task.columnId !== entry.columnId);
+
+      if (isStale) {
+        this.jobsByCardId.delete(entry.cardId);
+      }
+    }
   }
 
   private async reconcileQueuedEntries(boardId: string): Promise<void> {
@@ -235,7 +261,7 @@ export class KanbanSessionQueue {
   }
 
   private async drainQueue(boardId: string, workspaceId: string): Promise<void> {
-    await this.reconcileQueuedEntries(boardId);
+    await this.reconcileBoardEntries(boardId);
 
     const limit = await this.getConcurrencyLimit(workspaceId, boardId);
     let runningCount = this.countRunning(boardId);

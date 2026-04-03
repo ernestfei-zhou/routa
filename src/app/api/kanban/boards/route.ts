@@ -1,12 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { getRoutaSystem } from "@/core/routa-system";
-import { createKanbanBoard } from "@/core/models/kanban";
+import { createKanbanBoard, getKanbanAutomationSteps } from "@/core/models/kanban";
 import { ensureDefaultBoard } from "@/core/kanban/boards";
 import { getKanbanSessionConcurrencyLimit } from "@/core/kanban/board-session-limits";
 import { getKanbanDevSessionSupervision } from "@/core/kanban/board-session-supervision";
 import { getKanbanEventBroadcaster } from "@/core/kanban/kanban-event-broadcaster";
 import { getKanbanSessionQueue } from "@/core/kanban/workflow-orchestrator-singleton";
+import { processKanbanColumnTransition } from "@/core/kanban/workflow-orchestrator-singleton";
+
+async function reviveMissingEntryAutomations(
+  system: ReturnType<typeof getRoutaSystem>,
+  workspaceId: string,
+  boardId: string,
+): Promise<void> {
+  const board = await system.kanbanBoardStore.get(boardId);
+  if (!board) return;
+
+  const tasks = await system.taskStore.listByWorkspace(workspaceId);
+  for (const task of tasks) {
+    if (task.boardId !== boardId || task.triggerSessionId || !task.columnId) {
+      continue;
+    }
+
+    const column = board.columns.find((entry) => entry.id === task.columnId);
+    const automation = column?.automation;
+    const transitionType = automation?.transitionType ?? "entry";
+    const hasLaneSessionForCurrentColumn = (task.laneSessions ?? []).some((entry) => entry.columnId === task.columnId);
+    if (
+      !automation?.enabled
+      || (transitionType !== "entry" && transitionType !== "both")
+      || getKanbanAutomationSteps(automation).length === 0
+      || hasLaneSessionForCurrentColumn
+    ) {
+      continue;
+    }
+
+    await processKanbanColumnTransition(system, {
+      cardId: task.id,
+      cardTitle: task.title,
+      boardId,
+      workspaceId,
+      fromColumnId: "__revive__",
+      toColumnId: task.columnId,
+      fromColumnName: "Revive",
+      toColumnName: column?.name,
+    });
+  }
+}
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +67,7 @@ export async function GET(request: NextRequest) {
   const boards = await system.kanbanBoardStore.listByWorkspace(workspaceId);
   const workspace = await system.workspaceStore.get(workspaceId);
   const queue = getKanbanSessionQueue(system);
+  await Promise.all(boards.map((board) => reviveMissingEntryAutomations(system, workspaceId, board.id)));
   return NextResponse.json({
     boards: await Promise.all(boards.map(async (board) => ({
       ...board,
