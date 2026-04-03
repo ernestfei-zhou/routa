@@ -91,8 +91,8 @@ export interface ArtifactInfo {
 export interface ArtifactSummaryInfo {
   total: number;
   byType: Partial<Record<ArtifactInfo["type"], number>>;
-  requiredSatisfied: boolean;
-  missingRequired: ArtifactInfo["type"][];
+  requiredSatisfied?: boolean;
+  missingRequired?: ArtifactInfo["type"][];
 }
 
 export interface TaskEvidenceSummaryInfo {

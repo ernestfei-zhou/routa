@@ -713,8 +713,9 @@ function EvidenceBundlePanel({
 
   const reviewable = evidence.artifact.requiredSatisfied
     && (evidence.verification.hasReport || evidence.verification.hasVerdict || evidence.completion.hasSummary);
-  const missingRequired = evidence.artifact.missingRequired.length > 0
-    ? evidence.artifact.missingRequired.join(", ")
+  const missingRequiredArtifacts = evidence.artifact.missingRequired ?? [];
+  const missingRequired = missingRequiredArtifacts.length > 0
+    ? missingRequiredArtifacts.join(", ")
     : t.kanbanDetail.none;
   const artifactBreakdown = Object.entries(evidence.artifact.byType)
     .map(([type, count]) => `${type}: ${count}`)
