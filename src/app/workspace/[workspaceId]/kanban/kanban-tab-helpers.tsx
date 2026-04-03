@@ -18,6 +18,11 @@ interface SpecialistOption {
   defaultProvider?: string;
 }
 
+function normalizeProviderId(providerId: string | null | undefined): string | undefined {
+  const normalized = providerId?.trim();
+  return normalized ? normalized : undefined;
+}
+
 export function extractHistoryText(content: unknown): string | null {
   if (typeof content === "string") return content.trim() || null;
   if (!content || typeof content !== "object") return null;
@@ -103,6 +108,27 @@ export function taskOwnsSession(task: TaskInfo | null | undefined, sessionId: st
   return task.laneSessions?.some((entry) => entry.sessionId === sessionId) ?? false;
 }
 
+export function resolveKanbanBoardAutoProviderId(
+  board: Pick<KanbanBoardInfo, "autoProviderId"> | null | undefined,
+  fallbackProviderId?: string | null,
+): string | undefined {
+  return normalizeProviderId(board?.autoProviderId) ?? normalizeProviderId(fallbackProviderId);
+}
+
+function getProviderDisplayName(providerId: string | undefined, providers: AcpProviderInfo[]): string | undefined {
+  if (!providerId) return undefined;
+  return providers.find((provider) => provider.id === providerId)?.name ?? providerId;
+}
+
+function formatAutoProviderLabel(
+  providerId: string | undefined,
+  providers: AcpProviderInfo[],
+  autoLabel: string,
+): string {
+  const providerName = getProviderDisplayName(providerId, providers);
+  return providerName ? `${autoLabel} (${providerName})` : autoLabel;
+}
+
 export function QueueStatusBadge({
   label,
   count,
@@ -146,13 +172,21 @@ export function formatLaneAutomationSummary(
   automation: ColumnAutomationConfig | undefined,
   providers: AcpProviderInfo[],
   specialists: SpecialistOption[],
+  options: {
+    autoProviderId?: string;
+    autoLabel: string;
+  },
 ): string {
   const resolveSpecialist = createKanbanSpecialistResolver(specialists);
   const steps = getKanbanAutomationSteps(automation);
   const core = steps.map((step) => {
-    const resolvedStep = resolveKanbanAutomationStep(step, resolveSpecialist) ?? step;
-    const transport = resolvedStep.transport ?? "acp";
-    if (transport === "a2a") {
+    const resolvedStep = resolveKanbanAutomationStep(step, resolveSpecialist, {
+      autoProviderId: options.autoProviderId,
+    });
+    if (!resolvedStep) {
+      return "";
+    }
+    if (step.transport === "a2a") {
       const specialist = resolvedStep.specialistId || resolvedStep.specialistName
         ? (getSpecialistDisplayName(findSpecialistById(specialists, resolvedStep.specialistId)) ?? resolvedStep.specialistName)
         : null;
@@ -165,14 +199,18 @@ export function formatLaneAutomationSummary(
       ].filter(Boolean).join(" · ");
     }
 
-    const provider = resolvedStep.providerId
-      ? (providers.find((item) => item.id === resolvedStep.providerId)?.name ?? resolvedStep.providerId)
-      : "Default";
+    const provider = normalizeProviderId(step.providerId)
+      ? getProviderDisplayName(resolvedStep.providerId, providers)
+      : resolvedStep.providerSource === "auto"
+        ? formatAutoProviderLabel(resolvedStep.providerId, providers, options.autoLabel)
+        : resolvedStep.providerSource === "specialist"
+          ? (getProviderDisplayName(resolvedStep.providerId, providers) ?? options.autoLabel)
+          : options.autoLabel;
     const specialist = resolvedStep.specialistId || resolvedStep.specialistName
       ? (getSpecialistDisplayName(findSpecialistById(specialists, resolvedStep.specialistId)) ?? resolvedStep.specialistName)
       : null;
     return [provider, resolvedStep.role ?? "DEVELOPER", specialist].filter(Boolean).join(" · ");
-  }).join(" -> ");
+  }).filter(Boolean).join(" -> ");
   if (automation?.transitionType === "exit") return `${core} ->`;
   if (automation?.transitionType === "both") return `-> ${core} ->`;
   return `-> ${core}`;

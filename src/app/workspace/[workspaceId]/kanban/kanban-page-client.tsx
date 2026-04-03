@@ -103,7 +103,9 @@ export function KanbanPageClient() {
           continue;
         }
         for (const step of column.automation.steps ?? []) {
-          const resolvedStep = resolveKanbanAutomationStep(step, resolveSpecialist);
+          const resolvedStep = resolveKanbanAutomationStep(step, resolveSpecialist, {
+            autoProviderId: board.autoProviderId,
+          });
           if (resolvedStep?.providerId) {
             enabledAutomationProviderIds.add(resolvedStep.providerId);
           }
@@ -115,7 +117,9 @@ export function KanbanPageClient() {
           specialistId: column.automation.specialistId,
           specialistName: column.automation.specialistName,
           specialistLocale: column.automation.specialistLocale,
-        }, resolveSpecialist);
+        }, resolveSpecialist, {
+          autoProviderId: board.autoProviderId,
+        });
         if (fallbackStep?.providerId) {
           enabledAutomationProviderIds.add(fallbackStep.providerId);
         }

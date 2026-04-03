@@ -27,6 +27,7 @@ describe("resolveEffectiveTaskAutomation", () => {
     expect(resolved.canRun).toBe(true);
     expect(resolved.source).toBe("lane");
     expect(resolved.providerId).toBe("claude");
+    expect(resolved.providerSource).toBe("lane");
     expect(resolved.role).toBe("ROUTA");
     expect(resolved.specialistId).toBe("backlog-refiner");
     expect(resolved.specialistName).toBe("Backlog Refiner");
@@ -61,6 +62,7 @@ describe("resolveEffectiveTaskAutomation", () => {
     expect(resolved.canRun).toBe(true);
     expect(resolved.source).toBe("card");
     expect(resolved.providerId).toBe("codex");
+    expect(resolved.providerSource).toBe("card");
     expect(resolved.role).toBe("DEVELOPER");
     expect(resolved.specialistId).toBe("implementor");
     expect(resolved.specialistName).toBe("Implementor");
@@ -85,10 +87,11 @@ describe("resolveEffectiveTaskAutomation", () => {
     expect(resolved.canRun).toBe(false);
     expect(resolved.source).toBe("none");
     expect(resolved.providerId).toBeUndefined();
+    expect(resolved.providerSource).toBe("none");
     expect(resolved.role).toBeUndefined();
   });
 
-  it("inherits provider and role defaults from the selected specialist", () => {
+  it("uses the board auto provider before falling back to specialist defaults", () => {
     const resolveSpecialist = (id: string) => id === "kanban-dev-executor"
       ? {
         name: "Kanban Dev Executor",
@@ -114,16 +117,51 @@ describe("resolveEffectiveTaskAutomation", () => {
         },
       ],
       resolveSpecialist,
+      { autoProviderId: "codex" },
     );
 
-    expect(resolved.providerId).toBe("claude");
+    expect(resolved.providerId).toBe("codex");
+    expect(resolved.providerSource).toBe("auto");
     expect(resolved.role).toBe("CRAFTER");
     expect(resolved.specialistName).toBe("Kanban Dev Executor");
     expect(resolved.step).toMatchObject({
-      providerId: "claude",
+      providerId: "codex",
+      providerSource: "auto",
       role: "CRAFTER",
       specialistName: "Kanban Dev Executor",
     });
+  });
+
+  it("inherits provider and role defaults from the selected specialist when no auto provider exists", () => {
+    const resolved = resolveEffectiveTaskAutomation(
+      {
+        columnId: "dev",
+      },
+      [
+        {
+          id: "dev",
+          automation: {
+            enabled: true,
+            steps: [{
+              id: "implement",
+              specialistId: "kanban-dev-executor",
+            }],
+          },
+        },
+      ],
+      (id) => id === "kanban-dev-executor"
+        ? {
+          name: "Kanban Dev Executor",
+          role: "CRAFTER",
+          defaultProvider: "claude",
+        }
+        : undefined,
+    );
+
+    expect(resolved.providerId).toBe("claude");
+    expect(resolved.providerSource).toBe("specialist");
+    expect(resolved.role).toBe("CRAFTER");
+    expect(resolved.specialistName).toBe("Kanban Dev Executor");
   });
 
   it("resolves a single step with specialist execution defaults", () => {
@@ -147,6 +185,7 @@ describe("resolveEffectiveTaskAutomation", () => {
       specialistName: "Review Guard",
       role: "GATE",
       providerId: "codex",
+      providerSource: "specialist",
     });
   });
 

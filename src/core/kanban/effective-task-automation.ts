@@ -16,6 +16,12 @@ export type AutomationSpecialistResolver = (
   locale?: string,
 ) => AutomationSpecialistSummary | undefined;
 
+export type EffectiveAutomationProviderSource = "card" | "lane" | "auto" | "specialist" | "none";
+
+export interface ResolveAutomationOptions {
+  autoProviderId?: string;
+}
+
 type TaskAutomationFields = {
   columnId?: string;
   assignedProvider?: string;
@@ -29,15 +35,21 @@ type ColumnAutomationFields = {
   automation?: KanbanColumnAutomation;
 };
 
+export interface ResolvedKanbanAutomationStep extends KanbanAutomationStep {
+  providerSource?: Exclude<EffectiveAutomationProviderSource, "card">;
+  specialistDefaultProviderId?: string;
+}
+
 export interface EffectiveTaskAutomation {
   canRun: boolean;
   source: "card" | "lane" | "none";
   laneAutomation?: KanbanColumnAutomation;
-  steps: KanbanAutomationStep[];
+  steps: ResolvedKanbanAutomationStep[];
   stepIndex?: number;
-  step?: KanbanAutomationStep;
+  step?: ResolvedKanbanAutomationStep;
   transport?: KanbanTransport;
   providerId?: string;
+  providerSource?: EffectiveAutomationProviderSource;
   role?: string;
   specialistId?: string;
   specialistName?: string;
@@ -46,19 +58,39 @@ export interface EffectiveTaskAutomation {
   authConfigId?: string;
 }
 
+function normalizeProviderId(providerId: string | null | undefined): string | undefined {
+  const normalized = providerId?.trim();
+  return normalized ? normalized : undefined;
+}
+
 export function resolveKanbanAutomationStep(
   step: KanbanAutomationStep | undefined,
   resolveSpecialist?: AutomationSpecialistResolver,
-): KanbanAutomationStep | undefined {
+  options: ResolveAutomationOptions = {},
+): ResolvedKanbanAutomationStep | undefined {
   if (!step) return undefined;
   const specialist = step.specialistId
     ? resolveSpecialist?.(step.specialistId, step.specialistLocale)
     : undefined;
+  const transport = step.transport === "a2a" ? "acp" : (step.transport ?? "acp");
+  const configuredProviderId = normalizeProviderId(step.providerId);
+  const autoProviderId = normalizeProviderId(options.autoProviderId);
+  const specialistDefaultProviderId = normalizeProviderId(specialist?.defaultProvider);
+  const providerId = configuredProviderId ?? autoProviderId ?? specialistDefaultProviderId;
+  const providerSource = configuredProviderId
+    ? "lane"
+    : autoProviderId
+      ? "auto"
+      : specialistDefaultProviderId
+        ? "specialist"
+        : "none";
 
   return {
     ...step,
-    transport: step.transport === "a2a" ? "acp" : (step.transport ?? "acp"),
-    providerId: step.providerId ?? specialist?.defaultProvider,
+    transport,
+    providerId,
+    providerSource,
+    specialistDefaultProviderId,
     role: step.role ?? specialist?.role,
     specialistName: step.specialistName ?? specialist?.name,
   };
@@ -68,6 +100,7 @@ export function resolveEffectiveTaskAutomation(
   task: TaskAutomationFields,
   boardColumns: ColumnAutomationFields[] = [],
   resolveSpecialist?: AutomationSpecialistResolver,
+  options: ResolveAutomationOptions = {},
 ): EffectiveTaskAutomation {
   const currentColumnId = task.columnId ?? "backlog";
   const laneAutomation = boardColumns.find((column) => column.id === currentColumnId)?.automation;
@@ -89,9 +122,12 @@ export function resolveEffectiveTaskAutomation(
     }]
     : getKanbanAutomationSteps(enabledLaneAutomation);
   const steps = rawSteps
-    .map((step) => resolveKanbanAutomationStep(step, resolveSpecialist))
-    .filter((step): step is KanbanAutomationStep => Boolean(step));
+    .map((step) => resolveKanbanAutomationStep(step, resolveSpecialist, options))
+    .filter((step): step is ResolvedKanbanAutomationStep => Boolean(step));
   const step = steps[0];
+  const providerSource: EffectiveAutomationProviderSource = normalizeProviderId(task.assignedProvider)
+    ? "card"
+    : step?.providerSource ?? "none";
 
   return {
     canRun,
@@ -101,7 +137,8 @@ export function resolveEffectiveTaskAutomation(
     stepIndex: step ? 0 : undefined,
     step,
     transport: step?.transport ?? (canRun ? "acp" : undefined),
-    providerId: task.assignedProvider ?? step?.providerId,
+    providerId: normalizeProviderId(task.assignedProvider) ?? step?.providerId,
+    providerSource,
     role: task.assignedRole ?? step?.role ?? (canRun ? "DEVELOPER" : undefined),
     specialistId: task.assignedSpecialistId ?? step?.specialistId,
     specialistName: task.assignedSpecialistName ?? step?.specialistName,

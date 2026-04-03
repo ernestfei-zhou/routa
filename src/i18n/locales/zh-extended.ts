@@ -492,7 +492,7 @@ export const zhExtended: ExtendedTranslationDictionarySections = {
     manualLane: "手动泳道",
     clearAllCards: "清空所有卡片",
     clearAllConfirm: "确定要清空此工作区看板中的所有卡片吗？",
-    autoFollowsGlobal: "自动跟随全局供应商偏好或专家默认值。",
+    autoFollowsGlobal: "自动跟随当前看板标签页选择的 Provider。",
     exportKanban: "导出",
     importKanban: "导入",
     exportFailed: "导出失败",

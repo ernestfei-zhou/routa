@@ -38,6 +38,7 @@ import {
   extractSessionLiveTail,
   getPreferredTaskSessionId,
   isA2ATaskSession,
+  resolveKanbanBoardAutoProviderId,
   taskOwnsSession,
 } from "./kanban-tab-helpers";
 import { KanbanTabHeader } from "./kanban-tab-header";
@@ -222,6 +223,10 @@ export function KanbanTab({
     [boards, selectedBoardId],
   );
   const boardQueue = board?.queue;
+  const boardAutoProviderId = useMemo(
+    () => resolveKanbanBoardAutoProviderId(board, acp?.selectedProvider),
+    [acp?.selectedProvider, board],
+  );
   const queuedPositions = boardQueue?.queuedPositions ?? {};
 
   useEffect(() => {
@@ -273,6 +278,25 @@ export function KanbanTab({
     acp?.selectSession(sessionId);
   }, [acp]);
 
+  const persistBoardAutoProvider = useCallback(async (providerId: string | null | undefined) => {
+    if (!board?.id) return;
+    await fetch(`/api/kanban/boards/${encodeURIComponent(board.id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ autoProviderId: providerId ?? "" }),
+    });
+  }, [board?.id]);
+
+  const setKanbanBoardProvider = useCallback((providerId: string) => {
+    if (!providerId) return;
+    acp?.setProvider(providerId);
+    if (board?.autoProviderId !== providerId) {
+      void persistBoardAutoProvider(providerId).catch((error) => {
+        console.error("[kanban] Failed to persist board auto provider:", error);
+      });
+    }
+  }, [acp, board?.autoProviderId, persistBoardAutoProvider]);
+
   // Handle agent input submission
   const handleAgentSubmit = useCallback(async () => {
     if (!agentInput.trim() || !onAgentPrompt || agentLoading) return;
@@ -288,7 +312,7 @@ export function KanbanTab({
       });
 
       const sessionId = await onAgentPrompt(agentInput, {
-        provider: acp?.selectedProvider,
+        provider: boardAutoProviderId,
         role: "CRAFTER",
         toolMode: "full",
         allowedNativeTools: [],
@@ -305,7 +329,7 @@ export function KanbanTab({
       setAgentLoading(false);
     }
   }, [
-    acp?.selectedProvider,
+    boardAutoProviderId,
     agentInput,
     agentLoading,
     defaultBoardId,
@@ -439,6 +463,14 @@ export function KanbanTab({
   }, [activeTaskId]);
 
   useEffect(() => {
+    if (!board?.id || !acp?.setProvider) return;
+    if (activeTask?.assignedProvider) return;
+    if (board.autoProviderId && acp.selectedProvider !== board.autoProviderId) {
+      acp.setProvider(board.autoProviderId);
+    }
+  }, [acp, activeTask?.assignedProvider, board?.autoProviderId, board?.id]);
+
+  useEffect(() => {
     if (!activeTask) {
       previousPreferredTaskSessionIdRef.current = null;
       return;
@@ -512,7 +544,12 @@ export function KanbanTab({
       emptySessionRecoveryRef.current = null;
       return;
     }
-    if (!resolveEffectiveTaskAutomation(activeTask, board?.columns ?? [], resolveSpecialist).canRun || activeTask.columnId === "done") {
+    if (!resolveEffectiveTaskAutomation(
+      activeTask,
+      board?.columns ?? [],
+      resolveSpecialist,
+      { autoProviderId: boardAutoProviderId },
+    ).canRun || activeTask.columnId === "done") {
       emptySessionRecoveryRef.current = null;
       return;
     }
@@ -524,7 +561,7 @@ export function KanbanTab({
 
     emptySessionRecoveryRef.current = recoveryKey;
     return scheduleKanbanRefreshBurst(onRefresh);
-  }, [activeSessionId, activeTask, board?.columns, onRefresh, preferredActiveTaskSessionId, resolveSpecialist]);
+  }, [activeSessionId, activeTask, board?.columns, boardAutoProviderId, onRefresh, preferredActiveTaskSessionId, resolveSpecialist]);
 
   // Initialize visible columns when board changes
   useEffect(() => {
@@ -602,7 +639,7 @@ export function KanbanTab({
 
     const result = await acp.createSession(
       cwd ?? defaultCodebase?.repoPath,
-      provider ?? acp.selectedProvider,
+      provider ?? boardAutoProviderId,
       undefined,
       "DEVELOPER",
       workspaceId,
@@ -623,7 +660,14 @@ export function KanbanTab({
 
     openAgentPanel(result.sessionId);
     return result.sessionId;
-  }, [acp, agentSessionId, defaultCodebase?.repoPath, openAgentPanel, workspaceId]);
+  }, [acp, agentSessionId, boardAutoProviderId, defaultCodebase?.repoPath, openAgentPanel, workspaceId]);
+
+  const ensureBoardAutoProviderPersisted = useCallback(async () => {
+    if (!board?.id || !boardAutoProviderId || board.autoProviderId === boardAutoProviderId) {
+      return;
+    }
+    await persistBoardAutoProvider(boardAutoProviderId);
+  }, [board?.autoProviderId, board?.id, boardAutoProviderId, persistBoardAutoProvider]);
 
   const openTaskDetail = useCallback(async (task: TaskInfo) => {
     setActiveTaskId(task.id);
@@ -1078,8 +1122,8 @@ export function KanbanTab({
   }, [localTasks, patchTask]);
 
   async function createTaskCard() {
+    await ensureBoardAutoProviderPersisted();
     const effectiveCodebaseIds = draft.codebaseIds.length > 0 ? draft.codebaseIds : allCodebaseIds;
-    const selectedProvider = acp?.selectedProvider;
     const response = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1097,7 +1141,6 @@ export function KanbanTab({
           ? codebases.find((codebase) => codebase.id === effectiveCodebaseIds[0])?.repoPath
           : defaultCodebase?.repoPath,
         codebaseIds: effectiveCodebaseIds,
-        assignedProvider: selectedProvider,
       }),
     });
     const data = await response.json();
@@ -1115,9 +1158,8 @@ export function KanbanTab({
     issues: GitHubIssueListItemInfo[],
     repo: string,
   ) {
+    await ensureBoardAutoProviderPersisted();
     const importedTasks: TaskInfo[] = [];
-    const selectedProvider = acp?.selectedProvider;
-
     for (const issue of issues) {
       const response = await fetch("/api/tasks", {
         method: "POST",
@@ -1135,7 +1177,6 @@ export function KanbanTab({
           githubUrl: issue.url,
           githubRepo: repo,
           githubState: issue.state,
-          assignedProvider: selectedProvider,
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -1169,9 +1210,8 @@ export function KanbanTab({
     pulls: GitHubPRListItemInfo[],
     repo: string,
   ) {
+    await ensureBoardAutoProviderPersisted();
     const importedTasks: TaskInfo[] = [];
-    const selectedProvider = acp?.selectedProvider;
-
     for (const pull of pulls) {
       const response = await fetch("/api/tasks", {
         method: "POST",
@@ -1190,7 +1230,6 @@ export function KanbanTab({
           githubRepo: repo,
           githubState: pull.state,
           isPullRequest: true,
-          assignedProvider: selectedProvider,
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -1220,15 +1259,18 @@ export function KanbanTab({
   }
 
   async function retryTaskTrigger(taskId: string) {
+    await ensureBoardAutoProviderPersisted();
     const task = localTasks.find((item) => item.id === taskId);
     const effectiveAutomation = task
-      ? resolveEffectiveTaskAutomation(task, board?.columns ?? [], resolveSpecialist)
+      ? resolveEffectiveTaskAutomation(task, board?.columns ?? [], resolveSpecialist, {
+        autoProviderId: boardAutoProviderId,
+      })
       : undefined;
     const retryProviderId = task
       && !task.assignedProvider
       && effectiveAutomation?.transport !== "a2a"
-      && acp?.selectedProvider
-      ? acp.selectedProvider
+      && boardAutoProviderId
+      ? boardAutoProviderId
       : undefined;
     const updated = await patchTask(taskId, {
       retryTrigger: true,
@@ -1282,6 +1324,7 @@ export function KanbanTab({
   async function moveTask(taskId: string, targetColumnId: string) {
     const movingTask = localTasks.find((task) => task.id === taskId);
     if (!movingTask) return;
+    await ensureBoardAutoProviderPersisted();
     setMoveError(null);
 
     let shouldCleanupWorktree = false;
@@ -1403,6 +1446,8 @@ export function KanbanTab({
         repoChangesLoading={repoChangesLoading}
         availableProviders={availableProviders}
         acp={acp}
+        boardAutoProviderId={boardAutoProviderId}
+        onBoardProviderChange={setKanbanBoardProvider}
         kanbanTaskAgentCopy={kanbanTaskAgentCopy}
         agentInput={agentInput}
         setAgentInput={setAgentInput}
@@ -1465,6 +1510,8 @@ export function KanbanTab({
         board={board}
         resolveSpecialist={resolveSpecialist}
         acp={acp}
+        boardAutoProviderId={boardAutoProviderId}
+        onBoardProviderChange={setKanbanBoardProvider}
         detailSplitContainerRef={detailSplitContainerRef}
         detailSplitRatio={detailSplitRatio}
         setIsDraggingDetailSplit={setIsDraggingDetailSplit}

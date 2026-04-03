@@ -306,6 +306,7 @@ export interface KanbanBoardInfo {
   workspaceId: string;
   name: string;
   isDefault: boolean;
+  autoProviderId?: string;
   sessionConcurrencyLimit?: number;
   devSessionSupervision?: KanbanDevSessionSupervisionInfo;
   queue?: KanbanBoardQueueInfo;

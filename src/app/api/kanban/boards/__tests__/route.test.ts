@@ -49,7 +49,11 @@ describe("/api/kanban/boards GET", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     ensureDefaultBoard.mockResolvedValue(undefined);
-    workspaceStore.get.mockResolvedValue(undefined);
+    workspaceStore.get.mockResolvedValue({
+      metadata: {
+        "kanbanAutoProvider:board-1": "codex",
+      },
+    });
     getBoardSnapshot.mockResolvedValue({
       boardId: "board-1",
       runningCount: 0,
@@ -114,7 +118,12 @@ describe("/api/kanban/boards GET", () => {
     ]);
 
     const response = await GET(new NextRequest("http://localhost/api/kanban/boards?workspaceId=workspace-1"));
+    const data = await response.json();
     expect(response.status).toBe(200);
+    expect(data.boards[0]).toMatchObject({
+      id: "board-1",
+      autoProviderId: "codex",
+    });
     expect(processKanbanColumnTransition).toHaveBeenCalledWith(system, expect.objectContaining({
       cardId: "task-1",
       toColumnId: "backlog",

@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getRoutaSystem } from "@/core/routa-system";
 import { createKanbanBoard, getKanbanAutomationSteps } from "@/core/models/kanban";
 import { ensureDefaultBoard } from "@/core/kanban/boards";
+import { getKanbanAutoProvider } from "@/core/kanban/board-auto-provider";
 import { getKanbanSessionConcurrencyLimit } from "@/core/kanban/board-session-limits";
 import { getKanbanDevSessionSupervision } from "@/core/kanban/board-session-supervision";
 import { getKanbanEventBroadcaster } from "@/core/kanban/kanban-event-broadcaster";
@@ -71,6 +72,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     boards: await Promise.all(boards.map(async (board) => ({
       ...board,
+      autoProviderId: getKanbanAutoProvider(workspace?.metadata, board.id),
       sessionConcurrencyLimit: getKanbanSessionConcurrencyLimit(workspace?.metadata, board.id),
       devSessionSupervision: getKanbanDevSessionSupervision(workspace?.metadata, board.id),
       queue: await queue.getBoardSnapshot(board.id),

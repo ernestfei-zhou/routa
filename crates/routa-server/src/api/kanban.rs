@@ -149,6 +149,15 @@ fn get_session_concurrency_limit(metadata: &HashMap<String, String>, board_id: &
         .unwrap_or(1)
 }
 
+fn get_auto_provider(metadata: &HashMap<String, String>, board_id: &str) -> Option<String> {
+    let key = format!("kanbanAutoProvider:{}", board_id);
+    metadata
+        .get(&key)
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct KanbanDevSessionSupervision {
@@ -459,6 +468,7 @@ struct UpdateBoardRequest {
     name: Option<String>,
     columns: Option<serde_json::Value>,
     is_default: Option<bool>,
+    auto_provider_id: Option<String>,
     session_concurrency_limit: Option<u32>,
     dev_session_supervision: Option<PartialKanbanDevSessionSupervision>,
 }
@@ -498,6 +508,9 @@ async fn update_board(
 
     if let Some(limit) = body.session_concurrency_limit {
         persist_session_concurrency_limit(&state, &workspace_id, &board_id, limit).await?;
+    }
+    if let Some(auto_provider_id) = body.auto_provider_id {
+        persist_auto_provider(&state, &workspace_id, &board_id, Some(auto_provider_id)).await?;
     }
     if let Some(dev_session_supervision) = body.dev_session_supervision {
         persist_dev_session_supervision(&state, &workspace_id, &board_id, dev_session_supervision)
@@ -799,6 +812,28 @@ async fn persist_session_concurrency_limit(
     Ok(())
 }
 
+async fn persist_auto_provider(
+    state: &AppState,
+    workspace_id: &str,
+    board_id: &str,
+    provider_id: Option<String>,
+) -> Result<(), ServerError> {
+    let workspace = state.workspace_store.get(workspace_id).await.ok().flatten();
+    if let Some(mut workspace) = workspace {
+        let key = format!("kanbanAutoProvider:{}", board_id);
+        if let Some(provider_id) = provider_id
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+        {
+            workspace.metadata.insert(key, provider_id);
+        } else {
+            workspace.metadata.remove(&key);
+        }
+        state.workspace_store.save(&workspace).await?;
+    }
+    Ok(())
+}
+
 async fn persist_dev_session_supervision(
     state: &AppState,
     workspace_id: &str,
@@ -899,6 +934,11 @@ async fn add_board_runtime_meta(
     object.insert(
         "sessionConcurrencyLimit".to_string(),
         serde_json::json!(get_session_concurrency_limit(metadata, &board_id)),
+    );
+    object.insert(
+        "autoProviderId".to_string(),
+        serde_json::to_value(get_auto_provider(metadata, &board_id))
+            .unwrap_or(serde_json::Value::Null),
     );
     object.insert(
         "devSessionSupervision".to_string(),

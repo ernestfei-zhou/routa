@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRoutaSystem } from "@/core/routa-system";
 import type { KanbanColumn } from "@/core/models/kanban";
 import {
+  getKanbanAutoProvider,
+  setKanbanAutoProvider,
+} from "@/core/kanban/board-auto-provider";
+import {
   getKanbanSessionConcurrencyLimit,
   setKanbanSessionConcurrencyLimit,
 } from "@/core/kanban/board-session-limits";
@@ -19,6 +23,7 @@ interface PatchBoardBody {
   name?: string;
   columns?: KanbanColumn[];
   isDefault?: boolean;
+  autoProviderId?: string | null;
   sessionConcurrencyLimit?: number;
   devSessionSupervision?: Partial<KanbanDevSessionSupervision>;
 }
@@ -40,6 +45,7 @@ export async function GET(
   return NextResponse.json({
     board: {
       ...board,
+      autoProviderId: getKanbanAutoProvider(workspace?.metadata, board.id),
       sessionConcurrencyLimit: getKanbanSessionConcurrencyLimit(workspace?.metadata, board.id),
       devSessionSupervision: getKanbanDevSessionSupervision(workspace?.metadata, board.id),
       queue: await queue.getBoardSnapshot(board.id),
@@ -78,9 +84,20 @@ export async function PATCH(
 
   await system.kanbanBoardStore.save(updated);
 
-  if (body.sessionConcurrencyLimit !== undefined || body.devSessionSupervision !== undefined) {
+  if (
+    body.autoProviderId !== undefined
+    || body.sessionConcurrencyLimit !== undefined
+    || body.devSessionSupervision !== undefined
+  ) {
     const workspace = await system.workspaceStore.get(existing.workspaceId);
     let nextMetadata = workspace?.metadata;
+    if (body.autoProviderId !== undefined) {
+      nextMetadata = setKanbanAutoProvider(
+        nextMetadata,
+        boardId,
+        body.autoProviderId,
+      );
+    }
     if (body.sessionConcurrencyLimit !== undefined) {
       nextMetadata = setKanbanSessionConcurrencyLimit(
         nextMetadata,
@@ -115,6 +132,7 @@ export async function PATCH(
   return NextResponse.json({
     board: {
       ...updated,
+      autoProviderId: getKanbanAutoProvider(workspace?.metadata, boardId),
       sessionConcurrencyLimit: getKanbanSessionConcurrencyLimit(workspace?.metadata, boardId),
       devSessionSupervision: getKanbanDevSessionSupervision(workspace?.metadata, boardId),
       queue: await queue.getBoardSnapshot(boardId),

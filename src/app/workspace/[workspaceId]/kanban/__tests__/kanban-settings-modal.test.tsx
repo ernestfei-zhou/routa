@@ -165,6 +165,37 @@ describe("KanbanSettingsModal", () => {
     expect(screen.queryAllByRole("option", { name: "Team QA" })).toHaveLength(0);
   });
 
+  it("shows the resolved auto provider in lane summaries", () => {
+    const reviewBoard: KanbanBoardInfo = {
+      ...board,
+      autoProviderId: "codex",
+      columns: [board.columns[1]],
+    };
+
+    render(
+      <KanbanSettingsModal
+        board={reviewBoard}
+        columnAutomation={{
+          review: {
+            enabled: true,
+            steps: [{ id: "step-1", role: "GATE", specialistId: "kanban-review-guard" }],
+          },
+        }}
+        availableProviders={[
+          { id: "claude", name: "Claude Code", description: "Claude Code provider", command: "claude" },
+          { id: "codex", name: "Codex", description: "Codex provider", command: "codex-acp" },
+        ]}
+        specialists={[{ id: "kanban-review-guard", name: "Review Guard", role: "GATE" }]}
+        specialistLanguage="en"
+        onClose={vi.fn()}
+        onClearAll={vi.fn(async () => {})}
+        onSave={vi.fn(async () => {})}
+      />,
+    );
+
+    expect(screen.getByText(/Auto \(Codex\) • Review Guard/i)).toBeTruthy();
+  });
+
   it("keeps the selected lane workspace free of redundant summary labels", () => {
     const reviewBoard: KanbanBoardInfo = {
       ...board,

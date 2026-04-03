@@ -125,8 +125,13 @@ function formatAutomationStepSummary(
   step: KanbanAutomationStep,
   availableProviders: AcpProviderInfo[],
   specialists: SpecialistOption[],
+  autoProviderId?: string | null,
 ): string {
-  const resolvedStep = resolveKanbanAutomationStep(step, createKanbanSpecialistResolver(specialists)) ?? step;
+  const resolvedStep = resolveKanbanAutomationStep(
+    step,
+    createKanbanSpecialistResolver(specialists),
+    { autoProviderId: autoProviderId ?? undefined },
+  ) ?? step;
   if ((resolvedStep.transport ?? "acp") === "a2a") {
     return [
       "A2A",
@@ -542,6 +547,7 @@ export function KanbanCardDetail({
               sessions={sessions ?? []}
               specialists={specialists}
               specialistLanguage={specialistLanguage}
+              autoProviderId={selectedProvider ?? undefined}
               currentSessionId={activeRunSessionId}
               onSelectSession={onSelectSession}
               compact={compactMode}
@@ -1040,7 +1046,9 @@ function ExecutionSection({
     () => createKanbanSpecialistResolver(specialists),
     [specialists],
   );
-  const effectiveAutomation = resolveEffectiveTaskAutomation(task, boardColumns, resolveSpecialist);
+  const effectiveAutomation = resolveEffectiveTaskAutomation(task, boardColumns, resolveSpecialist, {
+    autoProviderId: selectedProvider ?? undefined,
+  });
   const canRunTask = effectiveAutomation.canRun && task.columnId !== "done";
   const hasCardOverride = Boolean(task.assignedProvider || task.assignedRole || task.assignedSpecialistId || task.assignedSpecialistName);
   const usesSelectedProvider = Boolean(
@@ -1100,7 +1108,12 @@ function ExecutionSection({
       )
     : manualRunTarget;
   const lanePipeline = laneSteps.length > 0
-    ? laneSteps.map((step) => formatAutomationStepSummary(step, availableProviders, specialists)).join(" -> ")
+    ? laneSteps.map((step) => formatAutomationStepSummary(
+      step,
+      availableProviders,
+      specialists,
+      selectedProvider,
+    )).join(" -> ")
     : t.kanbanDetail.noLaneAutomation;
   const hasRecordedRuns = getOrderedSessionIds(task).length > 0;
   const transitionArtifacts = resolveKanbanTransitionArtifacts(boardColumns, task.columnId);

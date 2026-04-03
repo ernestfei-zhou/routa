@@ -225,7 +225,7 @@ describe("KanbanTab GitHub import", () => {
     vi.unstubAllGlobals();
   });
 
-  it("preserves the selected ACP provider when importing backlog issues", async () => {
+  it("imports backlog issues without creating a task-level provider override", async () => {
     desktopAwareFetch.mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === "/api/github/issues?workspaceId=workspace-1&codebaseId=codebase-1") {
@@ -253,12 +253,22 @@ describe("KanbanTab GitHub import", () => {
 
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (url === "/api/kanban/boards/board-1" && init?.method === "PATCH") {
+        return {
+          ok: true,
+          json: async () => ({
+            board: {
+              ...board,
+              autoProviderId: "codex",
+            },
+          }),
+        } as Response;
+      }
       if (url === "/api/tasks" && init?.method === "POST") {
         return {
           ok: true,
           json: async () => ({
             task: createTask("task-imported", "Imported issue", {
-              assignedProvider: "codex",
               codebaseIds: ["codebase-1"],
             }),
           }),
@@ -352,7 +362,6 @@ describe("KanbanTab GitHub import", () => {
           githubUrl: "https://github.com/phodal/routa-js/issues/161",
           githubRepo: "phodal/routa-js",
           githubState: "open",
-          assignedProvider: "codex",
         }),
       });
     });
@@ -364,15 +373,25 @@ describe("KanbanTab manual card creation", () => {
     vi.unstubAllGlobals();
   });
 
-  it("preserves the selected ACP provider when creating a manual card", async () => {
+  it("creates a manual card without creating a task-level provider override", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (url === "/api/kanban/boards/board-1" && init?.method === "PATCH") {
+        return {
+          ok: true,
+          json: async () => ({
+            board: {
+              ...board,
+              autoProviderId: "codex",
+            },
+          }),
+        } as Response;
+      }
       if (url === "/api/tasks" && init?.method === "POST") {
         return {
           ok: true,
           json: async () => ({
             task: createTask("task-manual", "create a js hello world", {
-              assignedProvider: "codex",
               codebaseIds: ["codebase-1"],
             }),
           }),
@@ -476,7 +495,6 @@ describe("KanbanTab manual card creation", () => {
           creationSource: "manual",
           repoPath: "/Users/phodal/repos/routa-js",
           codebaseIds: ["codebase-1"],
-          assignedProvider: "codex",
         }),
       });
     });
@@ -493,6 +511,7 @@ describe("KanbanTab manual run provider selection", () => {
 
     const automatedBoard: KanbanBoardInfo = {
       ...board,
+      autoProviderId: "codex",
       columns: [
         {
           id: "backlog",
@@ -501,7 +520,6 @@ describe("KanbanTab manual run provider selection", () => {
           stage: "backlog",
           automation: {
             enabled: true,
-            providerId: "opencode",
             role: "ROUTA",
             specialistId: "backlog-refiner",
             specialistName: "Backlog Refiner",
@@ -540,6 +558,17 @@ describe("KanbanTab manual run provider selection", () => {
 
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (init?.method === "PATCH" && url === "/api/kanban/boards/board-1") {
+        return {
+          ok: true,
+          json: async () => ({
+            board: {
+              ...automatedBoard,
+              autoProviderId: "codex",
+            },
+          }),
+        } as Response;
+      }
       if (init?.method === "PATCH" && url === "/api/tasks/task-1") {
         return {
           ok: true,
@@ -586,6 +615,97 @@ describe("KanbanTab manual run provider selection", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ retryTrigger: true, retryProviderId: "codex" }),
       });
+    });
+  });
+
+  it("persists the board auto provider when the Kanban tab selection changes", async () => {
+    const automatedBoard: KanbanBoardInfo = {
+      ...board,
+      autoProviderId: "codex",
+      columns: [
+        {
+          id: "backlog",
+          name: "Backlog",
+          position: 0,
+          stage: "backlog",
+          automation: {
+            enabled: true,
+            role: "ROUTA",
+            specialistId: "backlog-refiner",
+            specialistName: "Backlog Refiner",
+            transitionType: "exit",
+          },
+        },
+      ],
+    };
+    const acp = {
+      connected: true,
+      sessionId: null,
+      updates: [],
+      providers: [],
+      selectedProvider: "codex",
+      loading: false,
+      error: null,
+      authError: null,
+      dockerConfigError: null,
+      connect: vi.fn(),
+      createSession: vi.fn(),
+      selectSession: vi.fn(),
+      setProvider: vi.fn(),
+      setMode: vi.fn(),
+      prompt: vi.fn(),
+      promptSession: vi.fn(),
+      respondToUserInput: vi.fn(),
+      respondToUserInputForSession: vi.fn(),
+      writeTerminal: vi.fn(),
+      resizeTerminal: vi.fn(),
+      cancel: vi.fn(),
+      disconnect: vi.fn(),
+      clearAuthError: vi.fn(),
+      clearDockerConfigError: vi.fn(),
+      listProviderModels: vi.fn(),
+    } satisfies Partial<UseAcpState & UseAcpActions> as UseAcpState & UseAcpActions;
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (init?.method === "PATCH" && url === "/api/kanban/boards/board-1") {
+        return {
+          ok: true,
+          json: async () => ({ board: { ...automatedBoard, autoProviderId: "claude" } }),
+        } as Response;
+      }
+      throw new Error(`Unexpected fetch: ${init?.method ?? "GET"} ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <KanbanTab
+        workspaceId="workspace-1"
+        boards={[automatedBoard]}
+        tasks={[createTask("task-1", "Story One")]}
+        sessions={[]}
+        providers={[
+          { id: "codex", name: "Codex", description: "Codex provider", command: "codex-acp", status: "available" },
+          { id: "claude", name: "Claude Code", description: "Claude Code provider", command: "claude", status: "available" },
+        ]}
+        specialists={[{ id: "backlog-refiner", name: "Backlog Refiner", role: "ROUTA" }]}
+        codebases={[]}
+        onRefresh={vi.fn()}
+        acp={acp}
+        onAgentPrompt={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("kanban-agent-provider"));
+    fireEvent.click(screen.getByRole("button", { name: /Claude Code/i }));
+
+    await waitFor(() => {
+      expect(acp.setProvider).toHaveBeenCalledWith("claude");
+      expect(fetchMock).toHaveBeenCalledWith("/api/kanban/boards/board-1", expect.objectContaining({
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ autoProviderId: "claude" }),
+      }));
     });
   });
 });
@@ -734,7 +854,7 @@ describe.skip("KanbanTab card detail manual runs", () => {
 
     const runButton = await screen.findByTestId("kanban-detail-run");
     expect(runButton.textContent).toBe("Run");
-    expect(screen.getByText(/Manual runs use the current lane default/i)).toBeTruthy();
+    expect(screen.getByText(/current lane default/i)).toBeTruthy();
 
     fireEvent.click(runButton);
 
@@ -742,7 +862,7 @@ describe.skip("KanbanTab card detail manual runs", () => {
       expect(fetchMock).toHaveBeenCalledWith("/api/tasks/task-1", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ retryTrigger: true, retryProviderId: "claude" }),
+        body: JSON.stringify({ retryTrigger: true }),
       });
     });
   });

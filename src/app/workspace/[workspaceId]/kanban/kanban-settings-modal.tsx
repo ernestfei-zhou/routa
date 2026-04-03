@@ -4,6 +4,7 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import type { AcpProviderInfo } from "@/client/acp-client";
 import { AcpProviderDropdown } from "@/client/components/acp-provider-dropdown";
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
+import { resolveKanbanAutomationStep } from "@/core/kanban/effective-task-automation";
 import {
   DEFAULT_DEV_REQUIRED_TASK_FIELDS,
   getKanbanAutomationSteps,
@@ -147,10 +148,6 @@ function getStepTransport(step?: KanbanAutomationStep): KanbanTransport {
   return step?.transport ?? "acp";
 }
 
-function isA2AStep(step?: KanbanAutomationStep): boolean {
-  return getStepTransport(step) === "a2a";
-}
-
 function setAutomationStepTransport(step: KanbanAutomationStep, _transport: KanbanTransport): KanbanAutomationStep {
   return {
     ...step,
@@ -201,12 +198,20 @@ function getColumnWorkflowSummary(
   automation: ColumnAutomationConfig | undefined,
   providers: AcpProviderInfo[],
   specialists: SpecialistOption[],
+  autoProviderId: string | undefined,
+  autoLabel: string,
 ): string {
   const mode = getColumnWorkflowMode(column, automation);
   if (mode === "manual") {
     return isManualOnlyColumn(column) ? "Manual lane only" : "Manual lane";
   }
-  return getAutomationSummary(automation ?? { enabled: false }, providers, specialists);
+  return getAutomationSummary(
+    automation ?? { enabled: false },
+    providers,
+    specialists,
+    autoProviderId,
+    autoLabel,
+  );
 }
 
 function loadKanbanExportWorkspaceId(defaultWorkspaceId: string): string {
@@ -901,7 +906,14 @@ export function KanbanSettingsModal({
                               <div className="min-w-0">
                                 <div className={`text-[12px] font-semibold ${active ? "text-white" : "text-slate-900 dark:text-slate-100"}`}>{column.name}</div>
                                 <div className={`mt-0.5 truncate text-[10px] leading-4 ${active ? "text-slate-300" : "text-slate-500 dark:text-slate-400"}`}>
-                                  {column.id} · {getColumnWorkflowSummary(column, automation, availableProviders, specialists)}
+                                  {column.id} · {getColumnWorkflowSummary(
+                                    column,
+                                    automation,
+                                    availableProviders,
+                                    specialists,
+                                    board.autoProviderId,
+                                    t.common.auto,
+                                  )}
                                 </div>
                               </div>
                               <div
@@ -1657,35 +1669,74 @@ function resolveProviderName(providerId: string | undefined, providers: AcpProvi
   return providers.find((provider) => provider.id === providerId)?.name ?? providerId;
 }
 
+function formatAutoProviderLabel(
+  providerId: string | undefined,
+  providers: AcpProviderInfo[],
+  autoLabel: string,
+): string {
+  const providerName = resolveProviderName(providerId, providers);
+  return providerName ? `${autoLabel} (${providerName})` : autoLabel;
+}
+
 function formatAutomationStepSummary(
   step: KanbanAutomationStep,
   index: number,
   providers: AcpProviderInfo[],
   specialists: SpecialistOption[],
+  autoProviderId: string | undefined,
+  autoLabel: string,
 ): string {
-  if (isA2AStep(step)) {
-    const specialist = getSpecialistDisplayName(findSpecialistById(specialists, step.specialistId)) ?? step.specialistName;
+  const resolveSpecialist = (specialistId: string, locale?: string) => {
+    void locale;
+    const specialist = findSpecialistById(specialists, specialistId);
+    if (!specialist) return undefined;
+    return {
+      name: specialist.name,
+      role: specialist.role,
+      defaultProvider: specialist.defaultProvider,
+    };
+  };
+  const resolvedStep = resolveKanbanAutomationStep(step, resolveSpecialist, { autoProviderId });
+  if (!resolvedStep) {
+    return `Step ${index + 1}`;
+  }
+
+  if (step.transport === "a2a") {
+    const specialist = getSpecialistDisplayName(findSpecialistById(specialists, resolvedStep.specialistId)) ?? resolvedStep.specialistName;
     return [
       "A2A",
-      specialist ?? step.role ?? `Step ${index + 1}`,
-      formatAgentCardTarget(step.agentCardUrl),
-      step.skillId ? `skill:${step.skillId}` : undefined,
+      specialist ?? resolvedStep.role ?? `Step ${index + 1}`,
+      formatAgentCardTarget(resolvedStep.agentCardUrl),
+      resolvedStep.skillId ? `skill:${resolvedStep.skillId}` : undefined,
     ].filter(Boolean).join(" • ");
   }
 
-  const provider = resolveProviderName(step.providerId, providers) ?? "Default";
-  const specialist = getSpecialistDisplayName(findSpecialistById(specialists, step.specialistId)) ?? step.specialistName;
-  return [provider, specialist ?? step.role ?? `Step ${index + 1}`].filter(Boolean).join(" • ");
+  const provider = step.providerId
+    ? resolveProviderName(resolvedStep.providerId, providers) ?? autoLabel
+    : resolvedStep.providerSource === "auto"
+      ? formatAutoProviderLabel(resolvedStep.providerId, providers, autoLabel)
+      : resolveProviderName(resolvedStep.providerId, providers) ?? autoLabel;
+  const specialist = getSpecialistDisplayName(findSpecialistById(specialists, resolvedStep.specialistId)) ?? resolvedStep.specialistName;
+  return [provider, specialist ?? resolvedStep.role ?? `Step ${index + 1}`].filter(Boolean).join(" • ");
 }
 
 function getAutomationSummary(
   automation: ColumnAutomationConfig,
   providers: AcpProviderInfo[],
   specialists: SpecialistOption[],
+  autoProviderId: string | undefined,
+  autoLabel: string,
 ): string {
   const steps = getEditableAutomationSteps(automation);
   return [
-    steps.map((step, index) => formatAutomationStepSummary(step, index, providers, specialists)).join(" -> "),
+    steps.map((step, index) => formatAutomationStepSummary(
+      step,
+      index,
+      providers,
+      specialists,
+      autoProviderId,
+      autoLabel,
+    )).join(" -> "),
     formatTriggerLabel(automation.transitionType),
   ].join(" • ");
 }

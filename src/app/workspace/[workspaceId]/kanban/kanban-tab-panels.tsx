@@ -21,6 +21,7 @@ import {
   formatLaneAutomationSummary,
   getTaskLaneSession,
   isA2ATaskSession,
+  resolveKanbanBoardAutoProviderId,
 } from "./kanban-tab-helpers";
 import type { ColumnAutomationConfig } from "./kanban-settings-modal";
 import type { KanbanBoardInfo, SessionInfo, TaskInfo, WorktreeInfo } from "../types";
@@ -51,6 +52,8 @@ export function KanbanBoardSurface({
   repoChangesLoading,
   availableProviders,
   acp,
+  boardAutoProviderId,
+  onBoardProviderChange,
   kanbanTaskAgentCopy,
   agentInput,
   setAgentInput,
@@ -98,6 +101,8 @@ export function KanbanBoardSurface({
   repoChangesLoading: boolean;
   availableProviders: AcpProviderInfo[];
   acp?: UseAcpState & UseAcpActions;
+  boardAutoProviderId?: string;
+  onBoardProviderChange: (providerId: string) => void;
   kanbanTaskAgentCopy: KanbanTaskAgentCopy;
   agentInput: string;
   setAgentInput: Dispatch<SetStateAction<string>>;
@@ -249,8 +254,8 @@ export function KanbanBoardSurface({
                   <div className="shrink-0 border-r border-slate-200 dark:border-slate-700">
                     <AcpProviderDropdown
                       providers={availableProviders}
-                    selectedProvider={acp?.selectedProvider ?? ""}
-                    onProviderChange={(providerId) => acp?.setProvider(providerId)}
+                    selectedProvider={resolveKanbanBoardAutoProviderId(board, acp?.selectedProvider) ?? ""}
+                    onProviderChange={(providerId) => onBoardProviderChange(providerId)}
                     disabled={!acp?.connected || availableProviders.length === 0}
                     ariaLabel={kanbanTaskAgentCopy.providerAriaLabel}
                     dataTestId="kanban-agent-provider"
@@ -350,10 +355,16 @@ export function KanbanBoardSurface({
                         <div
                           className="truncate text-[10px] leading-4 text-slate-500 dark:text-slate-400"
                           data-testid={`kanban-column-automation-${column.id}`}
-                          title={laneAutomation?.enabled ? formatLaneAutomationSummary(laneAutomation, providers, specialists) : column.stage === "blocked" ? t.kanbanBoard.manualLaneOnly : t.kanbanBoard.manualLane}
+                          title={laneAutomation?.enabled ? formatLaneAutomationSummary(laneAutomation, providers, specialists, {
+                            autoProviderId: boardAutoProviderId,
+                            autoLabel: t.common.auto,
+                          }) : column.stage === "blocked" ? t.kanbanBoard.manualLaneOnly : t.kanbanBoard.manualLane}
                         >
                           {laneAutomation?.enabled
-                            ? formatLaneAutomationSummary(laneAutomation, providers, specialists)
+                            ? formatLaneAutomationSummary(laneAutomation, providers, specialists, {
+                              autoProviderId: boardAutoProviderId,
+                              autoLabel: t.common.auto,
+                            })
                             : column.stage === "blocked"
                               ? t.kanbanBoard.manualLaneOnly
                               : t.kanbanBoard.manualLane}
@@ -400,7 +411,7 @@ export function KanbanBoardSurface({
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{kanbanTaskAgentCopy.panelTitle}</div>
                 <div className="truncate text-[11px] text-slate-400 dark:text-slate-500">
-                  {agentSession?.provider ?? acp.selectedProvider} · {agentSessionId.slice(0, 12)}...
+                  {agentSession?.provider ?? boardAutoProviderId ?? acp.selectedProvider} · {agentSessionId.slice(0, 12)}...
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -570,6 +581,8 @@ export function KanbanTaskDetailOverlay({
   board,
   resolveSpecialist,
   acp,
+  boardAutoProviderId,
+  onBoardProviderChange,
   detailSplitContainerRef,
   detailSplitRatio,
   setIsDraggingDetailSplit,
@@ -598,6 +611,8 @@ export function KanbanTaskDetailOverlay({
   board: KanbanBoardInfo | null;
   resolveSpecialist: ReturnType<typeof import("./kanban-card-session-utils").createKanbanSpecialistResolver>;
   acp?: UseAcpState & UseAcpActions;
+  boardAutoProviderId?: string;
+  onBoardProviderChange: (providerId: string) => void;
   detailSplitContainerRef: RefObject<HTMLDivElement | null>;
   detailSplitRatio: number;
   setIsDraggingDetailSplit: Dispatch<SetStateAction<boolean>>;
@@ -625,7 +640,9 @@ export function KanbanTaskDetailOverlay({
   const showEmptySessionPane = Boolean(
     activeTask &&
     !activeSessionId &&
-    resolveEffectiveTaskAutomation(activeTask, board?.columns ?? [], resolveSpecialist).canRun &&
+    resolveEffectiveTaskAutomation(activeTask, board?.columns ?? [], resolveSpecialist, {
+      autoProviderId: resolveKanbanBoardAutoProviderId(board, boardAutoProviderId),
+    }).canRun &&
     activeTask.columnId !== "done",
   );
   const selectedLaneSession = getTaskLaneSession(activeTask, activeSessionId);
@@ -673,14 +690,14 @@ export function KanbanTaskDetailOverlay({
                   sessionInfo={sessionInfo}
                   sessions={combinedSessions}
                   fullWidth={!hasSessionPane}
-                  selectedProvider={acp?.selectedProvider ?? null}
+                  selectedProvider={resolveKanbanBoardAutoProviderId(board, boardAutoProviderId) ?? null}
                   onPatchTask={patchTask}
                   onRetryTrigger={retryTaskTrigger}
                   onDelete={() => confirmDeleteTask(task)}
                   onRefresh={onRefresh}
                   onProviderChange={(providerId) => {
-                    if (acp && providerId) {
-                      acp.setProvider(providerId);
+                    if (providerId) {
+                      onBoardProviderChange(providerId);
                     }
                   }}
                   onRepositoryChange={(codebaseIds) => {
@@ -738,6 +755,7 @@ export function KanbanTaskDetailOverlay({
                     availableProviders={availableProviders}
                     specialists={specialists}
                     specialistLanguage={specialistLanguage}
+                    autoProviderId={resolveKanbanBoardAutoProviderId(board, boardAutoProviderId)}
                     onCloseSession={closeTaskDetail}
                   />
                 </div>

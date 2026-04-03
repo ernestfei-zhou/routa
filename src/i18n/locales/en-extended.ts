@@ -492,7 +492,7 @@ export const enExtended: ExtendedTranslationDictionarySections = {
     manualLane: "Manual lane",
     clearAllCards: "Clear all cards",
     clearAllConfirm: "Clear all cards from this workspace board?",
-    autoFollowsGlobal: "Auto follows the global provider preference or specialist default.",
+    autoFollowsGlobal: "Auto follows the current Kanban tab provider.",
     exportKanban: "Export",
     importKanban: "Import",
     exportFailed: "Export failed",

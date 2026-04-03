@@ -115,9 +115,12 @@ function formatExpectedRunTarget(
   availableProviders: AcpProviderInfo[],
   specialists: KanbanSpecialistOption[],
   workspaceDefaultLabel: string,
+  autoProviderId?: string,
 ): string {
   const resolveSpecialist = createKanbanSpecialistResolver(specialists);
-  const effectiveAutomation = resolveEffectiveTaskAutomation(task, boardColumns, resolveSpecialist);
+  const effectiveAutomation = resolveEffectiveTaskAutomation(task, boardColumns, resolveSpecialist, {
+    autoProviderId,
+  });
   const specialistName = getSpecialistName(
     effectiveAutomation.specialistId,
     effectiveAutomation.specialistName,
@@ -184,6 +187,7 @@ export function KanbanCardActivityPanel({
   sessions,
   specialists,
   specialistLanguage = "en",
+  autoProviderId: _autoProviderId,
   currentSessionId,
   onSelectSession,
   refreshSignal,
@@ -193,6 +197,7 @@ export function KanbanCardActivityPanel({
   sessions: SessionInfo[];
   specialists: KanbanSpecialistOption[];
   specialistLanguage?: KanbanSpecialistLanguage;
+  autoProviderId?: string;
   currentSessionId?: string;
   onSelectSession?: (sessionId: string) => void;
   refreshSignal?: number;
@@ -574,6 +579,7 @@ export function KanbanEmptySessionPane({
   availableProviders,
   specialists,
   specialistLanguage = "en",
+  autoProviderId,
   onCloseSession,
 }: {
   task: TaskInfo;
@@ -581,11 +587,19 @@ export function KanbanEmptySessionPane({
   availableProviders: AcpProviderInfo[];
   specialists: KanbanSpecialistOption[];
   specialistLanguage?: KanbanSpecialistLanguage;
+  autoProviderId?: string;
   onCloseSession?: () => void;
 }) {
   const { t } = useTranslation();
   const copy = getKanbanSessionCopy(specialistLanguage);
-  const target = formatExpectedRunTarget(task, boardColumns, availableProviders, specialists, t.kanban.workspaceDefault);
+  const target = formatExpectedRunTarget(
+    task,
+    boardColumns,
+    availableProviders,
+    specialists,
+    t.kanban.workspaceDefault,
+    autoProviderId,
+  );
 
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">

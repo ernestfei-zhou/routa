@@ -31,6 +31,7 @@ import { getInternalApiOrigin, triggerAssignedTaskAgent } from "./agent-trigger"
 import { KanbanSessionQueue } from "./kanban-session-queue";
 import { getKanbanSessionConcurrencyLimit as getBoardSessionConcurrencyLimit } from "./board-session-limits";
 import { getKanbanDevSessionSupervision } from "./board-session-supervision";
+import { getKanbanAutoProvider } from "./board-auto-provider";
 import { upsertTaskLaneSession } from "./task-lane-history";
 import { getHttpSessionStore } from "../acp/http-session-store";
 import { getSpecialistById } from "../orchestration/specialist-prompts";
@@ -77,7 +78,11 @@ async function createAutomationSession(
 ): Promise<string | null> {
   const task = await system.taskStore.get(params.cardId);
   if (!task?.boardId) return null;
-  const resolvedStep = resolveKanbanAutomationStep(params.step, resolveKanbanSpecialist);
+  const workspace = await system.workspaceStore.get(task.workspaceId);
+  const autoProviderId = getKanbanAutoProvider(workspace?.metadata, task.boardId);
+  const resolvedStep = resolveKanbanAutomationStep(params.step, resolveKanbanSpecialist, {
+    autoProviderId,
+  });
   const result = await enqueueKanbanTaskSession(system, {
     task,
     expectedColumnId: params.columnId,
@@ -158,6 +163,8 @@ async function startKanbanTaskSession(
   };
   params.mutateTask?.(nextTask);
   const board = await system.kanbanBoardStore.get(nextTask.boardId!);
+  const workspace = await system.workspaceStore.get(nextTask.workspaceId);
+  const autoProviderId = getKanbanAutoProvider(workspace?.metadata, nextTask.boardId!);
 
   let preferredCodebase = (nextTask.codebaseIds?.length ?? 0) > 0
     ? await system.codebaseStore.get(nextTask.codebaseIds[0])
@@ -175,7 +182,6 @@ async function startKanbanTaskSession(
         system.codebaseStore,
       );
       const { branch, label } = buildKanbanWorktreeNaming(nextTask.id);
-      const workspace = await system.workspaceStore.get(nextTask.workspaceId);
       const worktreeRoot = workspace
         ? getEffectiveWorkspaceMetadata(workspace).worktreeRoot
         : getDefaultWorkspaceWorktreeRoot(nextTask.workspaceId);
@@ -208,9 +214,12 @@ async function startKanbanTaskSession(
     nextTask,
     board?.columns ?? [],
     resolveKanbanSpecialist,
+    { autoProviderId },
   );
   const providerOverride = params.providerOverride?.trim() || undefined;
-  const sessionStep = resolveKanbanAutomationStep(params.step, resolveKanbanSpecialist)
+  const sessionStep = resolveKanbanAutomationStep(params.step, resolveKanbanSpecialist, {
+    autoProviderId,
+  })
     ?? effectiveAutomation.step;
   const sessionStepIndex = params.stepIndex ?? effectiveAutomation.stepIndex;
   const sessionProviderId = providerOverride
