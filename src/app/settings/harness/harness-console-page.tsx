@@ -352,9 +352,12 @@ export default function HarnessConsolePage() {
     event.preventDefault();
     const startY = event.clientY;
     const startHeight = bottomPanelHeight;
+    const resizeInlinePanel = activeSection === "overview";
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaY = startY - moveEvent.clientY;
+      const deltaY = resizeInlinePanel
+        ? moveEvent.clientY - startY
+        : startY - moveEvent.clientY;
       setBottomPanelHeight(clamp(startHeight + deltaY, MIN_BOTTOM_PANEL_HEIGHT, MAX_BOTTOM_PANEL_HEIGHT));
     };
 
@@ -662,7 +665,7 @@ export default function HarnessConsolePage() {
 
   function renderOverview() {
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         <div className="flex items-center justify-end border-b border-desktop-border pb-2">
           <div className="inline-flex items-center gap-0.5 rounded border border-desktop-border bg-desktop-bg-primary p-0.5 normal-case tracking-normal">
             {(["lifecycle", "loop"] as const).map((view) => (
@@ -711,6 +714,103 @@ export default function HarnessConsolePage() {
             contextPanel={null}
           />
         )}
+        {activeSection === "overview" ? renderGovernanceBottomPanel() : null}
+      </div>
+    );
+  }
+
+  function renderGovernanceBottomPanel() {
+    if (!showBottomPanel) {
+      return null;
+    }
+
+    const inlineOverviewPanel = activeSection === "overview";
+    const panelBorderClass = inlineOverviewPanel
+      ? "border border-desktop-border"
+      : "border-t border-desktop-border";
+    const panelStyle = inlineOverviewPanel ? undefined : { height: `${bottomPanelHeight}px` };
+
+    return (
+      <div className="flex flex-col">
+        {inlineOverviewPanel ? null : (
+          <div
+            role="separator"
+            aria-label="Resize bottom panel"
+            data-testid="harness-console-bottom-resizer"
+            className="h-1 shrink-0 cursor-row-resize bg-desktop-border/60 transition-colors hover:bg-desktop-accent"
+            onMouseDown={handleBottomPanelResizeStart}
+          />
+        )}
+        <div
+          className={`flex shrink-0 flex-col bg-desktop-bg-secondary ${panelBorderClass}`}
+          data-testid="harness-console-bottom-panel"
+          style={panelStyle}
+        >
+          <div className="flex h-9 items-center justify-between border-b border-desktop-border px-3">
+            <div className="flex items-center gap-1">
+              {(["context", "plan", "fitness"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setBottomPanelTab(tab)}
+                  className={`rounded px-2.5 py-1 text-[10px] font-medium ${
+                    bottomPanelTab === tab
+                      ? "bg-desktop-accent text-desktop-accent-text"
+                      : "text-desktop-text-secondary hover:bg-desktop-bg-active hover:text-desktop-text-primary"
+                  }`}
+                >
+                  {tab === "context" ? "Context" : tab === "plan" ? "Execution Plan" : "Fitness"}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 text-[10px] text-desktop-text-secondary">
+              {selectedGovernanceNodeId ? <span>node: {selectedGovernanceNodeId}</span> : null}
+              {selectedGovernanceSection ? (
+                <button
+                  type="button"
+                  className="desktop-btn desktop-btn-secondary"
+                  onClick={() => openSection(selectedGovernanceSection)}
+                >
+                  Open full view
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="desktop-btn desktop-btn-secondary"
+                onClick={() => setShowBottomPanel(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+
+          <div className={inlineOverviewPanel ? "p-3" : "min-h-0 flex-1 overflow-y-auto p-3 desktop-scrollbar-thin"}>
+            {bottomPanelTab === "context" ? governanceContextPanel : null}
+            {bottomPanelTab === "plan" ? (
+              <HarnessExecutionPlanFlow
+                loading={planState.loading}
+                error={planState.error}
+                plan={planState.data}
+                repoLabel={selectedRepoLabel}
+                selectedTier={selectedTier}
+                onTierChange={setSelectedTier}
+                unsupportedMessage={unsupportedRepoMessage}
+                variant="compact"
+              />
+            ) : null}
+            {bottomPanelTab === "fitness" ? (
+              <HarnessFitnessFilesDashboard
+                specFiles={specFiles}
+                selectedSpec={visibleSpec}
+                loading={specsState.loading}
+                error={specsState.error}
+                unsupportedMessage={unsupportedRepoMessage}
+                embedded
+              />
+            ) : null}
+          </div>
+        </div>
       </div>
     );
   }
@@ -934,87 +1034,7 @@ export default function HarnessConsolePage() {
             {renderSectionContent(activeSection)}
           </div>
 
-          {showBottomPanel ? (
-            <>
-              <div
-                role="separator"
-                aria-label="Resize bottom panel"
-                data-testid="harness-console-bottom-resizer"
-                className="h-1 shrink-0 cursor-row-resize bg-desktop-border/60 transition-colors hover:bg-desktop-accent"
-                onMouseDown={handleBottomPanelResizeStart}
-              />
-              <div
-                className="flex shrink-0 flex-col border-t border-desktop-border bg-desktop-bg-secondary"
-                data-testid="harness-console-bottom-panel"
-                style={{ height: `${bottomPanelHeight}px` }}
-              >
-              <div className="flex h-9 items-center justify-between border-b border-desktop-border px-3">
-                <div className="flex items-center gap-1">
-                  {(["context", "plan", "fitness"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setBottomPanelTab(tab)}
-                      className={`rounded px-2.5 py-1 text-[10px] font-medium ${
-                        bottomPanelTab === tab
-                          ? "bg-desktop-accent text-desktop-accent-text"
-                          : "text-desktop-text-secondary hover:bg-desktop-bg-active hover:text-desktop-text-primary"
-                      }`}
-                    >
-                      {tab === "context" ? "Context" : tab === "plan" ? "Execution Plan" : "Fitness"}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-2 text-[10px] text-desktop-text-secondary">
-                  {selectedGovernanceNodeId ? <span>node: {selectedGovernanceNodeId}</span> : null}
-                  {selectedGovernanceSection ? (
-                    <button
-                      type="button"
-                      className="desktop-btn desktop-btn-secondary"
-                      onClick={() => openSection(selectedGovernanceSection)}
-                    >
-                      Open full view
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="desktop-btn desktop-btn-secondary"
-                    onClick={() => setShowBottomPanel(false)}
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-
-              <div className="min-h-0 flex-1 overflow-y-auto p-3 desktop-scrollbar-thin">
-                {bottomPanelTab === "context" ? governanceContextPanel : null}
-                {bottomPanelTab === "plan" ? (
-                  <HarnessExecutionPlanFlow
-                    loading={planState.loading}
-                    error={planState.error}
-                    plan={planState.data}
-                    repoLabel={selectedRepoLabel}
-                    selectedTier={selectedTier}
-                    onTierChange={setSelectedTier}
-                    unsupportedMessage={unsupportedRepoMessage}
-                    variant="compact"
-                  />
-                ) : null}
-                {bottomPanelTab === "fitness" ? (
-                  <HarnessFitnessFilesDashboard
-                    specFiles={specFiles}
-                    selectedSpec={visibleSpec}
-                    loading={specsState.loading}
-                    error={specsState.error}
-                    unsupportedMessage={unsupportedRepoMessage}
-                    embedded
-                  />
-                ) : null}
-              </div>
-              </div>
-            </>
-          ) : null}
+          {activeSection !== "overview" ? renderGovernanceBottomPanel() : null}
 
           <div className="flex h-6 shrink-0 items-center justify-between bg-desktop-accent px-3 text-[10px] text-desktop-accent-text">
             <div className="flex items-center gap-3">

@@ -582,20 +582,14 @@ describe("HarnessSettingsPage", () => {
     expect(explorer.getAttribute("style")).toContain("304px");
   });
 
-  it("resizes the bottom panel via the drag handle", () => {
+  it("shows the overview context panel inline without resize controls", () => {
     render(<HarnessSettingsPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "select-thinking" }));
 
     const bottomPanel = screen.getByTestId("harness-console-bottom-panel");
-    const resizer = screen.getByTestId("harness-console-bottom-resizer");
 
-    expect(bottomPanel.getAttribute("style")).toContain("280px");
-
-    fireEvent.mouseDown(resizer, { clientY: 400 });
-    fireEvent.mouseMove(document, { clientY: 340 });
-    fireEvent.mouseUp(document);
-
-    expect(bottomPanel.getAttribute("style")).toContain("340px");
+    expect(bottomPanel.getAttribute("style")).toBeNull();
+    expect(screen.queryByTestId("harness-console-bottom-resizer")).toBeNull();
   });
 });

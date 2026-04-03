@@ -16,17 +16,32 @@ import {
   processKanbanColumnTransition,
 } from "@/core/kanban/workflow-orchestrator-singleton";
 import { buildRemainingLaneStepsMessage, resolveCurrentLaneAutomationState } from "@/core/kanban/lane-automation-state";
-import { buildTaskEvidenceSummary } from "../task-evidence-summary";
+import {
+  buildTaskEvidenceSummary,
+  buildTaskInvestValidation,
+  buildTaskStoryReadiness,
+  formatRequiredTaskFieldLabel,
+  resolveTargetRequiredTaskFields,
+  validateTaskReadiness,
+} from "../task-evidence-summary";
+import {
+  buildTaskDeliveryReadiness,
+  buildTaskDeliveryTransitionError,
+} from "@/core/kanban/task-delivery-readiness";
 
 export const dynamic = "force-dynamic";
 
 async function serializeTask(task: Task, system: ReturnType<typeof getRoutaSystem>) {
   const evidenceSummary = await buildTaskEvidenceSummary(task, system);
+  const storyReadiness = await buildTaskStoryReadiness(task, system);
+  const investValidation = buildTaskInvestValidation(task);
 
   return {
     ...task,
     artifactSummary: evidenceSummary.artifact,
     evidenceSummary,
+    storyReadiness,
+    investValidation,
     githubSyncedAt: task.githubSyncedAt?.toISOString(),
     createdAt: task.createdAt instanceof Date ? task.createdAt.toISOString() : task.createdAt,
     updatedAt: task.updatedAt instanceof Date ? task.updatedAt.toISOString() : task.updatedAt,
@@ -117,6 +132,11 @@ export async function PATCH(
   if (body.testCases !== undefined) nextTask.testCases = body.testCases;
   if (body.assignedTo !== undefined) nextTask.assignedTo = body.assignedTo;
   if (body.boardId !== undefined) nextTask.boardId = body.boardId;
+  if (body.codebaseIds !== undefined && Array.isArray(body.codebaseIds)) {
+    nextTask.codebaseIds = body.codebaseIds.filter((id): id is string => typeof id === "string");
+  }
+  if (body.worktreeId === null) nextTask.worktreeId = undefined;
+  if (typeof body.worktreeId === "string") nextTask.worktreeId = body.worktreeId;
 
   // Check required artifacts before allowing column transition
   if (body.columnId !== undefined && body.columnId !== existing.columnId) {
@@ -157,6 +177,40 @@ export async function PATCH(
             );
           }
         }
+
+        const requiredTaskFields = resolveTargetRequiredTaskFields(board.columns, targetColumn?.id);
+        if (requiredTaskFields.length > 0) {
+          const readiness = validateTaskReadiness(nextTask, requiredTaskFields);
+          if (!readiness.ready) {
+            const missingTaskFields = readiness.missing.map(formatRequiredTaskFieldLabel);
+            return NextResponse.json(
+              {
+                error: `Cannot move task to "${targetColumn?.name ?? body.columnId}": missing required task fields: ${missingTaskFields.join(", ")}. Please complete this story definition before moving the task.`,
+                missingTaskFields,
+                storyReadiness: readiness,
+              },
+              { status: 400 },
+            );
+          }
+        }
+
+        if (targetColumn && (targetColumn.id === "review" || targetColumn.id === "done")) {
+          const deliveryReadiness = await buildTaskDeliveryReadiness(nextTask, system);
+          const deliveryError = buildTaskDeliveryTransitionError(
+            deliveryReadiness,
+            targetColumn.name ?? body.columnId,
+            targetColumn.id,
+          );
+          if (deliveryError) {
+            return NextResponse.json(
+              {
+                error: deliveryError,
+                deliveryReadiness,
+              },
+              { status: 400 },
+            );
+          }
+        }
       }
     }
   }
@@ -180,12 +234,6 @@ export async function PATCH(
   if (body.completionSummary !== undefined) nextTask.completionSummary = body.completionSummary;
   if (body.verificationVerdict !== undefined) nextTask.verificationVerdict = body.verificationVerdict;
   if (body.verificationReport !== undefined) nextTask.verificationReport = body.verificationReport;
-  if (body.codebaseIds !== undefined && Array.isArray(body.codebaseIds)) {
-    nextTask.codebaseIds = body.codebaseIds.filter((id): id is string => typeof id === "string");
-  }
-  if (body.worktreeId === null) nextTask.worktreeId = undefined;
-  if (typeof body.worktreeId === "string") nextTask.worktreeId = body.worktreeId;
-
   const normalizedLabels = sanitizeLabels(body.labels);
   if (body.labels !== undefined && normalizedLabels === undefined) {
     return NextResponse.json({ error: "labels must be an array of strings" }, { status: 400 });
