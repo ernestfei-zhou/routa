@@ -89,7 +89,7 @@ function inferModuleRole(name: string): string {
   if (name === "docs") return "Documentation, architecture notes, and operational guides.";
   if (name === "crates") return "Rust service/runtime modules.";
   if (name === "apps") return "Application entrypoints and package surfaces.";
-  if (name === "src" || name === "app") return "User-facing application layer.";
+  if (name === "app") return "User-facing application layer.";
   return "Core repository module area.";
 }
 

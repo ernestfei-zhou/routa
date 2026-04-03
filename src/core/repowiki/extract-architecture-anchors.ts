@@ -8,10 +8,9 @@ const ROOT_FILE_ANCHORS = [
   "Cargo.toml",
   "pyproject.toml",
   "go.mod",
-  "docs/ARCHITECTURE.md",
-  "docs/adr/README.md",
 ];
 
+const NESTED_FILE_ANCHORS = ["docs/ARCHITECTURE.md", "docs/adr/README.md"];
 const DIRECTORY_ANCHORS = ["src/app", "src/core", "src/client", "crates", "docs", "apps", "api"];
 
 export interface RepoWikiAnchor {
@@ -26,7 +25,7 @@ export function extractArchitectureAnchors(tree: RepoTreeNode): RepoWikiAnchor[]
 
   for (const child of rootChildren) {
     if (child.type !== "file") continue;
-    if (ROOT_FILE_ANCHORS.some((name) => child.name === name || child.name.startsWith(name.split(".")[0]))) {
+    if (ROOT_FILE_ANCHORS.some((anchor) => matchesRootFileAnchor(child.name, anchor))) {
       anchors.push({
         kind: "file",
         path: child.path,
@@ -45,7 +44,22 @@ export function extractArchitectureAnchors(tree: RepoTreeNode): RepoWikiAnchor[]
     });
   }
 
+  for (const filePath of NESTED_FILE_ANCHORS) {
+    const node = findNodeByPath(tree, filePath);
+    if (!node || node.type !== "file") continue;
+    anchors.push({
+      kind: "file",
+      path: node.path,
+      reason: `Architecture/documentation anchor (${node.name})`,
+    });
+  }
+
   return anchors;
+}
+
+function matchesRootFileAnchor(fileName: string, anchor: string): boolean {
+  const baseName = anchor.split(".")[0];
+  return fileName === anchor || fileName === baseName || fileName.startsWith(`${baseName}.`);
 }
 
 function findNodeByPath(tree: RepoTreeNode, targetPath: string): RepoTreeNode | null {
