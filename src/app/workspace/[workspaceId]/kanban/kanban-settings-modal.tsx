@@ -445,7 +445,7 @@ export function KanbanSettingsModal({
   const [selectedColumnId, setSelectedColumnId] = useState<string>(board.columns[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
   const [clearingAll, setClearingAll] = useState(false);
-  const [showRuntimeSettings, setShowRuntimeSettings] = useState(false);
+  const [showRuntimeSettings, setShowRuntimeSettings] = useState(true);
   const [specialistCategory, setSpecialistCategory] = useState<SpecialistCategory>("kanban");
   const [kanbanExportWorkspaceId, setKanbanExportWorkspaceId] = useState<string>(() =>
     loadKanbanExportWorkspaceId(board.workspaceId || "default"),

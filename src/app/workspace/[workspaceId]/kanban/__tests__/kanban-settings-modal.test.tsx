@@ -143,7 +143,7 @@ describe("KanbanSettingsModal", () => {
     });
   });
 
-  it("keeps runtime settings collapsed until requested", () => {
+  it("shows runtime settings by default", () => {
     render(
       <KanbanSettingsModal
         board={board}
@@ -157,9 +157,8 @@ describe("KanbanSettingsModal", () => {
       />,
     );
 
-    expect(screen.queryByLabelText("Dev supervision mode")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /runtime/i }));
     expect(screen.getByLabelText("Dev supervision mode")).not.toBeNull();
+    expect(screen.getByDisplayValue("2")).not.toBeNull();
   });
 
   it("defaults specialist filtering to kanban in board settings", () => {

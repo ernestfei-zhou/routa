@@ -13,6 +13,26 @@ import { getRoutaOrchestrator } from "@/core/orchestration/orchestrator-singleto
 import { ToolMode } from "./routa-mcp-tool-manager";
 import { getMcpProfileToolAllowlist, type McpServerProfile } from "./mcp-server-profiles";
 
+async function resolveSessionProvider(sessionId: string | undefined): Promise<string | undefined> {
+  if (!sessionId) return undefined;
+
+  try {
+    const { getHttpSessionStore } = await import("@/core/acp/http-session-store");
+    const liveProvider = getHttpSessionStore().getSession(sessionId)?.provider;
+    if (liveProvider) return liveProvider;
+  } catch {
+    // Ignore and try persisted metadata next.
+  }
+
+  try {
+    const { loadSessionFromDb, loadSessionFromLocalStorage } = await import("@/core/acp/session-db-persister");
+    const persisted = await loadSessionFromDb(sessionId) ?? await loadSessionFromLocalStorage(sessionId);
+    return persisted?.provider;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Essential tools for weak models - minimum viable coordination.
  * Core coordination tools plus Kanban and artifact tools for card-assigned agents.
@@ -447,6 +467,9 @@ export async function executeMcpTool(
       return formatResult(await kanbanTools.getBoard(args.boardId as string));
     case "create_card":
       if (!kanbanTools) return formatResult({ success: false, error: "Kanban tools not available." });
+      {
+        const assignedProvider = (args.assignedProvider as string | undefined)
+          ?? await resolveSessionProvider(args.sessionId as string | undefined);
       return formatResult(
         await kanbanTools.createCard({
           boardId: args.boardId as string | undefined,
@@ -456,8 +479,10 @@ export async function executeMcpTool(
           columnId: (args.columnId as string | undefined) ?? (args.column as string | undefined) ?? "backlog",
           priority: args.priority as "low" | "medium" | "high" | "urgent" | undefined,
           labels: args.labels as string[] | undefined,
+          assignedProvider,
         })
       );
+      }
     case "move_card":
       if (!kanbanTools) return formatResult({ success: false, error: "Kanban tools not available." });
       return formatResult(
@@ -502,14 +527,24 @@ export async function executeMcpTool(
       );
     case "decompose_tasks":
       if (!kanbanTools) return formatResult({ success: false, error: "Kanban tools not available." });
+      {
+        const defaultAssignedProvider = (args.assignedProvider as string | undefined)
+          ?? await resolveSessionProvider(args.sessionId as string | undefined);
       return formatResult(
         await kanbanTools.decomposeTasks({
           boardId: args.boardId as string | undefined,
           workspaceId: (args.workspaceId as string) ?? workspace,
-          tasks: args.tasks as { title: string; description?: string; priority?: "low" | "medium" | "high" | "urgent"; labels?: string[] }[],
+          tasks: ((args.tasks as Array<Record<string, unknown>> | undefined) ?? []).map((task) => ({
+            title: task.title as string,
+            description: task.description as string | undefined,
+            priority: task.priority as "low" | "medium" | "high" | "urgent" | undefined,
+            labels: task.labels as string[] | undefined,
+            assignedProvider: (task.assignedProvider as string | undefined) ?? defaultAssignedProvider,
+          })),
           columnId: (args.columnId as string | undefined) ?? (args.column as string | undefined),
         })
       );
+      }
     case "request_previous_lane_handoff":
       if (!kanbanTools) return formatResult({ success: false, error: "Kanban tools not available." });
       if (!args.sessionId) return formatResult({ success: false, error: "Current ACP session is required for lane handoff." });
@@ -1152,6 +1187,7 @@ export function getMcpToolDefinitions(
           boardId: { type: "string", description: "Optional board ID; uses default board if omitted" },
           title: { type: "string", description: "Card title" },
           description: { type: "string", description: "Card description" },
+          assignedProvider: { type: "string", description: "Provider override for the created card; defaults to the current session provider when available" },
           columnId: { type: "string", description: "Target column ID" },
           column: { type: "string", description: "Target column alias" },
           priority: { type: "string", enum: ["low", "medium", "high", "urgent"], description: "Card priority" },

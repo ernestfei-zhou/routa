@@ -44,6 +44,34 @@ describe("KanbanTools", () => {
     });
   });
 
+  it("persists an assigned provider override on created cards", async () => {
+    const boardStore = new InMemoryKanbanBoardStore();
+    const taskStore = new InMemoryTaskStore();
+    const tools = new KanbanTools(boardStore, taskStore);
+
+    const board = createKanbanBoard({
+      id: "board-1",
+      workspaceId: "default",
+      name: "Default Board",
+      isDefault: true,
+    });
+    await boardStore.save(board);
+
+    const result = await tools.createCard({
+      workspaceId: "default",
+      title: "Created with Codex",
+      columnId: "backlog",
+      assignedProvider: "codex",
+    });
+
+    expect(result.success).toBe(true);
+    const tasks = await taskStore.listByWorkspace("default");
+    expect(tasks[0]).toMatchObject({
+      title: "Created with Codex",
+      assignedProvider: "codex",
+    });
+  });
+
   it("lists cards by column on the default board when boardId is omitted", async () => {
     const boardStore = new InMemoryKanbanBoardStore();
     const taskStore = new InMemoryTaskStore();
