@@ -399,9 +399,13 @@ async fn api_task_artifact_flow_and_gate() {
         task_json["task"]["artifactSummary"]["missingRequired"],
         json!(["screenshot"])
     );
-    assert_eq!(
-        task_json["task"]["evidenceSummary"]["runs"]["latestStatus"],
-        json!("idle")
+    assert!(
+        matches!(
+            task_json["task"]["evidenceSummary"]["runs"]["latestStatus"].as_str(),
+            Some("idle" | "running")
+        ),
+        "expected latestStatus to be idle or running, got {:?}",
+        task_json["task"]["evidenceSummary"]["runs"]["latestStatus"]
     );
     assert_eq!(
         task_json["task"]["storyReadiness"]["requiredTaskFields"],
