@@ -243,8 +243,12 @@ export interface TranslationDictionary {
         violationsLabel: string;
         notesLabel: string;
         failedRulesTitle: string;
+        boundaryLeaksTitle: string;
+        cycleHotspotsTitle: string;
         topViolationsTitle: string;
         noFailedRules: string;
+        noBoundaryLeaks: string;
+        noCycleHotspots: string;
         noViolations: string;
         ruleColumn: string;
         suiteColumn: string;

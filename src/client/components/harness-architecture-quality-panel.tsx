@@ -30,6 +30,12 @@ type FlattenedViolation = {
   kindLabel: string;
 };
 
+type ArchitectureCluster = {
+  label: string;
+  count: number;
+  sample: string;
+};
+
 function formatSuiteLabel(
   suite: ArchitectureSuiteName,
   labels: { suiteBoundaries: string; suiteCycles: string },
@@ -80,6 +86,76 @@ function buildViolationCount(violation: ArchitectureViolation): number {
   return 1;
 }
 
+function normalizeModuleBucket(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, "/").trim();
+  const parts = normalized.split("/").filter(Boolean);
+  if (parts[0] !== "src") {
+    return normalized;
+  }
+  if (parts[1] === "app" && parts[2] === "api") {
+    return parts.slice(0, Math.min(parts.length, 4)).join("/");
+  }
+  return parts.slice(0, Math.min(parts.length, 3)).join("/");
+}
+
+function buildBoundaryLeakClusters(rules: ArchitectureRuleResult[]): ArchitectureCluster[] {
+  const clusters = new Map<string, ArchitectureCluster>();
+
+  for (const rule of rules) {
+    for (const violation of rule.violations) {
+      if (violation.kind !== "dependency") {
+        continue;
+      }
+      const label = `${normalizeModuleBucket(violation.source)} -> ${normalizeModuleBucket(violation.target)}`;
+      const current = clusters.get(label);
+      if (current) {
+        current.count += 1;
+      } else {
+        clusters.set(label, {
+          label,
+          count: 1,
+          sample: `${violation.source} -> ${violation.target}`,
+        });
+      }
+    }
+  }
+
+  return [...clusters.values()].sort((left, right) => right.count - left.count || left.label.localeCompare(right.label));
+}
+
+function buildCycleHotspotClusters(rules: ArchitectureRuleResult[]): ArchitectureCluster[] {
+  const clusters = new Map<string, ArchitectureCluster>();
+
+  for (const rule of rules) {
+    for (const violation of rule.violations) {
+      if (violation.kind !== "cycle") {
+        continue;
+      }
+
+      for (const edge of violation.path) {
+        const [source, target] = edge.split(" -> ");
+        for (const bucket of [normalizeModuleBucket(source ?? ""), normalizeModuleBucket(target ?? "")]) {
+          if (!bucket) {
+            continue;
+          }
+          const current = clusters.get(bucket);
+          if (current) {
+            current.count += 1;
+          } else {
+            clusters.set(bucket, {
+              label: bucket,
+              count: 1,
+              sample: edge,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return [...clusters.values()].sort((left, right) => right.count - left.count || left.label.localeCompare(right.label));
+}
+
 function statusTone(status: "pass" | "fail" | "skipped") {
   if (status === "fail") {
     return "border-rose-200 bg-rose-50 text-rose-700";
@@ -124,6 +200,14 @@ export function HarnessArchitectureQualityPanel({
       kindLabel: buildViolationKindLabel(violation, copy),
     }))),
     [copy, failedRules],
+  );
+  const boundaryLeakClusters = useMemo(
+    () => buildBoundaryLeakClusters(failedRules.filter((rule) => rule.suite === "boundaries")),
+    [failedRules],
+  );
+  const cycleHotspotClusters = useMemo(
+    () => buildCycleHotspotClusters(failedRules.filter((rule) => rule.suite === "cycles")),
+    [failedRules],
   );
 
   const statusLabel = data?.summaryStatus === "fail"
@@ -218,6 +302,58 @@ export function HarnessArchitectureQualityPanel({
                   </ul>
                 ) : null}
               </div>
+            </div>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            <div className="rounded-sm border border-desktop-border bg-desktop-bg-primary/80 px-3 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">{copy.boundaryLeaksTitle}</div>
+              {boundaryLeakClusters.length > 0 ? (
+                <div className="mt-2 space-y-2">
+                  {boundaryLeakClusters.slice(0, 8).map((cluster) => (
+                    <div key={cluster.label} className="rounded-sm border border-desktop-border bg-desktop-bg-secondary/40 px-3 py-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[11px] font-semibold text-desktop-text-primary">{cluster.label}</span>
+                        <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] text-rose-700">
+                          {cluster.count}
+                        </span>
+                      </div>
+                      <div className="mt-1 break-all font-mono text-[10px] text-desktop-text-secondary">
+                        {cluster.sample}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-2 rounded-sm border border-dashed border-desktop-border px-3 py-4 text-[11px] text-desktop-text-secondary">
+                  {copy.noBoundaryLeaks}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-sm border border-desktop-border bg-desktop-bg-primary/80 px-3 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-desktop-text-secondary">{copy.cycleHotspotsTitle}</div>
+              {cycleHotspotClusters.length > 0 ? (
+                <div className="mt-2 space-y-2">
+                  {cycleHotspotClusters.slice(0, 8).map((cluster) => (
+                    <div key={cluster.label} className="rounded-sm border border-desktop-border bg-desktop-bg-secondary/40 px-3 py-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[11px] font-semibold text-desktop-text-primary">{cluster.label}</span>
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-800">
+                          {cluster.count}
+                        </span>
+                      </div>
+                      <div className="mt-1 break-all font-mono text-[10px] text-desktop-text-secondary">
+                        {cluster.sample}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-2 rounded-sm border border-dashed border-desktop-border px-3 py-4 text-[11px] text-desktop-text-secondary">
+                  {copy.noCycleHotspots}
+                </div>
+              )}
             </div>
           </div>
 

@@ -293,7 +293,9 @@ function summarizeReports(repoRoot: string, reports: ArchitectureSuiteReport[]):
 export async function GET(request: NextRequest) {
   try {
     const context = parseContext(request.nextUrl.searchParams);
-    const repoRoot = await resolveFitnessRepoRoot(context);
+    const repoRoot = await resolveFitnessRepoRoot(context, {
+      preferCurrentRepoForDefaultWorkspace: true,
+    });
     const reports = await Promise.all(SUITES.map((suite) => executeSuite(repoRoot, suite)));
 
     return NextResponse.json(summarizeReports(repoRoot, reports) satisfies ArchitectureQualityResponse);
