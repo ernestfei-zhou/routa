@@ -37,6 +37,22 @@ describe("useHarnessSettingsData", () => {
         });
       }
 
+      if (url.startsWith("/api/fitness/architecture?")) {
+        return okJson({
+          generatedAt: "2026-03-31T00:00:00.000Z",
+          repoRoot: "/repo",
+          summaryStatus: "pass",
+          archUnitSource: "/arch/src/files/index.ts",
+          tsconfigPath: "/repo/tsconfig.json",
+          suiteCount: 2,
+          ruleCount: 4,
+          failedRuleCount: 0,
+          violationCount: 0,
+          reports: [],
+          notes: [],
+        });
+      }
+
       if (url.startsWith("/api/harness/hooks?")) {
         return okJson({
           generatedAt: "2026-03-31T00:00:00.000Z",
@@ -249,5 +265,33 @@ describe("useHarnessSettingsData", () => {
     expect(result.current.automationsState.data?.definitions).toEqual([]);
     expect(result.current.automationsState.data?.pendingSignals).toEqual([]);
     expect(result.current.automationsState.data?.recentRuns).toEqual([]);
+  });
+
+  it("does not fetch architecture until reloadArchitecture is called", async () => {
+    const { result } = renderHook(() => useHarnessSettingsData({
+      workspaceId: "default",
+      repoPath: "/repo",
+      selectedTier: "normal",
+      enableArchitecture: true,
+    }));
+
+    await waitFor(() => {
+      expect(result.current.specsState.loading).toBe(false);
+      expect(result.current.planState.loading).toBe(false);
+    });
+
+    expect(result.current.architectureState.data).toBeNull();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith("/api/fitness/architecture?"))).toBe(false);
+
+    act(() => {
+      result.current.reloadArchitecture();
+    });
+
+    await waitFor(() => {
+      expect(result.current.architectureState.loading).toBe(false);
+      expect(result.current.architectureState.data?.ruleCount).toBe(4);
+    });
+
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).startsWith("/api/fitness/architecture?"))).toHaveLength(1);
   });
 });

@@ -236,6 +236,8 @@ export interface TranslationDictionary {
         navigationLabel: string;
         title: string;
         description: string;
+        runScanLabel: string;
+        idleDescription: string;
         statusLabel: string;
         sourceLabel: string;
         tsconfigLabel: string;

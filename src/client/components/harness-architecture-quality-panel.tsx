@@ -185,6 +185,7 @@ export function HarnessArchitectureQualityPanel({
 }: HarnessArchitectureQualityPanelProps) {
   const { t } = useTranslation();
   const copy = t.settings.harness.architectureQuality;
+  const actionLabel = data ? t.common.refresh : copy.runScanLabel;
 
   const failedRules = useMemo(
     () => (data?.reports ?? []).flatMap((report) => report.results.filter((result) => result.status === "fail")),
@@ -228,6 +229,19 @@ export function HarnessArchitectureQualityPanel({
 
       {error && !unsupportedMessage ? (
         <HarnessSectionStateFrame tone="error">{error}</HarnessSectionStateFrame>
+      ) : null}
+
+      {!loading && !error && !unsupportedMessage && !data ? (
+        <HarnessSectionStateFrame>
+          <div className="space-y-3">
+            <div>{copy.idleDescription}</div>
+            {onRefresh ? (
+              <button type="button" className="desktop-btn desktop-btn-secondary" onClick={onRefresh}>
+                {copy.runScanLabel}
+              </button>
+            ) : null}
+          </div>
+        </HarnessSectionStateFrame>
       ) : null}
 
       {!loading && !error && !unsupportedMessage && data ? (
@@ -403,7 +417,7 @@ export function HarnessArchitectureQualityPanel({
         description={copy.description}
         actions={onRefresh ? (
           <button type="button" className="desktop-btn desktop-btn-secondary" onClick={onRefresh}>
-            {t.common.refresh}
+            {actionLabel}
           </button>
         ) : null}
       >
@@ -418,7 +432,7 @@ export function HarnessArchitectureQualityPanel({
       description={copy.description}
       actions={onRefresh ? (
         <button type="button" className="desktop-btn desktop-btn-secondary" onClick={onRefresh}>
-          {t.common.refresh}
+          {actionLabel}
         </button>
       ) : null}
     >

@@ -235,6 +235,8 @@ const en: TranslationDictionary = {
         navigationLabel: "Architecture",
         title: "Architecture Quality",
         description: "Live ArchUnitTS-backed backend boundary and cycle findings for the current repository.",
+        runScanLabel: "Run Scan",
+        idleDescription: "Run an on-demand architecture scan for the current repository when you want fresh boundary and cycle results.",
         statusLabel: "Status",
         sourceLabel: "Source",
         tsconfigLabel: "TSConfig",

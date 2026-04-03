@@ -231,6 +231,8 @@ const zh: TranslationDictionary = {
         navigationLabel: "架构",
         title: "架构质量",
         description: "基于 ArchUnitTS 的后端边界与循环依赖实时结果。",
+        runScanLabel: "运行扫描",
+        idleDescription: "需要时再为当前仓库执行一次架构扫描，获取最新的边界与循环依赖结果。",
         statusLabel: "状态",
         sourceLabel: "来源",
         tsconfigLabel: "TSConfig",

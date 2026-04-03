@@ -305,6 +305,11 @@ type InstructionRefreshState = {
   token: number;
 };
 
+type ArchitectureRefreshState = {
+  contextKey: string;
+  token: number;
+};
+
 function buildHarnessQuery(workspaceId?: string, codebaseId?: string, repoPath?: string) {
   const query = new URLSearchParams();
   if (workspaceId) {
@@ -641,8 +646,16 @@ export function useHarnessSettingsData({
     contextKey: "",
     token: 0,
   });
-  const [architectureRefreshToken, setArchitectureRefreshToken] = useState(0);
+  const [architectureRefreshState, setArchitectureRefreshState] = useState<ArchitectureRefreshState>({
+    contextKey: "",
+    token: 0,
+  });
   const instructionsContextKey = baseQuery?.toString() ?? "";
+  const architectureContextKey = baseQuery?.toString() ?? "";
+
+  useEffect(() => {
+    setArchitectureState(emptyQueryState());
+  }, [architectureContextKey]);
 
   useEffect(() => {
     if (!baseQuery) {
@@ -727,11 +740,17 @@ export function useHarnessSettingsData({
 
   useEffect(() => {
     if (!baseQuery) {
-      setArchitectureState(emptyQueryState());
       return;
     }
     if (!enableArchitecture) {
-      setArchitectureState(emptyQueryState());
+      return;
+    }
+
+    const shouldFetch = (
+      architectureRefreshState.contextKey === architectureContextKey
+      && architectureRefreshState.token > 0
+    );
+    if (!shouldFetch) {
       return;
     }
 
@@ -766,7 +785,7 @@ export function useHarnessSettingsData({
     return () => {
       cancelled = true;
     };
-  }, [architectureRefreshToken, baseQuery, enableArchitecture]);
+  }, [architectureContextKey, architectureRefreshState, baseQuery, enableArchitecture]);
 
   useEffect(() => {
     if (!baseQuery) {
@@ -938,8 +957,11 @@ export function useHarnessSettingsData({
   }, [instructionsContextKey]);
 
   const reloadArchitecture = useCallback(() => {
-    setArchitectureRefreshToken((current) => current + 1);
-  }, []);
+    setArchitectureRefreshState((current) => ({
+      contextKey: architectureContextKey,
+      token: current.contextKey === architectureContextKey ? current.token + 1 : 1,
+    }));
+  }, [architectureContextKey]);
 
   useEffect(() => {
     if (!baseQuery) {
