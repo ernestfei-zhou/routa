@@ -14,7 +14,7 @@ import { desktopAwareFetch } from "../utils/diagnostics";
 import { createPortal } from "react-dom";
 import { BranchSelector } from "./branch-selector";
 import { useTranslation } from "@/i18n";
-import { Check, Download, PieChart, Search, X, GitBranch, Book, Folder, RefreshCcw } from "lucide-react";
+import { Check, Copy, Download, PieChart, Search, X, GitBranch, Book, Folder, RefreshCcw } from "lucide-react";
 
 
 // ─── Types ──────────────────────────────────────────────────────────────
@@ -69,6 +69,28 @@ interface CloneProgress {
 interface RepoActionResult {
   success?: boolean;
   branch?: string;
+}
+
+function shortenRepoPath(path: string): string {
+  const trimmed = path.trim();
+  if (!trimmed) return path;
+
+  const normalized = trimmed.replace(/^\/Users\/[^/]+/, "~");
+
+  const segments = normalized.split("/").filter(Boolean);
+  if (normalized.startsWith("~") && segments.length <= 4) {
+    return normalized;
+  }
+  if (!normalized.startsWith("~") && segments.length <= 3) {
+    return normalized;
+  }
+
+  const tail = segments.slice(-3).join("/");
+  return normalized.startsWith("~") ? `~/.../${tail}` : `.../${tail}`;
+}
+
+function buildRepoHoverTitle(selection: RepoSelection): string {
+  return `${selection.name}\n${selection.path}`;
 }
 
 function isGitHubInput(text: string): boolean {
@@ -753,6 +775,18 @@ function SelectedRepoPill({
   const currentRepo = repos.find((r) => r.path === value.path);
   const showInlinePath = pathDisplay === "inline";
   const showMutedPath = pathDisplay === "below-muted";
+  const [copied, setCopied] = useState(false);
+  const repoTitle = buildRepoHoverTitle(value);
+  const shortPath = shortenRepoPath(value.path);
+
+  const handleCopyPath = useCallback(() => {
+    navigator.clipboard.writeText(value.path).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    }).catch(() => {
+      setCopied(false);
+    });
+  }, [value.path]);
 
   return (
     <div className={`min-w-0 ${showMutedPath ? "flex flex-col gap-0.5" : "flex items-center gap-1.5 overflow-hidden"}`}>
@@ -764,7 +798,7 @@ function SelectedRepoPill({
           type="button"
           onClick={onClickName}
           className="text-xs font-medium text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate max-w-[200px]"
-          title={value.name}
+          title={repoTitle}
         >
           {value.name}
         </button>
@@ -782,7 +816,7 @@ function SelectedRepoPill({
             className="max-w-[200px] truncate text-[10px] font-mono text-slate-500 dark:text-slate-400"
             title={value.path}
           >
-            {value.path}
+            {shortPath}
           </span>
         )}
 
@@ -804,8 +838,26 @@ function SelectedRepoPill({
       </div>
 
       {showMutedPath && (
-        <div className="pl-5 text-[10px] font-mono text-slate-400 dark:text-slate-500 truncate" title={value.path}>
-          {value.path}
+        <div className="pl-5 flex min-w-0 items-center gap-1.5">
+          <div
+            className="min-w-0 flex-1 text-[10px] font-mono text-slate-400 dark:text-slate-500 truncate"
+            title={value.path}
+          >
+            {shortPath}
+          </div>
+          <button
+            type="button"
+            onClick={handleCopyPath}
+            className="shrink-0 rounded p-0.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+            title={t.common.copyToClipboard}
+            aria-label={t.common.copyToClipboard}
+          >
+            {copied ? (
+              <Check className="h-3 w-3" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
+          </button>
         </div>
       )}
     </div>
