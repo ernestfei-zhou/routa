@@ -61,6 +61,7 @@ export interface KanbanCardDetailProps {
 }
 
 const ROLE_OPTIONS = ["CRAFTER", "ROUTA", "GATE", "DEVELOPER"];
+type KanbanDetailTabId = "description" | "readiness" | "execution" | "evidence" | "runs";
 
 function getProviderName(providerId: string | undefined, availableProviders: AcpProviderInfo[]): string {
   if (!providerId) return "Workspace default";
@@ -168,6 +169,7 @@ export function KanbanCardDetail({
   const [isTitleEditing, setIsTitleEditing] = useState(false);
   const [isDescriptionEditing, setIsDescriptionEditing] = useState(false);
   const [isTestCasesEditing, setIsTestCasesEditing] = useState(false);
+  const [tabSelections, setTabSelections] = useState<Partial<Record<string, KanbanDetailTabId>>>({});
   const titleInputRef = useRef<HTMLTextAreaElement | null>(null);
   const testCasesInputRef = useRef<HTMLTextAreaElement | null>(null);
   const displayedTitle = isTitleEditing ? editTitle : task.title;
@@ -203,6 +205,15 @@ export function KanbanCardDetail({
   })() : undefined;
   const splitMode = !fullWidth;
   const compactMode = splitMode || Boolean(isFullscreen);
+  const tabStateKey = `${task.id}:${splitMode ? "split" : "full"}`;
+  const activeTab = tabSelections[tabStateKey] ?? "description";
+  const detailTabs = [
+    { id: "description" as const, label: t.kanbanDetail.description },
+    { id: "readiness" as const, label: t.kanbanDetail.storyReadiness },
+    { id: "execution" as const, label: t.kanbanDetail.execution },
+    { id: "evidence" as const, label: t.kanbanDetail.evidenceBundle },
+    ...(!splitMode ? [{ id: "runs" as const, label: t.kanbanDetail.runs }] : []),
+  ];
 
   return (
     <div className="h-full w-full overflow-y-auto">
@@ -286,132 +297,187 @@ export function KanbanCardDetail({
           </div>
         </section>
 
-        <div className={compactMode ? "space-y-3" : "space-y-4"}>
-          <DetailSection
-            title={t.kanbanDetail.description}
-            description={compactMode ? undefined : t.kanbanDetail.descriptionHint}
-            compact={compactMode}
-          >
-            <KanbanDescriptionEditor
-              value={displayedObjective}
-              compact={compactMode}
-              onEditingChange={(nextEditing) => {
-                if (nextEditing) {
-                  setEditObjective(task.objective ?? "");
-                }
-                setIsDescriptionEditing(nextEditing);
-              }}
-              onSave={async (nextObjective) => {
-                if (nextObjective !== (task.objective ?? "")) {
-                  setEditObjective(nextObjective);
-                  await onPatchTask(task.id, { objective: nextObjective });
-                  onRefresh();
-                }
-              }}
-            />
-          </DetailSection>
+        <div className="border-b border-slate-200/80 dark:border-[#232736]">
+          <div className="flex min-w-0 gap-1 overflow-x-auto pb-1">
+            {detailTabs.map((tab) => {
+              const active = tab.id === activeTab;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    setTabSelections((current) => ({ ...current, [tabStateKey]: tab.id }));
+                  }}
+                  className={`shrink-0 border-b-2 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+                    active
+                      ? "border-b-amber-600 text-slate-900 dark:border-b-amber-400 dark:text-slate-100"
+                      : "border-b-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  }`}
+                  aria-pressed={active}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-          {canonicalStory.hasYamlBlock && (
+        <div className={compactMode ? "space-y-3" : "space-y-4"}>
+          {activeTab === "description" && (
+            <>
+              <DetailSection
+                title={t.kanbanDetail.description}
+                description={compactMode ? undefined : t.kanbanDetail.descriptionHint}
+                compact={compactMode}
+              >
+                <KanbanDescriptionEditor
+                  value={displayedObjective}
+                  compact={compactMode}
+                  onEditingChange={(nextEditing) => {
+                    if (nextEditing) {
+                      setEditObjective(task.objective ?? "");
+                    }
+                    setIsDescriptionEditing(nextEditing);
+                  }}
+                  onSave={async (nextObjective) => {
+                    if (nextObjective !== (task.objective ?? "")) {
+                      setEditObjective(nextObjective);
+                      await onPatchTask(task.id, { objective: nextObjective });
+                      onRefresh();
+                    }
+                  }}
+                />
+              </DetailSection>
+
+              {canonicalStory.hasYamlBlock && (
+                <DetailSection
+                  title={t.kanbanDetail.structuredStory}
+                  description={compactMode ? undefined : t.kanbanDetail.structuredStoryHint}
+                  compact={compactMode}
+                >
+                  <CanonicalStoryRenderer parseResult={canonicalStory} compact={compactMode} />
+                </DetailSection>
+              )}
+
+              <DetailSection
+                title={t.kanbanDetail.progressNotes}
+                description={compactMode ? undefined : t.kanbanDetail.progressNotesHint}
+                compact={compactMode}
+              >
+                <div className={`border-b border-slate-200/70 py-2 dark:border-slate-700 ${compactMode ? "px-3" : "px-4"}`}>
+                  <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                    {t.kanbanDetail.appendedComments}
+                  </div>
+                  {task.comment?.trim() ? (
+                    <div className={compactMode ? "mt-2 px-3 py-2.5" : "mt-2 px-4 py-2.5"}>
+                      <MarkdownViewer
+                        content={task.comment}
+                        className="prose prose-sm max-w-none text-slate-800 dark:prose-invert dark:text-slate-200"
+                      />
+                    </div>
+                  ) : (
+                    <div className={`text-sm text-slate-500 dark:text-slate-400 ${compactMode ? "mt-2 px-3 py-2.5" : "mt-2 px-4 py-2.5"}`}>
+                      {t.kanbanDetail.noProgressNotesYet}
+                    </div>
+                  )}
+                </div>
+              </DetailSection>
+
+              <DetailSection
+                title={t.kanbanDetail.testCases}
+                description={compactMode ? undefined : t.kanbanDetail.testCasesHint}
+                compact={compactMode}
+              >
+                <textarea
+                  ref={testCasesInputRef}
+                  value={displayedTestCases}
+                  onFocus={() => {
+                    setEditTestCases((task.testCases ?? []).join("\n"));
+                    setIsTestCasesEditing(true);
+                  }}
+                  onChange={(event) => setEditTestCases(event.target.value)}
+                  onBlur={async () => {
+                    setIsTestCasesEditing(false);
+                    const normalizedCurrent = (task.testCases ?? []).join("\n");
+                    if (editTestCases !== normalizedCurrent) {
+                      await onPatchTask(task.id, {
+                        testCases: editTestCases.split("\n").map((item) => item.trim()).filter(Boolean),
+                      });
+                      onRefresh();
+                    }
+                  }}
+                  rows={compactMode ? 4 : 5}
+                  placeholder={t.kanbanDetail.testCasesPlaceholder}
+                  className="focus:ring-offset-0 w-full border border-slate-200/80 bg-transparent px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-transparent dark:text-slate-100"
+                />
+              </DetailSection>
+            </>
+          )}
+
+          {activeTab === "readiness" && (
             <DetailSection
-              title={t.kanbanDetail.structuredStory}
-              description={compactMode ? undefined : t.kanbanDetail.structuredStoryHint}
+              title={t.kanbanDetail.storyReadiness}
+              description={compactMode ? undefined : t.kanbanDetail.storyReadinessHint}
               compact={compactMode}
             >
-              <CanonicalStoryRenderer parseResult={canonicalStory} compact={compactMode} />
+              <StoryReadinessPanel task={task} compact={compactMode} />
             </DetailSection>
           )}
 
-          <DetailSection
-            title={t.kanbanDetail.storyReadiness}
-            description={compactMode ? undefined : t.kanbanDetail.storyReadinessHint}
-            compact={compactMode}
-          >
-            <StoryReadinessPanel task={task} compact={compactMode} />
-          </DetailSection>
+          {activeTab === "execution" && (
+            <>
+              <ExecutionSection
+                task={task}
+                lane={currentLane}
+                boardColumns={boardColumns ?? []}
+                availableProviders={availableProviders}
+                sessionInfo={sessionInfo}
+                specialists={specialists}
+                specialistLanguage={specialistLanguage}
+                onPatchTask={onPatchTask}
+                onRetryTrigger={onRetryTrigger}
+                onProviderChange={onProviderChange}
+                compact={compactMode}
+              />
 
-          <DetailSection
-            title={t.kanbanDetail.progressNotes}
-            description={compactMode ? undefined : t.kanbanDetail.progressNotesHint}
-            compact={compactMode}
-          >
-            <div className={`border-b border-slate-200/70 py-2 dark:border-slate-700 ${compactMode ? "px-3" : "px-4"}`}>
-              <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
-                {t.kanbanDetail.appendedComments}
-              </div>
-              {task.comment?.trim() ? (
-                <div className={compactMode ? "mt-2 px-3 py-2.5" : "mt-2 px-4 py-2.5"}>
-                  <MarkdownViewer
-                    content={task.comment}
-                    className="prose prose-sm max-w-none text-slate-800 dark:prose-invert dark:text-slate-200"
-                  />
-                </div>
-              ) : (
-                <div className={`text-sm text-slate-500 dark:text-slate-400 ${compactMode ? "mt-2 px-3 py-2.5" : "mt-2 px-4 py-2.5"}`}>
-                  {t.kanbanDetail.noProgressNotesYet}
-                </div>
-              )}
-            </div>
-          </DetailSection>
+              <RepositoriesWorktreeRow
+                task={task}
+                codebases={codebases}
+                allCodebaseIds={allCodebaseIds}
+                worktreeCache={worktreeCache}
+                sessionInfo={sessionInfo}
+                sessionCwdMismatch={sessionCwdMismatch}
+                updateError={updateError}
+                setUpdateError={setUpdateError}
+                onPatchTask={onPatchTask}
+                onRefresh={onRefresh}
+                onRepositoryChange={onRepositoryChange}
+                onSelectSession={onSelectSession}
+                compact={compactMode}
+              />
+            </>
+          )}
 
-          <DetailSection
-            title={t.kanbanDetail.testCases}
-            description={compactMode ? undefined : t.kanbanDetail.testCasesHint}
-            compact={compactMode}
-          >
-            <textarea
-              ref={testCasesInputRef}
-              value={displayedTestCases}
-              onFocus={() => {
-                setEditTestCases((task.testCases ?? []).join("\n"));
-                setIsTestCasesEditing(true);
-              }}
-              onChange={(event) => setEditTestCases(event.target.value)}
-              onBlur={async () => {
-                setIsTestCasesEditing(false);
-                const normalizedCurrent = (task.testCases ?? []).join("\n");
-                if (editTestCases !== normalizedCurrent) {
-                  await onPatchTask(task.id, {
-                    testCases: editTestCases.split("\n").map((item) => item.trim()).filter(Boolean),
-                  });
-                  onRefresh();
-                }
-              }}
-              rows={compactMode ? 4 : 5}
-              placeholder={t.kanbanDetail.testCasesPlaceholder}
-              className="focus:ring-offset-0 w-full border border-slate-200/80 bg-transparent px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-transparent dark:text-slate-100"
-            />
-          </DetailSection>
+          {activeTab === "evidence" && (
+            <>
+              <DetailSection
+                title={t.kanbanDetail.evidenceBundle}
+                description={compactMode ? undefined : t.kanbanDetail.evidenceBundleHint}
+                compact={compactMode}
+              >
+                <EvidenceBundlePanel task={task} compact={compactMode} />
+              </DetailSection>
 
-          <ExecutionSection
-            task={task}
-            lane={currentLane}
-            boardColumns={boardColumns ?? []}
-            availableProviders={availableProviders}
-            sessionInfo={sessionInfo}
-            specialists={specialists}
-            specialistLanguage={specialistLanguage}
-            onPatchTask={onPatchTask}
-            onRetryTrigger={onRetryTrigger}
-            onProviderChange={onProviderChange}
-            compact={compactMode}
-          />
+              <KanbanCardArtifacts
+                taskId={task.id}
+                compact={compactMode}
+                requiredArtifacts={nextTransitionArtifacts.nextRequiredArtifacts}
+                refreshSignal={refreshSignal}
+              />
+            </>
+          )}
 
-          <DetailSection
-            title={t.kanbanDetail.evidenceBundle}
-            description={compactMode ? undefined : t.kanbanDetail.evidenceBundleHint}
-            compact={compactMode}
-          >
-            <EvidenceBundlePanel task={task} compact={compactMode} />
-          </DetailSection>
-
-          <KanbanCardArtifacts
-            taskId={task.id}
-            compact={compactMode}
-            requiredArtifacts={nextTransitionArtifacts.nextRequiredArtifacts}
-            refreshSignal={refreshSignal}
-          />
-
-          {!splitMode && (
+          {activeTab === "runs" && !splitMode && (
             <KanbanCardActivityPanel
               task={task}
               refreshSignal={refreshSignal}
@@ -423,22 +489,6 @@ export function KanbanCardDetail({
               compact={compactMode}
             />
           )}
-
-          <RepositoriesWorktreeRow
-            task={task}
-            codebases={codebases}
-            allCodebaseIds={allCodebaseIds}
-            worktreeCache={worktreeCache}
-            sessionInfo={sessionInfo}
-            sessionCwdMismatch={sessionCwdMismatch}
-            updateError={updateError}
-            setUpdateError={setUpdateError}
-            onPatchTask={onPatchTask}
-            onRefresh={onRefresh}
-            onRepositoryChange={onRepositoryChange}
-            onSelectSession={onSelectSession}
-            compact={compactMode}
-          />
         </div>
 
         <div className={`mt-auto border-t border-slate-200 dark:border-slate-700 ${compactMode ? "pt-3" : "pt-4"}`}>

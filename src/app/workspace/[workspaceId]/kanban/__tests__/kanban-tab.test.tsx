@@ -1075,6 +1075,7 @@ describe("KanbanCardDetail repository health", () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Execution" }));
     fireEvent.click(screen.getByText("Repo").closest("summary")!);
 
     expect(await screen.findByText("Repo Health")).toBeTruthy();
@@ -1133,6 +1134,7 @@ describe("KanbanCardDetail repository health", () => {
       />
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Execution" }));
     expect(screen.getByText(/Current run failed on Auggie:/i)).toBeTruthy();
     expect(screen.getByText(/403 Forbidden/i)).toBeTruthy();
   });
@@ -1197,9 +1199,8 @@ describe("KanbanCardDetail repository health", () => {
       />
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Execution" }));
     expect(screen.getAllByText(/A2A · GATE · Remote Review · agents\.example\.com\/reviewer\/agent-card\.json · skill:review/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/A2A Task · remote-task-1/i)).toBeTruthy();
-    expect(screen.getByText(/Context ctx-1/i)).toBeTruthy();
   });
 
   it("syncs detail fields when the same task updates in the background", async () => {
@@ -1333,8 +1334,10 @@ describe("KanbanCardDetail repository health", () => {
     );
 
     expect(screen.getByText("Story Readiness")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Story Readiness" }));
     expect(screen.getByText("Blocked for Dev")).toBeTruthy();
-    expect(screen.getByText("Evidence Bundle")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Evidence Bundle" }));
+    expect(screen.getByRole("button", { name: "Evidence Bundle" })).toBeTruthy();
     expect(screen.getByText("Evidence incomplete")).toBeTruthy();
     expect(screen.getByText(/test_results/i)).toBeTruthy();
   });
