@@ -45,6 +45,12 @@ Schema id:
 
 - `routa.archdsl/v1`
 
+The top-level DSL file field that carries this identifier is:
+
+```yaml
+schema: routa.archdsl/v1
+```
+
 Recommended location:
 
 - `architecture/rules/`
@@ -90,7 +96,7 @@ Current selector kind:
 Current selector fields:
 
 - `kind`
-- `language`: `typescript`, `rust`, or future values
+- `language`: exact lowercase values `typescript` or `rust` (future values may be added in later schema versions)
 - `include`: glob list
 - `exclude`: optional glob list
 - `description`: optional short intent note
