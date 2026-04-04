@@ -26,6 +26,7 @@ import {
   refreshExecutionBinding,
 } from "@/core/acp/execution-backend";
 import type { McpServerProfile } from "@/core/mcp/mcp-server-profiles";
+import { pendingAcpCreations } from "@/core/acp/pending-acp-creations";
 
 export interface IdempotencyEntry {
   sessionId: string;
@@ -35,7 +36,7 @@ export interface IdempotencyEntry {
 }
 
 export const idempotencyCache = new Map<string, IdempotencyEntry>();
-export const pendingAcpCreations = new Map<string, Promise<void>>();
+export { pendingAcpCreations };
 
 const IDEMPOTENCY_TTL_MS = 30_000;
 

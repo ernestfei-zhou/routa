@@ -11,7 +11,7 @@ vi.mock("../../acp/claude-code-sdk-adapter", () => ({
   isClaudeCodeSdkConfigured: vi.fn(),
 }));
 
-vi.mock("@/app/api/acp/acp-session-prompt", () => ({
+vi.mock("@/core/acp/session-prompt", () => ({
   dispatchSessionPrompt: dispatchSessionPromptMock,
 }));
 

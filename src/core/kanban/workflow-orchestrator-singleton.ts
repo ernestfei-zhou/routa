@@ -35,7 +35,7 @@ import { getKanbanAutoProvider } from "./board-auto-provider";
 import { upsertTaskLaneSession } from "./task-lane-history";
 import { getHttpSessionStore } from "../acp/http-session-store";
 import { getSpecialistById } from "../orchestration/specialist-prompts";
-import { dispatchSessionPrompt } from "@/app/api/acp/acp-session-prompt";
+import { dispatchSessionPrompt } from "@/core/acp/session-prompt";
 import type { ColumnTransitionData } from "./column-transition";
 import {
   buildTaskEvidenceSummary,
