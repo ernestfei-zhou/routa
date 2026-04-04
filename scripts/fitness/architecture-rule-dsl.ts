@@ -1,8 +1,13 @@
+#!/usr/bin/env node
+
 import fs from "node:fs/promises";
 import path from "node:path";
 
 import yaml from "js-yaml";
 import { z } from "zod";
+
+import { isDirectExecution } from "../lib/cli";
+import { fromRoot } from "../lib/paths";
 
 type SuiteName = "boundaries" | "cycles";
 
@@ -41,7 +46,7 @@ export type ArchitectureRuleDefinition = {
 type ArchitectureSelectorKind = "files";
 type ArchitectureLanguage = "typescript" | "rust";
 type ArchitectureSeverity = "advisory" | "warning" | "error";
-type ArchitectureEngineHint = "archunitts";
+type ArchitectureEngineHint = "archunitts" | "graph";
 
 type ArchitectureSelector = {
   kind: ArchitectureSelectorKind;
@@ -103,6 +108,32 @@ type ArchitectureDslLoadResult = {
   sourcePath: string;
 };
 
+export type ArchitectureDslValidationRuleSummary = {
+  id: string;
+  title: string;
+  kind: ArchitectureRule["kind"];
+  suite: SuiteName;
+  engines: ArchitectureEngineHint[];
+  executableInTypescript: boolean;
+};
+
+export type ArchitectureDslValidationReport = {
+  reportType: "architecture_dsl_typescript";
+  generatedAt: string;
+  repoRoot: string;
+  dslPath: string;
+  tsconfigPath: string;
+  schema: ArchitectureDslDocument["schema"];
+  model: Pick<ArchitectureModel, "id" | "title" | "description"> & { owners: string[] };
+  summary: {
+    selectorCount: number;
+    ruleCount: number;
+    archUnitExecutableRuleCount: number;
+    skippedRuleCount: number;
+  };
+  rules: ArchitectureDslValidationRuleSummary[];
+};
+
 const architectureSelectorSchema = z.object({
   kind: z.literal("files"),
   language: z.enum(["typescript", "rust"]),
@@ -133,7 +164,7 @@ const architectureDependencyRuleSchema = z.object({
   from: z.string().min(1),
   relation: z.literal("must_not_depend_on"),
   to: z.string().min(1),
-  engine_hints: z.array(z.literal("archunitts")).optional(),
+  engine_hints: z.array(z.enum(["archunitts", "graph"])).optional(),
 }).strict();
 
 const architectureCycleRuleSchema = z.object({
@@ -145,7 +176,7 @@ const architectureCycleRuleSchema = z.object({
   severity: z.enum(["advisory", "warning", "error"]),
   scope: z.string().min(1),
   relation: z.literal("must_be_acyclic"),
-  engine_hints: z.array(z.literal("archunitts")).optional(),
+  engine_hints: z.array(z.enum(["archunitts", "graph"])).optional(),
 }).strict();
 
 const architectureRuleSchema = z.discriminatedUnion("kind", [
@@ -197,7 +228,7 @@ const architectureDslSchema = z.object({
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["selectors", selectorKey, "include"],
-          message: `ArchUnitTS POC currently supports exactly one include glob per selector (selector ${selectorKey})`,
+          message: `ArchUnitTS currently supports exactly one include glob per selector (selector ${selectorKey})`,
         });
       }
     }
@@ -249,12 +280,20 @@ function assertArchUnitCompatibleSelector(
   }
 
   if (selector.language !== "typescript") {
-    throw new Error(`ArchUnitTS POC supports only typescript selectors, but ${selectorId} is ${selector.language}`);
+    throw new Error(`ArchUnitTS supports only typescript selectors, but ${selectorId} is ${selector.language}`);
   }
 
   if (selector.include.length !== 1) {
-    throw new Error(`ArchUnitTS POC supports exactly one include glob per selector, but ${selectorId} has ${selector.include.length}`);
+    throw new Error(`ArchUnitTS supports exactly one include glob per selector, but ${selectorId} has ${selector.include.length}`);
   }
+}
+
+function ruleIsArchUnitExecutable(rule: ArchitectureRule): boolean {
+  return rule.engine_hints?.length ? rule.engine_hints.includes("archunitts") : true;
+}
+
+function resolvedEngineHints(rule: ArchitectureRule): ArchitectureEngineHint[] {
+  return rule.engine_hints?.length ? [...rule.engine_hints] : ["archunitts"];
 }
 
 function compileDependencyRule(
@@ -305,11 +344,15 @@ export function compileArchitectureDslDocument(
   document: ArchitectureDslDocument,
   tsConfigPath: string,
 ): ArchitectureRuleDefinition[] {
-  return document.rules.map((rule) => {
-    if (rule.kind === "dependency") {
-      return compileDependencyRule(rule, document.selectors, tsConfigPath);
+  return document.rules.flatMap((rule) => {
+    if (!ruleIsArchUnitExecutable(rule)) {
+      return [];
     }
-    return compileCycleRule(rule, document.selectors, tsConfigPath);
+
+    if (rule.kind === "dependency") {
+      return [compileDependencyRule(rule, document.selectors, tsConfigPath)];
+    }
+    return [compileCycleRule(rule, document.selectors, tsConfigPath)];
   });
 }
 
@@ -323,4 +366,139 @@ export async function loadArchitectureRuleDefinitions(
     ...loaded,
     rules: compileArchitectureDslDocument(loaded.document, tsConfigPath),
   };
+}
+
+export function createArchitectureDslValidationReport(
+  repoRoot: string,
+  tsConfigPath: string,
+  loaded: ArchitectureDslLoadResult,
+): ArchitectureDslValidationReport {
+  const compiledRules = compileArchitectureDslDocument(loaded.document, tsConfigPath);
+  const executableRuleIds = new Set(compiledRules.map((rule) => rule.id));
+
+  return {
+    reportType: "architecture_dsl_typescript",
+    generatedAt: new Date().toISOString(),
+    repoRoot,
+    dslPath: loaded.sourcePath,
+    tsconfigPath: tsConfigPath,
+    schema: loaded.document.schema,
+    model: {
+      id: loaded.document.model.id,
+      title: loaded.document.model.title,
+      description: loaded.document.model.description,
+      owners: loaded.document.model.owners ?? [],
+    },
+    summary: {
+      selectorCount: Object.keys(loaded.document.selectors).length,
+      ruleCount: loaded.document.rules.length,
+      archUnitExecutableRuleCount: compiledRules.length,
+      skippedRuleCount: loaded.document.rules.length - compiledRules.length,
+    },
+    rules: loaded.document.rules.map((rule) => ({
+      id: rule.id,
+      title: rule.title,
+      kind: rule.kind,
+      suite: rule.suite,
+      engines: resolvedEngineHints(rule),
+      executableInTypescript: executableRuleIds.has(rule.id),
+    })),
+  };
+}
+
+export async function loadArchitectureDslValidationReport(
+  repoRoot: string,
+  tsConfigPath: string,
+  dslPath = defaultArchitectureDslPath(repoRoot),
+): Promise<ArchitectureDslValidationReport> {
+  const loaded = await loadArchitectureDslFile(dslPath);
+  return createArchitectureDslValidationReport(repoRoot, tsConfigPath, loaded);
+}
+
+function parseRepoRoot(argv: string[]): string {
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--repo-root" && argv[index + 1]) {
+      return path.resolve(argv[index + 1]);
+    }
+    if (arg.startsWith("--repo-root=")) {
+      return path.resolve(arg.slice("--repo-root=".length));
+    }
+  }
+
+  const envRepoRoot = process.env.ROUTA_ARCH_REPO_ROOT?.trim();
+  return envRepoRoot ? path.resolve(envRepoRoot) : fromRoot();
+}
+
+function parseDslPath(argv: string[], repoRoot: string): string {
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--dsl" && argv[index + 1]) {
+      return path.resolve(argv[index + 1]);
+    }
+    if (arg.startsWith("--dsl=")) {
+      return path.resolve(arg.slice("--dsl=".length));
+    }
+  }
+
+  const envDslPath = process.env.ROUTA_ARCH_DSL_PATH?.trim();
+  return envDslPath ? path.resolve(envDslPath) : defaultArchitectureDslPath(repoRoot);
+}
+
+function parseTsConfigPath(argv: string[], repoRoot: string): string {
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--tsconfig" && argv[index + 1]) {
+      return path.resolve(argv[index + 1]);
+    }
+    if (arg.startsWith("--tsconfig=")) {
+      return path.resolve(arg.slice("--tsconfig=".length));
+    }
+  }
+
+  return path.join(repoRoot, "tsconfig.json");
+}
+
+function formatValidationReport(report: ArchitectureDslValidationReport): string {
+  const lines = [
+    `Architecture DSL validated: ${report.model.title} (${report.model.id})`,
+    `DSL: ${report.dslPath}`,
+    `TSConfig: ${report.tsconfigPath}`,
+    `Selectors: ${report.summary.selectorCount}`,
+    `Rules: ${report.summary.ruleCount}`,
+    `ArchUnitTS executable: ${report.summary.archUnitExecutableRuleCount}`,
+    `Skipped in TypeScript path: ${report.summary.skippedRuleCount}`,
+    "",
+    "Rules:",
+  ];
+
+  for (const rule of report.rules) {
+    lines.push(
+      `- ${rule.id} [${rule.suite}/${rule.kind}] engines=${rule.engines.join(",")} executable=${rule.executableInTypescript ? "yes" : "no"}`,
+    );
+  }
+
+  return lines.join("\n");
+}
+
+async function runCli(argv: string[]): Promise<void> {
+  const json = argv.includes("--json");
+  const repoRoot = parseRepoRoot(argv);
+  const dslPath = parseDslPath(argv, repoRoot);
+  const tsConfigPath = parseTsConfigPath(argv, repoRoot);
+  const report = await loadArchitectureDslValidationReport(repoRoot, tsConfigPath, dslPath);
+  if (json) {
+    console.log(JSON.stringify(report, null, 2));
+    return;
+  }
+
+  console.log(formatValidationReport(report));
+}
+
+if (isDirectExecution(import.meta.url)) {
+  runCli(process.argv.slice(2)).catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(message);
+    process.exitCode = 1;
+  });
 }

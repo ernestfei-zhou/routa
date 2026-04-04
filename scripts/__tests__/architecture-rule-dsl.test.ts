@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   compileArchitectureDslDocument,
+  createArchitectureDslValidationReport,
   loadArchitectureDslFile,
   parseArchitectureDslSource,
 } from "../fitness/architecture-rule-dsl";
@@ -84,6 +85,12 @@ selectors:
     language: typescript
     include:
       - src/app/**
+  rust_core:
+    kind: files
+    language: rust
+    include:
+      - crates/routa-core/**
+      - crates/routa-server/**
 rules:
   - id: no_core_to_app
     title: no core to app
@@ -95,6 +102,16 @@ rules:
     to: app_ts
     engine_hints:
       - archunitts
+  - id: rust_graph_only
+    title: rust graph only
+    kind: dependency
+    suite: boundaries
+    severity: advisory
+    from: rust_core
+    relation: must_not_depend_on
+    to: app_ts
+    engine_hints:
+      - graph
   - id: no_cycles
     title: no cycles
     kind: cycle
@@ -111,6 +128,7 @@ rules:
     const compiled = compileArchitectureDslDocument(document, "/repo/tsconfig.json");
 
     expect(compiled).toHaveLength(2);
+    expect(compiled.map((rule) => rule.id)).toEqual(["no_core_to_app", "no_cycles"]);
 
     const dependencyResult = compiled[0].build(fakeProjectFiles);
     expect(dependencyResult).toHaveProperty("check");
@@ -130,6 +148,166 @@ rules:
       "inFolder:src/core/**",
       "should",
       "haveNoCycles",
+    ]);
+  });
+
+  it("accepts graph engine hints without applying ArchUnitTS-only constraints", () => {
+    const document = parseArchitectureDslSource(`
+schema: routa.archdsl/v1
+model:
+  id: demo
+  title: Demo
+selectors:
+  rust_core:
+    kind: files
+    language: rust
+    include:
+      - crates/routa-core/**
+      - crates/routa-server/**
+  app_ts:
+    kind: files
+    language: typescript
+    include:
+      - src/app/**
+rules:
+  - id: rust_graph_only
+    title: rust graph only
+    kind: dependency
+    suite: boundaries
+    severity: advisory
+    from: rust_core
+    relation: must_not_depend_on
+    to: app_ts
+    engine_hints:
+      - graph
+`);
+
+    expect(document.rules[0].engine_hints).toEqual(["graph"]);
+  });
+
+  it("skips graph-only rules when compiling ArchUnitTS builders", () => {
+    const document = parseArchitectureDslSource(`
+schema: routa.archdsl/v1
+model:
+  id: demo
+  title: Demo
+selectors:
+  core_ts:
+    kind: files
+    language: typescript
+    include:
+      - src/core/**
+  app_ts:
+    kind: files
+    language: typescript
+    include:
+      - src/app/**
+  rust_core:
+    kind: files
+    language: rust
+    include:
+      - crates/routa-core/**
+      - crates/routa-server/**
+rules:
+  - id: no_core_to_app
+    title: no core to app
+    kind: dependency
+    suite: boundaries
+    severity: advisory
+    from: core_ts
+    relation: must_not_depend_on
+    to: app_ts
+    engine_hints:
+      - archunitts
+  - id: rust_graph_only
+    title: rust graph only
+    kind: dependency
+    suite: boundaries
+    severity: advisory
+    from: rust_core
+    relation: must_not_depend_on
+    to: app_ts
+    engine_hints:
+      - graph
+`);
+
+    const compiled = compileArchitectureDslDocument(document, "/repo/tsconfig.json");
+
+    expect(compiled).toHaveLength(1);
+    expect(compiled[0].id).toBe("no_core_to_app");
+  });
+
+  it("reports graph-only rules as skipped in the TypeScript validation report", () => {
+    const document = parseArchitectureDslSource(`
+schema: routa.archdsl/v1
+model:
+  id: demo
+  title: Demo
+selectors:
+  core_ts:
+    kind: files
+    language: typescript
+    include:
+      - src/core/**
+  app_ts:
+    kind: files
+    language: typescript
+    include:
+      - src/app/**
+  rust_core:
+    kind: files
+    language: rust
+    include:
+      - crates/routa-core/**
+rules:
+  - id: no_core_to_app
+    title: no core to app
+    kind: dependency
+    suite: boundaries
+    severity: advisory
+    from: core_ts
+    relation: must_not_depend_on
+    to: app_ts
+  - id: rust_graph_only
+    title: rust graph only
+    kind: dependency
+    suite: boundaries
+    severity: advisory
+    from: rust_core
+    relation: must_not_depend_on
+    to: app_ts
+    engine_hints:
+      - graph
+`);
+
+    const report = createArchitectureDslValidationReport("/repo", "/repo/tsconfig.json", {
+      document,
+      sourcePath: "/repo/architecture/rules/demo.archdsl.yaml",
+    });
+
+    expect(report.summary).toEqual({
+      selectorCount: 3,
+      ruleCount: 2,
+      archUnitExecutableRuleCount: 1,
+      skippedRuleCount: 1,
+    });
+    expect(report.rules).toEqual([
+      {
+        id: "no_core_to_app",
+        title: "no core to app",
+        kind: "dependency",
+        suite: "boundaries",
+        engines: ["archunitts"],
+        executableInTypescript: true,
+      },
+      {
+        id: "rust_graph_only",
+        title: "rust graph only",
+        kind: "dependency",
+        suite: "boundaries",
+        engines: ["graph"],
+        executableInTypescript: false,
+      },
     ]);
   });
 
