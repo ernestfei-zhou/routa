@@ -10,7 +10,7 @@ const require = createRequire(import.meta.url);
 const {
   warnIfSlideElementsOutOfBounds,
   safeOuterShadow,
-} = require("../.agents/skills/slide-skill/pptxgenjs_helpers/index.js");
+} = require("../.agents/skills/slide/pptxgenjs_helpers/index.js");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const outDir = path.join(__dirname, "..", "dist");

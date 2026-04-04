@@ -13,7 +13,7 @@ const {
   renderDiagramSlide,
   diagramTheme,
   warnIfSlideElementsOutOfBounds,
-} = require("../.agents/skills/slide-skill/pptxgenjs_helpers/index.js");
+} = require("../.agents/skills/slide/pptxgenjs_helpers/index.js");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, "..", "..", "..");

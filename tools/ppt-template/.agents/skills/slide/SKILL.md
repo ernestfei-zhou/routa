@@ -1,5 +1,5 @@
 ---
-name: slide-skill
+name: slide
 description: Use this skill as reference material when creating or editing presentation slide decks.
 ---
 
