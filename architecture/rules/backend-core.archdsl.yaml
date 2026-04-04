@@ -61,6 +61,7 @@ rules:
     to: app_ts
     engine_hints:
       - archunitts
+      - graph
 
   - id: ts_backend_core_no_core_to_client
     title: src/core must not depend on src/client

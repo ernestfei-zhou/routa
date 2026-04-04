@@ -195,6 +195,10 @@ const architectureDslSchema = z.object({
   const ruleIds = new Set<string>();
 
   for (const [index, rule] of document.rules.entries()) {
+    const archUnitEnabled = rule.engine_hints?.length
+      ? rule.engine_hints.includes("archunitts")
+      : true;
+
     if (ruleIds.has(rule.id)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -216,7 +220,7 @@ const architectureDslSchema = z.object({
       }
 
       const selector = document.selectors[selectorKey];
-      if (selector.language !== "typescript" && rule.engine_hints?.includes("archunitts")) {
+      if (selector.language !== "typescript" && archUnitEnabled) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["rules", index, "engine_hints"],
@@ -224,7 +228,7 @@ const architectureDslSchema = z.object({
         });
       }
 
-      if (selector.include.length !== 1 && rule.engine_hints?.includes("archunitts")) {
+      if (selector.include.length !== 1 && archUnitEnabled) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["selectors", selectorKey, "include"],
@@ -418,8 +422,12 @@ export async function loadArchitectureDslValidationReport(
 function parseRepoRoot(argv: string[]): string {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === "--repo-root" && argv[index + 1]) {
-      return path.resolve(argv[index + 1]);
+    if (arg === "--repo-root") {
+      const value = argv[index + 1];
+      if (!value || value.startsWith("-")) {
+        throw new Error("Missing value for --repo-root");
+      }
+      return path.resolve(value);
     }
     if (arg.startsWith("--repo-root=")) {
       return path.resolve(arg.slice("--repo-root=".length));
@@ -433,8 +441,12 @@ function parseRepoRoot(argv: string[]): string {
 function parseDslPath(argv: string[], repoRoot: string): string {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === "--dsl" && argv[index + 1]) {
-      return path.resolve(argv[index + 1]);
+    if (arg === "--dsl") {
+      const value = argv[index + 1];
+      if (!value || value.startsWith("-")) {
+        throw new Error("Missing value for --dsl");
+      }
+      return path.resolve(value);
     }
     if (arg.startsWith("--dsl=")) {
       return path.resolve(arg.slice("--dsl=".length));
@@ -448,8 +460,12 @@ function parseDslPath(argv: string[], repoRoot: string): string {
 function parseTsConfigPath(argv: string[], repoRoot: string): string {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === "--tsconfig" && argv[index + 1]) {
-      return path.resolve(argv[index + 1]);
+    if (arg === "--tsconfig") {
+      const value = argv[index + 1];
+      if (!value || value.startsWith("-")) {
+        throw new Error("Missing value for --tsconfig");
+      }
+      return path.resolve(value);
     }
     if (arg.startsWith("--tsconfig=")) {
       return path.resolve(arg.slice("--tsconfig=".length));

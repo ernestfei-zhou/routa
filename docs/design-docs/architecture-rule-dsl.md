@@ -117,7 +117,7 @@ Shared rule fields:
 - `message_key`: optional future i18n lookup key
 - `kind`: current values `dependency` or `cycle`
 - `suite`: current values `boundaries` or `cycles`
-- `severity`: current value `advisory`, future values may add `warning` or `error`
+- `severity`: current values `advisory`, `warning`, or `error`
 - `engine_hints`: optional executor hints such as `archunitts` or `graph`
 
 #### Dependency Rule

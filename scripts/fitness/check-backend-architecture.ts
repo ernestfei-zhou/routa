@@ -267,13 +267,13 @@ async function runSuite(suite: SuiteName): Promise<ArchitectureReport> {
       generatedAt: new Date().toISOString(),
       repoRoot,
       suite,
-      summaryStatus: "skipped",
+      summaryStatus: "fail",
       archUnitSource: null,
       tsconfigPath: tsConfigPath,
       ruleCount: 0,
       failedRuleCount: 0,
       results: [],
-      notes: [`Architecture DSL not available: ${error instanceof Error ? error.message : String(error)}`],
+      notes: [`Architecture DSL failed to load: ${error instanceof Error ? error.message : String(error)}`],
     };
   }
 

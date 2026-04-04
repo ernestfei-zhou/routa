@@ -734,8 +734,21 @@ enum ReviewAction {
     },
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
+    commands::set_full_path_env();
+
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap_or_else(|error| {
+            eprintln!("Error: failed to initialize tokio runtime: {}", error);
+            std::process::exit(1);
+        });
+
+    runtime.block_on(async_main());
+}
+
+async fn async_main() {
     let cli = Cli::parse();
 
     // Initialize tracing
@@ -748,7 +761,6 @@ async fn main() {
 
     let result = if let Some(prompt_text) = cli.prompt {
         // ── Quick prompt mode: routa -p "requirement" ───────────────
-        commands::set_full_path_env();
         let state = commands::init_state(&cli.db).await;
         commands::prompt::run(&state, &prompt_text, &cli.workspace_id, &cli.provider).await
     } else if let Some(command) = cli.command {
@@ -764,7 +776,6 @@ async fn main() {
                     workspace_id,
                     provider,
                 } => {
-                    commands::set_full_path_env();
                     let state = commands::init_state(&cli.db).await;
                     commands::acp_serve::run(&state, &workspace_id, &provider).await
                 }
@@ -1352,7 +1363,6 @@ async fn main() {
             }
 
             Commands::Team { action } => {
-                commands::set_full_path_env();
                 let state = commands::init_state(&cli.db).await;
                 match action {
                     TeamAction::Run {
