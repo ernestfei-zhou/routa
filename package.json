@@ -70,6 +70,7 @@
     "api:schema:validate:json": "node --import tsx scripts/fitness/validate-openapi-schema.ts --json",
     "api:schema:report": "node --import tsx scripts/fitness/validate-openapi-schema.ts --report",
     "git:coauthor:stats": "node --import tsx scripts/coauthor-stats.ts",
+    "hooks:sync": "node --import tsx tools/hook-runtime/src/install.ts",
     "hook:prepush": "node --import tsx tools/hook-runtime/src/cli.ts",
     "codemod:lucide-icons": "node --import tsx tools/codemods/replace-inline-svg-with-lucide.ts --write",
     "fitness:fluency": "cargo run -p routa-cli -- fitness fluency",
@@ -104,7 +105,7 @@
     "rust:cov": "node --import tsx scripts/fitness/rust-coverage.ts routa-core summary",
     "rust:cov:lcov": "node --import tsx scripts/fitness/rust-coverage.ts routa-core lcov",
     "rust:cov:html": "node --import tsx scripts/fitness/rust-coverage.ts routa-core html",
-    "prepare": "husky"
+    "prepare": "npm run hooks:sync"
   },
   "dependencies": {
     "@a2a-js/sdk": "^0.3.10",
