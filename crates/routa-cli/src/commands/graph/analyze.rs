@@ -336,17 +336,53 @@ fn build_graph_result(
 pub fn render_dot(graph: &DependencyGraph) -> String {
     let mut out = String::from("digraph dependencies {\n");
     out.push_str("  rankdir=LR;\n");
-    out.push_str("  node [shape=box];\n");
+    out.push_str("  node [shape=box, style=filled];\n");
+    out.push_str("  edge [fontsize=10];\n");
 
     for node in &graph.nodes {
-        let label = node.id.replace('"', "\\\"");
-        out.push_str(&format!("  \"{}\" [label=\"{}\"];\n", label, label));
+        let label = node.name.as_deref().unwrap_or(&node.id);
+        let escaped_id = node.id.replace('"', "\\\"");
+        let escaped_label = label.replace('"', "\\\"");
+
+        // Choose color based on node kind
+        let (color, shape) = match node.kind {
+            NodeKind::Package => ("lightblue", "folder"),
+            NodeKind::Class => ("lightgreen", "box"),
+            NodeKind::Interface => ("lightyellow", "box"),
+            NodeKind::Enum => ("lightcoral", "box"),
+            NodeKind::Method => ("lightcyan", "ellipse"),
+            NodeKind::Field => ("lavender", "ellipse"),
+            NodeKind::Constructor => ("lightpink", "ellipse"),
+            NodeKind::File => ("white", "note"),
+            NodeKind::ExternalPackage => ("lightgray", "box"),
+            NodeKind::ExternalCrate => ("lightgray", "box"),
+            NodeKind::UnresolvedModule => ("pink", "box"),
+        };
+
+        out.push_str(&format!(
+            "  \"{}\" [label=\"{}\", fillcolor={}, shape={}];\n",
+            escaped_id, escaped_label, color, shape
+        ));
     }
 
     for edge in &graph.edges {
         let from = edge.from.replace('"', "\\\"");
         let to = edge.to.replace('"', "\\\"");
-        out.push_str(&format!("  \"{}\" -> \"{}\";\n", from, to));
+
+        // Add edge label and style based on kind
+        let (label, style) = match edge.kind {
+            EdgeKind::MadeOf => ("contains", "solid"),
+            EdgeKind::DependsOn => ("depends on", "dashed"),
+            EdgeKind::Extends => ("extends", "bold"),
+            EdgeKind::Implements => ("implements", "dotted"),
+            EdgeKind::Imports => ("imports", "solid"),
+            EdgeKind::Uses => ("uses", "solid"),
+        };
+
+        out.push_str(&format!(
+            "  \"{}\" -> \"{}\" [label=\"{}\", style={}];\n",
+            from, to, label, style
+        ));
     }
 
     out.push_str("}\n");
