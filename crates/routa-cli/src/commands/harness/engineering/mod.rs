@@ -3,9 +3,12 @@
 //! Self-bootstrapping harness engineering agent with evaluation, patch generation,
 //! and controlled auto-evolution capabilities.
 
+mod learning;
 mod ratchet;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_learning;
 mod types;
 
 use self::ratchet::{run_ratchet_loop, ApplyOutcome};
@@ -42,6 +45,11 @@ pub async fn evaluate_harness_engineering(
     state: Option<&AppState>,
 ) -> Result<HarnessEngineeringReport, String> {
     let mut warnings = Vec::new();
+
+    // Learn mode: Generate playbooks from evolution history
+    if options.learn {
+        return generate_playbooks_from_history(repo_root, options);
+    }
 
     // Bootstrap mode: detect weak repo and synthesize initial harness
     if options.bootstrap {
@@ -2077,6 +2085,130 @@ entrypointGroups:
 }
 
 // Phase 3: Feedback Learning Loop (Foundation)
+
+fn generate_playbooks_from_history(
+    repo_root: &Path,
+    options: &HarnessEngineeringOptions,
+) -> Result<HarnessEngineeringReport, String> {
+    use learning::*;
+
+    println!("📊 Harness Evolution - Learning Mode");
+    println!("  Loading evolution history...");
+
+    let history = load_evolution_history(repo_root)?;
+
+    if history.is_empty() {
+        return Err("No evolution history found. Run `harness evolve --apply` first to generate data.".to_string());
+    }
+
+    println!("  Found {} evolution runs", history.len());
+
+    // Detect patterns (min 80% success rate)
+    let patterns = detect_common_patterns(&history, 0.8);
+
+    if patterns.is_empty() {
+        println!("  ⚠️  No patterns detected (need 3+ successful runs with same gap combination)");
+        println!("\nℹ️  Run `harness evolve --apply` multiple times to generate learning data.");
+        return Err("Not enough data for pattern extraction. Need 3+ successful runs with matching gap patterns.".to_string());
+    }
+
+    println!("  Detected {} common patterns:", patterns.len());
+    for pattern in &patterns {
+        println!(
+            "    - Gap pattern: {:?} (seen {} times, avg success: {:.1}%)",
+            pattern.gap_categories,
+            pattern.occurrence_count,
+            pattern.avg_success_rate * 100.0
+        );
+    }
+
+    // Generate playbook candidates
+    let playbooks = generate_playbook_candidates(repo_root, &patterns)?;
+
+    println!("  Generated {} playbook candidates:", playbooks.len());
+
+    // Save playbooks
+    for playbook in &playbooks {
+        save_playbook(repo_root, playbook)?;
+        println!(
+            "    ✓ {}.json (confidence: {:.1}%, evidence: {} runs)",
+            playbook.id,
+            playbook.confidence * 100.0,
+            playbook.provenance.evidence_count
+        );
+    }
+
+    let playbook_dir = repo_root.join("docs/fitness/playbooks");
+    println!("\n✅ Playbooks saved to {}", playbook_dir.display());
+
+    // Create minimal report (learning mode doesn't use full report structure)
+    let default_inputs = HarnessEngineeringInputs {
+        repo_signals: None,
+        templates: TemplateSummary {
+            templates_checked: 0,
+            drift_error_count: 0,
+            drift_warning_count: 0,
+            missing_sensor_files: 0,
+            missing_automation_refs: 0,
+            warnings: 0,
+        },
+        automations: AutomationSummary {
+            definition_count: 0,
+            pending_signal_count: 0,
+            recent_run_count: 0,
+            definition_only_count: 0,
+            warnings: 0,
+        },
+        specs: SpecSummary {
+            source_count: 0,
+            feature_count: 0,
+            systems: vec![],
+            warnings: 0,
+        },
+        fitness: FitnessSummary {
+            manifest_present: false,
+            fluency_snapshots_loaded: 0,
+            blocking_criteria_count: 0,
+            critical_blocking_criteria_count: 0,
+        },
+    };
+
+    Ok(HarnessEngineeringReport {
+        generated_at: chrono::Utc::now().to_rfc3339(),
+        repo_root: repo_root.display().to_string(),
+        mode: "learn".to_string(),
+        report_path: playbook_dir.display().to_string(),
+        summary: HarnessEngineeringSummary {
+            total_gaps: 0,
+            blocking_gaps: 0,
+            harness_mutation_candidates: playbooks.len(),
+            non_harness_gaps: 0,
+            low_risk_patch_candidates: playbooks.len(),
+        },
+        inputs: default_inputs,
+        gaps: vec![],
+        recommended_actions: playbooks
+            .iter()
+            .enumerate()
+            .map(|(idx, p)| HarnessEngineeringAction {
+                gap_id: format!("playbook-{}", idx),
+                priority: 1,
+                action: format!("Review playbook: {}", p.id),
+                rationale: format!(
+                    "Generated from {} successful runs with {:.0}% confidence",
+                    p.provenance.evidence_count,
+                    p.confidence * 100.0
+                ),
+            })
+            .collect(),
+        patch_candidates: vec![],
+        verification_plan: vec![],
+        verification_results: vec![],
+        ratchet: None,
+        ai_assessment: None,
+        warnings: vec![],
+    })
+}
 
 fn build_evolution_context(
     state: Option<&AppState>,

@@ -1,0 +1,115 @@
+//! Tests for trace learning functionality
+
+use super::learning::*;
+use std::fs;
+use std::path::PathBuf;
+use tempfile::TempDir;
+
+#[test]
+fn test_load_evolution_history() {
+    let temp_dir = TempDir::new().unwrap();
+    let repo_root = temp_dir.path();
+    
+    // Create history file
+    let history_dir = repo_root.join("docs/fitness/evolution");
+    fs::create_dir_all(&history_dir).unwrap();
+    
+    let history_content = r#"{"timestamp":"2026-04-06T01:00:00Z","repoRoot":"/test","mode":"auto-apply","taskType":"harness_evolution","workflow":"bootstrap","trigger":"manual","gapsDetected":1,"gapCategories":["missing_execution_surface"],"changedPaths":["build.yml"],"patchesApplied":["patch.A"],"patchesFailed":[],"successRate":1.0}
+{"timestamp":"2026-04-06T02:00:00Z","repoRoot":"/test","mode":"auto-apply","taskType":"harness_evolution","workflow":"bootstrap","trigger":"manual","gapsDetected":1,"gapCategories":["missing_execution_surface"],"changedPaths":["build.yml"],"patchesApplied":["patch.A"],"patchesFailed":[],"successRate":1.0}
+{"timestamp":"2026-04-06T03:00:00Z","repoRoot":"/test","mode":"auto-apply","taskType":"harness_evolution","workflow":"bootstrap","trigger":"manual","gapsDetected":1,"gapCategories":["missing_execution_surface"],"changedPaths":["build.yml"],"patchesApplied":["patch.A"],"patchesFailed":[],"successRate":1.0}
+"#;
+    
+    fs::write(history_dir.join("history.jsonl"), history_content).unwrap();
+    
+    // Load history
+    let history = load_evolution_history(repo_root).unwrap();
+    
+    assert_eq!(history.len(), 3);
+    assert_eq!(history[0].patches_applied, vec!["patch.A"]);
+    assert_eq!(history[0].success_rate, 1.0);
+}
+
+#[test]
+fn test_detect_common_patterns() {
+    let temp_dir = TempDir::new().unwrap();
+    let repo_root = temp_dir.path();
+    
+    // Create history with repeated pattern
+    let history_dir = repo_root.join("docs/fitness/evolution");
+    fs::create_dir_all(&history_dir).unwrap();
+    
+    let history_content = r#"{"timestamp":"2026-04-06T01:00:00Z","repoRoot":"/test","mode":"auto-apply","taskType":"harness_evolution","gapsDetected":2,"gapCategories":["missing_automation","missing_execution_surface"],"patchesApplied":["patch.A","patch.B"],"patchesFailed":[],"successRate":1.0}
+{"timestamp":"2026-04-06T02:00:00Z","repoRoot":"/test","mode":"auto-apply","taskType":"harness_evolution","gapsDetected":2,"gapCategories":["missing_automation","missing_execution_surface"],"patchesApplied":["patch.A","patch.B"],"patchesFailed":[],"successRate":1.0}
+{"timestamp":"2026-04-06T03:00:00Z","repoRoot":"/test","mode":"auto-apply","taskType":"harness_evolution","gapsDetected":2,"gapCategories":["missing_automation","missing_execution_surface"],"patchesApplied":["patch.A","patch.B"],"patchesFailed":[],"successRate":1.0}
+"#;
+    
+    fs::write(history_dir.join("history.jsonl"), history_content).unwrap();
+    
+    let history = load_evolution_history(repo_root).unwrap();
+    let patterns = detect_common_patterns(&history, 0.8);
+    
+    assert_eq!(patterns.len(), 1);
+    assert_eq!(patterns[0].occurrence_count, 3);
+    assert_eq!(patterns[0].gap_categories.len(), 2);
+    assert_eq!(patterns[0].preferred_patch_order, vec!["patch.A", "patch.B"]);
+}
+
+#[test]
+fn test_generate_playbook_candidates() {
+    let temp_dir = TempDir::new().unwrap();
+    let repo_root = temp_dir.path();
+    
+    // Create history
+    let history_dir = repo_root.join("docs/fitness/evolution");
+    fs::create_dir_all(&history_dir).unwrap();
+    
+    let history_content = r#"{"timestamp":"2026-04-06T01:00:00Z","repoRoot":"/test","mode":"auto-apply","taskType":"harness_evolution","gapsDetected":1,"gapCategories":["missing_governance_gate"],"patchesApplied":["patch.create_codeowners"],"patchesFailed":[],"successRate":1.0}
+{"timestamp":"2026-04-06T02:00:00Z","repoRoot":"/test","mode":"auto-apply","taskType":"harness_evolution","gapsDetected":1,"gapCategories":["missing_governance_gate"],"patchesApplied":["patch.create_codeowners"],"patchesFailed":[],"successRate":1.0}
+{"timestamp":"2026-04-06T03:00:00Z","repoRoot":"/test","mode":"auto-apply","taskType":"harness_evolution","gapsDetected":1,"gapCategories":["missing_governance_gate"],"patchesApplied":["patch.create_codeowners"],"patchesFailed":[],"successRate":1.0}
+"#;
+    
+    fs::write(history_dir.join("history.jsonl"), history_content).unwrap();
+    
+    let history = load_evolution_history(repo_root).unwrap();
+    let patterns = detect_common_patterns(&history, 0.8);
+    let playbooks = generate_playbook_candidates(repo_root, &patterns).unwrap();
+    
+    assert_eq!(playbooks.len(), 1);
+    assert_eq!(playbooks[0].task_type, "harness_evolution");
+    assert_eq!(playbooks[0].confidence, 1.0);
+    assert_eq!(playbooks[0].provenance.evidence_count, 3);
+    assert_eq!(playbooks[0].strategy.preferred_patch_order, vec!["patch.create_codeowners"]);
+}
+
+#[test]
+fn test_save_playbook() {
+    let temp_dir = TempDir::new().unwrap();
+    let repo_root = temp_dir.path();
+    
+    use super::learning::{PlaybookCandidate, PlaybookStrategy, PlaybookProvenance, AntiPattern};
+    
+    let playbook = PlaybookCandidate {
+        id: "test-playbook".to_string(),
+        task_type: "harness_evolution".to_string(),
+        confidence: 0.95,
+        strategy: PlaybookStrategy {
+            preferred_patch_order: vec!["patch.A".to_string()],
+            gap_patterns: vec!["missing_automation".to_string()],
+            anti_patterns: vec![],
+        },
+        provenance: PlaybookProvenance {
+            source_runs: vec!["2026-04-06T01:00:00Z".to_string()],
+            success_rate: 0.95,
+            evidence_count: 3,
+        },
+    };
+    
+    save_playbook(repo_root, &playbook).unwrap();
+    
+    let playbook_file = repo_root.join("docs/fitness/playbooks/test-playbook.json");
+    assert!(playbook_file.exists());
+    
+    let content = fs::read_to_string(playbook_file).unwrap();
+    assert!(content.contains("test-playbook"));
+    assert!(content.contains("harness_evolution"));
+}

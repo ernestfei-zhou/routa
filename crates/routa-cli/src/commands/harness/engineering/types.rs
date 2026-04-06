@@ -1,6 +1,6 @@
 //! Type definitions for Harness Engineering
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
@@ -17,6 +17,7 @@ pub struct HarnessEngineeringOptions {
     pub ai_provider: Option<String>,
     pub ai_provider_timeout_ms: Option<u64>,
     pub ai_provider_retries: u8,
+    pub learn: bool,  // Generate playbooks from evolution history
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -242,7 +243,7 @@ pub(super) struct FluencyBlockingCriterion {
     pub evidence_hint: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct EvolutionHistory {
