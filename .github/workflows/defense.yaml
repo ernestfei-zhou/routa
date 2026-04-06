@@ -40,6 +40,79 @@ env:
 
 jobs:
   # ══════════════════════════════════════════════════════════════
+  # COMMIT METADATA VALIDATION: Block test credentials
+  # ══════════════════════════════════════════════════════════════
+  validate-commit-metadata:
+    name: 'Gate: Commit Metadata'
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history needed to scan commits
+
+      - name: Validate commit authors
+        run: |
+          # Determine range to check
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+            RANGE="$BASE_SHA..$HEAD_SHA"
+            echo "📋 Checking PR commits: $RANGE"
+          else
+            # For push events, check the pushed commits
+            RANGE="${{ github.event.before }}..${{ github.event.after }}"
+            echo "📋 Checking pushed commits: $RANGE"
+          fi
+
+          # Scan for test credentials
+          echo ""
+          echo "🔍 Scanning for test credentials..."
+
+          SUSPICIOUS=$(git log "$RANGE" --format="%H|%ae|%an" 2>/dev/null | \
+            grep -iE "(test@example\.com|routa test|placeholder@|noreply@test)" || true)
+
+          if [ -n "$SUSPICIOUS" ]; then
+            echo ""
+            echo "❌ TEST CREDENTIALS DETECTED IN COMMITS"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "$SUSPICIOUS" | while IFS='|' read hash email name; do
+              SHORT_HASH=$(echo $hash | cut -c1-8)
+              echo "  Commit: $SHORT_HASH"
+              echo "  Author: $name <$email>"
+              git log -1 --format="  Subject: %s" $hash
+              echo ""
+            done
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "::error::Commits with test credentials detected"
+            echo "::error::These commits must be amended with real author information"
+            echo ""
+            echo "To fix:"
+            echo "  1. Use interactive rebase: git rebase -i origin/main"
+            echo "  2. Mark commits for 'edit'"
+            echo "  3. Amend each commit: git commit --amend --author=\"Your Name <your@email.com>\" --no-edit"
+            echo "  4. Continue: git rebase --continue"
+            echo ""
+            exit 1
+          fi
+
+          echo "✅ All commits have valid author metadata"
+
+      - name: Validate email formats
+        run: |
+          # Check that all emails are valid format
+          INVALID=$(git log "$RANGE" --format="%ae" 2>/dev/null | \
+            grep -vE "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$" || true)
+
+          if [ -n "$INVALID" ]; then
+            echo "⚠️  Warning: Invalid email formats detected:"
+            echo "$INVALID"
+            # Don't fail, just warn
+          fi
+
+  # ══════════════════════════════════════════════════════════════
   # FITNESS DIMENSIONS: 按 docs/fitness 维度拆分执行
   # ══════════════════════════════════════════════════════════════
   fitness-dimensions:

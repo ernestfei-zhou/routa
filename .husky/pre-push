@@ -15,5 +15,69 @@ if [ "$(uname -s 2>/dev/null | cut -c1-5)" = "MINGW" ] || [ "$(uname -s 2>/dev/n
   export TMP="$win_temp"
 fi
 
+# ─── Scan Commits for Test Credentials ────────────────────────────
+# Read push details from stdin
+REMOTE="$1"
+URL="$2"
+
+echo "🔍 Scanning commits for test credentials..."
+
+HAS_SUSPICIOUS=0
+
+while read local_ref local_sha remote_ref remote_sha; do
+  # Skip if deleting a branch
+  if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
+    continue
+  fi
+
+  # Determine range to check
+  if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+    # New branch - check last 100 commits
+    RANGE="$local_sha~100..$local_sha"
+  else
+    # Existing branch - check commits since remote
+    RANGE="$remote_sha..$local_sha"
+  fi
+
+  # Find commits with test credentials
+  SUSPICIOUS=$(git log "$RANGE" --format="%H|%ae|%an" 2>/dev/null | \
+    grep -iE "(test@example\.com|routa test|placeholder)" || true)
+
+  if [ -n "$SUSPICIOUS" ]; then
+    HAS_SUSPICIOUS=1
+    echo ""
+    echo "❌ PUSH BLOCKED: Commits with test credentials detected in $local_ref"
+    echo ""
+    echo "$SUSPICIOUS" | while IFS='|' read hash email name; do
+      echo "  Commit: $(echo $hash | cut -c1-8)"
+      echo "  Author: $name <$email>"
+      echo ""
+    done
+  fi
+done
+
+if [ "$HAS_SUSPICIOUS" = "1" ]; then
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "  Fix these commits before pushing:"
+  echo ""
+  echo "  Option 1: Amend most recent commit"
+  echo "    git commit --amend --author=\"Your Name <your@email.com>\" --no-edit"
+  echo ""
+  echo "  Option 2: Interactive rebase (for multiple commits)"
+  echo "    git rebase -i origin/main"
+  echo "    # Mark commits for 'edit', then for each:"
+  echo "    git commit --amend --author=\"Your Name <your@email.com>\" --no-edit"
+  echo "    git rebase --continue"
+  echo ""
+  echo "  Option 3: Emergency bypass (NOT recommended)"
+  echo "    SKIP_HOOKS=1 git push"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  exit 1
+fi
+
+echo "✅ No test credentials found in commits"
+echo ""
+
+# ─── Run Standard Checks ───────────────────────────────────────────
 # Run hook runtime directly for full pre-push checks.
 node --import tsx tools/hook-runtime/src/cli.ts --profile pre-push "$@"
