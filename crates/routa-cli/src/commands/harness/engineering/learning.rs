@@ -352,10 +352,8 @@ pub fn find_matching_playbook<'a>(
         // Only consider if overlap is significant (>= 50%) and weighted by confidence
         let weighted_score = overlap_score * playbook.confidence;
 
-        if overlap_score >= 0.5 {
-            if best_match.is_none() || weighted_score > best_match.unwrap().1 {
-                best_match = Some((playbook, weighted_score));
-            }
+        if overlap_score >= 0.5 && (best_match.is_none() || weighted_score > best_match.unwrap().1) {
+            best_match = Some((playbook, weighted_score));
         }
     }
 
@@ -364,7 +362,7 @@ pub fn find_matching_playbook<'a>(
 
 /// Reorder patches based on playbook strategy
 pub fn reorder_patches_by_playbook(
-    patches: &mut Vec<super::HarnessEngineeringPatchCandidate>,
+    patches: &mut [super::HarnessEngineeringPatchCandidate],
     playbook: &PlaybookCandidate,
 ) {
     use std::collections::HashMap;
