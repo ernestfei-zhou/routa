@@ -1,6 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getRoutaSystem } from "@/core/routa-system";
-import { getRepoChanges, isBareGitRepository, isGitRepository } from "@/core/git/git-utils";
+import {
+  getRepoChanges,
+  isBareGitRepository,
+  isGitRepository,
+} from "@/core/git/git-utils";
 import { buildTaskDeliveryReadiness } from "@/core/kanban/task-delivery-readiness";
 import { getRepoCommitChanges } from "@/core/git";
 
@@ -10,8 +14,20 @@ function repoLabelFromPath(repoPath: string): string {
   return repoPath.split("/").filter(Boolean).pop() ?? repoPath;
 }
 
+/**
+ * GET /api/tasks/[taskId]/changes
+ *
+ * Returns repository changes for a task.
+ * Performance optimizations:
+ * - Batch git diff for all files (1 command instead of N)
+ * - Global limit of 500 files with detailed stats
+ * - 5-second LRU cache
+ *
+ * For very large changesets, use /api/tasks/[taskId]/changes/stats
+ * to lazy-load stats for specific files only.
+ */
 export async function GET(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ taskId: string }> },
 ) {
   const { taskId } = await params;

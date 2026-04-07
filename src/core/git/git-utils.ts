@@ -14,6 +14,7 @@
 
 import * as path from "path";
 import * as fs from "fs";
+import { LRUCache } from "lru-cache";
 
 import { getServerBridge } from "@/core/platform";
 
@@ -26,7 +27,10 @@ const GITHUB_URL_PATTERNS = [
 ];
 
 const SIMPLE_OWNER_REPO = /^([a-zA-Z0-9\-_]+)\/([a-zA-Z0-9\-_.]+)$/;
+
+// Performance limits for file statistics calculation
 const MAX_UNTRACKED_FILES_WITH_SYNTHETIC_STATS = 25;
+const MAX_CHANGED_FILES_WITH_DETAILED_STATS = 500; // Global limit for all file types
 
 export interface ParsedGitHubUrl {
   owner: string;
@@ -132,6 +136,13 @@ export interface RepoChanges {
   status: RepoStatus;
   files: GitFileChange[];
 }
+
+// 🚀 Performance: Cache repo changes to avoid repeated expensive git operations
+// TTL of 5 seconds is fresh enough for UI interactions while preventing rapid re-computation
+const repoChangesCache = new LRUCache<string, RepoChanges>({
+  max: 100, // Cache up to 100 different repo paths
+  ttl: 5000, // 5 seconds - balances freshness with performance
+});
 
 export interface RepoFileDiff {
   path: string;
@@ -371,6 +382,13 @@ export function parseGitStatusPorcelain(output: string): GitFileChange[] {
 }
 
 export function getRepoChanges(repoPath: string): RepoChanges {
+  // 🚀 Check cache first (5-second TTL)
+  const cacheKey = `${repoPath}:${Math.floor(Date.now() / 5000)}`; // 5-second buckets
+  const cached = repoChangesCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const branch = getCurrentBranch(repoPath) ?? "unknown";
   const status = getRepoStatus(repoPath);
 
@@ -385,16 +403,42 @@ export function getRepoChanges(repoPath: string): RepoChanges {
   try {
     const output = gitExecSync("git status --porcelain -uall", repoPath);
     const parsedFiles = parseGitStatusPorcelain(output);
+
+    // 🚀 Performance optimization: batch fetch all file stats at once
+    // instead of running git diff for each file individually
+    const batchStats = batchGetRepoFileStats(repoPath);
+
     let syntheticUntrackedStatsCount = 0;
+    let totalStatsCalculated = 0;
+
     const files = parsedFiles.map((file) => {
+      // 🛡️ Global limit: Skip detailed stats if we've processed too many files
+      if (totalStatsCalculated >= MAX_CHANGED_FILES_WITH_DETAILED_STATS) {
+        return file;
+      }
+
+      // First try to get stats from batch result
+      const batchStat = batchStats.get(file.path);
+      if (batchStat) {
+        totalStatsCalculated++;
+        return {
+          ...file,
+          ...batchStat,
+        };
+      }
+
+      // Fallback to synthetic stats for special cases
       if (file.status === "untracked") {
         syntheticUntrackedStatsCount += 1;
         if (syntheticUntrackedStatsCount > MAX_UNTRACKED_FILES_WITH_SYNTHETIC_STATS) {
-          return file;
+          return file; // Skip stats for too many untracked files
         }
       }
 
+      // For files not in batch results (e.g., untracked, renamed),
+      // compute stats using individual file logic
       try {
+        totalStatsCalculated++;
         return {
           ...file,
           ...getRepoFileLineStats(repoPath, file),
@@ -403,11 +447,17 @@ export function getRepoChanges(repoPath: string): RepoChanges {
         return file;
       }
     });
-    return {
+
+    const result: RepoChanges = {
       branch,
       status,
       files,
     };
+
+    // 🚀 Store in cache
+    repoChangesCache.set(cacheKey, result);
+
+    return result;
   } catch {
     return {
       branch,
@@ -499,6 +549,87 @@ function parseNumstat(output: string): { additions: number; deletions: number } 
 
   if (Number.isNaN(additions) || Number.isNaN(deletions)) return null;
   return { additions, deletions };
+}
+
+/**
+ * Parse numstat output into a map of file path -> stats.
+ * Handles renamed files by using the new path as the key.
+ *
+ * Example numstat output:
+ *   10  5   src/foo.ts
+ *   20  0   src/bar.ts
+ *   15  3   src/{old.ts => new.ts}
+ */
+function parseNumstatToMap(output: string): Map<string, { additions: number; deletions: number }> {
+  const statsMap = new Map<string, { additions: number; deletions: number }>();
+
+  for (const line of output.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    const parts = trimmed.split(/\s+/);
+    if (parts.length < 3) continue;
+
+    const [rawAdditions, rawDeletions, ...pathParts] = parts;
+    const additions = rawAdditions === "-" ? 0 : Number.parseInt(rawAdditions, 10);
+    const deletions = rawDeletions === "-" ? 0 : Number.parseInt(rawDeletions, 10);
+
+    if (Number.isNaN(additions) || Number.isNaN(deletions)) continue;
+
+    const pathStr = pathParts.join(" ");
+
+    // Handle renamed files: "src/{old.ts => new.ts}" -> "src/new.ts"
+    const renameMatch = pathStr.match(/^(.*)?\{.*\s*=>\s*([^}]+)\}(.*)$/);
+    if (renameMatch) {
+      const [, prefix = "", newName, suffix = ""] = renameMatch;
+      const newPath = `${prefix}${newName.trim()}${suffix}`;
+      statsMap.set(newPath, { additions, deletions });
+    } else {
+      statsMap.set(pathStr, { additions, deletions });
+    }
+  }
+
+  return statsMap;
+}
+
+/**
+ * Batch fetch file statistics for all changed files using a single git diff command.
+ * This is dramatically faster than calling git diff for each file individually.
+ *
+ * Strategy:
+ * 1. Try unstaged changes (git diff --numstat)
+ * 2. If no results, try staged changes (git diff --cached --numstat)
+ * 3. If no results, try all changes vs HEAD (git diff HEAD --numstat)
+ *
+ * Returns a map of file path -> { additions, deletions }
+ */
+function batchGetRepoFileStats(repoPath: string): Map<string, { additions: number; deletions: number }> {
+  const commands = [
+    "git --no-pager diff --no-ext-diff --find-renames --find-copies --numstat",
+    "git --no-pager diff --no-ext-diff --find-renames --find-copies --cached --numstat",
+    "git --no-pager diff --no-ext-diff --find-renames --find-copies HEAD --numstat",
+  ];
+
+  const combinedStats = new Map<string, { additions: number; deletions: number }>();
+
+  for (const command of commands) {
+    try {
+      const output = gitExecSync(command, repoPath);
+      if (output.trim()) {
+        const stats = parseNumstatToMap(output);
+        // Merge stats, preferring earlier (more specific) results
+        for (const [path, stat] of stats.entries()) {
+          if (!combinedStats.has(path)) {
+            combinedStats.set(path, stat);
+          }
+        }
+      }
+    } catch {
+      // Ignore errors and try next command
+    }
+  }
+
+  return combinedStats;
 }
 
 function getRepoFileLineStats(repoPath: string, file: GitFileChange): { additions: number; deletions: number } {
