@@ -11,6 +11,7 @@
 - `docs/exec-plans/tech-debt-tracker.md`: Cross-cutting debt ledger.
 - `docs/issues/`: Incident and repro records. Capture WHAT happened and WHY it mattered.
 - `docs/fitness/`: Executable quality/testing/contract rulebook consumed by `entrix`.
+- `docs/coding-style.md`: Canonical coding style guidance for Rust, TypeScript/frontend, naming, and testing preferences.
 - `docs/REFACTOR.md`: Long-file refactor playbook.
 - `docs/references/`: Distilled external references for frequent dependencies.
 - `docs/release-guide.md`: Full release guide for CLI/Desktop/distribution.
@@ -37,6 +38,7 @@ When starting work on this repository, read in this order:
 
 ## Coding Standards
 
+- General coding style guidance lives in `docs/coding-style.md`; keep this file focused on routing and repo-level guardrails.
 - Source of truth for executable gates is `docs/fitness/` + `entrix`; do not restate tool-level checks here.
 - For long behavior-heavy files, prefer **orchestration shell + domain hooks** over UI-only slicing.
 - Apply the same pattern to oversized API routes: thin top-level route, extract workflow branches (session creation, streaming, provider dispatch, etc.).
