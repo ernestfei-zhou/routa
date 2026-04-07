@@ -83,12 +83,13 @@ pub async fn evaluate_harness_engineering(
     let mut patch_candidates = build_patch_candidates(repo_root, repo_signals.as_ref(), &gaps);
 
     // NEW (Phase 2): Load playbooks and apply learned strategies
-    let playbooks = learning::load_playbooks_for_task(repo_root, "harness_evolution").unwrap_or_else(|e| {
-        if !options.json_output {
-            eprintln!("Warning: Failed to load playbooks: {}", e);
-        }
-        Vec::new()
-    });
+    let playbooks = learning::load_playbooks_for_task(repo_root, "harness_evolution")
+        .unwrap_or_else(|e| {
+            if !options.json_output {
+                eprintln!("Warning: Failed to load playbooks: {}", e);
+            }
+            Vec::new()
+        });
 
     if let Some(playbook) = learning::find_matching_playbook(&playbooks, &gaps) {
         learning::display_preflight_guidance(playbook, &gaps, options.json_output);
@@ -184,11 +185,7 @@ pub async fn evaluate_harness_engineering(
 
     let apply_outcome = if options.apply && !patch_candidates.is_empty() {
         // Build evolution context for trace learning
-        let evolution_context = build_evolution_context(
-            state,
-            &gaps,
-            options,
-        );
+        let evolution_context = build_evolution_context(state, &gaps, options);
 
         Some(apply_patches(
             repo_root,
@@ -1928,7 +1925,9 @@ fn apply_patches(
         }
     };
 
-    if let Err(error) = record_evolution_outcome(repo_root, &selected_for_apply, &[], evolution_context) {
+    if let Err(error) =
+        record_evolution_outcome(repo_root, &selected_for_apply, &[], evolution_context)
+    {
         eprintln!(
             "  ⚠️  Warning: Failed to record evolution history: {}",
             error
@@ -2114,7 +2113,10 @@ fn generate_playbooks_from_history(
     let history = load_evolution_history(repo_root)?;
 
     if history.is_empty() {
-        return Err("No evolution history found. Run `harness evolve --apply` first to generate data.".to_string());
+        return Err(
+            "No evolution history found. Run `harness evolve --apply` first to generate data."
+                .to_string(),
+        );
     }
 
     println!("  Found {} evolution runs", history.len());
@@ -2245,10 +2247,7 @@ fn build_evolution_context(
     };
 
     // Aggregate gap categories
-    let mut gap_categories: Vec<String> = gaps
-        .iter()
-        .map(|gap| gap.category.clone())
-        .collect();
+    let mut gap_categories: Vec<String> = gaps.iter().map(|gap| gap.category.clone()).collect();
     gap_categories.sort();
     gap_categories.dedup();
 
@@ -2285,7 +2284,14 @@ fn record_evolution_outcome(
         // NEW: Task fingerprint
         task_type: Some("harness_evolution".to_string()),
         workflow: context.and_then(|ctx| ctx.workflow.clone()),
-        trigger: Some(if context.is_some() { "manual" } else { "unknown" }.to_string()),
+        trigger: Some(
+            if context.is_some() {
+                "manual"
+            } else {
+                "unknown"
+            }
+            .to_string(),
+        ),
 
         // NEW: Evidence bundle
         gaps_detected: context.map(|ctx| ctx.gaps_detected),

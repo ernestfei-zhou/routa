@@ -1360,7 +1360,10 @@ mod tests {
         git(repo, &["init", "-b", "main"]);
         // Use --local to scope test credentials to this repo only
         git(repo, &["config", "--local", "user.name", "Routa Test"]);
-        git(repo, &["config", "--local", "user.email", "test@example.com"]);
+        git(
+            repo,
+            &["config", "--local", "user.email", "test@example.com"],
+        );
 
         fs::write(
             repo.join("example.ts"),

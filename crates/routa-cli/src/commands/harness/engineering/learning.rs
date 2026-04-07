@@ -3,10 +3,10 @@
 //! Extracts patterns from evolution history and generates playbook candidates.
 
 use super::types::*;
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::Path;
-use serde::{Deserialize, Serialize};
 
 /// Playbook candidate generated from successful evolution runs
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,20 +45,20 @@ pub struct PlaybookProvenance {
 /// Load evolution history from JSONL file
 pub fn load_evolution_history(repo_root: &Path) -> Result<Vec<EvolutionHistory>, String> {
     let history_file = repo_root.join("docs/fitness/evolution/history.jsonl");
-    
+
     if !history_file.exists() {
         return Ok(Vec::new());
     }
-    
+
     let content = fs::read_to_string(&history_file)
         .map_err(|e| format!("Failed to read evolution history: {}", e))?;
-    
+
     let mut entries = Vec::new();
     for (line_num, line) in content.lines().enumerate() {
         if line.trim().is_empty() {
             continue;
         }
-        
+
         match serde_json::from_str::<EvolutionHistory>(line) {
             Ok(entry) => entries.push(entry),
             Err(e) => {
@@ -70,7 +70,7 @@ pub fn load_evolution_history(repo_root: &Path) -> Result<Vec<EvolutionHistory>,
             }
         }
     }
-    
+
     Ok(entries)
 }
 
@@ -84,27 +84,27 @@ pub fn detect_common_patterns(
         .iter()
         .filter(|e| e.success_rate >= min_success_rate)
         .collect();
-    
+
     if successful.len() < 3 {
         return Vec::new(); // Need at least 3 successful runs
     }
-    
+
     // Group by gap patterns (which gap categories appear together)
     let mut gap_pattern_groups: HashMap<String, Vec<&EvolutionHistory>> = HashMap::new();
-    
+
     for entry in successful.iter() {
         if let Some(ref categories) = entry.gap_categories {
             let mut sorted_categories = categories.clone();
             sorted_categories.sort();
             let pattern_key = sorted_categories.join(",");
-            
+
             gap_pattern_groups
                 .entry(pattern_key)
                 .or_default()
                 .push(entry);
         }
     }
-    
+
     // Find patterns that appear 3+ times
     gap_pattern_groups
         .into_iter()
@@ -112,7 +112,8 @@ pub fn detect_common_patterns(
         .map(|(pattern, group)| CommonPattern {
             gap_categories: pattern.split(',').map(|s| s.to_string()).collect(),
             occurrence_count: group.len(),
-            avg_success_rate: group.iter().map(|e| e.success_rate).sum::<f64>() / group.len() as f64,
+            avg_success_rate: group.iter().map(|e| e.success_rate).sum::<f64>()
+                / group.len() as f64,
             preferred_patch_order: extract_patch_order_consensus(&group),
         })
         .collect()
@@ -130,7 +131,7 @@ pub struct CommonPattern {
 fn extract_patch_order_consensus(entries: &[&EvolutionHistory]) -> Vec<String> {
     // Count patch frequencies and their typical positions
     let mut patch_positions: BTreeMap<String, Vec<usize>> = BTreeMap::new();
-    
+
     for entry in entries {
         for (idx, patch_id) in entry.patches_applied.iter().enumerate() {
             patch_positions
@@ -139,7 +140,7 @@ fn extract_patch_order_consensus(entries: &[&EvolutionHistory]) -> Vec<String> {
                 .push(idx);
         }
     }
-    
+
     // Sort patches by their average position
     let mut patches_with_avg: Vec<(String, f64)> = patch_positions
         .into_iter()
@@ -148,10 +149,13 @@ fn extract_patch_order_consensus(entries: &[&EvolutionHistory]) -> Vec<String> {
             (patch, avg)
         })
         .collect();
-    
+
     patches_with_avg.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-    
-    patches_with_avg.into_iter().map(|(patch, _)| patch).collect()
+
+    patches_with_avg
+        .into_iter()
+        .map(|(patch, _)| patch)
+        .collect()
 }
 
 /// Generate playbook candidates from detected patterns
@@ -189,10 +193,8 @@ pub fn generate_playbook_candidates(
             .collect();
 
         // Extract anti-patterns from failed runs
-        let failed_runs: Vec<&EvolutionHistory> = history
-            .iter()
-            .filter(|e| e.success_rate < 0.8)
-            .collect();
+        let failed_runs: Vec<&EvolutionHistory> =
+            history.iter().filter(|e| e.success_rate < 0.8).collect();
 
         let anti_patterns = extract_anti_patterns(&failed_runs);
 
@@ -238,10 +240,7 @@ fn extract_anti_patterns(failed_runs: &[&EvolutionHistory]) -> Vec<AntiPattern> 
 }
 
 /// Save playbook to JSON file
-pub fn save_playbook(
-    repo_root: &Path,
-    playbook: &PlaybookCandidate,
-) -> Result<(), String> {
+pub fn save_playbook(repo_root: &Path, playbook: &PlaybookCandidate) -> Result<(), String> {
     let playbook_dir = repo_root.join("docs/fitness/playbooks");
     fs::create_dir_all(&playbook_dir)
         .map_err(|e| format!("Failed to create playbooks dir: {}", e))?;
@@ -251,8 +250,7 @@ pub fn save_playbook(
     let json = serde_json::to_string_pretty(playbook)
         .map_err(|e| format!("Failed to serialize playbook: {}", e))?;
 
-    fs::write(&playbook_file, json)
-        .map_err(|e| format!("Failed to write playbook: {}", e))?;
+    fs::write(&playbook_file, json).map_err(|e| format!("Failed to write playbook: {}", e))?;
 
     Ok(())
 }
@@ -268,8 +266,8 @@ pub fn load_playbooks_for_task(
         return Ok(Vec::new());
     }
 
-    let entries = fs::read_dir(&playbook_dir)
-        .map_err(|e| format!("Failed to read playbooks dir: {}", e))?;
+    let entries =
+        fs::read_dir(&playbook_dir).map_err(|e| format!("Failed to read playbooks dir: {}", e))?;
 
     let mut playbooks = Vec::new();
 
@@ -313,10 +311,7 @@ pub fn find_matching_playbook<'a>(
     }
 
     // Extract and sort current gap categories
-    let mut current_categories: Vec<String> = gaps
-        .iter()
-        .map(|g| g.category.clone())
-        .collect();
+    let mut current_categories: Vec<String> = gaps.iter().map(|g| g.category.clone()).collect();
     current_categories.sort();
     current_categories.dedup();
 
@@ -352,7 +347,8 @@ pub fn find_matching_playbook<'a>(
         // Only consider if overlap is significant (>= 50%) and weighted by confidence
         let weighted_score = overlap_score * playbook.confidence;
 
-        if overlap_score >= 0.5 && (best_match.is_none() || weighted_score > best_match.unwrap().1) {
+        if overlap_score >= 0.5 && (best_match.is_none() || weighted_score > best_match.unwrap().1)
+        {
             best_match = Some((playbook, weighted_score));
         }
     }
@@ -379,9 +375,7 @@ pub fn reorder_patches_by_playbook(
     // Sort patches by priority
     // Patches in playbook come first (by their order)
     // Patches not in playbook come last (preserve original order)
-    patches.sort_by_key(|patch| {
-        priority_map.get(&patch.id).copied().unwrap_or(usize::MAX)
-    });
+    patches.sort_by_key(|patch| priority_map.get(&patch.id).copied().unwrap_or(usize::MAX));
 }
 
 /// Display preflight guidance from playbook
@@ -395,10 +389,7 @@ pub fn display_preflight_guidance(
     }
 
     // Calculate match type
-    let current_categories: Vec<String> = gaps
-        .iter()
-        .map(|g| g.category.clone())
-        .collect();
+    let current_categories: Vec<String> = gaps.iter().map(|g| g.category.clone()).collect();
 
     let exact_match = {
         let mut sorted_current = current_categories.clone();
@@ -416,10 +407,16 @@ pub fn display_preflight_guidance(
     };
 
     println!();
-    println!("🧠 Loaded learned playbook (confidence: {:.0}%, {})",
-             playbook.confidence * 100.0, match_type);
+    println!(
+        "🧠 Loaded learned playbook (confidence: {:.0}%, {})",
+        playbook.confidence * 100.0,
+        match_type
+    );
     println!("  ID: {}", playbook.id);
-    println!("  Evidence: {} successful runs", playbook.provenance.evidence_count);
+    println!(
+        "  Evidence: {} successful runs",
+        playbook.provenance.evidence_count
+    );
 
     if !playbook.strategy.preferred_patch_order.is_empty() {
         println!();
