@@ -76,7 +76,9 @@ export function parseGitHubUrl(url: string): ParsedGitHubUrl | null {
  */
 function gitExecSync(command: string, cwd: string): string {
   const bridge = getServerBridge();
-  return bridge.process.execSync(command, { cwd }).trim();
+  // Preserve leading whitespace because `git status --porcelain` encodes
+  // worktree state in fixed columns at the start of each line.
+  return bridge.process.execSync(command, { cwd }).trimEnd();
 }
 
 function shellQuote(value: string): string {
