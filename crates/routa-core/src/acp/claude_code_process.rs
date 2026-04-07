@@ -21,6 +21,9 @@ use tokio::sync::{broadcast, oneshot, Mutex};
 
 use crate::trace::{Contributor, TraceConversation, TraceEventType, TraceRecord, TraceWriter};
 
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
 // ─── Claude Protocol Types ──────────────────────────────────────────────
 
 #[derive(Debug, Clone, Deserialize)]
@@ -246,6 +249,9 @@ impl ClaudeCodeProcess {
         cmd.stdin(Stdio::piped());
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
+
+        #[cfg(windows)]
+        cmd.creation_flags(CREATE_NO_WINDOW);
 
         tracing::info!(
             "[ClaudeCode:{}] Spawning: {} -p --output-format stream-json ... (cwd: {})",

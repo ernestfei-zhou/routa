@@ -30,6 +30,9 @@ pub type NotificationSender = broadcast::Sender<serde_json::Value>;
 /// Type alias for the pending request map to avoid complex type repetition.
 type PendingMap = Arc<Mutex<HashMap<u64, oneshot::Sender<Result<serde_json::Value, String>>>>>;
 
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
 /// A managed ACP agent child process.
 pub struct AcpProcess {
     stdin: Arc<Mutex<ChildStdin>>,
@@ -79,6 +82,9 @@ impl AcpProcess {
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped());
+
+        #[cfg(windows)]
+        command_builder.creation_flags(CREATE_NO_WINDOW);
 
         // codex-acp often returns only stopReason in session/prompt result.
         // Enabling lightweight codex logs gives us process_output lines that
