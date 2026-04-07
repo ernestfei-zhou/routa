@@ -677,4 +677,74 @@ describe("KanbanTab agent prompt flow", () => {
     );
     expect(screen.getByDisplayValue("调查 lane 问题")).toBeTruthy();
   });
+
+  it("renders canonical story descriptions instead of leaving the detail blank", () => {
+    render(
+      <KanbanCardDetail
+        task={{
+          ...createTask("task-canonical", "Canonical Story"),
+          objective: `\`\`\`yaml
+story:
+  version: 1
+  language: en
+  title: Upgrade @tiptap/core safely
+  problem_statement: |
+    Dependency upgrades can regress editor behavior without explicit validation.
+  user_value: |
+    Maintainers can review the change as a structured story instead of raw YAML only.
+  acceptance_criteria:
+    - id: AC1
+      text: Detail view shows the canonical story content.
+      testable: true
+    - id: AC2
+      text: Reviewers can inspect the AI-produced analysis in place.
+      testable: true
+  constraints_and_affected_areas:
+    - src/app/workspace/[workspaceId]/kanban/kanban-description-editor.tsx
+  dependencies_and_sequencing:
+    independent_story_check: pass
+    depends_on: []
+    unblock_condition: none
+  out_of_scope:
+    - unrelated UI cleanup
+  invest:
+    independent:
+      status: pass
+      reason: No blocking prerequisites.
+    negotiable:
+      status: pass
+      reason: Tradeoffs can still be discussed.
+    valuable:
+      status: pass
+      reason: Reviewers need visible story context.
+    estimable:
+      status: pass
+      reason: Scope is constrained to description rendering.
+    small:
+      status: pass
+      reason: One focused UI fix.
+    testable:
+      status: pass
+      reason: Visible renderer can be asserted in tests.
+\`\`\``,
+        }}
+        boardColumns={board.columns}
+        availableProviders={[]}
+        specialists={[]}
+        specialistLanguage="en"
+        codebases={[]}
+        allCodebaseIds={[]}
+        worktreeCache={{}}
+        sessions={[]}
+        fullWidth
+        onPatchTask={vi.fn(async () => createTask("task-canonical", "Canonical Story"))}
+        onRetryTrigger={vi.fn()}
+        onDelete={vi.fn()}
+        onRefresh={vi.fn()}
+      />,
+    );
+
+    expect(document.body.textContent ?? "").toContain("Upgrade @tiptap/core safely");
+    expect(document.body.textContent ?? "").toContain("Dependency upgrades can regress editor behavior");
+  });
 });

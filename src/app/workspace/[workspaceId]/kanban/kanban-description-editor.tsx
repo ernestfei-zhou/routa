@@ -277,7 +277,6 @@ export function KanbanDescriptionEditor({
             <MarkdownViewer
               content={value}
               className="text-slate-700 dark:text-slate-300"
-              hideCanonicalStory
             />
           ) : (
             <div className="text-sm text-slate-400 dark:text-slate-500">{t.kanban.noDescriptionYet}</div>
