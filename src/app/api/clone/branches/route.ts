@@ -96,7 +96,10 @@ export async function PATCH(request: NextRequest) {
   }
   if (isBareGitRepository(repoPath)) {
     return NextResponse.json(
-      { error: "Repository path points to a bare git repo. Switch branches in a worktree instead." },
+      {
+        error: "This repository is a bare git repository (no working directory)",
+        suggestion: "Bare repos can't be checked out or synced. Use them as worktree sources instead, or clone a regular working copy."
+      },
       { status: 400 }
     );
   }
@@ -182,7 +185,10 @@ export async function DELETE(request: NextRequest) {
   }
   if (isBareGitRepository(repoPath)) {
     return NextResponse.json(
-      { error: "Repository path points to a bare git repo. Delete branches from a worktree instead." },
+      {
+        error: "This repository is a bare git repository (no working directory)",
+        suggestion: "Bare repos can't be used for branch operations. Use a worktree or regular working copy instead."
+      },
       { status: 400 }
     );
   }

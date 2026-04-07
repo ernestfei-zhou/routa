@@ -83,7 +83,7 @@ describe("GET /api/workspaces/[workspaceId]/codebases/changes", () => {
       codebaseId: "codebase-1",
       branch: "main",
       files: [],
-      error: "Repository path points to a bare git repo. Inspect a worktree instead.",
+      error: expect.stringContaining("bare git repository"),
     });
   });
 });

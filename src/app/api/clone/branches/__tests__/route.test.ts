@@ -104,8 +104,8 @@ describe("/api/clone/branches DELETE", () => {
 
     expect(response.status).toBe(400);
     expect(gitMocks.deleteBranch).not.toHaveBeenCalled();
-    expect(data).toEqual({
-      error: "Repository path points to a bare git repo. Delete branches from a worktree instead.",
+    expect(data).toMatchObject({
+      error: expect.stringContaining("bare git repository"),
     });
   });
 });
@@ -144,8 +144,8 @@ describe("/api/clone/branches PATCH", () => {
 
     expect(response.status).toBe(400);
     expect(gitMocks.checkoutBranch).not.toHaveBeenCalled();
-    expect(data).toEqual({
-      error: "Repository path points to a bare git repo. Switch branches in a worktree instead.",
+    expect(data).toMatchObject({
+      error: expect.stringContaining("bare git repository"),
     });
   });
 });

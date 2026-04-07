@@ -23,7 +23,7 @@ export async function GET(
         throw new Error("Repository is missing or not a git repository");
       }
       if (isBareGitRepository(codebase.repoPath)) {
-        throw new Error("Repository path points to a bare git repo. Inspect a worktree instead.");
+        throw new Error("This codebase points to a bare git repository (no working directory). Bare repos can't show changes. Use a worktree or regular clone instead.");
       }
 
       const changes = getRepoChanges(codebase.repoPath);

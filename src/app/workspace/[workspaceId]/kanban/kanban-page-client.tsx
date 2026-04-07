@@ -252,18 +252,29 @@ export function KanbanPageClient() {
   }, [fetchCodebases]);
 
   const syncCodebaseToLatest = useCallback(async (codebase: CodebaseData): Promise<void> => {
+    // Check if this is a bare repository - skip sync for bare repos
+    // Bare repos don't have a working directory and can't be checked out or pulled
+    // They should only be used as worktree sources
+    const bareCheckRes = await desktopAwareFetch(
+      `/api/clone/branches?repoPath=${encodeURIComponent(codebase.repoPath)}`,
+      { cache: "no-store" },
+    );
+    const bareCheckData = await bareCheckRes.json().catch(() => ({}));
+
+    // If the error mentions bare repo, skip sync
+    if (!bareCheckRes.ok && bareCheckData.error?.includes("bare git repo")) {
+      console.log(`[sync] Skipping bare repo: ${codebase.label ?? codebase.repoPath}`);
+      return; // Bare repos can't be synced, only used as worktree sources
+    }
+
+    if (!bareCheckRes.ok) {
+      throw new Error(bareCheckData.error ?? `Failed to load branch info for ${codebase.label ?? codebase.repoPath}`);
+    }
+
     let targetBranch = codebase.branch?.trim();
     if (!targetBranch) {
-      const branchRes = await desktopAwareFetch(
-        `/api/clone/branches?repoPath=${encodeURIComponent(codebase.repoPath)}`,
-        { cache: "no-store" },
-      );
-      const branchData = await branchRes.json().catch(() => ({}));
-      if (!branchRes.ok) {
-        throw new Error(branchData.error ?? `Failed to load branch info for ${codebase.label ?? codebase.repoPath}`);
-      }
-      targetBranch = typeof branchData.current === "string" && branchData.current.trim().length > 0
-        ? branchData.current.trim()
+      targetBranch = typeof bareCheckData.current === "string" && bareCheckData.current.trim().length > 0
+        ? bareCheckData.current.trim()
         : "main";
     }
 
@@ -277,6 +288,13 @@ export function KanbanPageClient() {
       }),
     });
     const syncData = await syncRes.json().catch(() => ({}));
+
+    // Skip if it's a bare repo (in case the check above didn't catch it)
+    if (!syncRes.ok && syncData.error?.includes("bare git repo")) {
+      console.log(`[sync] Skipping bare repo: ${codebase.label ?? codebase.repoPath}`);
+      return;
+    }
+
     if (!syncRes.ok) {
       throw new Error(syncData.error ?? `Failed to sync ${codebase.label ?? codebase.repoPath}`);
     }

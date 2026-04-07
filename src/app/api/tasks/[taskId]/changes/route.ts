@@ -74,7 +74,7 @@ export async function GET(
       throw new Error("Repository is missing or not a git repository");
     }
     if (!worktree && isBareGitRepository(repoPath)) {
-      throw new Error("Repository path points to a bare git repo. Open a task worktree to inspect local changes.");
+      throw new Error("This task's codebase points to a bare git repository (no working directory). Move the task to 'Dev' to create a worktree, or use a regular clone as the codebase.");
     }
 
     const changes = getRepoChanges(repoPath);
