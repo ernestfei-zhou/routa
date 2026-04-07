@@ -290,9 +290,9 @@ export function KanbanCardDetail({
 
   return (
     <div className="h-full w-full overflow-y-auto">
-      <div className={`mx-auto flex min-h-full max-w-6xl flex-col ${compactMode ? "gap-3 p-3" : "gap-4 p-5"}`}>
-        <section className={`border-b border-slate-200/80 pb-3 dark:border-[#232736] ${compactMode ? "pt-0.5" : "pt-1"}`}>
-          <div className={`flex items-center justify-between gap-3 ${compactMode ? "mb-1.5" : "mb-2"}`}>
+      <div className={`mx-auto flex min-h-full max-w-6xl flex-col ${compactMode ? "gap-2 p-3" : "gap-3 p-4"}`}>
+        <section className={`border-b border-slate-200/80 pb-2 dark:border-[#232736] ${compactMode ? "pt-0" : "pt-0.5"}`}>
+          <div className={`flex items-center justify-between gap-3 ${compactMode ? "mb-1" : "mb-1.5"}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
               {t.kanbanDetail.cardDetail}
             </div>
@@ -335,7 +335,7 @@ export function KanbanCardDetail({
             rows={isTitleEditing ? 2 : 1}
             className={`w-full resize-none border-0 bg-transparent px-0 py-0 font-semibold leading-tight text-slate-950 outline-none focus:border-transparent focus:ring-0 dark:text-slate-50 ${compactMode ? "text-lg" : "text-xl"}`}
           />
-          <div className={`flex flex-wrap items-center ${compactMode ? "mt-2 gap-1.5" : "mt-3 gap-2"}`}>
+          <div className={`flex flex-wrap items-center ${compactMode ? "mt-1.5 gap-1.5" : "mt-2 gap-2"}`}>
             <MetaSelect
               label={t.kanbanDetail.priority}
               value={displayedPriority}
@@ -378,7 +378,7 @@ export function KanbanCardDetail({
         </section>
 
         <div className="border-b border-slate-200/80 dark:border-[#232736]">
-          <div className="flex min-w-0 gap-1 overflow-x-auto pb-1">
+          <div className="flex min-w-0 gap-1 overflow-x-auto">
             {detailTabs.map((tab) => {
               const active = tab.id === activeTab;
               return (
@@ -388,7 +388,7 @@ export function KanbanCardDetail({
                   onClick={() => {
                     setTabSelections((current) => ({ ...current, [tabStateKey]: tab.id }));
                   }}
-                  className={`shrink-0 border-b-2 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+                  className={`shrink-0 border-b-2 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
                     active
                       ? "border-b-amber-600 text-slate-900 dark:border-b-amber-400 dark:text-slate-100"
                       : "border-b-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
@@ -402,10 +402,10 @@ export function KanbanCardDetail({
           </div>
         </div>
 
-        <div className={compactMode ? "space-y-3" : "space-y-4"}>
+        <div className={compactMode ? "space-y-2" : "space-y-3"}>
           {activeTab === "description" && (
             <>
-              <section className={compactMode ? "space-y-2 border-b border-slate-200/80 py-2 dark:border-[#232736]" : "space-y-2 border-b border-slate-200/70 py-2.5 dark:border-[#232736]"}>
+              <section className={compactMode ? "space-y-1.5 border-b border-slate-200/80 py-1.5 dark:border-[#232736]" : "space-y-2 border-b border-slate-200/70 py-2 dark:border-[#232736]"}>
                 <KanbanDescriptionEditor
                   value={displayedObjective}
                   compact={compactMode}
@@ -578,7 +578,7 @@ export function KanbanCardDetail({
           )}
         </div>
 
-        <div className={`mt-auto border-t border-slate-200 dark:border-slate-700 ${compactMode ? "pt-3" : "pt-4"}`}>
+        <div className={`mt-auto border-t border-slate-200 dark:border-slate-700 ${compactMode ? "pt-2" : "pt-3"}`}>
           <button
             onClick={onDelete}
             className="w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:border-red-300 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20"
@@ -1795,8 +1795,8 @@ function DetailSection({
   compact?: boolean;
 }) {
   return (
-    <section className={compact ? "space-y-2 border-b border-slate-200/80 py-2 dark:border-[#232736]" : "space-y-2 border-b border-slate-200/70 py-2.5 dark:border-[#232736]"}>
-      <div className={compact ? "mb-2" : "mb-3"}>
+    <section className={compact ? "space-y-1.5 border-b border-slate-200/80 py-1.5 dark:border-[#232736]" : "space-y-2 border-b border-slate-200/70 py-2 dark:border-[#232736]"}>
+      <div className={compact ? "mb-1.5" : "mb-2"}>
         <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">{title}</div>
         {description && (
           <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{description}</div>

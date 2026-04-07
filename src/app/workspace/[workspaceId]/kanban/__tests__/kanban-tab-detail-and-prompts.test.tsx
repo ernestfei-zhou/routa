@@ -801,7 +801,7 @@ story:
       />,
     );
 
-    expect(document.body.textContent ?? "").toContain("Upgrade @tiptap/core safely");
     expect(document.body.textContent ?? "").toContain("Dependency upgrades can regress editor behavior");
+    expect(document.body.textContent ?? "").toContain("Maintainers can review the change as a structured story instead of raw YAML only.");
   });
 });
