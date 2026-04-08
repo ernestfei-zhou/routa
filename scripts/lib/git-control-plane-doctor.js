@@ -3,7 +3,14 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 export const EXPECTED_HOOKS_PATH = ".husky/_";
-export const REQUIRED_HOOK_FILES = ["h", "pre-commit", "pre-push", "post-commit"];
+export const REQUIRED_HOOK_FILES = [
+  "h",
+  "pre-commit",
+  "pre-push",
+  "post-commit",
+  "prepare-commit-msg",
+  "commit-msg",
+];
 const SUSPICIOUS_LOCAL_IDENTITY_PATTERNS = {
   email: [/@example\.com$/i, /placeholder/i],
   name: [/^test$/i, /placeholder/i, /routa test/i],

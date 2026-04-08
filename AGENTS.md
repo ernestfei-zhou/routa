@@ -81,7 +81,8 @@ entrix run --tier normal   # when behavior/shared modules/APIs/workflow orchestr
 ### Co-Author Format
 
 - If closing an issue in commit text, verify against `main` first: `gh issue view <issue-id>`.
-- If the change is co-authored by an agent, append trailer(s) in this format:
+- If the change is co-authored by an agent, append trailer(s) in this format.
+- Agent commits should enforce this via `prepare-commit-msg` + `commit-msg` hooks, using explicit env like `ROUTA_COAUTHOR_EMAIL` plus `ROUTA_COAUTHOR_NAME`, or `ROUTA_AGENT_NAME` + `ROUTA_AGENT_MODEL`.
 
 ```text
 Co-authored-by: Kiro AI (Claude Opus 4.6) <kiro@kiro.dev>
