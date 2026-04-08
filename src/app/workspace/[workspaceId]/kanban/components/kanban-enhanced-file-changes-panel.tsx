@@ -1,12 +1,15 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useTranslation } from "@/i18n";
-import type { KanbanRepoChanges, KanbanFileChangeItem, KanbanTaskChanges } from "../kanban-file-changes-types";
+import type { KanbanRepoChanges, KanbanFileChangeItem, KanbanTaskChanges, KanbanCommitInfo } from "../kanban-file-changes-types";
 import { KanbanUnstagedSection } from "./kanban-unstaged-section";
 import { KanbanStagedSection } from "./kanban-staged-section";
+import { KanbanCommitsSection } from "./kanban-commits-section";
 import { KanbanCommitModal } from "./kanban-commit-modal";
 import { KanbanInlineDiffViewer } from "./kanban-inline-diff-viewer";
+import { KanbanGitOperationButtons } from "./kanban-git-operation-buttons";
+import { KanbanWorkflowActions } from "./kanban-workflow-actions";
 import { loadKanbanFileDiff } from "./kanban-file-diff-loader";
 import { useGitOperations } from "../hooks/use-git-operations";
 import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
@@ -41,16 +44,32 @@ export function KanbanEnhancedFileChangesPanel({
   const [diffContent, setDiffContent] = useState<string | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
   const [diffError, setDiffError] = useState<string | null>(null);
+  const [commits, setCommits] = useState<KanbanCommitInfo[]>([]);
+  const [commitsLoading, setCommitsLoading] = useState(false);
 
   // Support both sidebar mode (repos) and embedded mode (changes)
   const activeRepo = repos && repos.length > 0 ? repos[0] : null;
   const codebaseId = changes?.codebaseId || activeRepo?.codebaseId || "";
 
-  const { stageFiles, unstageFiles, createCommit, discardChanges, loading: gitLoading } = useGitOperations({
+  const {
+    stageFiles,
+    unstageFiles,
+    createCommit,
+    discardChanges,
+    getCommits,
+    getCommitDiff,
+    exportChanges,
+    pullCommits,
+    rebaseBranch,
+    resetBranch,
+    loading: gitLoading
+  } = useGitOperations({
     workspaceId,
     codebaseId,
     onSuccess: () => {
       onRefresh?.();
+      // Refresh commits after successful operations
+      loadCommits();
     },
     onError: (error) => {
       console.error("Git operation failed:", error);
@@ -154,6 +173,26 @@ export function KanbanEnhancedFileChangesPanel({
     setCommitModalOpen(false);
   }, [createCommit]);
 
+  // Load commits
+  const loadCommits = useCallback(async () => {
+    if (!codebaseId || embedded) return; // Only load commits in sidebar mode
+
+    setCommitsLoading(true);
+    try {
+      const fetchedCommits = await getCommits(20); // Get last 20 commits
+      setCommits(fetchedCommits);
+    } catch (error) {
+      console.error("Failed to load commits:", error);
+    } finally {
+      setCommitsLoading(false);
+    }
+  }, [codebaseId, embedded, getCommits]);
+
+  // Load commits on mount and when codebaseId changes
+  useEffect(() => {
+    loadCommits();
+  }, [loadCommits]);
+
   const handleFileClick = useCallback(async (file: KanbanFileChangeItem, staged = false) => {
     setActiveDiffFile(file);
     setDiffError(null);
@@ -180,6 +219,81 @@ export function KanbanEnhancedFileChangesPanel({
     setActiveDiffFile(null);
     setDiffContent(null);
     setDiffError(null);
+  }, []);
+
+  const handleCommitFileClick = useCallback(async (file: KanbanFileChangeItem, commitSha: string) => {
+    setActiveDiffFile(file);
+    setDiffError(null);
+    setDiffLoading(true);
+
+    try {
+      const diff = await getCommitDiff(commitSha, file.path);
+      setDiffContent(diff);
+    } catch (error) {
+      setDiffError(error instanceof Error ? error.message : "Failed to load commit diff");
+    } finally {
+      setDiffLoading(false);
+    }
+  }, [getCommitDiff]);
+
+  const handleOpenCommit = useCallback((commit: KanbanCommitInfo) => {
+    // TODO: Open commit in external viewer or GitHub
+    console.log("Open commit:", commit.sha);
+  }, []);
+
+  const handleRevertCommit = useCallback((commit: KanbanCommitInfo) => {
+    // TODO: Implement revert functionality
+    console.log("Revert commit:", commit.sha);
+  }, []);
+
+  const handleExport = useCallback(async () => {
+    const result = await exportChanges();
+    if (result.success && result.patch && result.filename) {
+      // Create a download link
+      const blob = new Blob([result.patch], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = result.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  }, [exportChanges]);
+
+  const handlePull = useCallback(async () => {
+    const confirmed = window.confirm(
+      `Pull commits from remote? This will update your local branch.`
+    );
+    if (!confirmed) return;
+
+    await pullCommits();
+  }, [pullCommits]);
+
+  const handleRebase = useCallback(async () => {
+    const targetBranch = activeRepo?.targetBranch || "main";
+    const confirmed = window.confirm(
+      `Rebase current branch onto ${targetBranch}? This will rewrite commit history.`
+    );
+    if (!confirmed) return;
+
+    await rebaseBranch(targetBranch);
+  }, [rebaseBranch, activeRepo?.targetBranch]);
+
+  const handleReset = useCallback(async () => {
+    const targetBranch = activeRepo?.targetBranch || "main";
+    const confirmed = window.confirm(
+      `Reset to ${targetBranch} and keep working? This will discard all local commits but keep your working directory changes.`
+    );
+    if (!confirmed) return;
+
+    await resetBranch(targetBranch, "soft");
+  }, [resetBranch, activeRepo?.targetBranch]);
+
+  const handleArchive = useCallback(() => {
+    // TODO: Implement archive and create new workspace
+    alert("Archive functionality will create a new workspace from fresh checkout. Coming soon!");
   }, []);
 
   // Keyboard shortcuts
@@ -279,9 +393,7 @@ export function KanbanEnhancedFileChangesPanel({
                 onSelectAll={(selected) => handleSelectAll(stagedWithSelection, selected)}
                 onUnstageSelected={handleUnstageSelected}
                 onCommit={() => setCommitModalOpen(true)}
-                onExport={() => {
-                  console.log("Export changes");
-                }}
+                onExport={handleExport}
                 loading={gitLoading}
               />
             </>
@@ -384,9 +496,36 @@ export function KanbanEnhancedFileChangesPanel({
                 onSelectAll={(selected) => handleSelectAll(stagedWithSelection, selected)}
                 onUnstageSelected={handleUnstageSelected}
                 onCommit={() => setCommitModalOpen(true)}
-                onExport={() => {
-                  console.log("Export changes");
-                }}
+                onExport={handleExport}
+                loading={gitLoading}
+              />
+
+              {/* Commits Section */}
+              <KanbanCommitsSection
+                commits={commits}
+                onFileClick={handleCommitFileClick}
+                onOpenCommit={handleOpenCommit}
+                onRevertCommit={handleRevertCommit}
+                loading={commitsLoading}
+              />
+
+              {/* Git Operation Buttons */}
+              {commits.length > 0 && (
+                <KanbanGitOperationButtons
+                  targetBranch={activeRepo?.targetBranch}
+                  ahead={activeRepo?.ahead}
+                  behind={activeRepo?.behind}
+                  onPull={handlePull}
+                  onRebase={handleRebase}
+                  loading={gitLoading}
+                />
+              )}
+
+              {/* Workflow Actions */}
+              <KanbanWorkflowActions
+                targetBranch={activeRepo?.targetBranch}
+                onReset={handleReset}
+                onArchive={handleArchive}
                 loading={gitLoading}
               />
             </div>

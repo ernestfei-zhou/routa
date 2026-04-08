@@ -190,6 +190,125 @@ export function useGitOperations({ workspaceId, codebaseId, onSuccess, onError }
     }
   }, [workspaceId, codebaseId, onError]);
 
+  const pullCommits = useCallback(async (remote = "origin", branch?: string): Promise<GitOperationResult> => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `/api/workspaces/${workspaceId}/codebases/${codebaseId}/git/pull`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ remote, branch }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        onSuccess?.();
+        return { success: true };
+      } else {
+        onError?.(data.error || "Failed to pull commits");
+        return { success: false, error: data.error };
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to pull commits";
+      onError?.(message);
+      return { success: false, error: message };
+    } finally {
+      setLoading(false);
+    }
+  }, [workspaceId, codebaseId, onSuccess, onError]);
+
+  const rebaseBranch = useCallback(async (onto: string): Promise<GitOperationResult> => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `/api/workspaces/${workspaceId}/codebases/${codebaseId}/git/rebase`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ onto }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        onSuccess?.();
+        return { success: true };
+      } else {
+        onError?.(data.error || "Failed to rebase branch");
+        return { success: false, error: data.error };
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to rebase branch";
+      onError?.(message);
+      return { success: false, error: message };
+    } finally {
+      setLoading(false);
+    }
+  }, [workspaceId, codebaseId, onSuccess, onError]);
+
+  const resetBranch = useCallback(async (to: string, mode: "soft" | "hard", confirm = false): Promise<GitOperationResult> => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `/api/workspaces/${workspaceId}/codebases/${codebaseId}/git/reset`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ to, mode, confirm }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        onSuccess?.();
+        return { success: true };
+      } else {
+        onError?.(data.error || "Failed to reset branch");
+        return { success: false, error: data.error };
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to reset branch";
+      onError?.(message);
+      return { success: false, error: message };
+    } finally {
+      setLoading(false);
+    }
+  }, [workspaceId, codebaseId, onSuccess, onError]);
+
+  const exportChanges = useCallback(async (files?: string[], format: "patch" | "diff" = "patch"): Promise<GitOperationResult & { patch?: string; filename?: string }> => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `/api/workspaces/${workspaceId}/codebases/${codebaseId}/git/export`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ files, format }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        return { success: true, patch: data.patch, filename: data.filename };
+      } else {
+        onError?.(data.error || "Failed to export changes");
+        return { success: false, error: data.error };
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to export changes";
+      onError?.(message);
+      return { success: false, error: message };
+    } finally {
+      setLoading(false);
+    }
+  }, [workspaceId, codebaseId, onError]);
+
   return {
     stageFiles,
     unstageFiles,
@@ -198,6 +317,10 @@ export function useGitOperations({ workspaceId, codebaseId, onSuccess, onError }
     getCommits,
     getFileDiff,
     getCommitDiff,
+    pullCommits,
+    rebaseBranch,
+    resetBranch,
+    exportChanges,
     loading,
   };
 }
