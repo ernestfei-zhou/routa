@@ -418,14 +418,26 @@ export function ChatPanel({
       {/* Session info bar with view toggle */}
       {activeSessionId && (
         <div className="px-5 py-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-              {t.sessions.sessionInfo} {activeSessionId.slice(0, 12)}...
+            <span
+              className="max-w-[36rem] overflow-x-auto whitespace-nowrap text-[11px] text-slate-500 dark:text-slate-400 font-mono"
+              title={activeSessionId}
+            >
+              {t.sessions.sessionInfo} {activeSessionId}
             </span>
           </div>
           {/* View toggle: Chat | Trace */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-md p-0.5">
+          <div className="flex items-center gap-2">
+            <a
+              href={`/traces?sessionId=${encodeURIComponent(traceSessionId ?? activeSessionId)}${activeWorkspaceId ? `&workspaceId=${encodeURIComponent(activeWorkspaceId)}` : ""}`}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md border border-slate-200 px-3 py-1 text-[11px] font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              Debug
+            </a>
+            <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-md p-0.5">
             <button
               onClick={() => setViewMode("chat")}
               className={`px-3 py-1 text-[11px] font-medium rounded-md transition-colors ${
@@ -446,6 +458,7 @@ export function ChatPanel({
             >
               {t.chat.viewToggle.trace}
             </button>
+            </div>
           </div>
         </div>
       )}

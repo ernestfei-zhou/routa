@@ -416,8 +416,11 @@ export function KanbanBoardSurface({
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-[#191c28]">
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{kanbanTaskAgentCopy.panelTitle}</div>
-                <div className="truncate text-[11px] text-slate-400 dark:text-slate-500">
-                  {agentSession?.provider ?? boardAutoProviderId ?? acp.selectedProvider} · {agentSessionId.slice(0, 12)}...
+                <div
+                  className="overflow-x-auto whitespace-nowrap text-[11px] text-slate-400 dark:text-slate-500"
+                  title={agentSessionId}
+                >
+                  {agentSession?.provider ?? boardAutoProviderId ?? acp.selectedProvider} · {agentSessionId}
                 </div>
               </div>
               <div className="flex items-center gap-2">
