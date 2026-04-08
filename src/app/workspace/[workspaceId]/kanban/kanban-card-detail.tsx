@@ -88,7 +88,12 @@ function formatAgentCardTarget(agentCardUrl?: string): string | undefined {
   }
 }
 
-function resolveTaskCommentEntries(task: TaskInfo): Array<{ id: string; body: string; createdAt?: string }> {
+function resolveTaskCommentEntries(task: TaskInfo): Array<{
+  id: string;
+  body: string;
+  createdAt?: string;
+  source?: "legacy_import" | "update_card";
+}> {
   if ((task.comments?.length ?? 0) > 0) {
     return task.comments ?? [];
   }
@@ -107,6 +112,19 @@ function formatCommentTimestamp(value?: string): string | null {
   }
 
   return parsed.toLocaleString();
+}
+
+function formatCommentSource(
+  source: "legacy_import" | "update_card" | undefined,
+  t: ReturnType<typeof useTranslation>["t"],
+): string | null {
+  if (source === "legacy_import") {
+    return t.kanbanDetail.progressNoteSourceLegacy;
+  }
+  if (source === "update_card") {
+    return t.kanbanDetail.progressNoteSourceUpdateCard;
+  }
+  return null;
 }
 
 function formatEffectiveAutomationTarget(
@@ -489,10 +507,18 @@ export function KanbanCardDetail({
                     <div className={`space-y-3 ${compactMode ? "mt-2 px-3 py-2.5" : "mt-2 px-4 py-2.5"}`}>
                       {progressNotes.map((entry, index) => {
                         const timestamp = formatCommentTimestamp(entry.createdAt);
+                        const sourceLabel = formatCommentSource(entry.source, t);
                         return (
                           <div key={entry.id} className="rounded-xl border border-slate-200/70 bg-slate-50/80 px-3 py-2.5 dark:border-slate-700/70 dark:bg-slate-900/30">
                             <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-                              <span>{`Note ${index + 1}`}</span>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span>{`Note ${index + 1}`}</span>
+                                {sourceLabel ? (
+                                  <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800/80 dark:text-slate-300">
+                                    {sourceLabel}
+                                  </span>
+                                ) : null}
+                              </div>
                               {timestamp ? <span>{timestamp}</span> : null}
                             </div>
                             <div className="mt-2">

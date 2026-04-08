@@ -901,6 +901,7 @@ function appendTaskCommentEntry(existing: TaskCommentEntry[] | undefined, next: 
       id: uuidv4(),
       body: trimmedNext,
       createdAt: new Date().toISOString(),
+      source: "update_card",
     },
   ];
 }

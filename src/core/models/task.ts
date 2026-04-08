@@ -166,6 +166,7 @@ export interface TaskCommentEntry {
   id: string;
   body: string;
   createdAt: string;
+  source?: "legacy_import" | "update_card";
 }
 
 export interface Task {
@@ -314,6 +315,7 @@ function buildInitialTaskComments(comment: string | undefined, now: Date): TaskC
     id: createTaskCommentId(),
     body: trimmed,
     createdAt: now.toISOString(),
+    source: "legacy_import",
   }];
 }
 
@@ -350,5 +352,6 @@ export function splitLegacyTaskComment(comment: string | undefined): TaskComment
       id: `legacy-comment-${index + 1}`,
       body,
       createdAt: "",
+      source: "legacy_import" as const,
     }));
 }

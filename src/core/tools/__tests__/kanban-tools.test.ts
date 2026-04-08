@@ -525,11 +525,12 @@ describe("KanbanTools", () => {
     expect(saved?.comment).toBe("Initial note\n\nSecond note");
     expect(saved?.comments).toHaveLength(2);
     expect(saved?.comments.map((entry) => entry.body)).toEqual(["Initial note", "Second note"]);
+    expect(saved?.comments[1]?.source).toBe("update_card");
     expect(result.data).toMatchObject({
       comment: "Initial note\n\nSecond note",
       comments: [
-        { body: "Initial note" },
-        { body: "Second note" },
+        { body: "Initial note", source: "legacy_import" },
+        { body: "Second note", source: "update_card" },
       ],
     });
   });

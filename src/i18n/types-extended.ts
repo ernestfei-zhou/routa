@@ -694,6 +694,8 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
     progressNotesHint: string;
     appendedComments: string;
     noProgressNotesYet: string;
+    progressNoteSourceLegacy: string;
+    progressNoteSourceUpdateCard: string;
     scope: string;
     acceptanceCriteria: string;
     verificationCommands: string;
@@ -708,6 +710,10 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
     changesHint: string;
     committedChanges: string;
     localChanges: string;
+    pullRequestSpecialist: string;
+    pullRequestSpecialistHint: string;
+    runPullRequestSpecialist: string;
+    startingPullRequestSession: string;
     loadingChanges: string;
     noChanges: string;
     noRepoChanges: string;
