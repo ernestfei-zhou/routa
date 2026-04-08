@@ -10,9 +10,7 @@ import { useTranslation } from "@/i18n";
 import {
   ColumnAutomationWorkspace,
   DEFAULT_DEV_SESSION_SUPERVISION,
-  getAutomationTransportLabel,
   getColumnWorkflowMode,
-  getColumnWorkflowSummary,
   getDefaultAutomationForStage,
   getEditableAutomationSteps,
   getStageTypeLabel,
@@ -30,6 +28,8 @@ import {
 } from "./kanban-settings-modal-parts";
 
 export type { ColumnAutomationConfig } from "./kanban-settings-modal-parts";
+
+const BOARD_VIEW_ID = "__kanban_board__";
 
 export interface KanbanSettingsModalProps {
   board: KanbanBoardInfo;
@@ -72,7 +72,7 @@ export function KanbanSettingsModal({
   const [devSessionSupervision, setDevSessionSupervision] = useState<KanbanDevSessionSupervisionInfo>(
     board.devSessionSupervision ?? DEFAULT_DEV_SESSION_SUPERVISION,
   );
-  const [selectedColumnId, setSelectedColumnId] = useState<string>(board.columns[0]?.id ?? "");
+  const [selectedViewId, setSelectedViewId] = useState<string>(() => board.columns[0]?.id ?? BOARD_VIEW_ID);
   const [saving, setSaving] = useState(false);
   const [clearingAll, setClearingAll] = useState(false);
   const [specialistCategory, setSpecialistCategory] = useState<SpecialistCategory>("kanban");
@@ -91,7 +91,9 @@ export function KanbanSettingsModal({
     [editableColumns],
   );
 
-  const selectedColumn = sortedColumns.find((column) => column.id === selectedColumnId) ?? sortedColumns[0] ?? null;
+  const selectedColumn = selectedViewId !== BOARD_VIEW_ID
+    ? sortedColumns.find((column) => column.id === selectedViewId) ?? null
+    : null;
   const automationEnabledCount = sortedColumns.filter((column) => columnAutomation[column.id]?.enabled).length;
   const visibleColumnCount = sortedColumns.filter((column) => column.visible !== false).length;
 
@@ -112,11 +114,14 @@ export function KanbanSettingsModal({
   const isDirty = initialSnapshot !== currentSnapshot;
 
   useEffect(() => {
-    if (sortedColumns.length === 0) return;
-    if (!sortedColumns.some((column) => column.id === selectedColumnId)) {
-      setSelectedColumnId(sortedColumns[0].id);
+    if (sortedColumns.length === 0) {
+      setSelectedViewId(BOARD_VIEW_ID);
+      return;
     }
-  }, [selectedColumnId, sortedColumns]);
+    if (selectedViewId !== BOARD_VIEW_ID && !sortedColumns.some((column) => column.id === selectedViewId)) {
+      setSelectedViewId(sortedColumns[0].id);
+    }
+  }, [selectedViewId, sortedColumns]);
 
   useEffect(() => {
     setEditableColumns(initialEditableColumns);
@@ -240,8 +245,8 @@ export function KanbanSettingsModal({
         .filter((column) => column.id !== columnId)
         .sort((a, b) => a.position - b.position)
         .map((column, position) => ({ ...column, position }));
-      if (selectedColumnId === columnId) {
-        setSelectedColumnId(remaining[0]?.id ?? "");
+      if (selectedViewId === columnId) {
+        setSelectedViewId(remaining[0]?.id ?? BOARD_VIEW_ID);
       }
       return remaining;
     });
@@ -266,13 +271,13 @@ export function KanbanSettingsModal({
       ...current,
       {
         id,
-        name: `Stage ${suffix}`,
+        name: t.kanban.newStageDefaultName.replace("{n}", String(suffix)),
         stage: "todo",
         position: current.length,
         visible: true,
       },
     ]);
-    setSelectedColumnId(id);
+    setSelectedViewId(id);
   };
 
   const handleStageTypeChange = (columnId: string, stage: string) => {
@@ -449,209 +454,212 @@ export function KanbanSettingsModal({
               <div className="flex flex-wrap items-center gap-2">
                 <StatPill label={t.kanban.visible} value={`${visibleColumnCount}/${sortedColumns.length}`} tone="amber" />
                 <StatPill label={t.kanban.automation} value={String(automationEnabledCount)} tone="emerald" />
-                <StatPill label={t.kanban.queue} value={`Max ${sessionConcurrencyLimit}`} tone="slate" />
+                <StatPill label={t.kanban.queue} value={t.kanban.queueMaxValue.replace("{n}", String(sessionConcurrencyLimit))} tone="slate" />
                 {isDirty ? <StatPill label={t.kanban.unsavedLabel} value={t.kanban.yesLabel} tone="slate" /> : null}
               </div>
             </div>
           </div>
 
-          <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[304px_minmax(0,1fr)]">
+          <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)]">
             <aside className="min-h-0 overflow-y-auto overflow-x-hidden border-b border-slate-200/80 bg-slate-50/40 p-2 dark:border-slate-800 dark:bg-[#0a0f16] lg:border-b-0 lg:border-r lg:p-2.5">
-              <div className="space-y-2.5">
-                <SectionCard eyebrow={t.kanban.stageMap} title={t.kanban.stages}>
-                  <div className="mb-2 flex items-center justify-end">
-                    <button
-                      type="button"
-                      onClick={handleAddStage}
-                      className="rounded-md border border-slate-300 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-[#111722]"
-                    >
-                      {t.kanban.addStage}
-                    </button>
-                  </div>
-                  <div className="space-y-1">
-                    {sortedColumns.map((column) => {
+              <div className="space-y-2">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                  {t.kanban.stageMap}
+                </div>
+                <button
+                  type="button"
+                  title={t.kanban.boardOverviewHint}
+                  onClick={() => setSelectedViewId(BOARD_VIEW_ID)}
+                  className={`w-full min-w-0 rounded-[10px] border px-2.5 py-2 text-left text-[13px] font-semibold transition ${
+                    selectedViewId === BOARD_VIEW_ID
+                      ? "border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-900/10 dark:border-amber-400/40 dark:bg-slate-900"
+                      : "border-slate-200 bg-white text-slate-900 hover:border-slate-300 dark:border-slate-800 dark:bg-[#111722] dark:text-slate-100 dark:hover:border-slate-700"
+                  }`}
+                >
+                  {t.kanban.boardOverview}
+                </button>
+                <div className="space-y-1">
+                  {sortedColumns.map((column) => {
                       const automation = columnAutomation[column.id] ?? { enabled: false };
-                      const active = selectedColumnId === column.id;
+                      const active = selectedViewId === column.id;
+                      const automated = getColumnWorkflowMode(column, automation) === "automated";
                       return (
                         <button
                           key={column.id}
                           type="button"
-                          onClick={() => setSelectedColumnId(column.id)}
-                          className={`w-full min-w-0 rounded-[10px] border px-2 py-1 text-left transition ${
+                          aria-label={column.name}
+                          onClick={() => setSelectedViewId(column.id)}
+                          className={`w-full min-w-0 rounded-[10px] border px-2.5 py-2 text-left transition ${
                             active
                               ? "border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-900/10 dark:border-amber-400/40 dark:bg-slate-900"
                               : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-[#111722] dark:hover:border-slate-700"
                           }`}
                         >
-                          <div className="flex min-w-0 items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className={`text-[12px] font-semibold ${active ? "text-white" : "text-slate-900 dark:text-slate-100"}`}>{column.name}</div>
-                              <div className={`mt-1 flex flex-wrap items-center gap-1.5 ${active ? "text-slate-200" : "text-slate-500 dark:text-slate-400"}`}>
+                          <div className="flex min-w-0 items-center justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div className={`text-[13px] font-semibold ${active ? "text-white" : "text-slate-900 dark:text-slate-100"}`}>{column.name}</div>
+                              <div className={`mt-1 flex items-center justify-between gap-2 ${active ? "text-slate-200" : "text-slate-500 dark:text-slate-400"}`}>
                                 <span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] ${
                                   active ? "bg-white/10 text-slate-200" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
                                 }`}>
                                   {getStageTypeLabel(column.stage, t)}
                                 </span>
-                                <span className="text-[10px]">{getColumnWorkflowSummary(
-                                  column,
-                                  automation,
-                                  availableProviders,
-                                  specialists,
-                                  board.autoProviderId,
-                                  t.common.auto,
-                                  t,
-                                )}</span>
+                                <span
+                                  className={`h-2 w-2 shrink-0 rounded-full ${automated ? "bg-emerald-400" : active ? "bg-slate-400" : "bg-slate-300 dark:bg-slate-600"}`}
+                                  title={automated ? t.kanban.automationOn : t.kanban.manualLabel}
+                                  aria-hidden
+                                />
                               </div>
-                              <div className={`mt-1 text-[10px] leading-4 ${active ? "text-slate-300" : "text-slate-500 dark:text-slate-400"}`}>
-                                {column.visible !== false ? t.kanban.visibleOnBoard : t.kanban.hiddenFromBoard}
-                              </div>
-                            </div>
-                            <div className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] ${
-                              active ? "bg-white/10 text-slate-200" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                            }`}>
-                              {getAutomationTransportLabel(column, automation, t)}
                             </div>
                           </div>
                         </button>
                       );
                     })}
-                  </div>
-                </SectionCard>
-
-                <SectionCard eyebrow={t.kanban.runtime} title={t.kanban.runtimeSettings} description={t.kanban.runtimeSettingsHint}>
-                  <div className="space-y-3">
-                    <div>
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                        {t.kanban.sessionQueue}
-                      </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2">
-                        <label className="flex items-center gap-2">
-                          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">{t.kanban.maxLabel}</span>
-                          <input
-                            type="number"
-                            min={1}
-                            max={20}
-                            value={sessionConcurrencyLimit}
-                            onChange={(event) => setSessionConcurrencyLimit(Math.max(1, Number.parseInt(event.target.value || "1", 10) || 1))}
-                            className="h-9 w-18 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-amber-400 dark:border-slate-700 dark:bg-[#0b1119] dark:text-slate-100"
-                          />
-                        </label>
-                      </div>
-                      <p className="mt-1.5 text-xs leading-5 text-slate-500 dark:text-slate-400">{t.kanban.extraCardsWait}</p>
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                        {t.kanban.devSupervision}
-                      </div>
-                      <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
-                        <LabeledSelect
-                          label={t.kanban.mode}
-                          ariaLabel="Dev supervision mode"
-                          value={devSessionSupervision.mode}
-                          options={[
-                            { value: "disabled", label: t.kanban.off },
-                            { value: "watchdog_retry", label: t.kanban.watchdogRetry },
-                            { value: "ralph_loop", label: t.kanban.ralphLoop },
-                          ]}
-                          onChange={(value) => setDevSessionSupervision((current) => ({
-                            ...current,
-                            mode: value as KanbanDevSessionSupervisionInfo["mode"],
-                          }))}
-                        />
-                        <LabeledNumberInput
-                          label={t.kanban.idleMin}
-                          ariaLabel="Dev supervision idle timeout"
-                          min={1}
-                          max={120}
-                          value={devSessionSupervision.inactivityTimeoutMinutes}
-                          onChange={(value) => setDevSessionSupervision((current) => ({
-                            ...current,
-                            inactivityTimeoutMinutes: Math.max(1, value || 10),
-                          }))}
-                        />
-                        <LabeledNumberInput
-                          label={t.kanban.retries}
-                          ariaLabel="Dev supervision max recovery attempts"
-                          min={0}
-                          max={10}
-                          value={devSessionSupervision.maxRecoveryAttempts}
-                          onChange={(value) => setDevSessionSupervision((current) => ({
-                            ...current,
-                            maxRecoveryAttempts: Math.max(0, value || 0),
-                          }))}
-                        />
-                        <LabeledSelect
-                          label={t.kanban.completion}
-                          ariaLabel="Dev supervision completion requirement"
-                          value={devSessionSupervision.completionRequirement}
-                          disabled={devSessionSupervision.mode !== "ralph_loop"}
-                          options={[
-                            { value: "turn_complete", label: t.kanban.turnComplete },
-                            { value: "completion_summary", label: t.kanban.completionSummary },
-                            { value: "verification_report", label: t.kanban.verificationReport },
-                          ]}
-                          onChange={(value) => setDevSessionSupervision((current) => ({
-                            ...current,
-                            completionRequirement: value as KanbanDevSessionSupervisionInfo["completionRequirement"],
-                          }))}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </SectionCard>
-
-                <SectionCard eyebrow={t.common.import} title={t.kanban.boardTransfer} description={t.kanban.boardTransferHint}>
-                  <div className="space-y-2">
-                    <label className="block space-y-1">
-                      <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
-                        {t.kanban.workspaceIdLabel}
-                      </span>
-                      <input
-                        type="text"
-                        value={kanbanExportWorkspaceId}
-                        onChange={(event) => handleKanbanExportWorkspaceChange(event.target.value)}
-                        placeholder={board.workspaceId || "default"}
-                        className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-amber-400 dark:border-slate-700 dark:bg-[#0b1119] dark:text-slate-100"
-                        aria-label="Kanban YAML workspace ID"
-                      />
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      <ActionButton onClick={() => void handleExportKanbanYaml()} disabled={isExportingKanbanYaml}>
-                        {isExportingKanbanYaml ? t.kanban.exportingYaml : t.kanban.exportYaml}
-                      </ActionButton>
-                      <input
-                        ref={kanbanImportInputRef}
-                        type="file"
-                        accept=".yaml,.yml,text/yaml,application/yaml"
-                        className="hidden"
-                        onChange={(event) => {
-                          const file = event.target.files?.[0];
-                          if (file) void handleImportKanbanYaml(file);
-                        }}
-                      />
-                      <ActionButton onClick={() => kanbanImportInputRef.current?.click()} disabled={isImportingKanbanYaml}>
-                        {isImportingKanbanYaml ? t.kanban.importingYaml : t.kanban.importYaml}
-                      </ActionButton>
-                    </div>
-                    {kanbanYamlError ? <StatusMessage tone="error">{kanbanYamlError}</StatusMessage> : null}
-                    {kanbanYamlResult ? <StatusMessage tone="success">{kanbanYamlResult}</StatusMessage> : null}
-                  </div>
-                </SectionCard>
-
-                <SectionCard eyebrow={t.common.delete} title={t.kanban.dangerZone} description={t.kanban.dangerZoneHint}>
-                  <button
-                    onClick={() => void handleClearAll()}
-                    disabled={saving || clearingAll}
-                    className="rounded-xl border border-rose-200 px-4 py-1.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:opacity-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
-                  >
-                    {clearingAll ? t.kanban.clearingAll : t.kanban.clearAllCards}
-                  </button>
-                </SectionCard>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddStage}
+                  className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-[#111722]"
+                >
+                  {t.kanban.addStage}
+                </button>
               </div>
             </aside>
 
             <main className="min-h-0 overflow-y-auto bg-white p-2 dark:bg-[#0d1118] sm:p-2.5 xl:p-3">
-              {selectedColumn ? (
+              {selectedViewId === BOARD_VIEW_ID ? (
+                <div className="mx-auto max-w-4xl space-y-3">
+                  <SectionCard eyebrow={t.kanban.runtime} title={t.kanban.runtimeSettings} description={t.kanban.runtimeSettingsHint}>
+                    <div className="space-y-3">
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                          {t.kanban.sessionQueue}
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <label className="flex items-center gap-2">
+                            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">{t.kanban.maxLabel}</span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={20}
+                              value={sessionConcurrencyLimit}
+                              onChange={(event) => setSessionConcurrencyLimit(Math.max(1, Number.parseInt(event.target.value || "1", 10) || 1))}
+                              className="h-9 w-18 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-amber-400 dark:border-slate-700 dark:bg-[#0b1119] dark:text-slate-100"
+                            />
+                          </label>
+                        </div>
+                        <p className="mt-1.5 text-xs leading-5 text-slate-500 dark:text-slate-400">{t.kanban.extraCardsWait}</p>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                          {t.kanban.devSupervision}
+                        </div>
+                        <div className="mt-1.5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                          <LabeledSelect
+                            label={t.kanban.mode}
+                            ariaLabel="Dev supervision mode"
+                            value={devSessionSupervision.mode}
+                            options={[
+                              { value: "disabled", label: t.kanban.off },
+                              { value: "watchdog_retry", label: t.kanban.watchdogRetry },
+                              { value: "ralph_loop", label: t.kanban.ralphLoop },
+                            ]}
+                            onChange={(value) => setDevSessionSupervision((current) => ({
+                              ...current,
+                              mode: value as KanbanDevSessionSupervisionInfo["mode"],
+                            }))}
+                          />
+                          <LabeledNumberInput
+                            label={t.kanban.idleMin}
+                            ariaLabel="Dev supervision idle timeout"
+                            min={1}
+                            max={120}
+                            value={devSessionSupervision.inactivityTimeoutMinutes}
+                            onChange={(value) => setDevSessionSupervision((current) => ({
+                              ...current,
+                              inactivityTimeoutMinutes: Math.max(1, value || 10),
+                            }))}
+                          />
+                          <LabeledNumberInput
+                            label={t.kanban.retries}
+                            ariaLabel="Dev supervision max recovery attempts"
+                            min={0}
+                            max={10}
+                            value={devSessionSupervision.maxRecoveryAttempts}
+                            onChange={(value) => setDevSessionSupervision((current) => ({
+                              ...current,
+                              maxRecoveryAttempts: Math.max(0, value || 0),
+                            }))}
+                          />
+                          <LabeledSelect
+                            label={t.kanban.completion}
+                            ariaLabel="Dev supervision completion requirement"
+                            value={devSessionSupervision.completionRequirement}
+                            disabled={devSessionSupervision.mode !== "ralph_loop"}
+                            options={[
+                              { value: "turn_complete", label: t.kanban.turnComplete },
+                              { value: "completion_summary", label: t.kanban.completionSummary },
+                              { value: "verification_report", label: t.kanban.verificationReport },
+                            ]}
+                            onChange={(value) => setDevSessionSupervision((current) => ({
+                              ...current,
+                              completionRequirement: value as KanbanDevSessionSupervisionInfo["completionRequirement"],
+                            }))}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </SectionCard>
+
+                  <SectionCard eyebrow={t.common.import} title={t.kanban.boardTransfer} description={t.kanban.boardTransferHint}>
+                    <div className="space-y-2">
+                      <label className="block space-y-1">
+                        <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
+                          {t.kanban.workspaceIdLabel}
+                        </span>
+                        <input
+                          type="text"
+                          value={kanbanExportWorkspaceId}
+                          onChange={(event) => handleKanbanExportWorkspaceChange(event.target.value)}
+                          placeholder={board.workspaceId || "default"}
+                          className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-amber-400 dark:border-slate-700 dark:bg-[#0b1119] dark:text-slate-100"
+                          aria-label="Kanban YAML workspace ID"
+                        />
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        <ActionButton onClick={() => void handleExportKanbanYaml()} disabled={isExportingKanbanYaml}>
+                          {isExportingKanbanYaml ? t.kanban.exportingYaml : t.kanban.exportYaml}
+                        </ActionButton>
+                        <input
+                          ref={kanbanImportInputRef}
+                          type="file"
+                          accept=".yaml,.yml,text/yaml,application/yaml"
+                          className="hidden"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            if (file) void handleImportKanbanYaml(file);
+                          }}
+                        />
+                        <ActionButton onClick={() => kanbanImportInputRef.current?.click()} disabled={isImportingKanbanYaml}>
+                          {isImportingKanbanYaml ? t.kanban.importingYaml : t.kanban.importYaml}
+                        </ActionButton>
+                      </div>
+                      {kanbanYamlError ? <StatusMessage tone="error">{kanbanYamlError}</StatusMessage> : null}
+                      {kanbanYamlResult ? <StatusMessage tone="success">{kanbanYamlResult}</StatusMessage> : null}
+                    </div>
+                  </SectionCard>
+
+                  <SectionCard eyebrow={t.common.delete} title={t.kanban.dangerZone} description={t.kanban.dangerZoneHint}>
+                    <button
+                      onClick={() => void handleClearAll()}
+                      disabled={saving || clearingAll}
+                      className="rounded-xl border border-rose-200 px-4 py-1.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:opacity-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                    >
+                      {clearingAll ? t.kanban.clearingAll : t.kanban.clearAllCards}
+                    </button>
+                  </SectionCard>
+                </div>
+              ) : selectedColumn ? (
                 <div className="space-y-3">
                   <SectionCard
                     eyebrow={t.kanban.structure}
@@ -736,6 +744,7 @@ export function KanbanSettingsModal({
                       {t.kanban.automation}
                     </div>
                     <ColumnAutomationWorkspace
+                      key={`${selectedColumn.id}-${getEditableAutomationSteps(columnAutomation[selectedColumn.id] ?? { enabled: false }).length}`}
                       column={selectedColumn}
                       automation={columnAutomation[selectedColumn.id] ?? { enabled: false }}
                       availableProviders={availableProviders}

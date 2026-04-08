@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import type { AcpProviderInfo } from "@/client/acp-client";
 import { AcpProviderDropdown } from "@/client/components/acp-provider-dropdown";
 import { resolveKanbanAutomationStep } from "@/core/kanban/effective-task-automation";
@@ -569,6 +569,7 @@ export function ColumnAutomationWorkspace({
   }, [automationSteps, specialistCategory, specialists]);
   const firstStep = automationSteps[0];
   const firstStepTransport = getStepTransport(firstStep);
+  const [advancedExpanded, setAdvancedExpanded] = useState(() => automationSteps.length > 1);
   const applyDefaultAutomation = () => {
     onUpdate(getDefaultAutomationForStage(column.stage));
   };
@@ -621,7 +622,7 @@ export function ColumnAutomationWorkspace({
                 <ProviderField
                   providers={availableProviders}
                   value={firstStep?.providerId}
-                  ariaLabel="Provider"
+                  ariaLabel={t.kanban.providerLabel}
                   dataTestId="kanban-settings-provider"
                   onChange={(providerId) => onUpdate(updateAutomationSteps(automation, (steps) => steps.map((currentStep, stepIndex) => (
                     stepIndex === 0
@@ -682,7 +683,7 @@ export function ColumnAutomationWorkspace({
               </ConfigField>
               <ConfigField label={t.kanban.trigger}>
                 <SelectControl
-                  aria-label="Trigger moment"
+                  aria-label={t.kanban.trigger}
                   value={automation.transitionType ?? "entry"}
                   onChange={(event) => onUpdate({ ...automation, transitionType: event.target.value as "entry" | "exit" | "both" })}
                 >
@@ -693,11 +694,20 @@ export function ColumnAutomationWorkspace({
               </ConfigField>
             </div>
           </div>
-          <section className="border-t border-slate-200/80 pt-3 dark:border-slate-800">
-            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
-              {t.kanban.advanced}
-            </div>
-            <div className="space-y-2">
+          <section className="mt-4 rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-white to-slate-50/80 p-1 shadow-[0_1px_0_rgba(15,23,42,0.06)] dark:border-amber-500/25 dark:from-amber-950/35 dark:via-[#0d1118] dark:to-[#0a0f16] dark:shadow-[0_1px_0_rgba(0,0,0,0.35)]">
+            <button
+              type="button"
+              onClick={() => setAdvancedExpanded((open) => !open)}
+              className="flex w-full items-center justify-between gap-3 rounded-xl border border-amber-300/50 bg-white/90 px-3 py-3 text-left shadow-sm ring-1 ring-amber-400/10 transition hover:border-amber-400/70 hover:bg-amber-50/80 dark:border-amber-500/30 dark:bg-[#111722]/95 dark:ring-amber-400/15 dark:hover:border-amber-400/45 dark:hover:bg-amber-500/[0.08]"
+              aria-expanded={advancedExpanded}
+            >
+              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-900/90 dark:text-amber-200/95">
+                {t.kanban.advanced}
+              </span>
+              <ChevronDown className={`h-5 w-5 shrink-0 text-amber-600 transition dark:text-amber-400/90 ${advancedExpanded ? "rotate-180" : ""}`} aria-hidden />
+            </button>
+            {advancedExpanded ? (
+            <div className="mt-2 space-y-2">
               {automationSteps.length > 1 ? automationSteps.map((step, index) => {
                 const stepSpecialist = findSpecialistById(specialists, step.specialistId) ?? null;
                 const stepTransport = getStepTransport(step);
@@ -956,6 +966,7 @@ export function ColumnAutomationWorkspace({
                 </span>
               </label>
             </div>
+            ) : null}
           </section>
         </div>
       ) : (

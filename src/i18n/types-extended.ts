@@ -469,6 +469,7 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
     addStage: string;
     visible: string;
     queue: string;
+    queueMaxValue: string;
     runtime: string;
     hideRuntime: string;
     sessionQueue: string;
@@ -589,6 +590,8 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
     authConfigIdPlaceholder: string;
     autoAdvanceOnSuccess: string;
     autoAdvanceOnSuccessDesc: string;
+    boardOverview: string;
+    boardOverviewHint: string;
     boardSettingsHint: string;
     boardSettingsLabel: string;
     boardTransfer: string;
@@ -624,6 +627,7 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
     loadingRepoChanges: string;
     modifiedCount: string;
     name: string;
+    newStageDefaultName: string;
     noColumnsAvailable: string;
     noLocalChanges: string;
     noReposLinkedPanel: string;

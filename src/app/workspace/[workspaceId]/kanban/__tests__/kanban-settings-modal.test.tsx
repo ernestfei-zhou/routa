@@ -116,7 +116,7 @@ describe("KanbanSettingsModal", () => {
     expect((screen.getByLabelText("Transport") as HTMLSelectElement).value).toBe("acp");
   });
 
-  it("shows runtime settings by default", () => {
+  it("shows runtime settings on Board view", () => {
     render(
       <KanbanSettingsModal
         board={board}
@@ -130,6 +130,7 @@ describe("KanbanSettingsModal", () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Board" }));
     expect(screen.getByLabelText("Dev supervision mode")).not.toBeNull();
     expect(screen.getByDisplayValue("2")).not.toBeNull();
   });
@@ -189,7 +190,9 @@ describe("KanbanSettingsModal", () => {
       />,
     );
 
-    expect(screen.getByText(/Auto \(Codex\) • Review Guard/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Review" }));
+    expect(screen.getByTestId("kanban-settings-provider").textContent).toMatch(/Auto/i);
+    expect(screen.getAllByText("Review Guard").length).toBeGreaterThan(0);
   });
 
   it("keeps the selected lane workspace free of redundant summary labels", () => {
@@ -274,6 +277,7 @@ describe("KanbanSettingsModal", () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Board" }));
     fireEvent.click(screen.getByRole("button", { name: /clear all cards/i }));
 
     await waitFor(() => {
