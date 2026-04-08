@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { Maximize2, Minimize2 } from "lucide-react";
 import type { AcpProviderInfo } from "@/client/acp-client";
 import type { CodebaseData } from "@/client/hooks/use-workspaces";
-import { desktopAwareFetch } from "@/client/utils/diagnostics";
 import { Select } from "@/client/components/select";
 import {
   type EffectiveTaskAutomation,
@@ -16,10 +15,7 @@ import { getKanbanAutomationSteps, type KanbanAutomationStep } from "@/core/mode
 import type { KanbanColumnInfo, SessionInfo, TaskInfo, WorktreeInfo } from "../types";
 import { KanbanCardActivityPanel } from "./kanban-card-activity";
 import { KanbanDescriptionEditor } from "./kanban-description-editor";
-import { KanbanEnhancedFileChangesPanel } from "./components/kanban-enhanced-file-changes-panel";
-import type {
-  KanbanTaskChanges,
-} from "./kanban-file-changes-types";
+import { KanbanTaskChangesTab } from "./components/kanban-task-changes-tab";
 import { MarkdownViewer } from "@/client/components/markdown/markdown-viewer";
 import {
   createKanbanSpecialistResolver,
@@ -203,8 +199,6 @@ export function KanbanCardDetail({
   const [isDescriptionEditing, setIsDescriptionEditing] = useState(false);
   const [isTestCasesEditing, setIsTestCasesEditing] = useState(false);
   const [tabSelections, setTabSelections] = useState<Partial<Record<string, KanbanDetailTabId>>>({});
-  const [taskChanges, setTaskChanges] = useState<KanbanTaskChanges | null>(null);
-  const [taskChangesLoading, setTaskChangesLoading] = useState(false);
   const titleInputRef = useRef<HTMLTextAreaElement | null>(null);
   const testCasesInputRef = useRef<HTMLTextAreaElement | null>(null);
   const displayedTitle = isTitleEditing ? editTitle : task.title;
@@ -254,58 +248,6 @@ export function KanbanCardDetail({
     { id: "evidence" as const, label: t.kanbanDetail.evidenceBundle },
     { id: "runs" as const, label: t.kanbanDetail.runs },
   ];
-
-  useEffect(() => {
-    setTaskChanges(null);
-    setTaskChangesLoading(false);
-  }, [task.id]);
-
-  // Fetch changes when the tab becomes active OR when refreshSignal changes
-  useEffect(() => {
-    if (activeTab !== "changes") {
-      return;
-    }
-
-    let cancelled = false;
-    setTaskChangesLoading(true);
-
-    void (async () => {
-      try {
-        const response = await desktopAwareFetch(`/api/tasks/${encodeURIComponent(task.id)}/changes`, {
-          cache: "no-store",
-        });
-        const payload = await response.json() as { changes?: KanbanTaskChanges; error?: string };
-        if (cancelled) {
-          return;
-        }
-        if (!response.ok) {
-          throw new Error(payload.error ?? t.common.unavailable);
-        }
-        setTaskChanges(payload.changes ?? null);
-      } catch (error) {
-        if (!cancelled) {
-          setTaskChanges({
-            codebaseId: "",
-            repoPath: "",
-            label: t.kanbanDetail.repo,
-            branch: "unknown",
-            status: { clean: true, ahead: 0, behind: 0, modified: 0, untracked: 0 },
-            files: [],
-            source: "repo",
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-      } finally {
-        if (!cancelled) {
-          setTaskChangesLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTab, task.id, refreshSignal, t.common.unavailable, t.kanbanDetail.repo]);
 
   return (
     <div className="h-full w-full overflow-y-auto">
@@ -624,13 +566,11 @@ export function KanbanCardDetail({
               description={compactMode ? undefined : t.kanbanDetail.changesHint}
               compact={compactMode}
             >
-              <KanbanEnhancedFileChangesPanel
+              <KanbanTaskChangesTab
                 taskId={task.id}
                 workspaceId={task.workspaceId}
-                changes={taskChanges}
-                loading={taskChangesLoading}
+                refreshSignal={refreshSignal}
                 onRefresh={onRefresh}
-                embedded={true}
               />
             </DetailSection>
           )}

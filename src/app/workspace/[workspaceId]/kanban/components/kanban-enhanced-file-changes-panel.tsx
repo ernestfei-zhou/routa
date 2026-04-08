@@ -7,6 +7,7 @@ import { KanbanUnstagedSection } from "./kanban-unstaged-section";
 import { KanbanStagedSection } from "./kanban-staged-section";
 import { KanbanCommitModal } from "./kanban-commit-modal";
 import { KanbanInlineDiffViewer } from "./kanban-inline-diff-viewer";
+import { loadKanbanFileDiff } from "./kanban-file-diff-loader";
 import { useGitOperations } from "../hooks/use-git-operations";
 import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
 
@@ -45,7 +46,7 @@ export function KanbanEnhancedFileChangesPanel({
   const activeRepo = repos && repos.length > 0 ? repos[0] : null;
   const codebaseId = changes?.codebaseId || activeRepo?.codebaseId || "";
 
-  const { stageFiles, unstageFiles, createCommit, discardChanges, getFileDiff, loading: gitLoading } = useGitOperations({
+  const { stageFiles, unstageFiles, createCommit, discardChanges, loading: gitLoading } = useGitOperations({
     workspaceId,
     codebaseId,
     onSuccess: () => {
@@ -157,58 +158,23 @@ export function KanbanEnhancedFileChangesPanel({
     setActiveDiffFile(file);
     setDiffError(null);
 
-    const inlineDiff = file.patch ?? file.diff;
-    if (typeof inlineDiff === "string") {
-      setDiffContent(inlineDiff);
-      setDiffLoading(false);
-      return;
-    }
-
-    if (embedded && taskId) {
-      setDiffLoading(true);
-      try {
-        const params = new URLSearchParams({
-          path: file.path,
-          status: file.status,
-        });
-        if (file.previousPath) {
-          params.set("previousPath", file.previousPath);
-        }
-        const response = await fetch(
-          `/api/tasks/${encodeURIComponent(taskId)}/changes/file?${params.toString()}`,
-          { method: "GET", cache: "no-store" }
-        );
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to load diff");
-        }
-        setDiffContent(data.diff?.patch || null);
-      } catch (error) {
-        setDiffError(error instanceof Error ? error.message : "Failed to load diff");
-      } finally {
-        setDiffLoading(false);
-      }
-      return;
-    }
-
-    if (!codebaseId) {
-      setDiffContent(null);
-      setDiffLoading(false);
-      setDiffError("No diff available");
-      return;
-    }
-
     setDiffLoading(true);
 
     try {
-      const diff = await getFileDiff(file.path, staged);
+      const diff = await loadKanbanFileDiff({
+        file,
+        taskId: embedded ? taskId : undefined,
+        workspaceId,
+        codebaseId,
+        staged,
+      });
       setDiffContent(diff);
     } catch (error) {
       setDiffError(error instanceof Error ? error.message : "Failed to load diff");
     } finally {
       setDiffLoading(false);
     }
-  }, [embedded, taskId, codebaseId, getFileDiff]);
+  }, [embedded, taskId, workspaceId, codebaseId]);
 
   const handleCloseDiff = useCallback(() => {
     setActiveDiffFile(null);
