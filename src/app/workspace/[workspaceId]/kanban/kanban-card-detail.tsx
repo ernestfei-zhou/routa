@@ -86,6 +86,35 @@ function formatAgentCardTarget(agentCardUrl?: string): string | undefined {
   }
 }
 
+function resolveTaskCommentEntries(task: TaskInfo): Array<{ id: string; body: string; createdAt?: string }> {
+  if ((task.comments?.length ?? 0) > 0) {
+    return task.comments ?? [];
+  }
+
+  const trimmed = task.comment?.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  return [{
+    id: "legacy-comment",
+    body: trimmed,
+  }];
+}
+
+function formatCommentTimestamp(value?: string): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed.toLocaleString();
+}
+
 function formatEffectiveAutomationTarget(
   automation: EffectiveTaskAutomation,
   availableProviders: AcpProviderInfo[],
@@ -189,6 +218,7 @@ export function KanbanCardDetail({
   onShowSessionPane,
 }: KanbanCardDetailProps) {
   const { t } = useTranslation();
+  const progressNotes = useMemo(() => resolveTaskCommentEntries(task), [task]);
   const sessionCopy = getKanbanSessionCopy(specialistLanguage);
   const [editTitle, setEditTitle] = useState(task.title);
   const [editObjective, setEditObjective] = useState(task.objective ?? "");
@@ -460,12 +490,25 @@ export function KanbanCardDetail({
                   <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
                     {t.kanbanDetail.appendedComments}
                   </div>
-                  {task.comment?.trim() ? (
-                    <div className={compactMode ? "mt-2 px-3 py-2.5" : "mt-2 px-4 py-2.5"}>
-                      <MarkdownViewer
-                        content={task.comment}
-                        className="prose prose-sm max-w-none text-slate-800 dark:prose-invert dark:text-slate-200"
-                      />
+                  {progressNotes.length > 0 ? (
+                    <div className={`space-y-3 ${compactMode ? "mt-2 px-3 py-2.5" : "mt-2 px-4 py-2.5"}`}>
+                      {progressNotes.map((entry, index) => {
+                        const timestamp = formatCommentTimestamp(entry.createdAt);
+                        return (
+                          <div key={entry.id} className="rounded-xl border border-slate-200/70 bg-slate-50/80 px-3 py-2.5 dark:border-slate-700/70 dark:bg-slate-900/30">
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                              <span>{`Note ${index + 1}`}</span>
+                              {timestamp ? <span>{timestamp}</span> : null}
+                            </div>
+                            <div className="mt-2">
+                              <MarkdownViewer
+                                content={entry.body}
+                                className="prose prose-sm max-w-none text-slate-800 dark:prose-invert dark:text-slate-200"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className={`text-sm text-slate-500 dark:text-slate-400 ${compactMode ? "mt-2 px-3 py-2.5" : "mt-2 px-4 py-2.5"}`}>

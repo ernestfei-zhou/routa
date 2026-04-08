@@ -523,6 +523,14 @@ describe("KanbanTools", () => {
     const saved = await taskStore.get(task.id);
     expect(saved?.objective).toBe("Stable story body");
     expect(saved?.comment).toBe("Initial note\n\nSecond note");
-    expect(result.data).toMatchObject({ comment: "Initial note\n\nSecond note" });
+    expect(saved?.comments).toHaveLength(2);
+    expect(saved?.comments.map((entry) => entry.body)).toEqual(["Initial note", "Second note"]);
+    expect(result.data).toMatchObject({
+      comment: "Initial note\n\nSecond note",
+      comments: [
+        { body: "Initial note" },
+        { body: "Second note" },
+      ],
+    });
   });
 });

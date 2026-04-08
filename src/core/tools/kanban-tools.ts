@@ -24,6 +24,7 @@ import type { RoutaSystem } from "../routa-system";
 import {
   createTask,
   Task,
+  type TaskCommentEntry,
   TaskLaneHandoffRequestType,
   TaskLaneHandoffStatus,
   TaskPriority,
@@ -327,7 +328,10 @@ export class KanbanTools {
 
     if (params.title !== undefined) task.title = params.title;
     if (params.description !== undefined) task.objective = params.description;
-    if (params.comment !== undefined) task.comment = appendTaskComment(task.comment, params.comment);
+    if (params.comment !== undefined) {
+      task.comment = appendTaskComment(task.comment, params.comment);
+      task.comments = appendTaskCommentEntry(task.comments, params.comment);
+    }
     if (params.priority !== undefined) task.priority = params.priority as TaskPriority;
     if (params.labels !== undefined) task.labels = params.labels;
     task.updatedAt = new Date();
@@ -692,6 +696,7 @@ export class KanbanTools {
       title: task.title,
       description: task.objective,
       comment: task.comment,
+      comments: task.comments,
       status: task.status,
       columnId: task.columnId ?? "backlog",
       position: task.position,
@@ -882,4 +887,20 @@ function appendTaskComment(existing: string | undefined, next: string): string {
   }
   const trimmedExisting = existing?.trim();
   return trimmedExisting ? `${trimmedExisting}\n\n${trimmedNext}` : trimmedNext;
+}
+
+function appendTaskCommentEntry(existing: TaskCommentEntry[] | undefined, next: string): TaskCommentEntry[] {
+  const trimmedNext = next.trim();
+  if (!trimmedNext) {
+    return existing ?? [];
+  }
+
+  return [
+    ...(existing ?? []),
+    {
+      id: uuidv4(),
+      body: trimmedNext,
+      createdAt: new Date().toISOString(),
+    },
+  ];
 }

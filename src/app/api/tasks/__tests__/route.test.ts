@@ -135,6 +135,9 @@ describe("/api/tasks GET", () => {
     expect(data.tasks[0]).toMatchObject({
       id: "task-1",
       comment: "Backlog refinement note from update_card.",
+      comments: [
+        { body: "Backlog refinement note from update_card." },
+      ],
       artifactSummary: {
         total: 2,
         byType: {

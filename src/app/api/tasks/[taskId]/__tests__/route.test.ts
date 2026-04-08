@@ -153,6 +153,9 @@ describe("/api/tasks/[taskId]", () => {
 
     expect(response.status).toBe(200);
     expect(data.task.comment).toBe("Review requested another verification pass.");
+    expect(data.task.comments).toEqual([
+      expect.objectContaining({ body: "Review requested another verification pass." }),
+    ]);
     expect(data.task.artifactSummary).toEqual({
       total: 0,
       byType: {},

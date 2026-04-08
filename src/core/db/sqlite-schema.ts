@@ -19,7 +19,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 import type { KanbanColumn } from "../models/kanban";
-import type { TaskLaneHandoff, TaskLaneSession } from "../models/task";
+import type { TaskCommentEntry, TaskLaneHandoff, TaskLaneSession } from "../models/task";
 
 // ─── Workspaces ─────────────────────────────────────────────────────
 
@@ -69,6 +69,7 @@ export const tasks = sqliteTable("tasks", {
   title: text("title").notNull(),
   objective: text("objective").notNull(),
   comment: text("comment"),
+  comments: text("comments", { mode: "json" }).$type<TaskCommentEntry[]>().default([]),
   scope: text("scope"),
   acceptanceCriteria: text("acceptance_criteria", { mode: "json" }).$type<string[]>(),
   verificationCommands: text("verification_commands", { mode: "json" }).$type<string[]>(),

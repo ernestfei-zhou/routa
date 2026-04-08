@@ -162,11 +162,18 @@ export interface TaskLaneHandoff {
   responseSummary?: string;
 }
 
+export interface TaskCommentEntry {
+  id: string;
+  body: string;
+  createdAt: string;
+}
+
 export interface Task {
   id: string;
   title: string;
   objective: string;
   comment?: string;
+  comments: TaskCommentEntry[];
   scope?: string;
   acceptanceCriteria?: string[];
   verificationCommands?: string[];
@@ -219,6 +226,7 @@ export function createTask(params: {
   title: string;
   objective: string;
   comment?: string;
+  comments?: TaskCommentEntry[];
   workspaceId: string;
   triggerSessionId?: string;
   sessionId?: string;
@@ -251,11 +259,13 @@ export function createTask(params: {
   worktreeId?: string;
 }): Task {
   const now = new Date();
+  const comments = params.comments ?? buildInitialTaskComments(params.comment, now);
   return {
     id: params.id,
     title: params.title,
     objective: params.objective,
     comment: params.comment,
+    comments,
     scope: params.scope,
     acceptanceCriteria: params.acceptanceCriteria,
     verificationCommands: params.verificationCommands,
@@ -292,4 +302,25 @@ export function createTask(params: {
     createdAt: now,
     updatedAt: now,
   };
+}
+
+function buildInitialTaskComments(comment: string | undefined, now: Date): TaskCommentEntry[] {
+  const trimmed = comment?.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  return [{
+    id: createTaskCommentId(),
+    body: trimmed,
+    createdAt: now.toISOString(),
+  }];
+}
+
+function createTaskCommentId(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `comment-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
 }

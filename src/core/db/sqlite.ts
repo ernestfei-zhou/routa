@@ -134,6 +134,7 @@ function initializeSqliteTables(db: SqliteDatabase): void {
       title TEXT NOT NULL,
       objective TEXT NOT NULL,
       comment TEXT,
+      comments TEXT DEFAULT '[]',
       scope TEXT,
       acceptance_criteria TEXT,
       verification_commands TEXT,
@@ -175,6 +176,7 @@ function initializeSqliteTables(db: SqliteDatabase): void {
     )
   `);
   runAddColumn(sql`ALTER TABLE tasks ADD COLUMN comment TEXT`);
+  runAddColumn(sql`ALTER TABLE tasks ADD COLUMN comments TEXT DEFAULT '[]'`);
   runAddColumn(sql`ALTER TABLE tasks ADD COLUMN board_id TEXT`);
   runAddColumn(sql`ALTER TABLE tasks ADD COLUMN column_id TEXT`);
   runAddColumn(sql`ALTER TABLE tasks ADD COLUMN position INTEGER NOT NULL DEFAULT 0`);

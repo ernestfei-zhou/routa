@@ -117,6 +117,11 @@ export interface TaskInfo {
   title: string;
   objective?: string;
   comment?: string;
+  comments?: Array<{
+    id: string;
+    body: string;
+    createdAt: string;
+  }>;
   scope?: string;
   acceptanceCriteria?: string[];
   verificationCommands?: string[];

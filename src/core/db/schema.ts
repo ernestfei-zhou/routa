@@ -17,7 +17,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { KanbanColumn } from "../models/kanban";
-import type { TaskLaneHandoff, TaskLaneSession } from "../models/task";
+import type { TaskCommentEntry, TaskLaneHandoff, TaskLaneSession } from "../models/task";
 
 // ─── Workspaces ─────────────────────────────────────────────────────
 
@@ -67,6 +67,7 @@ export const tasks = pgTable("tasks", {
   title: text("title").notNull(),
   objective: text("objective").notNull(),
   comment: text("comment"),
+  comments: jsonb("comments").$type<TaskCommentEntry[]>().default([]),
   scope: text("scope"),
   acceptanceCriteria: jsonb("acceptance_criteria").$type<string[]>(),
   verificationCommands: jsonb("verification_commands").$type<string[]>(),
