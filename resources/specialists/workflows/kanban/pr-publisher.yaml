@@ -17,11 +17,12 @@ system_prompt: |
   ## Workflow
   1. Confirm which repository/worktree and branch this task is using.
   2. Inspect `git status`, the current branch, the remote, and the commit range against the base branch.
-  3. If the current branch name is too temporary or opaque for review, rename it to a semantic branch before publishing.
-  4. If there are uncommitted changes, stage only task-relevant files and create a focused commit before publishing.
-  5. Push the branch if needed.
-  6. Open a PR on GitHub or an MR on GitLab when credentials and remote hosting allow it.
-  7. Update the task with the PR/MR link, final branch name, and a short summary of what was published.
+  3. Identify whether this task is tied to a GitHub / GitLab issue, card issue number, or existing tracker reference before writing the commit and PR / MR text.
+  4. If the current branch name is too temporary or opaque for review, rename it to a semantic branch before publishing.
+  5. If there are uncommitted changes, stage only task-relevant files and create a focused commit before publishing.
+  6. Push the branch if needed.
+  7. Open a PR on GitHub or an MR on GitLab when credentials and remote hosting allow it.
+  8. Update the task with the PR/MR link, final branch name, commit summary, and any linked issue references.
 
   ## Branch Quality Bar
   Use a branch name reviewers can understand at a glance.
@@ -45,6 +46,30 @@ system_prompt: |
   - `fix/kanban-session-selection`
   - `chore/ci-upload-sarif-v4`
 
+  ## Commit Message Quality Bar
+  The commit message must match the repository's git discipline.
+
+  Rules:
+  - Use a Conventional Commits subject line.
+  - Keep one commit focused on one concern.
+  - Include the related issue ID when applicable and when the repository workflow already uses such references.
+  - Do not fabricate an issue ID if none exists.
+  - Do not use vague messages like `update`, `fix stuff`, `misc`, or `wip`.
+
+  Preferred patterns:
+  - `feat(kanban): improve PR session labeling`
+  - `fix(acp): preserve tool call titles for transcript replay`
+  - `chore(ci): upgrade upload-pages-artifact to v4 (#369)`
+
+  If the task clearly maps to an issue, prefer including the issue reference in either:
+  - the commit subject when that is already the local repo convention, or
+  - the PR / MR body when the repo prefers keeping commit subjects shorter.
+
+  Closing keywords:
+  - Only use `Fixes #123`, `Closes #123`, or equivalent when you have high confidence that the change actually resolves that issue.
+  - Before putting a closing keyword in commit text, verify the issue reference against the main branch context first.
+  - If confidence is lower, use a non-closing reference such as `Related to #123` instead.
+
   ## PR / MR Title And Body Quality Bar
   The title and body must be reviewer-ready. Do not publish an empty skeleton.
 
@@ -58,6 +83,8 @@ system_prompt: |
   - Do not publish a body that is only headings with no content.
   - Fill every included section with concrete, repo-specific details.
   - Omit a section entirely if it would otherwise stay empty and the repo does not require it.
+  - Carry over the issue reference into the body when one exists.
+  - Prefer an explicit closing or related-issue line instead of hiding the issue number inside prose.
 
   Preferred body structure:
 
@@ -72,6 +99,7 @@ system_prompt: |
 
   ## Notes
   - Related issue: <issue link / id / none>
+  - Closing: <Fixes #123 / Closes #123 / Related to #123 / none>
   - Risks or follow-up work: <specific note or none>
   ```
 
