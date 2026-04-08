@@ -41,9 +41,9 @@ export function KanbanFileChangesSection({
   };
 
   return (
-    <section className="rounded-2xl border border-slate-200/70 bg-slate-50/70 dark:border-[#202433] dark:bg-[#0d1018]">
+    <section className="rounded-xl border border-slate-200/70 bg-slate-50/50 dark:border-[#202433] dark:bg-[#0d1018]/50">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 px-3.5 py-3">
+      <div className="flex items-center justify-between gap-2 px-3 py-2">
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}
@@ -56,17 +56,17 @@ export function KanbanFileChangesSection({
           )}
           
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200">
                 {title}
               </span>
               {badge}
-              <span className="text-xs text-slate-500 dark:text-slate-400">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">
                 ({files.length})
               </span>
             </div>
             {subtitle && (
-              <div className="text-[10px] text-slate-500 dark:text-slate-400">
+              <div className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
                 {subtitle}
               </div>
             )}
@@ -92,14 +92,14 @@ export function KanbanFileChangesSection({
 
       {/* Content */}
       {expanded && (
-        <div className="border-t border-slate-200/70 px-3.5 py-3 dark:border-[#202433]">
+        <div className="border-t border-slate-200/70 px-3 py-2 dark:border-[#202433]">
           {files.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 bg-white/70 px-3 py-4 text-center text-[11px] text-slate-400 dark:border-slate-700 dark:bg-[#12141c] dark:text-slate-500">
+            <div className="rounded-lg border border-dashed border-slate-200 bg-white/50 px-3 py-3 text-center text-[10px] text-slate-400 dark:border-slate-700 dark:bg-[#12141c]/50 dark:text-slate-500">
               No files in this section
             </div>
           ) : (
             <>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {files.map((file) => (
                   <FileRow
                     key={`${file.path}-${file.status}`}
@@ -111,9 +111,9 @@ export function KanbanFileChangesSection({
                   />
                 ))}
               </div>
-              
+
               {actions && (
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-2 flex flex-wrap gap-1.5">
                   {actions}
                 </div>
               )}
