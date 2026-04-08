@@ -533,4 +533,34 @@ describe("KanbanTools", () => {
       ],
     });
   });
+
+  it("backfills legacy concatenated comments into multiple notes before appending", async () => {
+    const boardStore = new InMemoryKanbanBoardStore();
+    const taskStore = new InMemoryTaskStore();
+    const tools = new KanbanTools(boardStore, taskStore);
+
+    const task = createTask({
+      id: "task-review-legacy",
+      title: "Legacy note trail",
+      objective: "Stable story body",
+      comment: "Initial note\n\nSecond note",
+      comments: [],
+      workspaceId: "default",
+      columnId: "review",
+    });
+    await taskStore.save(task);
+
+    const result = await tools.updateCard({
+      cardId: task.id,
+      comment: "Third note",
+    });
+
+    expect(result.success).toBe(true);
+    const saved = await taskStore.get(task.id);
+    expect(saved?.comments.map((entry) => entry.body)).toEqual([
+      "Initial note",
+      "Second note",
+      "Third note",
+    ]);
+  });
 });

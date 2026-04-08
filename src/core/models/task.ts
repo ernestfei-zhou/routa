@@ -324,3 +324,31 @@ function createTaskCommentId(): string {
 
   return `comment-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
 }
+
+export function hydrateTaskComments(
+  comments: TaskCommentEntry[] | undefined,
+  legacyComment: string | undefined,
+): TaskCommentEntry[] {
+  if ((comments?.length ?? 0) > 0) {
+    return comments ?? [];
+  }
+
+  return splitLegacyTaskComment(legacyComment);
+}
+
+export function splitLegacyTaskComment(comment: string | undefined): TaskCommentEntry[] {
+  const trimmed = comment?.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  return trimmed
+    .split(/\n{2,}/)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean)
+    .map((body, index) => ({
+      id: `legacy-comment-${index + 1}`,
+      body,
+      createdAt: "",
+    }));
+}

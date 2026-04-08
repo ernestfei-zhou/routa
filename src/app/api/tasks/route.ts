@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getRoutaSystem } from "@/core/routa-system";
-import { createTask, Task, TaskStatus, TaskPriority } from "@/core/models/task";
+import { createTask, hydrateTaskComments, Task, TaskStatus, TaskPriority } from "@/core/models/task";
 import { v4 as uuidv4 } from "uuid";
 import { ensureDefaultBoard } from "@/core/kanban/boards";
 import {
@@ -371,13 +371,14 @@ async function serializeTask(task: Task, system: ReturnType<typeof getRoutaSyste
   const storyReadiness = await buildTaskStoryReadiness(task, system);
   const investValidation = buildTaskInvestValidation(task);
   const deliveryReadiness = await buildTaskDeliveryReadiness(task, system);
+  const comments = hydrateTaskComments(task.comments, task.comment);
 
   return {
     id: task.id,
     title: task.title,
     objective: task.objective,
     comment: task.comment,
-    comments: task.comments ?? [],
+    comments,
     scope: task.scope,
     acceptanceCriteria: task.acceptanceCriteria,
     verificationCommands: task.verificationCommands,

@@ -7,7 +7,7 @@
 import { eq, and, sql } from "drizzle-orm";
 import type { Database } from "./index";
 import { tasks } from "./schema";
-import type { Task, TaskStatus } from "../models/task";
+import { hydrateTaskComments, type Task, type TaskStatus } from "../models/task";
 import type { TaskStore } from "../store/task-store";
 
 export class PgTaskStore implements TaskStore {
@@ -199,12 +199,17 @@ export class PgTaskStore implements TaskStore {
   }
 
   private toModel(row: typeof tasks.$inferSelect): Task {
+    const comments = hydrateTaskComments(
+      row.comments as import("../models/task").TaskCommentEntry[] | undefined,
+      row.comment ?? undefined,
+    );
+
     return {
       id: row.id,
       title: row.title,
       objective: row.objective,
       comment: row.comment ?? undefined,
-      comments: (row.comments as import("../models/task").TaskCommentEntry[]) ?? [],
+      comments,
       scope: row.scope ?? undefined,
       acceptanceCriteria: (row.acceptanceCriteria as string[]) ?? undefined,
       verificationCommands: (row.verificationCommands as string[]) ?? undefined,

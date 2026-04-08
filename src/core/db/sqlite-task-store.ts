@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import * as sqliteSchema from "./sqlite-schema";
-import type { Task, TaskStatus } from "../models/task";
+import { hydrateTaskComments, type Task, type TaskStatus } from "../models/task";
 import type { TaskStore } from "../store/task-store";
 
 type SqliteDb = BetterSQLite3Database<typeof sqliteSchema>;
@@ -206,12 +206,17 @@ export class SqliteTaskStore implements TaskStore {
   }
 
   private toModel(row: typeof sqliteSchema.tasks.$inferSelect): Task {
+    const comments = hydrateTaskComments(
+      row.comments as import("../models/task").TaskCommentEntry[] | undefined,
+      row.comment ?? undefined,
+    );
+
     return {
       id: row.id,
       title: row.title,
       objective: row.objective,
       comment: row.comment ?? undefined,
-      comments: (row.comments as import("../models/task").TaskCommentEntry[]) ?? [],
+      comments,
       scope: row.scope ?? undefined,
       acceptanceCriteria: (row.acceptanceCriteria as string[]) ?? undefined,
       verificationCommands: (row.verificationCommands as string[]) ?? undefined,

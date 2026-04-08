@@ -198,6 +198,32 @@ describe("/api/tasks/[taskId]", () => {
     });
   });
 
+  it("splits legacy appended comments into multiple structured notes", async () => {
+    taskStore.get.mockResolvedValueOnce(createTask({
+      id: "task-legacy-comments",
+      title: "Legacy notes",
+      objective: "Show note migration",
+      comment: "Initial note\n\nSecond note\n\nThird note",
+      comments: [],
+      workspaceId: "workspace-1",
+      boardId: "board-1",
+      columnId: "todo",
+      status: TaskStatus.PENDING,
+    }));
+
+    const response = await GET(new NextRequest("http://localhost/api/tasks/task-legacy-comments"), {
+      params: Promise.resolve({ taskId: "task-legacy-comments" }),
+    });
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.task.comments.map((entry: { body: string }) => entry.body)).toEqual([
+      "Initial note",
+      "Second note",
+      "Third note",
+    ]);
+  });
+
   it("reports missing required artifacts and latest run status in evidence summary", async () => {
     const task = createTask({
       id: "task-1",

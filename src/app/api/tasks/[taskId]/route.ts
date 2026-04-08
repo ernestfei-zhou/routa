@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRoutaSystem } from "@/core/routa-system";
-import { TaskPriority, TaskStatus, type Task } from "@/core/models/task";
+import { hydrateTaskComments, TaskPriority, TaskStatus, type Task } from "@/core/models/task";
 import { columnIdToTaskStatus, taskStatusToColumnId } from "@/core/models/kanban";
 import { getKanbanEventBroadcaster } from "@/core/kanban/kanban-event-broadcaster";
 import { ensureTaskBoardContext } from "@/core/kanban/task-board-context";
@@ -37,9 +37,11 @@ async function serializeTask(task: Task, system: ReturnType<typeof getRoutaSyste
   const storyReadiness = await buildTaskStoryReadiness(task, system);
   const investValidation = buildTaskInvestValidation(task);
   const deliveryReadiness = await buildTaskDeliveryReadiness(task, system);
+  const comments = hydrateTaskComments(task.comments, task.comment);
 
   return {
     ...task,
+    comments,
     artifactSummary: evidenceSummary.artifact,
     evidenceSummary,
     storyReadiness,

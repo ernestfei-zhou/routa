@@ -17,6 +17,7 @@ import { KanbanCardActivityPanel } from "./kanban-card-activity";
 import { KanbanDescriptionEditor } from "./kanban-description-editor";
 import { KanbanTaskChangesTab } from "./components/kanban-task-changes-tab";
 import { MarkdownViewer } from "@/client/components/markdown/markdown-viewer";
+import { splitLegacyTaskComment } from "@/core/models/task";
 import {
   createKanbanSpecialistResolver,
   getOrderedSessionIds,
@@ -54,6 +55,7 @@ export interface KanbanCardDetailProps {
   selectedProvider?: string | null;
   onPatchTask: (taskId: string, payload: Record<string, unknown>) => Promise<TaskInfo>;
   onRetryTrigger: (taskId: string) => Promise<void>;
+  onRunPullRequest?: (taskId: string) => Promise<string | null>;
   onDelete: () => void;
   onRefresh: () => void;
   onProviderChange?: (providerId: string | null) => void;
@@ -91,15 +93,7 @@ function resolveTaskCommentEntries(task: TaskInfo): Array<{ id: string; body: st
     return task.comments ?? [];
   }
 
-  const trimmed = task.comment?.trim();
-  if (!trimmed) {
-    return [];
-  }
-
-  return [{
-    id: "legacy-comment",
-    body: trimmed,
-  }];
+  return splitLegacyTaskComment(task.comment);
 }
 
 function formatCommentTimestamp(value?: string): string | null {
@@ -206,6 +200,7 @@ export function KanbanCardDetail({
   selectedProvider,
   onPatchTask,
   onRetryTrigger,
+  onRunPullRequest,
   onDelete,
   onRefresh,
   onProviderChange,
@@ -611,10 +606,14 @@ export function KanbanCardDetail({
               compact={compactMode}
             >
               <KanbanTaskChangesTab
+                task={task}
+                codebases={codebases}
                 taskId={task.id}
                 workspaceId={resolvedWorkspaceId}
                 refreshSignal={refreshSignal}
                 onRefresh={onRefresh}
+                onRunPullRequest={onRunPullRequest}
+                onSelectSession={onSelectSession}
               />
             </DetailSection>
           )}
