@@ -966,15 +966,18 @@ export function getBranchStatus(
   };
 
   try {
+    // Properly escape branch names to avoid ambiguous references
+    const escapedBranch = shellQuote(branch);
+    const escapedOriginBranch = shellQuote(`origin/${branch}`);
     const aheadBehind = gitExecSync(
-      `git rev-list --left-right --count ${branch}...origin/${branch}`,
+      `git rev-list --left-right --count ${escapedBranch}...${escapedOriginBranch}`,
       repoPath
     );
     const [ahead, behind] = aheadBehind.split(/\s+/).map(Number);
     result.ahead = ahead || 0;
     result.behind = behind || 0;
   } catch {
-    // no upstream or branch doesn't exist on remote
+    // no upstream or branch doesn't exist on remote - this is expected
   }
 
   if (supportsGitWorktreeOperations(repoPath)) {

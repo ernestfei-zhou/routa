@@ -35,6 +35,7 @@ interface PermissionRequestPayload {
     permissions?: Record<string, unknown>;
     scope?: string;
     decision?: string;
+    outcome?: string;
 }
 
 export function hasAskUserQuestionAnswers(message: ChatMessage): boolean {
@@ -547,6 +548,23 @@ export function PermissionRequestBubble({
     const isCompleted = message.toolStatus === "completed";
     const isFailed = message.toolStatus === "failed";
     const requestedPermissions = rawInput.permissions ?? {};
+    const outcome = rawInput.outcome === "denied"
+        ? "deny"
+        : rawInput.outcome === "approved"
+            ? "approve"
+            : rawInput.decision === "deny"
+                ? "deny"
+                : rawInput.decision === "approve"
+                    ? "approve"
+                    : null;
+    const scopeLabel = scope === "session"
+        ? t.messageBubble.permissionScopeSession
+        : t.messageBubble.permissionScopeTurn;
+    const completionLabel = outcome === "deny"
+        ? t.messageBubble.permissionDenied
+        : outcome === "approve"
+            ? t.messageBubble.permissionApproved
+            : null;
 
     const handleSubmit = async (decision: "approve" | "deny") => {
         if (!message.toolCallId || !onSubmit || submitting) return;
@@ -571,42 +589,58 @@ export function PermissionRequestBubble({
                 <div className="flex items-center gap-1.5">
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCompleted ? "bg-emerald-500" : isFailed ? "bg-red-500" : "bg-sky-500 animate-pulse"}`} />
                     <span className="text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-400">
-                        {message.toolName ?? "RequestPermissions"}
+                        {t.messageBubble.requestPermissions}
                     </span>
                 </div>
                 {rawInput.reason ? (
-                    <div className="text-xs text-slate-700 dark:text-slate-300">
-                        {rawInput.reason}
+                    <div className="space-y-1">
+                        <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                            {t.messageBubble.permissionReason}
+                        </div>
+                        <div className="text-xs text-slate-700 dark:text-slate-300">
+                            {rawInput.reason}
+                        </div>
+                    </div>
+                ) : null}
+                {isCompleted && completionLabel ? (
+                    <div className="inline-flex w-fit items-center rounded-full bg-white/80 px-2 py-1 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:ring-slate-700">
+                        {completionLabel}
+                        {outcome === "approve" ? ` · ${scopeLabel}` : ""}
                     </div>
                 ) : null}
                 <ToolInputTable input={requestedPermissions} />
                 {!isCompleted && !isFailed && (
-                    <div className="flex flex-wrap items-center gap-2">
-                        <select
-                            value={scope}
-                            onChange={(event) => setScope(event.target.value === "session" ? "session" : "turn")}
-                            disabled={submitting}
-                            className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-[#0b1119] dark:text-slate-200"
-                        >
-                            <option value="turn">{t.kanban.turnComplete}</option>
-                            <option value="session">{t.chatPanel.session}</option>
-                        </select>
-                        <button
-                            type="button"
-                            disabled={submitting}
-                            onClick={() => void handleSubmit("approve")}
-                            className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
-                        >
-                            {t.common.save}
-                        </button>
-                        <button
-                            type="button"
-                            disabled={submitting}
-                            onClick={() => void handleSubmit("deny")}
-                            className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200"
-                        >
-                            {t.common.cancel}
-                        </button>
+                    <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <select
+                                value={scope}
+                                onChange={(event) => setScope(event.target.value === "session" ? "session" : "turn")}
+                                disabled={submitting}
+                                className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-[#0b1119] dark:text-slate-200"
+                            >
+                                <option value="turn">{t.messageBubble.permissionScopeTurn}</option>
+                                <option value="session">{t.messageBubble.permissionScopeSession}</option>
+                            </select>
+                            <button
+                                type="button"
+                                disabled={submitting}
+                                onClick={() => void handleSubmit("approve")}
+                                className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
+                            >
+                                {t.common.save}
+                            </button>
+                            <button
+                                type="button"
+                                disabled={submitting}
+                                onClick={() => void handleSubmit("deny")}
+                                className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200"
+                            >
+                                {t.common.cancel}
+                            </button>
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                            {t.messageBubble.permissionScopeHint}
+                        </div>
                     </div>
                 )}
                 {submitError ? (

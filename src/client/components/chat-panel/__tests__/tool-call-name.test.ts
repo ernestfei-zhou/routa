@@ -70,4 +70,91 @@ describe("message-processor tool names", () => {
     expect(messages[0]?.toolName).toBe("update_card");
     expect(messages[0]?.content).toContain("cardId");
   });
+
+  it("preserves permission request input when the approval response arrives", () => {
+    const messages: ChatMessage[] = [];
+
+    processUpdate(
+      "tool_call",
+      {
+        sessionUpdate: "tool_call",
+        toolCallId: "request-permission-1",
+        title: "RequestPermissions",
+        kind: "request-permissions",
+        status: "waiting",
+        rawInput: {
+          reason: "Need write access outside workspace",
+          permissions: {
+            file_system: {
+              write: ["/tmp/outside"],
+            },
+          },
+        },
+      },
+      messages,
+      "session-1",
+      null,
+      () => "",
+      { current: {} },
+      { current: {} },
+      () => undefined,
+      () => undefined,
+      () => undefined,
+      {}
+    );
+
+    processUpdate(
+      "tool_call_update",
+      {
+        sessionUpdate: "tool_call_update",
+        toolCallId: "request-permission-1",
+        title: "RequestPermissions",
+        kind: "request-permissions",
+        status: "completed",
+        rawInput: {
+          reason: "Need write access outside workspace",
+          permissions: {
+            file_system: {
+              write: ["/tmp/outside"],
+            },
+          },
+          decision: "approve",
+          scope: "session",
+          outcome: "approved",
+        },
+        rawOutput: {
+          permissions: {
+            file_system: {
+              write: ["/tmp/outside"],
+            },
+          },
+          scope: "session",
+          outcome: "approved",
+        },
+      },
+      messages,
+      "session-1",
+      "tool_call",
+      () => "",
+      { current: {} },
+      { current: {} },
+      () => undefined,
+      () => undefined,
+      () => undefined,
+      {}
+    );
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0]?.toolStatus).toBe("completed");
+    expect(messages[0]?.toolRawInput).toMatchObject({
+      reason: "Need write access outside workspace",
+      decision: "approve",
+      scope: "session",
+      permissions: {
+        file_system: {
+          write: ["/tmp/outside"],
+        },
+      },
+    });
+  });
 });

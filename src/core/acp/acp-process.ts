@@ -411,6 +411,7 @@ export class AcpProcess {
         this.pendingInteractiveRequests.delete(toolCallId);
 
         let result: Record<string, unknown>;
+        let notificationRawInput: Record<string, unknown> = response;
         if (pending.method === "session/request_permission") {
             const requestedPermissions = (
                 typeof pending.params.permissions === "object" && pending.params.permissions !== null
@@ -428,6 +429,12 @@ export class AcpProcess {
                 permissions: grantedPermissions,
                 scope,
                 outcome: decision === "deny" ? "denied" : "approved",
+            };
+            notificationRawInput = {
+                ...pending.params,
+                decision,
+                scope,
+                outcome: result.outcome,
             };
         } else {
             result = response;
@@ -449,7 +456,8 @@ export class AcpProcess {
                     toolCallId,
                     title: pending.method === "session/request_permission" ? "RequestPermissions" : "UserInputResponse",
                     status: "completed",
-                    rawInput: response,
+                    rawInput: notificationRawInput,
+                    rawOutput: pending.method === "session/request_permission" ? result : undefined,
                 },
             },
         });

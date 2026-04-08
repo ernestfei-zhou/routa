@@ -4,6 +4,13 @@ export interface TailTranslationDictionarySections {
     input: string;
     task: string;
     plan: string;
+    requestPermissions: string;
+    permissionReason: string;
+    permissionApproved: string;
+    permissionDenied: string;
+    permissionScopeTurn: string;
+    permissionScopeSession: string;
+    permissionScopeHint: string;
     submit: string;
     priority: string;
     tokens: string;
@@ -305,4 +312,3 @@ export interface TailTranslationDictionarySections {
     describeWhatYouNeed: string;
   };
 }
-

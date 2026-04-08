@@ -227,12 +227,15 @@ pub fn get_branch_status(repo_path: &str, branch: &str) -> BranchStatus {
         has_uncommitted_changes: false,
     };
 
+    // Build the range string separately to ensure proper handling of branch names with slashes
+    let range = format!("{}...origin/{}", branch, branch);
+
     if let Ok(o) = Command::new("git")
         .args([
             "rev-list",
             "--left-right",
             "--count",
-            &format!("{}...origin/{}", branch, branch),
+            &range,
         ])
         .current_dir(repo_path)
         .output()
@@ -245,6 +248,7 @@ pub fn get_branch_status(repo_path: &str, branch: &str) -> BranchStatus {
                 result.behind = parts[1].parse().unwrap_or(0);
             }
         }
+        // Silently ignore errors - upstream may not exist or branch may not be on remote
     }
 
     if let Ok(o) = Command::new("git")
