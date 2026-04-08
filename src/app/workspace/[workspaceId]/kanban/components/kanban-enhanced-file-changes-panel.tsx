@@ -9,6 +9,7 @@ import { KanbanCommitsSection } from "./kanban-commits-section";
 import { KanbanCommitModal } from "./kanban-commit-modal";
 import { KanbanInlineDiffViewer } from "./kanban-inline-diff-viewer";
 import { useGitOperations } from "../hooks/use-git-operations";
+import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
 import type { KanbanCommitInfo } from "../kanban-file-changes-types";
 
 interface KanbanEnhancedFileChangesPanelProps {
@@ -201,6 +202,46 @@ export function KanbanEnhancedFileChangesPanel({
     setDiffContent(null);
     setDiffError(null);
   }, []);
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    enabled: open,
+    callbacks: {
+      onTogglePanel: onClose,
+      onEscape: activeDiffFile ? handleCloseDiff : onClose,
+      onStageSelected: () => {
+        const selected = unstagedWithSelection.filter((f) => f.selected);
+        if (selected.length > 0) {
+          handleStageSelected();
+        }
+      },
+      onUnstageSelected: () => {
+        const selected = stagedWithSelection.filter((f) => f.selected);
+        if (selected.length > 0) {
+          handleUnstageSelected();
+        }
+      },
+      onOpenCommit: () => {
+        if (stagedFiles.length > 0) {
+          setCommitModalOpen(true);
+        }
+      },
+      onSelectAll: () => {
+        // Select all unstaged files (could be improved to be context-aware)
+        handleSelectAll(unstagedWithSelection, true);
+      },
+      onShowDiff: () => {
+        // Show diff for first selected file
+        const selected = [...unstagedWithSelection, ...stagedWithSelection].find(
+          (f) => f.selected
+        );
+        if (selected) {
+          const isStaged = stagedWithSelection.includes(selected);
+          handleFileClick(selected, isStaged);
+        }
+      },
+    },
+  });
 
   const summary = {
     changedRepos: repos.filter((r) => !r.error && !r.status.clean).length,
