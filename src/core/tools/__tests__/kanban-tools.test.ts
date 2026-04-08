@@ -7,11 +7,24 @@ import { InMemoryKanbanBoardStore } from "../../store/kanban-board-store";
 import { InMemoryTaskStore } from "../../store/task-store";
 import { KanbanTools } from "../kanban-tools";
 
+const isGitRepository = vi.fn();
+const isBareGitRepository = vi.fn();
+const getRepoDeliveryStatus = vi.fn();
+
+vi.mock("@/core/git", () => ({
+  isGitRepository: (...args: unknown[]) => isGitRepository(...args),
+  isBareGitRepository: (...args: unknown[]) => isBareGitRepository(...args),
+  getRepoDeliveryStatus: (...args: unknown[]) => getRepoDeliveryStatus(...args),
+}));
+
 describe("KanbanTools", () => {
   const originalFetch = globalThis.fetch;
 
   afterEach(() => {
     vi.restoreAllMocks();
+    isGitRepository.mockReset();
+    isBareGitRepository.mockReset();
+    getRepoDeliveryStatus.mockReset();
     globalThis.fetch = originalFetch;
     resetWorkflowOrchestrator();
   });
@@ -497,6 +510,187 @@ describe("KanbanTools", () => {
     expect(result.success).toBe(false);
     expect(result.error).toContain("description is frozen");
     expect(result.error).toContain("comment field instead");
+  });
+
+  it("blocks dev to review moves without committed changes and records the reason on the task", async () => {
+    const system = createInMemorySystem();
+    const tools = new KanbanTools(system.kanbanBoardStore, system.taskStore);
+    tools.setAutomationSystem(system);
+
+    const board = createKanbanBoard({
+      id: "board-review-gate",
+      workspaceId: "default",
+      name: "Default Board",
+      isDefault: true,
+      columns: [
+        { id: "backlog", name: "Backlog", position: 0, stage: "backlog" },
+        { id: "todo", name: "Todo", position: 1, stage: "todo" },
+        { id: "dev", name: "Dev", position: 2, stage: "dev" },
+        {
+          id: "review",
+          name: "Review",
+          position: 3,
+          stage: "review",
+          automation: {
+            deliveryRules: {
+              requireCommittedChanges: true,
+              requireCleanWorktree: true,
+            },
+          },
+        },
+      ],
+    });
+    await system.kanbanBoardStore.save(board);
+
+    const task = createTask({
+      id: "task-review-gate",
+      title: "Need a commit before review",
+      objective: "Implement the feature and request review",
+      workspaceId: "default",
+      boardId: board.id,
+      columnId: "dev",
+      triggerSessionId: "session-dev-gate",
+      codebaseIds: ["codebase-1"],
+    });
+    await system.taskStore.save(task);
+
+    vi.spyOn(system.codebaseStore, "get").mockResolvedValue({
+      id: "codebase-1",
+      workspaceId: "default",
+      repoPath: "/repo/project",
+      branch: "main",
+      label: "project",
+      sourceType: "github",
+      sourceUrl: "https://github.com/acme/project",
+      isDefault: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as never);
+
+    isGitRepository.mockReturnValue(true);
+    isBareGitRepository.mockReturnValue(false);
+    getRepoDeliveryStatus.mockReturnValue({
+      branch: "feature/task-review-gate",
+      baseBranch: "main",
+      baseRef: "origin/main",
+      status: {
+        clean: true,
+        ahead: 0,
+        behind: 0,
+        modified: 0,
+        untracked: 0,
+      },
+      commitsSinceBase: 0,
+      hasCommitsSinceBase: false,
+      hasUncommittedChanges: false,
+      remoteUrl: "git@github.com:acme/project.git",
+      isGitHubRepo: true,
+      canCreatePullRequest: true,
+    });
+
+    const result = await tools.moveCard({
+      cardId: task.id,
+      targetColumnId: "review",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("no committed changes detected");
+
+    const savedTask = await system.taskStore.get(task.id);
+    expect(savedTask?.columnId).toBe("dev");
+    expect(savedTask?.comments.at(-1)?.body).toContain("Move blocked:");
+    expect(savedTask?.comments.at(-1)?.body).toContain("no committed changes detected");
+  });
+
+  it("blocks review to done moves with uncommitted changes", async () => {
+    const system = createInMemorySystem();
+    const tools = new KanbanTools(system.kanbanBoardStore, system.taskStore);
+    tools.setAutomationSystem(system);
+
+    const board = createKanbanBoard({
+      id: "board-done-gate",
+      workspaceId: "default",
+      name: "Default Board",
+      isDefault: true,
+      columns: [
+        { id: "backlog", name: "Backlog", position: 0, stage: "backlog" },
+        { id: "todo", name: "Todo", position: 1, stage: "todo" },
+        { id: "dev", name: "Dev", position: 2, stage: "dev" },
+        { id: "review", name: "Review", position: 3, stage: "review" },
+        {
+          id: "done",
+          name: "Done",
+          position: 4,
+          stage: "done",
+          automation: {
+            deliveryRules: {
+              requireCommittedChanges: true,
+              requireCleanWorktree: true,
+              requirePullRequestReady: true,
+            },
+          },
+        },
+      ],
+    });
+    await system.kanbanBoardStore.save(board);
+
+    const task = createTask({
+      id: "task-done-gate",
+      title: "Need clean working tree before done",
+      objective: "Ship the feature cleanly",
+      workspaceId: "default",
+      boardId: board.id,
+      columnId: "review",
+      triggerSessionId: "session-review-gate",
+      codebaseIds: ["codebase-1"],
+    });
+    await system.taskStore.save(task);
+
+    vi.spyOn(system.codebaseStore, "get").mockResolvedValue({
+      id: "codebase-1",
+      workspaceId: "default",
+      repoPath: "/repo/project",
+      branch: "main",
+      label: "project",
+      sourceType: "github",
+      sourceUrl: "https://github.com/acme/project",
+      isDefault: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as never);
+
+    isGitRepository.mockReturnValue(true);
+    isBareGitRepository.mockReturnValue(false);
+    getRepoDeliveryStatus.mockReturnValue({
+      branch: "feature/task-done-gate",
+      baseBranch: "main",
+      baseRef: "origin/main",
+      status: {
+        clean: false,
+        ahead: 1,
+        behind: 0,
+        modified: 2,
+        untracked: 1,
+      },
+      commitsSinceBase: 1,
+      hasCommitsSinceBase: true,
+      hasUncommittedChanges: true,
+      remoteUrl: "git@github.com:acme/project.git",
+      isGitHubRepo: true,
+      canCreatePullRequest: true,
+    });
+
+    const result = await tools.moveCard({
+      cardId: task.id,
+      targetColumnId: "done",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("uncommitted changes");
+    expect(result.error).toContain("before marking the task done");
+
+    const savedTask = await system.taskStore.get(task.id);
+    expect(savedTask?.columnId).toBe("review");
   });
 
   it("appends update_card comment notes without rewriting the story description", async () => {

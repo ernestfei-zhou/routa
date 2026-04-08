@@ -15,8 +15,8 @@ const createWorktree = vi.fn();
 const buildTaskDeliveryReadiness = vi.fn<
   (task: Task, currentSystem: typeof system) => Promise<TaskDeliveryReadiness>
 >();
-const buildTaskDeliveryTransitionError = vi.fn<
-  (readiness: TaskDeliveryReadiness, targetColumnName: string, targetColumnId: string) => string | null
+const buildTaskDeliveryTransitionErrorFromRules = vi.fn<
+  (readiness: TaskDeliveryReadiness, targetColumnName: string, deliveryRules: Record<string, unknown> | undefined) => string | null
 >(() => null);
 let capturedEnqueueTask: Task | undefined;
 
@@ -76,11 +76,11 @@ vi.mock("@/core/kanban/task-session-transition", () => ({
 vi.mock("@/core/kanban/task-delivery-readiness", () => ({
   buildTaskDeliveryReadiness: (task: Task, currentSystem: typeof system) =>
     buildTaskDeliveryReadiness(task, currentSystem),
-  buildTaskDeliveryTransitionError: (
+  buildTaskDeliveryTransitionErrorFromRules: (
     readiness: TaskDeliveryReadiness,
     targetColumnName: string,
-    targetColumnId: string,
-  ) => buildTaskDeliveryTransitionError(readiness, targetColumnName, targetColumnId),
+    deliveryRules: Record<string, unknown> | undefined,
+  ) => buildTaskDeliveryTransitionErrorFromRules(readiness, targetColumnName, deliveryRules),
 }));
 
 vi.mock("@/core/kanban/workflow-orchestrator-singleton", () => ({
@@ -109,7 +109,7 @@ describe("/api/tasks/[taskId]", () => {
       canCreatePullRequest: false,
       reason: "Task has no linked repository or worktree.",
     });
-    buildTaskDeliveryTransitionError.mockReturnValue(null);
+    buildTaskDeliveryTransitionErrorFromRules.mockReturnValue(null);
     taskStore.save.mockResolvedValue();
     system.kanbanBoardStore.get = vi.fn().mockResolvedValue(null);
     system.artifactStore = undefined;
@@ -530,7 +530,18 @@ describe("/api/tasks/[taskId]", () => {
       id: "board-1",
       columns: [
         { id: "dev", name: "Dev", position: 1, stage: "dev" },
-        { id: "review", name: "Review", position: 2, stage: "review" },
+        {
+          id: "review",
+          name: "Review",
+          position: 2,
+          stage: "review",
+          automation: {
+            deliveryRules: {
+              requireCommittedChanges: true,
+              requireCleanWorktree: true,
+            },
+          },
+        },
       ],
     });
     buildTaskDeliveryReadiness.mockResolvedValue({
@@ -548,7 +559,7 @@ describe("/api/tasks/[taskId]", () => {
       isGitHubRepo: true,
       canCreatePullRequest: false,
     });
-    buildTaskDeliveryTransitionError.mockReturnValue(
+    buildTaskDeliveryTransitionErrorFromRules.mockReturnValue(
       'Cannot move task to "Review": no committed changes detected on branch "issue/task-1" relative to "origin/main". Commit your implementation before requesting review.',
     );
 
@@ -588,7 +599,18 @@ describe("/api/tasks/[taskId]", () => {
       id: "board-1",
       columns: [
         { id: "dev", name: "Dev", position: 1, stage: "dev" },
-        { id: "review", name: "Review", position: 2, stage: "review" },
+        {
+          id: "review",
+          name: "Review",
+          position: 2,
+          stage: "review",
+          automation: {
+            deliveryRules: {
+              requireCommittedChanges: true,
+              requireCleanWorktree: true,
+            },
+          },
+        },
       ],
     });
     buildTaskDeliveryReadiness.mockResolvedValue({
@@ -606,7 +628,7 @@ describe("/api/tasks/[taskId]", () => {
       isGitHubRepo: true,
       canCreatePullRequest: false,
     });
-    buildTaskDeliveryTransitionError.mockReturnValue(
+    buildTaskDeliveryTransitionErrorFromRules.mockReturnValue(
       'Cannot move task to "Review": branch "issue/task-1" still has uncommitted changes (2 modified, 1 untracked). Commit, stash, or discard them before requesting review.',
     );
 
@@ -647,7 +669,19 @@ describe("/api/tasks/[taskId]", () => {
       id: "board-1",
       columns: [
         { id: "review", name: "Review", position: 2, stage: "review" },
-        { id: "done", name: "Done", position: 3, stage: "done" },
+        {
+          id: "done",
+          name: "Done",
+          position: 3,
+          stage: "done",
+          automation: {
+            deliveryRules: {
+              requireCommittedChanges: true,
+              requireCleanWorktree: true,
+              requirePullRequestReady: true,
+            },
+          },
+        },
       ],
     });
     buildTaskDeliveryReadiness.mockResolvedValue({
@@ -665,7 +699,7 @@ describe("/api/tasks/[taskId]", () => {
       isGitHubRepo: true,
       canCreatePullRequest: false,
     });
-    buildTaskDeliveryTransitionError.mockReturnValue(
+    buildTaskDeliveryTransitionErrorFromRules.mockReturnValue(
       'Cannot move task to "Done": GitHub repo is not PR-ready yet. Use a feature branch instead of "main" so this task can open a pull request cleanly.',
     );
 

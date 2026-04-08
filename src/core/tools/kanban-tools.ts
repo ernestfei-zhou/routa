@@ -49,6 +49,10 @@ import {
   resolveTargetRequiredTaskFields,
   validateTaskReadiness,
 } from "../kanban/task-derived-summary";
+import {
+  buildTaskDeliveryReadiness,
+  buildTaskDeliveryTransitionErrorFromRules,
+} from "../kanban/task-delivery-readiness";
 
 const DESCRIPTION_FROZEN_STAGES = new Set<KanbanColumnStage>(["dev", "review", "blocked", "done"]);
 
@@ -267,6 +271,19 @@ export class KanbanTools {
           `Cannot move card to "${targetColumn.name}": missing required task fields: ${missingTaskFields.join(", ")}. `
           + "Please complete this story definition before moving the card.",
         );
+      }
+    }
+
+    if (this.isAutomationSystemCompatible()) {
+      const deliveryReadiness = await buildTaskDeliveryReadiness(task, this.automationSystem!);
+      const deliveryError = buildTaskDeliveryTransitionErrorFromRules(
+        deliveryReadiness,
+        targetColumn.name,
+        targetColumn.automation?.deliveryRules,
+      );
+      if (deliveryError) {
+        await this.recordTaskMoveBlockComment(task, deliveryError, task.triggerSessionId);
+        return errorResult(deliveryError);
       }
     }
 
@@ -868,6 +885,26 @@ export class KanbanTools {
       && this.automationSystem.taskStore === this.taskStore
       && this.automationSystem.kanbanBoardStore === this.kanbanBoardStore,
     );
+  }
+
+  private async recordTaskMoveBlockComment(
+    task: Task,
+    message: string,
+    sessionId?: string,
+  ): Promise<void> {
+    const note = `Move blocked: ${message}`.trim();
+    const lastComment = task.comments?.[task.comments.length - 1]?.body?.trim();
+    if (lastComment === note) {
+      return;
+    }
+
+    task.comment = appendTaskComment(task.comment, note);
+    task.comments = appendTaskCommentEntry(task.comments, note, {
+      sessionId,
+    });
+    task.updatedAt = new Date();
+    await this.taskStore.save(task);
+    this.notifyWorkspaceChanged(task.workspaceId, "task", "updated", task.id);
   }
 }
 

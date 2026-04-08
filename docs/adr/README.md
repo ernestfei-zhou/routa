@@ -20,6 +20,7 @@ claude -p "Read ADR 0004 and explain the kanban automation boundary"
 | [0004](./0004-kanban-driven-automation.md) | Kanban lanes trigger ACP sessions with queued concurrency | [issue #96](../issues/2026-03-08-gh-96-feat-kanban-implement-generic-local-first-kanban-data-model.md), [issue #148](../issues/2026-03-14-gh-148-feat-add-session-queueing-and-concurrency-limits-for-kanban-acp-automati.md) |
 | [0005](./0005-specialist-externalization.md) | Specialists as Markdown+YAML with priority loading | [issue #1](../issues/2026-02-16-gh-1-feat-specialist-markdown-yaml-frontmatter-specialist.md) |
 | [0006](./0006-orchestration-shell-pattern.md) | Complex files use thin shell + domain hooks structure | coding standards |
+| [0007](./0007-kanban-delivery-transition-policies.md) | Kanban transition delivery gates are column policies enforced across UI and MCP | local design follow-up |
 
 ## Rules
 

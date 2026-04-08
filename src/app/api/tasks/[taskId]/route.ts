@@ -27,7 +27,7 @@ import {
 } from "../task-evidence-summary";
 import {
   buildTaskDeliveryReadiness,
-  buildTaskDeliveryTransitionError,
+  buildTaskDeliveryTransitionErrorFromRules,
 } from "@/core/kanban/task-delivery-readiness";
 
 export const dynamic = "force-dynamic";
@@ -201,12 +201,12 @@ export async function PATCH(
           }
         }
 
-        if (targetColumn && (targetColumn.id === "review" || targetColumn.id === "done")) {
+        if (targetColumn?.automation?.deliveryRules) {
           const deliveryReadiness = await buildTaskDeliveryReadiness(nextTask, system);
-          const deliveryError = buildTaskDeliveryTransitionError(
+          const deliveryError = buildTaskDeliveryTransitionErrorFromRules(
             deliveryReadiness,
             targetColumn.name ?? body.columnId,
-            targetColumn.id,
+            targetColumn.automation.deliveryRules,
           );
           if (deliveryError) {
             return NextResponse.json(

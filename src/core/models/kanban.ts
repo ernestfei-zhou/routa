@@ -23,6 +23,15 @@ export const DEFAULT_DEV_REQUIRED_TASK_FIELDS = [
 
 export type KanbanTransport = "acp" | "a2a";
 
+export interface KanbanDeliveryRules {
+  /** Require at least one commit ahead of the base branch before transition. */
+  requireCommittedChanges?: boolean;
+  /** Require a clean working tree before transition. */
+  requireCleanWorktree?: boolean;
+  /** Require the branch/repo state to be pull-request ready before transition. */
+  requirePullRequestReady?: boolean;
+}
+
 export interface KanbanAutomationStep {
   id: string;
   /** Transport protocol for this automation step */
@@ -76,6 +85,8 @@ export interface KanbanColumnAutomation {
   requiredArtifacts?: ("screenshot" | "test_results" | "code_diff")[];
   /** Task fields that must be present before transition is allowed */
   requiredTaskFields?: KanbanRequiredTaskField[];
+  /** Delivery-readiness requirements enforced before transition is allowed */
+  deliveryRules?: KanbanDeliveryRules;
   /** Automatically advance card to next column on agent success */
   autoAdvanceOnSuccess?: boolean;
 }
@@ -168,6 +179,9 @@ export function cloneKanbanColumns(columns: KanbanColumn[]): KanbanColumn[] {
           : undefined,
         requiredTaskFields: column.automation.requiredTaskFields
           ? [...column.automation.requiredTaskFields]
+          : undefined,
+        deliveryRules: column.automation.deliveryRules
+          ? { ...column.automation.deliveryRules }
           : undefined,
         steps: column.automation.steps?.map((step) => ({ ...step })),
       }

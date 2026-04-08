@@ -67,6 +67,10 @@ const RECOMMENDED_AUTOMATION_BY_STAGE: Partial<Record<KanbanColumnStage, KanbanC
     ],
     transitionType: "entry",
     requiredArtifacts: ["screenshot", "test_results"],
+    deliveryRules: {
+      requireCommittedChanges: true,
+      requireCleanWorktree: true,
+    },
     autoAdvanceOnSuccess: false,
   },
   blocked: {
@@ -89,6 +93,11 @@ const RECOMMENDED_AUTOMATION_BY_STAGE: Partial<Record<KanbanColumnStage, KanbanC
       specialistName: "Done Reporter",
     }],
     transitionType: "entry",
+    deliveryRules: {
+      requireCommittedChanges: true,
+      requireCleanWorktree: true,
+      requirePullRequestReady: true,
+    },
     autoAdvanceOnSuccess: false,
   },
 };
@@ -212,6 +221,7 @@ export function applyRecommendedAutomationToColumns(columns: KanbanColumn[]): Ka
         requiredArtifacts: shouldRefreshArtifactPolicy
           ? recommended.requiredArtifacts
           : (currentAutomation.requiredArtifacts ?? recommended.requiredArtifacts),
+        deliveryRules: currentAutomation.deliveryRules ?? recommended.deliveryRules,
         autoAdvanceOnSuccess: recommended.autoAdvanceOnSuccess,
       }),
     };

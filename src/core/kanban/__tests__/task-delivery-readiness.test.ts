@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createTask } from "@/core/models/task";
 import {
   buildTaskDeliveryReadiness,
+  buildTaskDeliveryTransitionErrorFromRules,
   buildTaskDeliveryTransitionError,
 } from "../task-delivery-readiness";
 
@@ -201,5 +202,49 @@ describe("task delivery readiness", () => {
     expect(reviewDirtyError).toContain("uncommitted changes");
     expect(reviewDirtyError).toContain("before requesting review");
     expect(doneError).toContain("uncommitted changes");
+  });
+
+  it("evaluates configurable delivery rules without relying on hard-coded column ids", () => {
+    const reviewLikeError = buildTaskDeliveryTransitionErrorFromRules({
+      checked: true,
+      branch: "issue/task-2",
+      baseBranch: "main",
+      baseRef: "origin/main",
+      modified: 0,
+      untracked: 0,
+      ahead: 0,
+      behind: 0,
+      commitsSinceBase: 0,
+      hasCommitsSinceBase: false,
+      hasUncommittedChanges: false,
+      isGitHubRepo: true,
+      canCreatePullRequest: false,
+    }, "QA Gate", {
+      requireCommittedChanges: true,
+      requireCleanWorktree: true,
+    });
+
+    const doneLikeError = buildTaskDeliveryTransitionErrorFromRules({
+      checked: true,
+      branch: "main",
+      baseBranch: "main",
+      baseRef: "origin/main",
+      modified: 0,
+      untracked: 0,
+      ahead: 1,
+      behind: 0,
+      commitsSinceBase: 1,
+      hasCommitsSinceBase: true,
+      hasUncommittedChanges: false,
+      isGitHubRepo: true,
+      canCreatePullRequest: false,
+    }, "Release", {
+      requireCommittedChanges: true,
+      requireCleanWorktree: true,
+      requirePullRequestReady: true,
+    });
+
+    expect(reviewLikeError).toContain("no committed changes detected");
+    expect(doneLikeError).toContain("GitHub repo is not PR-ready yet");
   });
 });

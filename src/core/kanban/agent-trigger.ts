@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import type { Task, TaskEvidenceSummary, TaskInvestValidation, TaskStoryReadiness } from "../models/task";
-import { getNextHappyPathColumnId, type KanbanColumn } from "../models/kanban";
+import { getNextHappyPathColumnId, type KanbanColumn, type KanbanDeliveryRules } from "../models/kanban";
 import { AgentEventType, type EventBus } from "../events/event-bus";
 import { isClaudeCodeSdkConfigured } from "../acp/claude-code-sdk-adapter";
 import { dispatchSessionPrompt } from "@/core/acp/session-prompt";
@@ -45,6 +45,18 @@ function formatLaneSessionDescriptor(session: TaskLaneSession): string {
     session.provider ?? "unknown provider",
     session.role ?? "unknown role",
   ].filter(Boolean).join(" · ");
+}
+
+function formatDeliveryRules(rules: KanbanDeliveryRules | undefined): string {
+  if (!rules) {
+    return "none";
+  }
+
+  const labels: string[] = [];
+  if (rules.requireCommittedChanges) labels.push("committed changes");
+  if (rules.requireCleanWorktree) labels.push("clean worktree");
+  if (rules.requirePullRequestReady) labels.push("PR-ready branch");
+  return labels.length > 0 ? labels.join(", ") : "none";
 }
 
 export function getInternalApiOrigin(): string {
@@ -182,6 +194,16 @@ export function buildTaskPrompt(
     "",
   ];
 
+  const deliveryGateSection = transitionArtifacts.nextColumn?.automation?.deliveryRules
+    ? [
+        "## Delivery Gates",
+        "",
+        `Moving this card to ${transitionArtifacts.nextColumn.name ?? nextColumnId ?? "the next column"} also requires: ${formatDeliveryRules(transitionArtifacts.nextColumn.automation.deliveryRules)}.`,
+        "Do not call `move_card` until those delivery conditions are satisfied. If the move is rejected, record the blocker clearly in `update_card` and resolve it before retrying.",
+        "",
+      ]
+    : [];
+
   const laneRunHistorySection = !isBacklogPlanning && previousLaneRun
     ? [
         "## Current Lane History",
@@ -314,6 +336,7 @@ export function buildTaskPrompt(
     ...storyReadinessSection,
     ...investSection,
     ...artifactGateSection,
+    ...deliveryGateSection,
     ...evidenceBundleSection,
     ...laneRunHistorySection,
     ...laneHandoffSection,

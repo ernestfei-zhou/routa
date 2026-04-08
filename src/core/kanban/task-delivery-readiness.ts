@@ -4,6 +4,7 @@ import {
   isGitRepository,
   type RepoDeliveryStatus,
 } from "@/core/git";
+import type { KanbanDeliveryRules } from "@/core/models/kanban";
 import type { Codebase } from "@/core/models/codebase";
 import type { Task } from "@/core/models/task";
 import type { Worktree } from "@/core/models/worktree";
@@ -166,11 +167,26 @@ function formatBaseReference(readiness: TaskDeliveryReadiness): string {
   return readiness.baseRef ?? readiness.baseBranch ?? "the base branch";
 }
 
-export function buildTaskDeliveryTransitionError(
+export function hasDeliveryRules(
+  rules: KanbanDeliveryRules | undefined,
+): rules is KanbanDeliveryRules {
+  return Boolean(
+    rules
+    && (rules.requireCommittedChanges
+      || rules.requireCleanWorktree
+      || rules.requirePullRequestReady),
+  );
+}
+
+export function buildTaskDeliveryTransitionErrorFromRules(
   readiness: TaskDeliveryReadiness,
   targetColumnName: string,
-  targetColumnId: string,
+  rules: KanbanDeliveryRules | undefined,
 ): string | null {
+  if (!hasDeliveryRules(rules)) {
+    return null;
+  }
+
   if (!readiness.checked) {
     if (!readiness.reason || readiness.reason === "Task has no linked repository or worktree.") {
       return null;
@@ -179,25 +195,42 @@ export function buildTaskDeliveryTransitionError(
     return `Cannot move task to "${targetColumnName}": ${readiness.reason}`;
   }
 
-  if (!readiness.hasCommitsSinceBase) {
+  if (rules.requireCommittedChanges && !readiness.hasCommitsSinceBase) {
     return `Cannot move task to "${targetColumnName}": no committed changes detected on branch "${readiness.branch ?? "unknown"}" relative to "${formatBaseReference(readiness)}". Commit your implementation before requesting review.`;
   }
 
-  if (readiness.hasUncommittedChanges) {
-    const transitionAction = targetColumnId === "review"
-      ? "requesting review"
-      : "marking the task done";
+  if (rules.requireCleanWorktree && readiness.hasUncommittedChanges) {
+    const transitionAction = rules.requirePullRequestReady
+      ? "marking the task done"
+      : "requesting review";
     return `Cannot move task to "${targetColumnName}": branch "${readiness.branch ?? "unknown"}" still has uncommitted changes (${readiness.modified} modified, ${readiness.untracked} untracked). Commit, stash, or discard them before ${transitionAction}.`;
   }
 
-  if (targetColumnId !== "done") {
-    return null;
-  }
-
-  if (readiness.isGitHubRepo && !readiness.canCreatePullRequest) {
+  if (rules.requirePullRequestReady && readiness.isGitHubRepo && !readiness.canCreatePullRequest) {
     const baseBranch = readiness.baseBranch ?? "the base branch";
     return `Cannot move task to "${targetColumnName}": GitHub repo is not PR-ready yet. Use a feature branch instead of "${baseBranch}" so this task can open a pull request cleanly.`;
   }
 
   return null;
+}
+
+export function buildTaskDeliveryTransitionError(
+  readiness: TaskDeliveryReadiness,
+  targetColumnName: string,
+  targetColumnId: string,
+): string | null {
+  const rules: KanbanDeliveryRules | undefined = targetColumnId === "review"
+    ? {
+        requireCommittedChanges: true,
+        requireCleanWorktree: true,
+      }
+    : targetColumnId === "done"
+    ? {
+        requireCommittedChanges: true,
+        requireCleanWorktree: true,
+        requirePullRequestReady: true,
+      }
+    : undefined;
+
+  return buildTaskDeliveryTransitionErrorFromRules(readiness, targetColumnName, rules);
 }
