@@ -1,5 +1,6 @@
 use axum::{
     extract::{Query, State},
+    http::StatusCode,
     response::{
         sse::{Event, Sse},
         IntoResponse, Response,
@@ -1744,13 +1745,39 @@ fn derive_allowed_native_tools(specialist_id: Option<&str>) -> Option<Vec<String
 #[serde(rename_all = "camelCase")]
 struct AcpSseQuery {
     session_id: Option<String>,
+    probe: Option<String>,
+    last_event_id: Option<String>,
 }
 
-async fn acp_sse(
-    State(state): State<AppState>,
-    Query(query): Query<AcpSseQuery>,
-) -> Sse<std::pin::Pin<Box<dyn tokio_stream::Stream<Item = Result<Event, Infallible>> + Send>>> {
+fn history_since_event_id(
+    history: &[serde_json::Value],
+    last_event_id: &str,
+) -> Vec<serde_json::Value> {
+    let index = history.iter().position(|entry| {
+        entry.get("eventId").and_then(|value| value.as_str()) == Some(last_event_id)
+    });
+
+    match index {
+        Some(index) => history.iter().skip(index + 1).cloned().collect(),
+        None => Vec::new(),
+    }
+}
+
+async fn acp_sse(State(state): State<AppState>, Query(query): Query<AcpSseQuery>) -> Response {
+    if query.probe.as_deref() == Some("1") {
+        return StatusCode::NO_CONTENT.into_response();
+    }
+
     let session_id = query.session_id.clone().unwrap_or_default();
+    let replay_events = match query.last_event_id.as_deref() {
+        Some(last_event_id) if !last_event_id.trim().is_empty() => state
+            .acp_session_store
+            .get_history(&session_id)
+            .await
+            .map(|history| history_since_event_id(&history, last_event_id))
+            .unwrap_or_default(),
+        _ => Vec::new(),
+    };
 
     // Send initial connected event
     let connected_event = serde_json::json!({
@@ -1768,6 +1795,14 @@ async fn acp_sse(
     let initial = tokio_stream::once(Ok::<_, Infallible>(
         Event::default().data(connected_event.to_string()),
     ));
+    let replay = tokio_stream::iter(replay_events.into_iter().map(|params| {
+        let msg = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "session/update",
+            "params": params,
+        });
+        Ok::<_, Infallible>(Event::default().data(msg.to_string()))
+    }));
 
     // Heartbeat (keep connection alive)
     let heartbeat = tokio_stream::wrappers::IntervalStream::new(tokio::time::interval(
@@ -1788,13 +1823,15 @@ async fn acp_sse(
             }
         };
         // Merge initial + notifications + heartbeat
-        Box::pin(initial.chain(tokio_stream::StreamExt::merge(notifications, heartbeat)))
+        Box::pin(
+            initial.chain(replay.chain(tokio_stream::StreamExt::merge(notifications, heartbeat))),
+        )
     } else {
-        // No process yet — just initial + heartbeat
-        Box::pin(initial.chain(heartbeat))
+        // No process yet — replay persisted history if requested, then keep the connection open.
+        Box::pin(initial.chain(replay.chain(heartbeat)))
     };
 
-    Sse::new(stream)
+    Sse::new(stream).into_response()
 }
 
 /// Persist a session to local JSONL file (best-effort, non-blocking).
@@ -1847,7 +1884,8 @@ mod tests {
 
     use super::{
         acp_rpc, custom_provider_launch_from_row, extract_custom_provider_launch, has_explicit_cwd,
-        resolve_session_cwd, should_attempt_native_resume, AcpResponse, CustomProviderLaunch,
+        history_since_event_id, resolve_session_cwd, should_attempt_native_resume, AcpResponse,
+        CustomProviderLaunch,
     };
     use routa_core::acp::terminal_manager::TerminalManager;
 
@@ -1865,6 +1903,20 @@ mod tests {
         assert!(!has_explicit_cwd(Some("")));
         assert!(!has_explicit_cwd(Some("   ")));
         assert!(!has_explicit_cwd(Some(".")));
+    }
+
+    #[test]
+    fn history_since_event_id_returns_only_newer_entries() {
+        let history = vec![
+            json!({ "eventId": "evt-1", "update": { "sessionUpdate": "agent_message_chunk" } }),
+            json!({ "eventId": "evt-2", "update": { "sessionUpdate": "tool_call" } }),
+            json!({ "eventId": "evt-3", "update": { "sessionUpdate": "tool_result" } }),
+        ];
+
+        let replay = history_since_event_id(&history, "evt-1");
+
+        assert_eq!(replay, history[1..]);
+        assert!(history_since_event_id(&history, "missing-event").is_empty());
     }
 
     #[test]
