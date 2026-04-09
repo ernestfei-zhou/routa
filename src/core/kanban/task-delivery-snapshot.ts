@@ -1,4 +1,4 @@
-import { getRepoCommitChanges, getRepoRefSha } from "@/core/git";
+import { getRepoCommitChanges, getRepoRefSha } from "@/core/git/git-utils";
 import type { Task, TaskDeliverySnapshot } from "@/core/models/task";
 import type { TaskDeliveryReadiness } from "./task-delivery-readiness";
 

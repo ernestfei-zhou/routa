@@ -237,7 +237,7 @@ function selectDiffSearchResult(results: DiffSearchResult[], index: number) {
   }
 
   result.element.style.backgroundColor = "rgba(59, 130, 246, 0.55)";
-  result.element.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+  result.element.scrollIntoView?.({ behavior: "smooth", block: "center", inline: "nearest" });
 }
 
 function KanbanPierreFileDiff({ fileDiff }: { fileDiff: FileDiffMetadata }) {

@@ -5,7 +5,7 @@ import { captureTaskDeliverySnapshot } from "../task-delivery-snapshot";
 const getRepoCommitChanges = vi.fn();
 const getRepoRefSha = vi.fn();
 
-vi.mock("@/core/git", () => ({
+vi.mock("@/core/git/git-utils", () => ({
   getRepoCommitChanges: (...args: unknown[]) => getRepoCommitChanges(...args),
   getRepoRefSha: (...args: unknown[]) => getRepoRefSha(...args),
 }));
