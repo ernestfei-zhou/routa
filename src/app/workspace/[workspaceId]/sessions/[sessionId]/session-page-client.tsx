@@ -49,6 +49,12 @@ interface SessionRecord {
   specialistId?: string;
   acpStatus?: "connecting" | "ready" | "error";
   parentSessionId?: string;
+  resumeCapabilities?: {
+    supported: boolean;
+    mode: "native" | "replay" | "both";
+    supportsFork?: boolean;
+    supportsList?: boolean;
+  } | null;
 }
 
 interface TranscriptMessage {
@@ -876,7 +882,7 @@ export function SessionPageClient() {
             <a href="/traces" className="hidden md:inline-flex px-2.5 py-1 rounded-md bg-[var(--dt-bg-secondary)] text-[11px] font-medium text-[var(--dt-text-primary)] hover:bg-[var(--dt-bg-active)] transition-colors">
               {t.sessions.tracesLabel}
             </a>
-            {activeSessionRecord?.provider === "codex" && activeSessionRecord?.cwd && (
+            {activeSessionRecord?.resumeCapabilities?.supported && activeSessionRecord?.cwd && (
               <button
                 type="button"
                 onClick={() => void handleResumeCurrentSession()}

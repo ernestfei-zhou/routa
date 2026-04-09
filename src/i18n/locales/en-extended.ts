@@ -1205,6 +1205,13 @@ export const enExtended: ExtendedTranslationDictionarySections = {
     resume: "Resume",
     resuming: "Resuming...",
     resumeHint: "Resume this persisted session. If native resume is unavailable, Routa recreates it in a new session with restored context.",
+    fork: "Fork",
+    forking: "Forking...",
+    forkHint: "Create a new session branched from this one, preserving the original intact.",
+    statusActive: "Active",
+    statusInterrupted: "Interrupted",
+    statusRestorable: "Restorable",
+    statusStale: "Stale",
   },
 
   mcp: {

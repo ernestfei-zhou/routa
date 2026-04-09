@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getHttpSessionStore } from "@/core/acp/http-session-store";
+import { getPresetById } from "@/core/acp/acp-presets";
 import { loadSessionFromDb, loadSessionFromLocalStorage, renameSessionInDb, deleteSessionFromDb } from "@/core/acp/session-db-persister";
 import {
   getRequiredRunnerUrl,
@@ -92,6 +93,9 @@ export async function GET(
       executionMode: resolvedSession.executionMode,
       ownerInstanceId: resolvedSession.ownerInstanceId,
       leaseExpiresAt: resolvedSession.leaseExpiresAt,
+      resumeCapabilities: resolvedSession.provider
+        ? getPresetById(resolvedSession.provider)?.resume ?? null
+        : null,
     },
   });
 }
