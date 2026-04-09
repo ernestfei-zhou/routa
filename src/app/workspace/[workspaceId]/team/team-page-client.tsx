@@ -309,10 +309,10 @@ export function TeamPageClient() {
                     return (
                       <div
                         key={`${specialist.id}-${index}`}
-                        className={`flex w-[170px] shrink-0 items-center rounded-lg px-2.5 py-1.5 text-sm transition-colors ${
+                        className={`flex w-42.5 shrink-0 items-center rounded-lg px-2.5 py-1.5 text-sm transition-colors ${
                           isLead
                             ? "bg-white/80 text-slate-900 dark:bg-white/8 dark:text-slate-100"
-                            : "bg-black/[0.03] text-slate-700 dark:bg-white/[0.03] dark:text-slate-200"
+                            : "bg-black/3 text-slate-700 dark:bg-white/3 dark:text-slate-200"
                         }`}
                         title={specialist.description ?? specialist.id}
                       >
@@ -333,11 +333,21 @@ export function TeamPageClient() {
                 workspaceId={workspaceId}
                 variant="default"
                 footerMetaMode="repo-only"
-                lockedSpecialistId={TEAM_LEAD_SPECIALIST_ID}
-                requireRepoSelection
-                buildSessionUrl={(nextWorkspaceId, sessionId) =>
-                  `/workspace/${nextWorkspaceId ?? workspaceId}/team/${sessionId}`
-                }
+                initialLaunchModeId="team"
+                launchModes={[{
+                  id: "team",
+                  label: t.home.modeTeamTitle,
+                  description: t.home.modeTeamDescription,
+                  placeholder: t.home.modeTeamPlaceholder,
+                  defaultAgentRole: "ROUTA",
+                  allowRoleSwitch: false,
+                  allowCustomSpecialist: false,
+                  lockedSpecialistId: TEAM_LEAD_SPECIALIST_ID,
+                  requireRepoSelection: true,
+                  dispatchMode: "pending-prompt",
+                  buildSessionUrl: (nextWorkspaceId, sessionId) =>
+                    `/workspace/${nextWorkspaceId ?? workspaceId}/team/${sessionId}`,
+                }]}
                 onSessionCreated={handleTeamSessionCreated}
               />
             </div>
@@ -377,7 +387,7 @@ export function TeamPageClient() {
 
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
             {teamRuns.length === 0 ? (
-              <div className="rounded-[22px] border border-dashed border-black/10 bg-[#f8f6f1] px-5 py-8 text-center dark:border-white/10 dark:bg-white/[0.04]">
+              <div className="rounded-[22px] border border-dashed border-black/10 bg-[#f8f6f1] px-5 py-8 text-center dark:border-white/10 dark:bg-white/4">
                 <div className="text-sm font-medium text-slate-700 dark:text-slate-200">
                   {t.team.noTeamRunsYet}
                 </div>
@@ -392,7 +402,7 @@ export function TeamPageClient() {
                     key={run.session.sessionId}
                     type="button"
                     onClick={() => router.push(`/workspace/${workspaceId}/team/${run.session.sessionId}`)}
-                    className="w-full rounded-[18px] border border-black/6 bg-[#fbfaf7] px-4 py-3 text-left transition-colors hover:bg-white dark:border-white/8 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]"
+                    className="w-full rounded-[18px] border border-black/6 bg-[#fbfaf7] px-4 py-3 text-left transition-colors hover:bg-white dark:border-white/8 dark:bg-white/4 dark:hover:bg-white/[0.07]"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">

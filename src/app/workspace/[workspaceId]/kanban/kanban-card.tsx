@@ -186,6 +186,7 @@ export function KanbanCard({
 }: KanbanCardProps) {
   const { t } = useTranslation();
   const sessionStatus = linkedSession?.acpStatus;
+  const isTerminalCard = task.columnId === "done" || task.columnId === "blocked";
   const resolveSpecialist = createKanbanSpecialistResolver(specialists);
   const effectiveAutomation = resolveEffectiveTaskAutomation(task, boardColumns, resolveSpecialist, {
     autoProviderId,
@@ -203,11 +204,15 @@ export function KanbanCard({
     ? getLanguageSpecificSpecialistId(task.assignedSpecialistId, specialistLanguage) ?? ""
     : "";
   const priorityTone = getPriorityTone(task.priority);
-  const sessionTone = getSessionTone(sessionStatus, queuePosition);
+  const sessionTone = isTerminalCard
+    ? "bg-emerald-100 text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:ring-emerald-900/40"
+    : getSessionTone(sessionStatus, queuePosition);
   const statusLabel = getStatusLabel(sessionStatus, queuePosition);
-  const resolvedStatusLabel = queuePosition
-    ? `${t.kanban.queued} #${queuePosition}`
-    : (t.kanban as Record<string, string>)[statusLabel] ?? statusLabel;
+  const resolvedStatusLabel = isTerminalCard
+    ? t.kanban.done
+    : queuePosition
+      ? `${t.kanban.queued} #${queuePosition}`
+      : (t.kanban as Record<string, string>)[statusLabel] ?? statusLabel;
   const automationSourceLabel = hasCardOverride ? t.kanban.cardOverride : t.kanban.laneDefault;
   const automationSourceTone = hasCardOverride
     ? "bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:ring-blue-900/40"
@@ -402,7 +407,7 @@ export function KanbanCard({
           )}
         </div>
       )}
-      {liveMessageTail && (
+      {!isTerminalCard && liveMessageTail && (
         <div className="rounded-xl border border-sky-200/80 bg-sky-50/70 px-3 py-2.5 dark:border-sky-900/50 dark:bg-sky-900/10">
           <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-600 dark:text-sky-300">
             {t.kanban.liveSession}

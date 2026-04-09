@@ -14,14 +14,12 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslation } from "@/i18n";
-import { useCodebases, useWorkspaces } from "@/client/hooks/use-workspaces";
+import { useWorkspaces } from "@/client/hooks/use-workspaces";
 import { useNotes } from "@/client/hooks/use-notes";
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
 import { DesktopAppShell } from "@/client/components/desktop-app-shell";
-import { HomeInput } from "@/client/components/home-input";
 import { WorkspaceSwitcher } from "@/client/components/workspace-switcher";
 import { BackgroundTaskInfo, TaskInfo, SessionInfo, KanbanBoardInfo } from "@/app/workspace/[workspaceId]/types";
-import { buildKanbanTaskAgentPrompt } from "@/app/workspace/[workspaceId]/kanban/i18n/kanban-task-agent";
 import { Activity, Columns2, ScrollText, StickyNote } from "lucide-react";
 
 function getSessionLabel(session: SessionInfo) {
@@ -40,7 +38,7 @@ function formatTimestamp(value?: string) {
 
 
 export function WorkspacePageClient() {
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useParams();
   const rawWorkspaceId = params.workspaceId as string;
@@ -51,7 +49,6 @@ export function WorkspacePageClient() {
 
   const workspacesHook = useWorkspaces();
   const notesHook = useNotes(workspaceId);
-  const { codebases } = useCodebases(workspaceId);
 
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [tasks, setTasks] = useState<TaskInfo[]>([]);
@@ -193,6 +190,7 @@ export function WorkspacePageClient() {
   const recentBgTasks = [...bgTasks]
     .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
     .slice(0, 4);
+  const launcherHref = (modeId: string) => `/?workspace=${encodeURIComponent(workspaceId)}&mode=${encodeURIComponent(modeId)}`;
 
   return (
     <DesktopAppShell
@@ -242,32 +240,65 @@ export function WorkspacePageClient() {
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-black/6 bg-white/80 p-4 shadow-sm dark:border-white/8 dark:bg-white/5">
-                  <HomeInput
-                    workspaceId={workspaceId}
-                    variant="default"
-                    defaultAgentRole="CRAFTER"
-                    buildSessionUrl={(nextWorkspaceId, sessionId) =>
-                      `/workspace/${nextWorkspaceId ?? workspaceId}/sessions/${sessionId}`
-                    }
-                    extraSessionParams={{
-                      role: "CRAFTER",
-                      mcpProfile: "kanban-planning",
-                      systemPrompt: (text) => buildKanbanTaskAgentPrompt({
-                        workspaceId,
-                        boardId: activeBoard?.id ?? "default",
-                        repoPath: codebases[0]?.repoPath,
-                        agentInput: text,
-                        language: locale === "zh" ? "zh-CN" : "en",
-                      }),
-                    }}
-                  />
-                </div>
+                <section className="rounded-3xl border border-black/6 bg-white/80 p-5 dark:border-white/8 dark:bg-white/5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">
+                        {t.workspace.backToLauncher}
+                      </div>
+                      <div className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                        {t.workspace.createFromLauncher}
+                      </div>
+                    </div>
+                    <Link
+                      href={launcherHref("session")}
+                      className="inline-flex items-center justify-center rounded-full border border-black/8 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+                    >
+                      {t.workspace.backToLauncher}
+                    </Link>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <Link
+                      href={launcherHref("session")}
+                      className="rounded-2xl border border-black/6 bg-[#faf9f4] p-4 transition-colors hover:bg-white dark:border-white/8 dark:bg-white/4 dark:hover:bg-white/8"
+                    >
+                      <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        {t.home.modeSessionTitle}
+                      </div>
+                      <div className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-slate-400">
+                        {t.home.modeSessionDescription}
+                      </div>
+                    </Link>
+                    <Link
+                      href={launcherHref("planning")}
+                      className="rounded-2xl border border-black/6 bg-[#faf9f4] p-4 transition-colors hover:bg-white dark:border-white/8 dark:bg-white/4 dark:hover:bg-white/8"
+                    >
+                      <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        {t.home.modePlanningTitle}
+                      </div>
+                      <div className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-slate-400">
+                        {t.home.modePlanningDescription}
+                      </div>
+                    </Link>
+                    <Link
+                      href={launcherHref("team")}
+                      className="rounded-2xl border border-black/6 bg-[#faf9f4] p-4 transition-colors hover:bg-white dark:border-white/8 dark:bg-white/4 dark:hover:bg-white/8"
+                    >
+                      <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        {t.home.modeTeamTitle}
+                      </div>
+                      <div className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-slate-400">
+                        {t.home.modeTeamDescription}
+                      </div>
+                    </Link>
+                  </div>
+                </section>
 
                 <div className="grid gap-3 lg:grid-cols-3">
                   <Link
                     href={`/workspace/${workspaceId}/kanban`}
-                    className="rounded-[24px] border border-black/6 bg-white/80 p-5 transition-colors hover:bg-white dark:border-white/8 dark:bg-white/5 dark:hover:bg-white/10"
+                    className="rounded-3xl border border-black/6 bg-white/80 p-5 transition-colors hover:bg-white dark:border-white/8 dark:bg-white/5 dark:hover:bg-white/10"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -289,7 +320,7 @@ export function WorkspacePageClient() {
 
                   <Link
                     href={latestSession ? `/workspace/${workspaceId}/sessions/${latestSession.sessionId}` : "/"}
-                    className="rounded-[24px] border border-black/6 bg-white/80 p-5 transition-colors hover:bg-white dark:border-white/8 dark:bg-white/5 dark:hover:bg-white/10"
+                    className="rounded-3xl border border-black/6 bg-white/80 p-5 transition-colors hover:bg-white dark:border-white/8 dark:bg-white/5 dark:hover:bg-white/10"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -309,7 +340,7 @@ export function WorkspacePageClient() {
                     </div>
                   </Link>
 
-                  <div className="rounded-[24px] border border-black/6 bg-white/80 p-5 dark:border-white/8 dark:bg-white/5">
+                  <div className="rounded-3xl border border-black/6 bg-white/80 p-5 dark:border-white/8 dark:bg-white/5">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">
@@ -330,7 +361,7 @@ export function WorkspacePageClient() {
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)]">
-                  <section className="rounded-[24px] border border-black/6 bg-white/80 p-5 dark:border-white/8 dark:bg-white/5">
+                  <section className="rounded-3xl border border-black/6 bg-white/80 p-5 dark:border-white/8 dark:bg-white/5">
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <div>
                         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">
@@ -379,7 +410,7 @@ export function WorkspacePageClient() {
                   </section>
 
                   <div className="grid gap-4">
-                    <section className="rounded-[24px] border border-black/6 bg-white/80 p-5 dark:border-white/8 dark:bg-white/5">
+                    <section className="rounded-3xl border border-black/6 bg-white/80 p-5 dark:border-white/8 dark:bg-white/5">
                       <div className="mb-4 flex items-center gap-2">
                         <StickyNote className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7} />
                         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">
@@ -406,7 +437,7 @@ export function WorkspacePageClient() {
                       )}
                     </section>
 
-                    <section className="rounded-[24px] border border-black/6 bg-white/80 p-5 dark:border-white/8 dark:bg-white/5">
+                    <section className="rounded-3xl border border-black/6 bg-white/80 p-5 dark:border-white/8 dark:bg-white/5">
                       <div className="mb-4 flex items-center gap-2">
                         <Activity className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7} />
                         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">

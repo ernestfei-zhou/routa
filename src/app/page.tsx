@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import type { RepoSelection } from "@/client/components/repo-picker";
 import { RepoPicker } from "@/client/components/repo-picker";
@@ -39,6 +40,8 @@ const EMPTY_HOME_DATA: WorkspaceHomeData = {
   sessions: [],
 };
 
+const TEAM_LEAD_SPECIALIST_ID = "team-agent-lead";
+
 function formatRelativeTime(value: string | undefined, hydrated: boolean) {
   if (!value) return "刚刚";
   if (!hydrated) return "刚刚";
@@ -62,6 +65,7 @@ export default function HomePage() {
   const workspacesHook = useWorkspaces();
   const acp = useAcp();
   const { t, locale } = useTranslation();
+  const searchParams = useSearchParams();
 
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
@@ -87,10 +91,18 @@ export default function HomePage() {
   }, [acp.connected, acp.loading]);
 
   useEffect(() => {
+    const requestedWorkspaceId = searchParams.get("workspace");
+    if (requestedWorkspaceId && workspacesHook.workspaces.some((workspace) => workspace.id === requestedWorkspaceId)) {
+      if (activeWorkspaceId !== requestedWorkspaceId) {
+        setActiveWorkspaceId(requestedWorkspaceId);
+      }
+      return;
+    }
+
     if (!activeWorkspaceId && workspacesHook.workspaces.length > 0) {
       setActiveWorkspaceId(workspacesHook.workspaces[0].id);
     }
-  }, [activeWorkspaceId, workspacesHook.workspaces]);
+  }, [activeWorkspaceId, searchParams, workspacesHook.workspaces]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -207,6 +219,7 @@ export default function HomePage() {
   }, [activeWorkspaceId, fetchCodebases, workspacesHook.workspaces]);
 
   const activeWorkspace = workspacesHook.workspaces.find((workspace) => workspace.id === activeWorkspaceId) ?? null;
+  const requestedLaunchModeId = searchParams.get("mode");
   const activeData = activeWorkspaceId ? (workspaceHomeData[activeWorkspaceId] ?? EMPTY_HOME_DATA) : EMPTY_HOME_DATA;
   const recentSessions = useMemo(() => (
     [...activeData.sessions].sort((left, right) => (
@@ -215,6 +228,61 @@ export default function HomePage() {
   ), [activeData.sessions]);
   const latestSession = recentSessions[0] ?? null;
   const hasCodebase = codebases.length > 0;
+  const homeLaunchModes = useMemo(() => {
+    if (!activeWorkspaceId) return [];
+
+    return [
+      {
+        id: "session",
+        label: t.home.modeSessionTitle,
+        description: t.home.modeSessionDescription,
+        placeholder: t.home.modeSessionPlaceholder,
+        defaultAgentRole: "ROUTA" as const,
+        allowRoleSwitch: true,
+        allowCustomSpecialist: true,
+        dispatchMode: "pending-prompt" as const,
+        buildSessionUrl: (nextWorkspaceId: string | null, sessionId: string) =>
+          `/workspace/${nextWorkspaceId ?? activeWorkspaceId}/sessions/${sessionId}`,
+      },
+      {
+        id: "planning",
+        label: t.home.modePlanningTitle,
+        description: t.home.modePlanningDescription,
+        placeholder: t.home.modePlanningPlaceholder,
+        defaultAgentRole: "CRAFTER" as const,
+        allowRoleSwitch: false,
+        allowCustomSpecialist: false,
+        dispatchMode: "pending-prompt" as const,
+        buildSessionUrl: (nextWorkspaceId: string | null, sessionId: string) =>
+          `/workspace/${nextWorkspaceId ?? activeWorkspaceId}/sessions/${sessionId}`,
+        sessionConfig: {
+          role: "CRAFTER",
+          mcpProfile: "kanban-planning",
+          systemPrompt: (text: string) => buildKanbanTaskAgentPrompt({
+            workspaceId: activeWorkspaceId,
+            boardId: "default",
+            repoPath: codebases[0]?.repoPath,
+            agentInput: text,
+            language: locale === "zh" ? "zh-CN" : "en",
+          }),
+        },
+      },
+      {
+        id: "team",
+        label: t.home.modeTeamTitle,
+        description: t.home.modeTeamDescription,
+        placeholder: t.home.modeTeamPlaceholder,
+        defaultAgentRole: "ROUTA" as const,
+        allowRoleSwitch: false,
+        allowCustomSpecialist: false,
+        lockedSpecialistId: TEAM_LEAD_SPECIALIST_ID,
+        requireRepoSelection: true,
+        dispatchMode: "pending-prompt" as const,
+        buildSessionUrl: (nextWorkspaceId: string | null, sessionId: string) =>
+          `/workspace/${nextWorkspaceId ?? activeWorkspaceId}/team/${sessionId}`,
+      },
+    ];
+  }, [activeWorkspaceId, codebases, locale, t.home.modePlanningDescription, t.home.modePlanningPlaceholder, t.home.modePlanningTitle, t.home.modeSessionDescription, t.home.modeSessionPlaceholder, t.home.modeSessionTitle, t.home.modeTeamDescription, t.home.modeTeamPlaceholder, t.home.modeTeamTitle]);
 
   const hasWorkspace = workspacesHook.workspaces.length > 0;
   const hasProviderConfig =
@@ -302,26 +370,13 @@ export default function HomePage() {
                         />
                       )}
 
-                      {/* Main input — start a planning session, then continue in session view */}
+                      {/* Main input — explicit launcher modes */}
                       <div className="rounded-3xl border border-black/6 bg-white/80 p-4 shadow-sm dark:border-white/8 dark:bg-white/5">
                         <HomeInput
                           workspaceId={activeWorkspaceId ?? undefined}
                           variant="default"
-                          defaultAgentRole="CRAFTER"
-                          buildSessionUrl={(nextWorkspaceId, sessionId) =>
-                            `/workspace/${nextWorkspaceId ?? activeWorkspaceId}/sessions/${sessionId}`
-                          }
-                          extraSessionParams={activeWorkspaceId ? {
-                            role: "CRAFTER",
-                            mcpProfile: "kanban-planning",
-                            systemPrompt: (text) => buildKanbanTaskAgentPrompt({
-                              workspaceId: activeWorkspaceId,
-                              boardId: "default",
-                              repoPath: codebases[0]?.repoPath,
-                              agentInput: text,
-                              language: locale === "zh" ? "zh-CN" : "en",
-                            }),
-                          } : undefined}
+                          launchModes={homeLaunchModes}
+                          initialLaunchModeId={requestedLaunchModeId}
                         />
                       </div>
 

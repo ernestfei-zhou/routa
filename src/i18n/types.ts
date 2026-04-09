@@ -135,6 +135,15 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     setupGateHint: string;
     whatToAdvance: string;
     homePrimaryHint: string;
+    modeSessionTitle: string;
+    modeSessionDescription: string;
+    modeSessionPlaceholder: string;
+    modePlanningTitle: string;
+    modePlanningDescription: string;
+    modePlanningPlaceholder: string;
+    modeTeamTitle: string;
+    modeTeamDescription: string;
+    modeTeamPlaceholder: string;
     readinessTitle: string;
     readinessModel: string;
     readinessCodebase: string;
