@@ -348,7 +348,6 @@ export function KanbanBoardSurface({
               </div>
             )}
             <KanbanRepoSyncStatus repoSync={repoSync} />
-            <KanbanRepoSyncStatus repoSync={repoSync} />
           </div>
 
           {onAgentPrompt ? (
@@ -430,7 +429,7 @@ export function KanbanBoardSurface({
             onRefresh={onRefresh}
           />
           {gitLogOpenValue && (
-            <div className="shrink-0 border-b border-slate-200 dark:border-[#1c1f2e]" style={{ height: "340px" }}>
+            <div className="absolute bottom-0 left-0 right-0 z-10 border-t border-slate-200 dark:border-[#1c1f2e] shadow-xl" style={{ height: "340px" }}>
               <GitLogPanel
                 adapter={gitAdapter}
                 repoPath={gitLogRepoPath ?? "/mock/repo"}

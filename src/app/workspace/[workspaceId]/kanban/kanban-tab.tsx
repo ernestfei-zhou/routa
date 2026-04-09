@@ -1489,7 +1489,6 @@ export function KanbanTab({
           onSelectBoard={setSelectedBoardId}
           githubImportEnabled={githubImportEnabled}
           onOpenGitHubImport={() => setShowGitHubImportModal(true)}
-          onOpenSettings={() => setShowSettings(true)}
           onRefresh={onRefresh}
         />
         <div className="rounded-2xl border border-gray-200/60 bg-white p-6 text-sm text-gray-500 dark:border-[#1c1f2e] dark:bg-[#12141c] dark:text-gray-400">
@@ -1500,7 +1499,7 @@ export function KanbanTab({
   }
 
   return (
-    <div className="flex flex-col h-full space-y-2">
+    <div className="flex flex-col h-full">
       <KanbanTabHeader
         tasksCount={tasks.length}
         board={board}
@@ -1511,7 +1510,6 @@ export function KanbanTab({
         onSelectBoard={setSelectedBoardId}
         githubImportEnabled={githubImportEnabled}
         onOpenGitHubImport={() => setShowGitHubImportModal(true)}
-        onOpenSettings={() => setShowSettings(true)}
         onRefresh={onRefresh}
       />
       <KanbanBoardSurface
@@ -1772,6 +1770,7 @@ export function KanbanTab({
         onProviderClick={() => {
           // Could open provider settings or do nothing
         }}
+        onSettingsClick={() => setShowSettings(true)}
         fileChangesOpen={fileChangesOpen}
         gitLogOpen={gitLogOpen}
       />

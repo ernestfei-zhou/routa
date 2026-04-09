@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useAcp } from "@/client/hooks/use-acp";
 import { useKanbanEvents } from "@/client/hooks/use-kanban-events";
 import { useWorkspaces, useCodebases } from "@/client/hooks/use-workspaces";
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
 import { DesktopAppShell } from "@/client/components/desktop-app-shell";
-import { WorkspaceSwitcher } from "@/client/components/workspace-switcher";
 import { useTranslation } from "@/i18n";
 import { KanbanTab } from "./kanban-tab";
 import {
@@ -38,7 +37,6 @@ interface SpecialistOption {
 
 export function KanbanPageClient() {
   const params = useParams();
-  const router = useRouter();
   const rawWorkspaceId = params.workspaceId as string;
   const workspaceId =
     rawWorkspaceId === "__placeholder__" && typeof window !== "undefined"
@@ -234,17 +232,6 @@ export function KanbanPageClient() {
     () => localizeSpecialists(specialists),
     [specialists],
   );
-
-  const handleWorkspaceSelect = (wsId: string) => {
-    router.push(`/workspace/${wsId}/kanban`);
-  };
-
-  const handleWorkspaceCreate = async (title: string) => {
-    const newWs = await workspacesHook.createWorkspace(title);
-    if (newWs) {
-      router.push(`/workspace/${newWs.id}/kanban`);
-    }
-  };
 
   const handleRefresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -470,19 +457,9 @@ export function KanbanPageClient() {
     <DesktopAppShell
       workspaceId={workspaceId}
       workspaceTitle={workspace?.title}
-      workspaceSwitcher={
-        <WorkspaceSwitcher
-          workspaces={workspacesHook.workspaces}
-          activeWorkspaceId={workspaceId}
-          onSelect={handleWorkspaceSelect}
-          onCreate={handleWorkspaceCreate}
-          loading={workspacesHook.loading}
-          compact
-        />
-      }
     >
       <div className="flex h-full flex-col overflow-hidden bg-desktop-bg-primary" data-testid="kanban-page-shell">
-        <div className="flex-1 min-h-0 overflow-hidden p-4">
+        <div className="flex-1 min-h-0 overflow-hidden">
           <KanbanTab
             workspaceId={workspaceId}
             refreshSignal={refreshKey}

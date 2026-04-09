@@ -1,6 +1,6 @@
 "use client";
 
-import { GitBranch, FileCode, Activity, Zap } from "lucide-react";
+import { GitBranch, FileCode, Activity, Zap, Settings } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import type { CodebaseData } from "@/client/hooks/use-workspaces";
 import type { AcpProviderInfo } from "@/client/acp-client";
@@ -35,6 +35,8 @@ interface KanbanStatusBarProps {
   fileChangesOpen?: boolean;
   /** Git Log 面板是否打开 */
   gitLogOpen?: boolean;
+  /** 点击设置时的回调 */
+  onSettingsClick?: () => void;
 }
 
 export function KanbanStatusBar({
@@ -48,6 +50,7 @@ export function KanbanStatusBar({
   onFileChangesClick,
   onGitLogClick,
   onProviderClick,
+  onSettingsClick,
   fileChangesOpen = false,
   gitLogOpen = false,
 }: KanbanStatusBarProps) {
@@ -149,6 +152,17 @@ export function KanbanStatusBar({
           >
             <Zap className="w-3 h-3" />
             <span className="max-w-[120px] truncate">{selectedProvider.name}</span>
+          </button>
+        )}
+
+        {/* Settings */}
+        {onSettingsClick && (
+          <button
+            onClick={onSettingsClick}
+            className="flex items-center gap-1.5 px-2.5 h-6 text-desktop-text-primary hover:bg-desktop-bg-active transition-colors"
+            title={t.kanban.boardSettings}
+          >
+            <Settings className="w-3 h-3" />
           </button>
         )}
       </div>
