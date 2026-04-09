@@ -144,6 +144,7 @@
     "@opentelemetry/sdk-node": "^0.214.0",
     "@opentelemetry/sdk-trace-base": "^2.6.1",
     "@opentelemetry/semantic-conventions": "^1.40.0",
+    "@pierre/diffs": "^1.1.12",
     "@tiptap/core": "^3.22.2",
     "@tiptap/extension-code-block-lowlight": "^3.22.2",
     "@tiptap/extension-image": "^3.22.2",

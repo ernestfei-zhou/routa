@@ -11,6 +11,11 @@ vi.mock("@/client/utils/diagnostics", () => ({
 describe("KanbanTaskChangesTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal("ResizeObserver", class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    });
   });
 
   it("renders and triggers the PR specialist action for GitHub repositories", async () => {
@@ -158,7 +163,7 @@ describe("KanbanTaskChangesTab", () => {
       throw new Error(`Unexpected desktopAwareFetch: ${url}`);
     });
 
-    render(
+    const { container } = render(
       <KanbanTaskChangesTab
         task={{
           id: "task-commit",
@@ -179,16 +184,38 @@ describe("KanbanTaskChangesTab", () => {
 
     fireEvent.click(await screen.findByTestId("kanban-commit-row-abc1234567890"));
 
-    expect(await screen.findByText(/"version": "1\.1\.0"/)).toBeTruthy();
+    const openPackageDiffShadowRoot = async () => {
+      const fileSection = await screen.findByTestId("kanban-commit-file-section-package.json");
+      const diffContainer = fileSection.querySelector("diffs-container");
+      const shadowRoot = diffContainer?.shadowRoot;
+      if (!shadowRoot) {
+        throw new Error("package.json diff shadow root is not mounted");
+      }
+      return shadowRoot;
+    };
+
+    await waitFor(async () => {
+      expect((await openPackageDiffShadowRoot()).textContent).toContain('"version": "1.1.0"');
+    });
     expect(screen.getByTestId("kanban-commit-files-changed").textContent).toContain("2 Files Changed");
     expect(screen.getByTestId("kanban-commit-file-section-package.json")).toBeTruthy();
     expect(screen.getByTestId("kanban-commit-file-section-src/editor.ts")).toBeTruthy();
-    expect(screen.queryByText(/context10/)).toBeNull();
-    fireEvent.click(screen.getByText("14 hidden lines"));
-    expect(screen.getByText(/context10/)).toBeTruthy();
+    expect((await openPackageDiffShadowRoot()).textContent).not.toContain("context10");
+
+    const hiddenLinesButton = (await openPackageDiffShadowRoot()).querySelector("[data-expand-button]");
+    expect(hiddenLinesButton).toBeTruthy();
+    hiddenLinesButton?.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+
+    await waitFor(async () => {
+      expect((await openPackageDiffShadowRoot()).textContent).toContain("context10");
+    });
 
     fireEvent.click(screen.getByTestId("kanban-commit-file-section-src/editor.ts").querySelector("summary")!);
-    expect(screen.getByText("export const editor = 'new';")).toBeTruthy();
+    await waitFor(() => {
+      const editorSection = container.querySelector("[data-testid='kanban-commit-file-section-src/editor.ts']");
+      const editorDiffText = editorSection?.querySelector("diffs-container")?.shadowRoot?.textContent ?? "";
+      expect(editorDiffText).toContain("export const editor = 'new';");
+    });
 
     fireEvent.click(screen.getByTestId("kanban-commit-row-abc1234567890"));
     expect(screen.queryByTestId("kanban-commit-files-changed")).toBeNull();

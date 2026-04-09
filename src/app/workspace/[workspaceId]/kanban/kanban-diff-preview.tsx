@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import type { ReactNode } from "react";
+import { parseDiffFromFile } from "@pierre/diffs";
+import type { FileContents, FileDiffMetadata } from "@pierre/diffs";
+import { FileDiff as PierreFileDiff } from "@pierre/diffs/react";
 import type { KanbanCommitChangeItem, KanbanCommitDiffPreview, KanbanFileChangeItem, KanbanFileDiffPreview } from "./kanban-file-changes-types";
 import { splitFilePath, STATUS_BADGE } from "./kanban-file-changes-panel";
 import { useTranslation } from "@/i18n";
@@ -14,6 +18,7 @@ export interface ParsedDiffPreview {
     text: string;
     oldLineNumber?: number;
     newLineNumber?: number;
+    sourceLineIndex?: number;
   }>;
 }
 
@@ -29,6 +34,20 @@ export interface CommitDiffFile {
 export interface CommitDiffFileSection extends CommitDiffFile {
   patch: string;
 }
+
+const PIERRE_DIFF_OPTIONS = {
+  diffStyle: "unified" as const,
+  diffIndicators: "classic" as const,
+  disableBackground: false,
+  disableFileHeader: true,
+  disableLineNumbers: false,
+  hunkSeparators: "line-info" as const,
+  expansionLineCount: 100,
+  lineDiffType: "word-alt" as const,
+  maxLineDiffLength: 1000,
+  overflow: "scroll" as const,
+  parseDiffOptions: { context: 3 },
+};
 
 /**
  * Parse commit diff to extract list of changed files with their stats.
@@ -125,19 +144,19 @@ export function parseUnifiedDiffPreview(diff: { patch: string; additions?: numbe
   let newLineNumber = 0;
   let countedBodyLines = false;
 
-  const parsedLines = lines.map((line) => {
-    if (line.startsWith("+++ b/")) return { kind: "meta" as const, text: line };
+  const parsedLines = lines.map((line, sourceLineIndex) => {
+    if (line.startsWith("+++ b/")) return { kind: "meta" as const, text: line, sourceLineIndex };
     if (line.startsWith("+") && !line.startsWith("+++")) {
       if (diff.additions == null) additions += 1;
       countedBodyLines = true;
-      const parsedLine = { kind: "add" as const, text: line, newLineNumber };
+      const parsedLine = { kind: "add" as const, text: line, newLineNumber, sourceLineIndex };
       newLineNumber += 1;
       return parsedLine;
     }
     if (line.startsWith("-") && !line.startsWith("---")) {
       if (diff.deletions == null) deletions += 1;
       countedBodyLines = true;
-      const parsedLine = { kind: "remove" as const, text: line, oldLineNumber };
+      const parsedLine = { kind: "remove" as const, text: line, oldLineNumber, sourceLineIndex };
       oldLineNumber += 1;
       return parsedLine;
     }
@@ -147,7 +166,7 @@ export function parseUnifiedDiffPreview(diff: { patch: string; additions?: numbe
         oldLineNumber = Number.parseInt(match[1] ?? "0", 10);
         newLineNumber = Number.parseInt(match[2] ?? "0", 10);
       }
-      return { kind: "hunk" as const, text: line };
+      return { kind: "hunk" as const, text: line, sourceLineIndex };
     }
     if (
       line.startsWith("diff --git ")
@@ -159,16 +178,16 @@ export function parseUnifiedDiffPreview(diff: { patch: string; additions?: numbe
       || line.startsWith("rename from ")
       || line.startsWith("rename to ")
     ) {
-      return { kind: "meta" as const, text: line };
+      return { kind: "meta" as const, text: line, sourceLineIndex };
     }
     if (line.startsWith(" ")) {
       countedBodyLines = true;
-      const parsedLine = { kind: "context" as const, text: line, oldLineNumber, newLineNumber };
+      const parsedLine = { kind: "context" as const, text: line, oldLineNumber, newLineNumber, sourceLineIndex };
       oldLineNumber += 1;
       newLineNumber += 1;
       return parsedLine;
     }
-    return { kind: "context" as const, text: line };
+    return { kind: "context" as const, text: line, sourceLineIndex };
   });
 
   return {
@@ -178,10 +197,70 @@ export function parseUnifiedDiffPreview(diff: { patch: string; additions?: numbe
   };
 }
 
+export function reconstructFileContentsFromUnifiedDiff(parsedDiff: ParsedDiffPreview): { oldContents: string; newContents: string } | null {
+  const oldLines: string[] = [];
+  const newLines: string[] = [];
+  let foundBodyLine = false;
+
+  for (const line of parsedDiff.lines) {
+    if (line.kind === "context" && line.text.startsWith(" ")) {
+      const content = line.text.slice(1);
+      oldLines.push(content);
+      newLines.push(content);
+      foundBodyLine = true;
+    } else if (line.kind === "remove") {
+      oldLines.push(line.text.slice(1));
+      foundBodyLine = true;
+    } else if (line.kind === "add") {
+      newLines.push(line.text.slice(1));
+      foundBodyLine = true;
+    }
+  }
+
+  if (!foundBodyLine) {
+    return null;
+  }
+
+  return {
+    oldContents: oldLines.join("\n"),
+    newContents: newLines.join("\n"),
+  };
+}
+
+export function buildPierreDiffFromFullUnifiedPatch(file: CommitDiffFileSection): FileDiffMetadata | null {
+  const parsedDiff = parseUnifiedDiffPreview({
+    patch: file.patch,
+    additions: file.additions,
+    deletions: file.deletions,
+  });
+  const contents = reconstructFileContentsFromUnifiedDiff(parsedDiff);
+
+  if (!contents) {
+    return null;
+  }
+
+  const oldFile: FileContents = {
+    name: file.previousPath ?? file.path,
+    contents: contents.oldContents,
+    cacheKey: `${file.startLineIndex}:old:${file.previousPath ?? file.path}:${contents.oldContents.length}`,
+  };
+  const newFile: FileContents = {
+    name: file.path,
+    contents: contents.newContents,
+    cacheKey: `${file.startLineIndex}:new:${file.path}:${contents.newContents.length}`,
+  };
+
+  try {
+    return parseDiffFromFile(oldFile, newFile, { context: 3 });
+  } catch {
+    return null;
+  }
+}
+
 export function renderUnifiedDiffLines(parsedDiff: ParsedDiffPreview) {
   return parsedDiff.lines.map((line, index) => (
     <div
-      key={`${line.text}-${index}`}
+      key={`${line.kind}-${line.sourceLineIndex ?? index}-${line.oldLineNumber ?? ""}-${line.newLineNumber ?? ""}`}
       className={
         line.kind === "add"
           ? "grid grid-cols-[3rem_3rem_1.5rem_minmax(0,1fr)] bg-emerald-950/70 px-3 text-emerald-100"
@@ -535,6 +614,7 @@ function CommitFileDiffSection({
     additions: file.additions,
     deletions: file.deletions,
   });
+  const pierreDiff = useMemo(() => buildPierreDiffFromFullUnifiedPatch(file), [file]);
   const { name, directory } = splitFilePath(file.path);
 
   return (
@@ -574,12 +654,30 @@ function CommitFileDiffSection({
         </div>
       </summary>
       <div className="max-h-[28rem] overflow-auto border-t border-slate-200/70 dark:border-[#202433]">
-        <pre className="min-w-full bg-slate-950/95 px-0 py-0 text-[11px] leading-5 text-slate-100">
-          {renderUnifiedDiffWithHiddenContext(
-            parsedDiff,
-            (count) => t.kanbanDetail.hiddenLines.replace("{count}", String(count)),
-          )}
-        </pre>
+        {pierreDiff ? (
+          <div
+            className="kanban-pierre-diff min-w-full text-[11px]"
+            style={{
+              "--diffs-font-size": "12px",
+              "--diffs-line-height": "20px",
+              "--diffs-header-font-family": "var(--font-sans)",
+              "--diffs-font-family": "var(--font-mono)",
+            } as CSSProperties}
+          >
+            <PierreFileDiff
+              disableWorkerPool={true}
+              fileDiff={pierreDiff}
+              options={PIERRE_DIFF_OPTIONS}
+            />
+          </div>
+        ) : (
+          <pre className="min-w-full bg-slate-950/95 px-0 py-0 text-[11px] leading-5 text-slate-100">
+            {renderUnifiedDiffWithHiddenContext(
+              parsedDiff,
+              (count) => t.kanbanDetail.hiddenLines.replace("{count}", String(count)),
+            )}
+          </pre>
+        )}
       </div>
     </details>
   );
