@@ -463,7 +463,9 @@ async fn get_task_change_stats(
         .map(str::to_string)
         .collect();
     if requested_paths.is_empty() {
-        return Err(ServerError::BadRequest("No valid paths provided".to_string()));
+        return Err(ServerError::BadRequest(
+            "No valid paths provided".to_string(),
+        ));
     }
     if requested_paths.len() > 100 {
         return Err(ServerError::BadRequest(
@@ -495,7 +497,10 @@ async fn get_task_change_stats(
                 &GitFileChange {
                     path: path.clone(),
                     status: parse_file_change_status(
-                        statuses.get(index).map(String::as_str).unwrap_or("modified"),
+                        statuses
+                            .get(index)
+                            .map(String::as_str)
+                            .unwrap_or("modified"),
                     ),
                     previous_path: None,
                 },
@@ -753,11 +758,18 @@ async fn create_task(
         }
     }
 
+    let mut trigger_cwd = codebase.as_ref().map(|item| item.repo_path.clone());
+    let mut trigger_branch = codebase.as_ref().and_then(|item| item.branch.clone());
+
     if plan.should_trigger_agent {
         if plan.entering_dev {
             if let (Some(ref cb), None) = (&codebase, &task.worktree_id) {
                 match auto_create_worktree(&state, &task, cb).await {
                     Ok(worktree_id) => {
+                        if let Ok(Some(worktree)) = state.worktree_store.get(&worktree_id).await {
+                            trigger_cwd = Some(worktree.worktree_path);
+                            trigger_branch = Some(worktree.branch);
+                        }
                         task.worktree_id = Some(worktree_id);
                     }
                     Err(err) => {
@@ -771,8 +783,8 @@ async fn create_task(
         let trigger_result = trigger_assigned_task_agent(
             &state,
             &mut task,
-            codebase.as_ref().map(|item| item.repo_path.as_str()),
-            codebase.as_ref().and_then(|item| item.branch.as_deref()),
+            trigger_cwd.as_deref(),
+            trigger_branch.as_deref(),
         )
         .await;
 
@@ -979,12 +991,18 @@ async fn update_task(
         } else {
             resolve_codebase(&state, &task.workspace_id, None).await?
         };
+        let mut trigger_cwd = codebase.as_ref().map(|item| item.repo_path.clone());
+        let mut trigger_branch = codebase.as_ref().and_then(|item| item.branch.clone());
 
         // Auto-create worktree when entering dev column (mirrors Next.js behavior)
         if plan.entering_dev {
             if let (Some(ref cb), None) = (&codebase, &task.worktree_id) {
                 match auto_create_worktree(&state, &task, cb).await {
                     Ok(worktree_id) => {
+                        if let Ok(Some(worktree)) = state.worktree_store.get(&worktree_id).await {
+                            trigger_cwd = Some(worktree.worktree_path);
+                            trigger_branch = Some(worktree.branch);
+                        }
                         task.worktree_id = Some(worktree_id);
                     }
                     Err(err) => {
@@ -1009,8 +1027,8 @@ async fn update_task(
         let trigger_result = trigger_assigned_task_agent(
             &state,
             &mut task,
-            codebase.as_ref().map(|item| item.repo_path.as_str()),
-            codebase.as_ref().and_then(|item| item.branch.as_deref()),
+            trigger_cwd.as_deref(),
+            trigger_branch.as_deref(),
         )
         .await;
 

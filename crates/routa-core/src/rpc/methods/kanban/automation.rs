@@ -544,7 +544,7 @@ async fn trigger_assigned_task_acp_agent(
         .unwrap_or_else(|| "CRAFTER".to_string())
         .to_uppercase();
     let session_id = uuid::Uuid::new_v4().to_string();
-    let cwd = resolve_task_session_cwd(state, &task.workspace_id).await?;
+    let cwd = resolve_task_session_cwd(state, task).await?;
 
     state
         .acp_manager
@@ -732,10 +732,36 @@ async fn trigger_assigned_task_acp_agent(
     Ok(())
 }
 
-async fn resolve_task_session_cwd(state: &AppState, workspace_id: &str) -> Result<String, String> {
+async fn resolve_task_session_cwd(state: &AppState, task: &Task) -> Result<String, String> {
+    if let Some(worktree_id) = task.worktree_id.as_deref() {
+        if let Some(worktree) = state
+            .worktree_store
+            .get(worktree_id)
+            .await
+            .map_err(|error| format!("Failed to resolve task worktree: {}", error))?
+        {
+            if !worktree.worktree_path.trim().is_empty() {
+                return Ok(worktree.worktree_path);
+            }
+        }
+    }
+
+    for codebase_id in &task.codebase_ids {
+        if let Some(codebase) = state
+            .codebase_store
+            .get(codebase_id)
+            .await
+            .map_err(|error| format!("Failed to resolve task codebase: {}", error))?
+        {
+            if !codebase.repo_path.trim().is_empty() {
+                return Ok(codebase.repo_path);
+            }
+        }
+    }
+
     if let Some(codebase) = state
         .codebase_store
-        .get_default(workspace_id)
+        .get_default(&task.workspace_id)
         .await
         .map_err(|error| format!("Failed to resolve default codebase: {}", error))?
     {
@@ -746,7 +772,7 @@ async fn resolve_task_session_cwd(state: &AppState, workspace_id: &str) -> Resul
 
     let codebases = state
         .codebase_store
-        .list_by_workspace(workspace_id)
+        .list_by_workspace(&task.workspace_id)
         .await
         .map_err(|error| format!("Failed to list workspace codebases: {}", error))?;
     if let Some(codebase) = codebases
@@ -1448,7 +1474,21 @@ mod tests {
             .await
             .expect("codebase save should succeed");
 
-        let cwd = resolve_task_session_cwd(&state, "default")
+        let task = Task::new(
+            "task-1".to_string(),
+            "Resolve cwd".to_string(),
+            "Use the workspace codebase".to_string(),
+            "default".to_string(),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        let cwd = resolve_task_session_cwd(&state, &task)
             .await
             .expect("cwd resolution should succeed");
 
