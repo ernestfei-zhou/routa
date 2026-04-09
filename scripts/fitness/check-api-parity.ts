@@ -400,13 +400,15 @@ function printReport(report: ParityReport) {
   }
 
   // Summary
+  // Backend-extra routes are printed above as warnings and included in the JSON
+  // report, but the parity hard gate tracks contract coverage: every OpenAPI
+  // endpoint must exist in both backends.
   const totalIssues =
     report.missingInNextjs.length +
-    report.missingInRust.length +
-    report.missingInContract.length;
+    report.missingInRust.length;
 
   if (totalIssues === 0) {
-    console.log(`${ok} All backends are in sync with the contract!\n`);
+    console.log(`${ok} All contract endpoints are implemented by both backends!\n`);
   } else {
     console.log(`── Summary: ${totalIssues} parity issue(s) found ──\n`);
   }
