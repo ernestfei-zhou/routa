@@ -212,6 +212,18 @@ describe("KanbanTaskChangesTab", () => {
       expect((await openPackageDiffShadowRoot()).textContent).toContain("context10");
     });
 
+    const packageSection = screen.getByTestId("kanban-commit-file-section-package.json");
+    fireEvent.click(packageSection.querySelector("summary")!);
+    expect((packageSection as HTMLDetailsElement).open).toBe(false);
+    await waitFor(() => {
+      expect(packageSection.querySelector("diffs-container")).toBeNull();
+    });
+    fireEvent.click(packageSection.querySelector("summary")!);
+    await waitFor(async () => {
+      expect((await openPackageDiffShadowRoot()).textContent).toContain('"version": "1.1.0"');
+    });
+    expect((await openPackageDiffShadowRoot()).textContent).not.toContain("context10");
+
     await waitFor(() => {
       const editorSection = container.querySelector("[data-testid='kanban-commit-file-section-src/editor.ts']");
       const editorDiffText = editorSection?.querySelector("diffs-container")?.shadowRoot?.textContent ?? "";

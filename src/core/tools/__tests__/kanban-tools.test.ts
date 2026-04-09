@@ -21,6 +21,11 @@ vi.mock("@/core/git", () => ({
   getRepoRefSha: (...args: unknown[]) => getRepoRefSha(...args),
 }));
 
+vi.mock("@/core/git/git-utils", () => ({
+  getRepoCommitChanges: (...args: unknown[]) => getRepoCommitChanges(...args),
+  getRepoRefSha: (...args: unknown[]) => getRepoRefSha(...args),
+}));
+
 describe("KanbanTools", () => {
   const originalFetch = globalThis.fetch;
 

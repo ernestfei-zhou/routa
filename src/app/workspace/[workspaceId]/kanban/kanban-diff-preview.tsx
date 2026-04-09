@@ -890,18 +890,20 @@ function CommitFileDiffSection({
           <span className="text-rose-600 dark:text-rose-300">-{file.deletions}</span>
         </div>
       </summary>
-      <div className="overflow-auto border-t border-slate-200/70 dark:border-[#202433]">
-        {pierreDiff ? (
-          <KanbanPierreFileDiff fileDiff={pierreDiff} />
-        ) : (
-          <pre className="min-w-full bg-slate-950/95 px-0 py-0 text-[11px] leading-5 text-slate-100">
-            {renderUnifiedDiffWithHiddenContext(
-              parsedDiff,
-              (count) => t.kanbanDetail.hiddenLines.replace("{count}", String(count)),
-            )}
-          </pre>
-        )}
-      </div>
+      {isOpen ? (
+        <div className="overflow-auto border-t border-slate-200/70 dark:border-[#202433]">
+          {pierreDiff ? (
+            <KanbanPierreFileDiff fileDiff={pierreDiff} />
+          ) : (
+            <pre className="min-w-full bg-slate-950/95 px-0 py-0 text-[11px] leading-5 text-slate-100">
+              {renderUnifiedDiffWithHiddenContext(
+                parsedDiff,
+                (count) => t.kanbanDetail.hiddenLines.replace("{count}", String(count)),
+              )}
+            </pre>
+          )}
+        </div>
+      ) : null}
     </details>
   );
 }
