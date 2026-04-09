@@ -1,14 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import type { RepoSelection } from "@/client/components/repo-picker";
-import {
-  getDesktopAdvancedExpandedServerSnapshot,
-  getDesktopAdvancedExpandedSnapshot,
-  subscribeToDesktopAdvancedExpanded,
-} from "@/client/components/advanced-nav-menu";
+import { RepoPicker } from "@/client/components/repo-picker";
 import { OnboardingCard } from "@/client/components/home-page-sections";
 import { HomeInput } from "@/client/components/home-input";
 import {
@@ -72,15 +68,11 @@ export default function HomePage() {
   const [preferredMode, setPreferredMode] = useState<OnboardingMode | null>(null);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const [workspaceHomeData, setWorkspaceHomeData] = useState<Record<string, WorkspaceHomeData>>({});
-  const [recentSessionsLoading, setRecentSessionsLoading] = useState(false);
+  const [_recentSessionsLoading, setRecentSessionsLoading] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   const { codebases, fetchCodebases } = useCodebases(activeWorkspaceId ?? "");
-  const isAdvancedNavExpanded = useSyncExternalStore(
-    subscribeToDesktopAdvancedExpanded,
-    getDesktopAdvancedExpandedSnapshot,
-    getDesktopAdvancedExpandedServerSnapshot,
-  );
+  const [showRepoPickerForHome, setShowRepoPickerForHome] = useState(false);
 
   useEffect(() => {
     setHydrated(true);
@@ -222,13 +214,6 @@ export default function HomePage() {
   ), [activeData.sessions]);
   const latestSession = recentSessions[0] ?? null;
   const hasCodebase = codebases.length > 0;
-  const settingsHarnessHref = activeWorkspaceId
-    ? `/settings/harness?workspaceId=${encodeURIComponent(activeWorkspaceId)}`
-    : "/settings/harness";
-  const settingsFluencyHref = activeWorkspaceId
-    ? `/settings/fluency?workspaceId=${encodeURIComponent(activeWorkspaceId)}`
-    : "/settings/fluency";
-  const teamHref = activeWorkspaceId ? `/workspace/${activeWorkspaceId}/team` : "/";
 
   const hasWorkspace = workspacesHook.workspaces.length > 0;
   const hasProviderConfig =
@@ -242,7 +227,6 @@ export default function HomePage() {
     hasWorkspace &&
     !onboardingCompleted &&
     (!hasProviderConfig || preferredMode === null);
-  const showAdvancedLauncher = !needsInlineOnboarding && isAdvancedNavExpanded;
 
   return (
     <DesktopAppShell
@@ -280,207 +264,159 @@ export default function HomePage() {
                 />
               </div>
             ) : (
-              <>
-                <div className="min-h-0 flex-1 overflow-y-auto">
-                  <div className="mx-auto flex h-full w-full max-w-5xl flex-col px-6 py-8 lg:px-10 lg:py-10">
-                    {workspacesHook.loading ? (
-                      <div className="flex flex-1 items-center justify-center text-sm text-slate-500 dark:text-slate-400">
-                        {t.home.loadingWorkspaces}
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <div className="mx-auto flex h-full w-full max-w-3xl flex-col px-6 py-8 lg:px-10 lg:py-10">
+                  {workspacesHook.loading ? (
+                    <div className="flex flex-1 items-center justify-center text-sm text-slate-500 dark:text-slate-400">
+                      {t.home.loadingWorkspaces}
+                    </div>
+                  ) : (
+                    <section className="flex flex-1 flex-col justify-center gap-6">
+                      {/* Hero */}
+                      <div className="text-center">
+                        <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                          {activeWorkspace?.title ?? t.common.workspace}
+                        </div>
+                        <h1 className="mt-3 font-['Avenir_Next_Condensed','Avenir_Next','Segoe_UI','Helvetica_Neue',sans-serif] text-4xl font-semibold tracking-[-0.04em] text-slate-900 dark:text-slate-100 sm:text-5xl">
+                          {t.home.whatToAdvance}
+                        </h1>
+                        <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-slate-500 dark:text-slate-400">
+                          {t.home.homePrimaryHint}
+                        </p>
                       </div>
-                    ) : (
-                      <>
-                        {needsInlineOnboarding && (
-                          <div className="mb-6">
-                            <OnboardingCard
-                              hasWorkspace
-                              workspaceTitle={activeWorkspace?.title ?? null}
-                              hasProviderConfig={hasProviderConfig}
-                              hasCodebase={hasCodebase}
-                              preferredMode={preferredMode}
-                              onCreateWorkspace={handleWorkspaceCreate}
-                              onOpenProviders={handleOpenProviders}
-                              onAddCodebase={handleAddCodebase}
-                              onSelectMode={handleModeSelect}
-                              onDismiss={handleDismissOnboarding}
+
+                      {/* Onboarding hint (if needed) */}
+                      {needsInlineOnboarding && (
+                        <OnboardingCard
+                          hasWorkspace
+                          workspaceTitle={activeWorkspace?.title ?? null}
+                          hasProviderConfig={hasProviderConfig}
+                          hasCodebase={hasCodebase}
+                          preferredMode={preferredMode}
+                          onCreateWorkspace={handleWorkspaceCreate}
+                          onOpenProviders={handleOpenProviders}
+                          onAddCodebase={handleAddCodebase}
+                          onSelectMode={handleModeSelect}
+                          onDismiss={handleDismissOnboarding}
+                        />
+                      )}
+
+                      {/* Main input */}
+                      <div className="rounded-3xl border border-black/6 bg-white/80 p-4 shadow-sm dark:border-white/8 dark:bg-white/5">
+                        <HomeInput
+                          workspaceId={activeWorkspaceId ?? undefined}
+                          variant="default"
+                          defaultAgentRole={preferredMode === "CRAFTER" ? "CRAFTER" : "ROUTA"}
+                          buildSessionUrl={(nextWorkspaceId, sessionId) =>
+                            `/workspace/${nextWorkspaceId ?? activeWorkspaceId}/sessions/${sessionId}`
+                          }
+                        />
+                      </div>
+
+                      {/* Readiness checklist */}
+                      <div className="rounded-[20px] border border-black/6 bg-white/80 px-5 py-4 dark:border-white/8 dark:bg-white/5">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">
+                          {t.home.readinessTitle}
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={handleOpenProviders}
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                              hasProviderConfig
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/40 dark:bg-emerald-950/20 dark:text-emerald-400"
+                                : "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-800/40 dark:bg-amber-950/20 dark:text-amber-400"
+                            }`}
+                          >
+                            <span className={`h-1.5 w-1.5 rounded-full ${hasProviderConfig ? "bg-emerald-500" : "bg-amber-400"}`} />
+                            {t.home.readinessModel}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowRepoPickerForHome(true)}
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                              hasCodebase
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/40 dark:bg-emerald-950/20 dark:text-emerald-400"
+                                : "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-800/40 dark:bg-amber-950/20 dark:text-amber-400"
+                            }`}
+                          >
+                            <span className={`h-1.5 w-1.5 rounded-full ${hasCodebase ? "bg-emerald-500" : "bg-amber-400"}`} />
+                            {t.home.readinessCodebase}
+                          </button>
+                          <span
+                            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-medium text-emerald-700 dark:border-emerald-800/40 dark:bg-emerald-950/20 dark:text-emerald-400"
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            {t.home.readinessWorkspace}
+                          </span>
+                        </div>
+                        {showRepoPickerForHome && (
+                          <div className="mt-4 border-t border-black/6 pt-4 dark:border-white/8">
+                            <div className="mb-2 flex items-center justify-between">
+                              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                {t.home.readinessCodebase}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setShowRepoPickerForHome(false)}
+                                className="text-[11px] text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                              >
+                                {t.common.cancel}
+                              </button>
+                            </div>
+                            <RepoPicker
+                              value={null}
+                              onChange={async (selection) => {
+                                if (selection) {
+                                  await handleAddCodebase(selection);
+                                  setShowRepoPickerForHome(false);
+                                }
+                              }}
                             />
                           </div>
                         )}
+                      </div>
 
-                        <section className="flex flex-1 flex-col justify-center">
-                          <div className="mx-auto w-full max-w-3xl text-center">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">
-                              {t.home.subtitle}
-                            </div>
-                            <div className="mt-4 text-sm font-medium text-slate-500 dark:text-slate-400">
-                              {activeWorkspace?.title ?? t.common.workspace}
-                            </div>
-                            <h1 className="mt-4 font-['Avenir_Next_Condensed','Avenir_Next','Segoe_UI','Helvetica_Neue',sans-serif] text-5xl font-semibold tracking-[-0.05em] text-slate-900 dark:text-slate-100 sm:text-6xl">
-                              {t.home.heroTitle}
-                            </h1>
-                            <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-slate-600 dark:text-slate-300">
-                              {t.home.heroDescription}
-                            </p>
+                      {/* Continue recent work */}
+                      {(recentSessions.length > 0 || activeWorkspaceId) && (
+                        <div className="rounded-[20px] border border-black/6 bg-white/80 px-5 py-4 dark:border-white/8 dark:bg-white/5">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">
+                            {t.home.continueWork}
                           </div>
-
-                          <div className={`mx-auto mt-10 grid w-full max-w-4xl gap-4 ${needsInlineOnboarding ? "md:grid-cols-1" : "md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)]"}`}>
-                            <Link
-                              href={activeWorkspaceId ? `/workspace/${activeWorkspaceId}/kanban` : "/"}
-                              className="rounded-[28px] border border-[#9ec88e] bg-[#f6fbf2] p-5 text-left shadow-[0_22px_60px_-44px_rgba(15,23,42,0.35)] transition-colors hover:bg-white dark:border-emerald-800/40 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/25"
-                            >
-                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">
-                                {t.nav.kanban}
-                              </div>
-                              <div className="mt-3 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                                {t.home.openKanban}
-                              </div>
-                              <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                                {t.home.openKanbanDescription}
-                              </p>
-                            </Link>
-                            {!needsInlineOnboarding ? (
-                              <>
-                                <Link
-                                  href={activeWorkspaceId ? `/workspace/${activeWorkspaceId}/overview` : "/"}
-                                  className="rounded-[26px] border border-black/6 bg-white/80 p-5 text-left transition-colors hover:bg-white dark:border-white/8 dark:bg-white/5 dark:hover:bg-white/8"
-                                >
-                                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">
-                                    {t.nav.overview}
-                                  </div>
-                                  <div className="mt-3 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                                    {t.home.workspaceOverview}
-                                  </div>
-                                  <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                                    {t.home.workspaceOverviewDescription}
-                                  </p>
-                                </Link>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSettingsInitialTab(undefined);
-                                    setShowSettingsPanel(true);
-                                  }}
-                                  className="rounded-[26px] border border-black/6 bg-white/80 p-5 text-left transition-colors hover:bg-white dark:border-white/8 dark:bg-white/5 dark:hover:bg-white/8"
-                                >
-                                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">
-                                    {t.settings.title}
-                                  </div>
-                                  <div className="mt-3 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                                    {t.home.checkEnvironment}
-                                  </div>
-                                  <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                                    {t.home.checkEnvironmentDescription}
-                                  </p>
-                                </button>
-                              </>
-                            ) : null}
+                          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                            {activeWorkspaceId && (
+                              <Link
+                                href={`/workspace/${activeWorkspaceId}/kanban`}
+                                className="flex flex-col rounded-2xl border border-black/6 bg-[#faf9f4] p-4 transition-colors hover:bg-white dark:border-white/8 dark:bg-white/4 dark:hover:bg-white/8"
+                              >
+                                <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                  {t.home.continueBoard}
+                                </div>
+                                <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                                  {activeWorkspace?.title ?? t.common.workspace}
+                                </div>
+                              </Link>
+                            )}
+                            {latestSession && (
+                              <Link
+                                href={`/workspace/${latestSession.workspaceId}/sessions/${latestSession.sessionId}`}
+                                className="flex flex-col rounded-2xl border border-black/6 bg-[#faf9f4] p-4 transition-colors hover:bg-white dark:border-white/8 dark:bg-white/4 dark:hover:bg-white/8"
+                              >
+                                <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                  {getSessionLabel(latestSession)}
+                                </div>
+                                <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                                  {formatRelativeTime(latestSession.createdAt, hydrated)}
+                                </div>
+                              </Link>
+                            )}
                           </div>
-
-                          {needsInlineOnboarding ? (
-                            <section className="mx-auto mt-6 w-full max-w-4xl rounded-[24px] border border-dashed border-black/10 bg-white/70 px-5 py-5 text-sm text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-                              {t.home.setupGateHint}
-                            </section>
-                          ) : (
-                            <section className="mx-auto mt-8 w-full max-w-4xl rounded-[28px] border border-black/6 bg-white/82 p-5 dark:border-white/8 dark:bg-white/5">
-                              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                <div>
-                                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">
-                                    {t.home.recentWorkTitle}
-                                  </div>
-                                  <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                    {t.home.recentWorkDescription}
-                                  </div>
-                                </div>
-                                {latestSession ? (
-                                  <Link
-                                    href={`/workspace/${latestSession.workspaceId}/sessions/${latestSession.sessionId}`}
-                                    className="inline-flex rounded-full border border-black/8 bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 transition-colors hover:bg-slate-50 dark:border-white/8 dark:bg-white/6 dark:text-slate-200 dark:hover:bg-white/10"
-                                  >
-                                    {t.home.resumeLatestSession}
-                                  </Link>
-                                ) : null}
-                              </div>
-                              <div className="mt-4 space-y-3">
-                                {recentSessionsLoading && recentSessions.length === 0 ? (
-                                  <div className="rounded-[22px] border border-dashed border-black/10 px-4 py-8 text-sm text-slate-500 dark:border-white/10 dark:text-slate-400">
-                                    {t.common.loading}
-                                  </div>
-                                ) : recentSessions.length > 0 ? (
-                                  recentSessions.map((session) => (
-                                    <Link
-                                      key={session.sessionId}
-                                      href={`/workspace/${session.workspaceId}/sessions/${session.sessionId}`}
-                                      className="block rounded-[20px] border border-black/6 bg-[#faf9f4] p-4 transition-colors hover:bg-white dark:border-white/8 dark:bg-white/4 dark:hover:bg-white/8"
-                                    >
-                                      <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                        {getSessionLabel(session)}
-                                      </div>
-                                      <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-                                        <span>{formatRelativeTime(session.createdAt, hydrated)}</span>
-                                        {session.branch ? (
-                                          <>
-                                            <span>·</span>
-                                            <span className="truncate">{session.branch}</span>
-                                          </>
-                                        ) : null}
-                                      </div>
-                                    </Link>
-                                  ))
-                                ) : (
-                                  <div className="rounded-[22px] border border-dashed border-black/10 px-4 py-8 text-sm text-slate-500 dark:border-white/10 dark:text-slate-400">
-                                    {t.home.noRecentSessions}
-                                  </div>
-                                )}
-                              </div>
-                            </section>
-                          )}
-
-                          {showAdvancedLauncher ? (
-                            <section className="mx-auto mt-6 w-full max-w-4xl rounded-[28px] border border-black/6 bg-white/82 p-5 dark:border-white/8 dark:bg-white/5">
-                              <div>
-                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">
-                                  {t.nav.advanced}
-                                </div>
-                                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-                                  {t.home.advancedModeDescription}
-                                </p>
-                              </div>
-
-                              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                                <Link href={teamHref} className="rounded-[20px] border border-black/6 bg-[#faf9f4] px-4 py-4 text-sm font-semibold text-slate-900 transition-colors hover:bg-white dark:border-white/8 dark:bg-white/4 dark:text-slate-100 dark:hover:bg-white/8">
-                                  {t.nav.team}
-                                </Link>
-                                <Link href={settingsHarnessHref} className="rounded-[20px] border border-black/6 bg-[#faf9f4] px-4 py-4 text-sm font-semibold text-slate-900 transition-colors hover:bg-white dark:border-white/8 dark:bg-white/4 dark:text-slate-100 dark:hover:bg-white/8">
-                                  {t.nav.harness}
-                                </Link>
-                                <Link href={settingsFluencyHref} className="rounded-[20px] border border-black/6 bg-[#faf9f4] px-4 py-4 text-sm font-semibold text-slate-900 transition-colors hover:bg-white dark:border-white/8 dark:bg-white/4 dark:text-slate-100 dark:hover:bg-white/8">
-                                  {t.nav.fluency}
-                                </Link>
-                                <Link href="/settings/workflows" className="rounded-[20px] border border-black/6 bg-[#faf9f4] px-4 py-4 text-sm font-semibold text-slate-900 transition-colors hover:bg-white dark:border-white/8 dark:bg-white/4 dark:text-slate-100 dark:hover:bg-white/8">
-                                  {t.nav.workflows}
-                                </Link>
-                                <Link href="/settings/specialists" className="rounded-[20px] border border-black/6 bg-[#faf9f4] px-4 py-4 text-sm font-semibold text-slate-900 transition-colors hover:bg-white dark:border-white/8 dark:bg-white/4 dark:text-slate-100 dark:hover:bg-white/8">
-                                  {t.nav.specialists}
-                                </Link>
-                              </div>
-
-                              <div className="mt-5 border-t border-black/6 pt-5 dark:border-white/8">
-                                <HomeInput
-                                  workspaceId={activeWorkspaceId ?? undefined}
-                                  variant="default"
-                                  defaultAgentRole={preferredMode === "CRAFTER" ? "CRAFTER" : "ROUTA"}
-                                  buildSessionUrl={(nextWorkspaceId, sessionId) =>
-                                    `/workspace/${nextWorkspaceId ?? activeWorkspaceId}/sessions/${sessionId}`
-                                  }
-                                />
-                              </div>
-                            </section>
-                          ) : null}
-                        </section>
-                      </>
-                    )}
-                  </div>
+                        </div>
+                      )}
+                    </section>
+                  )}
                 </div>
-              </>
+              </div>
             )}
           </main>
         </div>

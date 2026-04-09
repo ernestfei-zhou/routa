@@ -127,6 +127,14 @@ const zh: TranslationDictionary = {
     hideAdvancedMode: "收起高级模式",
     advancedModeDescription: "只有在需要团队协作、治理工具或专家级启动器时，再打开这些入口。",
     setupGateHint: "先完成上面的引导清单，再解锁概览恢复入口和高级能力。当前首页只保留最直接的起步路径。",
+    whatToAdvance: "你现在要推进什么？",
+    homePrimaryHint: "说出需求，Routa 会先生成卡片，再在看板里推进。",
+    readinessTitle: "准备状态",
+    readinessModel: "连接模型",
+    readinessCodebase: "选择代码库",
+    readinessWorkspace: "工作区已就绪",
+    continueWork: "继续最近工作",
+    continueBoard: "继续看板",
   },
 
   nav: {
@@ -149,6 +157,7 @@ const zh: TranslationDictionary = {
     specialists: "专家",
     debug: "调试",
     advanced: "高级",
+    records: "记录",
   },
 
   settings: {

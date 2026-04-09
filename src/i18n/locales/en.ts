@@ -128,6 +128,14 @@ const en: TranslationDictionary = {
     hideAdvancedMode: "Hide advanced mode",
     advancedModeDescription: "Open these entry points only when you need team coordination, governance tools, or the expert launcher.",
     setupGateHint: "Finish the checklist above before unlocking Overview recovery and advanced tools. The home page now keeps only the most direct starting path.",
+    whatToAdvance: "What do you want to advance?",
+    homePrimaryHint: "State your requirement — Routa will create a card first, then drive it through the board.",
+    readinessTitle: "Readiness",
+    readinessModel: "Connect model",
+    readinessCodebase: "Select codebase",
+    readinessWorkspace: "Workspace ready",
+    continueWork: "Continue recent work",
+    continueBoard: "Continue board",
   },
 
   nav: {
@@ -150,6 +158,7 @@ const en: TranslationDictionary = {
     specialists: "Specialists",
     debug: "Debug",
     advanced: "Advanced",
+    records: "Records",
   },
 
   settings: {

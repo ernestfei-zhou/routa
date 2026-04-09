@@ -133,6 +133,14 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     hideAdvancedMode: string;
     advancedModeDescription: string;
     setupGateHint: string;
+    whatToAdvance: string;
+    homePrimaryHint: string;
+    readinessTitle: string;
+    readinessModel: string;
+    readinessCodebase: string;
+    readinessWorkspace: string;
+    continueWork: string;
+    continueBoard: string;
   };
 
   // Navigation & Header
@@ -156,6 +164,7 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     specialists: string;
     debug: string;
     advanced: string;
+    records: string;
   };
 
   // Settings panel

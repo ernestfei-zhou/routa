@@ -16,7 +16,7 @@ import { usePathname } from "next/navigation";
 import { useTranslation } from "@/i18n";
 import { AdvancedNavMenu } from "./advanced-nav-menu";
 import { SettingsPopupMenu } from "./settings-popup-menu";
-import { ChevronLeft, Columns2, House, LayoutGrid } from "lucide-react";
+import { ChevronLeft, Columns2, House, ScrollText } from "lucide-react";
 
 
 interface NavItem {
@@ -74,12 +74,12 @@ export function DesktopSidebar({
       ),
     },
     {
-      id: "overview",
-      label: t.nav.overview,
+      id: "records",
+      label: t.nav.records,
       href: workspaceBaseHref ? `${workspaceBaseHref}/overview` : "/",
       requiresWorkspace: true,
       icon: (
-        <LayoutGrid className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
+        <ScrollText className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
       ),
     },
   ];
