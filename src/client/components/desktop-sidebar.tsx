@@ -14,8 +14,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "@/i18n";
-import { AdvancedNavMenu } from "./advanced-nav-menu";
-import { SettingsPopupMenu } from "./settings-popup-menu";
 import { ChevronLeft, Columns2, House, ScrollText, Share2 } from "lucide-react";
 
 
@@ -92,8 +90,6 @@ export function DesktopSidebar({
       ),
     },
   ];
-  const settingsActive = pathname === "/settings" || pathname.startsWith("/settings/");
-
   const isActive = (href: string) => {
     const hrefPath = href.split("?")[0]?.split("#")[0] ?? href;
     if (hrefPath === "/") return pathname === "/";
@@ -177,24 +173,6 @@ export function DesktopSidebar({
         ) : null}
         {primaryItems.map(renderNavItem)}
       </nav>
-
-      <div className={`${collapsed ? "mx-3" : "mx-2"} border-t border-desktop-border`} />
-
-      <div className={`py-3 ${collapsed ? "flex flex-col items-center gap-1" : "px-2 space-y-1"}`}>
-        <AdvancedNavMenu
-          workspaceId={workspaceId}
-          collapsed={collapsed}
-          className="w-full"
-          buttonClassName={collapsed ? "h-10 w-10 px-0 py-0 justify-center" : "h-11 w-full gap-3 px-3 py-0 text-sm font-medium justify-start"}
-        />
-        <SettingsPopupMenu
-          position="sidebar"
-          showLabel={!collapsed}
-          isActive={settingsActive}
-          className="w-full"
-          buttonClassName={collapsed ? "h-10 w-10 px-0 py-0 justify-center" : "h-11 w-full gap-3 px-3 py-0 text-sm font-medium"}
-        />
-      </div>
     </aside>
   );
 }

@@ -23,13 +23,12 @@ describe("DesktopSidebar", () => {
     expect(screen.getByRole("link", { name: "Team" }).getAttribute("href")).toBe("/workspace/default/team");
   });
 
-  it("shows advanced workspace tools as direct sidebar links", () => {
+  it("keeps the sidebar focused on page navigation", () => {
     render(<DesktopSidebar workspaceId="default" />);
 
-    expect(screen.getByRole("link", { name: "MCP Servers" }).getAttribute("href")).toBe("/settings/mcp");
-    expect(screen.getByRole("link", { name: "Harness" }).getAttribute("href")).toBe(
-      "/settings/harness?workspaceId=default",
-    );
+    expect(screen.queryByRole("link", { name: "MCP Servers" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Harness" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Settings" })).toBeNull();
   });
 
   it("shows a collapse icon when expanded and an expand icon when collapsed", () => {
