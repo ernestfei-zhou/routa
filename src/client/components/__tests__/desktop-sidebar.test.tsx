@@ -23,12 +23,13 @@ describe("DesktopSidebar", () => {
     expect(screen.getByRole("link", { name: "Team" }).getAttribute("href")).toBe("/workspace/default/team");
   });
 
-  it("keeps the sidebar focused on page navigation", () => {
+  it("keeps the sidebar focused on navigation and a single settings entry", () => {
     render(<DesktopSidebar workspaceId="default" />);
 
     expect(screen.queryByRole("link", { name: "MCP Servers" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Harness" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Settings" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Settings" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Preferences" })).toBeNull();
   });
 
   it("shows a collapse icon when expanded and an expand icon when collapsed", () => {

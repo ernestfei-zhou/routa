@@ -7,13 +7,13 @@ import { McpStatusIndicator } from "./mcp-status-indicator";
 
 interface ShellHeaderControlsProps {
   className?: string;
-  showSettingsMenu?: boolean;
+  showPreferencesMenu?: boolean;
   compactStatus?: boolean;
 }
 
 export function ShellHeaderControls({
   className = "",
-  showSettingsMenu = false,
+  showPreferencesMenu = false,
   compactStatus = false,
 }: ShellHeaderControlsProps) {
   return (
@@ -24,7 +24,14 @@ export function ShellHeaderControls({
       <div className="hidden lg:flex">
         <McpStatusIndicator compact={compactStatus} />
       </div>
-      {showSettingsMenu ? <SettingsPopupMenu showLabel position="topbar" buttonClassName="h-8 gap-1" /> : null}
+      {showPreferencesMenu ? (
+        <SettingsPopupMenu
+          position="topbar"
+          showSettingsLink={false}
+          showLabel={false}
+          buttonClassName="h-8 w-8 justify-center px-0"
+        />
+      ) : null}
     </div>
   );
 }
