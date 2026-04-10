@@ -226,3 +226,12 @@ pub struct RuntimeServiceInfo {
     pub started_at_ms: i64,
     pub last_seen_at_ms: i64,
 }
+
+#[derive(Debug, Clone)]
+pub struct DetectedAgent {
+    pub key: String,
+    pub vendor: String,
+    pub pid: u32,
+    pub cwd: Option<String>,
+    pub command: String,
+}

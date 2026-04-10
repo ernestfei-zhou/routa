@@ -88,6 +88,13 @@ pub(super) fn render(
 
 fn render_sessions(frame: &mut Frame, area: ratatui::layout::Rect, state: &RuntimeState) {
     let colors = palette(state.theme_mode);
+    let outer_block = panel_block("Sessions", state.focus == FocusPane::Sessions, colors);
+    let inner = outer_block.inner(area);
+    frame.render_widget(outer_block, area);
+    let split = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(6), Constraint::Length(5)])
+        .split(inner);
     let items: Vec<ListItem> = state
         .session_items()
         .iter()
@@ -156,12 +163,27 @@ fn render_sessions(frame: &mut Frame, area: ratatui::layout::Rect, state: &Runti
         })
         .collect();
 
-    let list = List::new(items).block(panel_block(
-        "Sessions",
-        state.focus == FocusPane::Sessions,
-        colors,
-    ));
-    frame.render_widget(list, area);
+    let list = List::new(items).block(
+        Block::default()
+            .borders(Borders::BOTTOM)
+            .border_style(Style::default().fg(colors.border))
+            .style(Style::default().bg(colors.surface)),
+    );
+    frame.render_widget(list, split[0]);
+
+    let agent_lines = render_agent_lines(state, colors);
+    frame.render_widget(
+        Paragraph::new(agent_lines)
+            .block(
+                Block::default()
+                    .title("Agents")
+                    .borders(Borders::NONE)
+                    .style(Style::default().bg(colors.surface).fg(colors.text)),
+            )
+            .style(Style::default().bg(colors.surface).fg(colors.text))
+            .wrap(Wrap { trim: true }),
+        split[1],
+    );
 }
 
 fn render_files(
@@ -508,6 +530,50 @@ fn render_footer(frame: &mut Frame, area: ratatui::layout::Rect, state: &Runtime
         Paragraph::new(line).style(Style::default().bg(colors.bg).fg(colors.text)),
         area,
     );
+}
+
+fn render_agent_lines(state: &RuntimeState, colors: UiPalette) -> Vec<Line<'static>> {
+    if state.detected_agents.is_empty() {
+        return vec![Line::from(Span::styled(
+            "no repo-local agents detected",
+            Style::default().fg(colors.muted),
+        ))];
+    }
+
+    state
+        .detected_agents
+        .iter()
+        .take(3)
+        .map(|agent| {
+            let cwd = agent
+                .cwd
+                .as_deref()
+                .map(short_cwd_label)
+                .unwrap_or_else(|| "-".to_string());
+            Line::from(vec![
+                Span::styled(
+                    agent.vendor.to_ascii_uppercase(),
+                    Style::default().fg(colors.accent),
+                ),
+                Span::raw(" "),
+                Span::styled(format!("#{}", agent.pid), Style::default().fg(colors.text)),
+                Span::raw(" "),
+                Span::styled(cwd, Style::default().fg(colors.muted)),
+                Span::raw(" "),
+                Span::styled(
+                    shorten_path(agent.command.trim(), 14),
+                    Style::default().fg(colors.muted),
+                ),
+            ])
+        })
+        .collect()
+}
+
+fn short_cwd_label(cwd: &str) -> String {
+    Path::new(cwd)
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_else(|| cwd.to_string())
 }
 
 fn render_title_bar(frame: &mut Frame, area: Rect, state: &RuntimeState) {

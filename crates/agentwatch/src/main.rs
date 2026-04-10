@@ -1,4 +1,5 @@
 mod db;
+mod detect;
 mod hooks;
 mod ipc;
 mod models;

@@ -1,6 +1,6 @@
 use crate::models::{
-    AttributionConfidence, AttributionEvent, EventLogEntry, EventSource, FileView, GitEvent,
-    HookEvent, RuntimeMessage, SessionView, DEFAULT_INFERENCE_WINDOW_MS, EVENT_LOG_LIMIT,
+    AttributionConfidence, AttributionEvent, DetectedAgent, EventLogEntry, EventSource, FileView,
+    GitEvent, HookEvent, RuntimeMessage, SessionView, DEFAULT_INFERENCE_WINDOW_MS, EVENT_LOG_LIMIT,
 };
 use chrono::Utc;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -93,6 +93,7 @@ pub struct RuntimeState {
     pub runtime_transport: String,
     pub search_query: String,
     pub search_active: bool,
+    pub detected_agents: Vec<DetectedAgent>,
     cached_session_items: Vec<SessionListItem>,
     cached_file_item_keys: Vec<String>,
 }
@@ -120,6 +121,7 @@ impl RuntimeState {
             runtime_transport: "feed".to_string(),
             search_query: String::new(),
             search_active: false,
+            detected_agents: Vec::new(),
             cached_session_items: Vec::new(),
             cached_file_item_keys: Vec::new(),
         };
@@ -443,6 +445,10 @@ impl RuntimeState {
 
     pub fn set_runtime_transport(&mut self, transport: impl Into<String>) {
         self.runtime_transport = transport.into();
+    }
+
+    pub fn set_detected_agents(&mut self, agents: Vec<DetectedAgent>) {
+        self.detected_agents = agents;
     }
 
     pub fn toggle_theme_mode(&mut self) {
