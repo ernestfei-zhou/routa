@@ -40,6 +40,7 @@ pub use runtime_manager::{current_platform, AcpRuntimeManager, RuntimeInfo, Runt
 pub use warmup::{AcpWarmupService, WarmupState, WarmupStatus};
 
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -50,6 +51,23 @@ use process::AcpProcess;
 
 #[cfg(windows)]
 pub(crate) const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+fn validate_session_cwd(cwd: &str) -> Result<(), String> {
+    let path = Path::new(cwd);
+    if !path.exists() {
+        return Err(format!(
+            "Invalid session cwd '{}': directory does not exist",
+            cwd
+        ));
+    }
+    if !path.is_dir() {
+        return Err(format!(
+            "Invalid session cwd '{}': path is not a directory",
+            cwd
+        ));
+    }
+    Ok(())
+}
 
 // ─── Session Record ─────────────────────────────────────────────────────
 
@@ -352,6 +370,7 @@ impl AcpManager {
         provider_session_id: Option<String>,
         options: SessionLaunchOptions,
     ) -> Result<(String, String), String> {
+        validate_session_cwd(&cwd)?;
         let provider_name = provider.as_deref().unwrap_or("opencode");
 
         if provider_name == "claude" {
@@ -576,6 +595,7 @@ impl AcpManager {
         args: Vec<String>,
         options: SessionLaunchOptions,
     ) -> Result<(String, String), String> {
+        validate_session_cwd(&cwd)?;
         let (ntx, _) = broadcast::channel::<serde_json::Value>(256);
 
         let process = AcpProcess::spawn(
@@ -633,6 +653,7 @@ impl AcpManager {
         provider_session_id: Option<String>,
         options: SessionLaunchOptions,
     ) -> Result<(String, String), String> {
+        validate_session_cwd(&cwd)?;
         let (ntx, _) = broadcast::channel::<serde_json::Value>(256);
 
         let process = AcpProcess::spawn(
@@ -694,6 +715,7 @@ impl AcpManager {
         mcp_profile: Option<String>,
         options: SessionLaunchOptions,
     ) -> Result<(String, String), String> {
+        validate_session_cwd(&cwd)?;
         let provider_name = provider.as_deref().unwrap_or("opencode");
 
         // Create the notification broadcast channel for this session
@@ -1270,9 +1292,11 @@ fn truncate_content(text: &str, max_len: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        get_preset_by_id_with_registry, get_presets, truncate_content, AcpManager, AcpSessionRecord,
+        get_preset_by_id_with_registry, get_presets, truncate_content, validate_session_cwd,
+        AcpManager, AcpSessionRecord,
     };
     use std::collections::HashMap;
+    use std::fs;
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
@@ -1296,6 +1320,25 @@ mod tests {
         assert_eq!(preset.id, "qodercli");
         assert_eq!(preset.command, "qodercli");
         assert_eq!(preset.args, vec!["--acp".to_string()]);
+    }
+
+    #[test]
+    fn validate_session_cwd_rejects_missing_or_non_directory_paths() {
+        let temp = tempfile::tempdir().expect("tempdir should create");
+        let missing = temp.path().join("missing-dir");
+        let file_path = temp.path().join("not-a-dir.txt");
+        fs::write(&file_path, "content").expect("file should write");
+
+        let missing_error = validate_session_cwd(missing.to_string_lossy().as_ref())
+            .expect_err("missing directory should fail");
+        assert!(missing_error.contains("directory does not exist"));
+
+        let file_error = validate_session_cwd(file_path.to_string_lossy().as_ref())
+            .expect_err("file path should fail");
+        assert!(file_error.contains("path is not a directory"));
+
+        validate_session_cwd(temp.path().to_string_lossy().as_ref())
+            .expect("existing directory should pass");
     }
 
     #[tokio::test]

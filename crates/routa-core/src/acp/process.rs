@@ -11,8 +11,10 @@
 //! Agent message notifications are traced to JSONL files for attribution tracking.
 
 use std::collections::HashMap;
+use std::io::ErrorKind;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -69,6 +71,20 @@ impl AcpProcess {
             cwd,
         );
 
+        let cwd_path = Path::new(cwd);
+        if !cwd_path.exists() {
+            return Err(format!(
+                "Invalid session cwd '{}': directory does not exist",
+                cwd
+            ));
+        }
+        if !cwd_path.is_dir() {
+            return Err(format!(
+                "Invalid session cwd '{}': path is not a directory",
+                cwd
+            ));
+        }
+
         // Resolve the actual binary path using the full shell PATH
         // (macOS GUI apps have a minimal PATH that won't find user CLI tools)
         let resolved_command =
@@ -99,11 +115,25 @@ impl AcpProcess {
             );
         }
 
-        let mut child = command_builder.spawn().map_err(|e| {
-            format!(
-                "Failed to spawn '{}' (resolved: '{}'): {}. Is it installed and in PATH?",
-                command, resolved_command, e
-            )
+        let mut child = command_builder.spawn().map_err(|e| match e.kind() {
+            ErrorKind::NotFound => {
+                let resolved_exists = Path::new(&resolved_command).exists();
+                if resolved_exists {
+                    format!(
+                        "Failed to execute '{}' (resolved: '{}'): {}. The binary exists, but a required interpreter or wrapper target may be missing.",
+                        command, resolved_command, e
+                    )
+                } else {
+                    format!(
+                        "Failed to spawn '{}' (resolved: '{}'): {}. Is it installed and in PATH?",
+                        command, resolved_command, e
+                    )
+                }
+            }
+            _ => format!(
+                "Failed to spawn '{}' (resolved: '{}') from cwd '{}': {}",
+                command, resolved_command, cwd, e
+            ),
         })?;
 
         let stdin = child

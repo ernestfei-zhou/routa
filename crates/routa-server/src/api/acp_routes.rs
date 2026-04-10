@@ -2054,6 +2054,42 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn session_new_rejects_invalid_explicit_cwd_before_spawn() {
+        let db = Database::open_in_memory().expect("db should open");
+        let state = Arc::new(AppStateInner::new(db));
+        state
+            .workspace_store
+            .ensure_default()
+            .await
+            .expect("default workspace should exist");
+
+        let response = acp_rpc(
+            State(state),
+            Json(json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "session/new",
+                "params": {
+                    "workspaceId": "default",
+                    "cwd": "/definitely/missing-routa-acp-cwd",
+                    "provider": "opencode"
+                }
+            })),
+        )
+        .await
+        .expect("request should complete");
+
+        let value = json_response_value(response);
+        assert_eq!(value["error"]["code"].as_i64(), Some(-32000));
+        assert_eq!(
+            value["error"]["message"].as_str(),
+            Some(
+                "Failed to create session: Invalid session cwd '/definitely/missing-routa-acp-cwd': directory does not exist"
+            )
+        );
+    }
+
+    #[tokio::test]
     async fn session_respond_user_input_returns_explicit_no_pending_error() {
         let db = Database::open_in_memory().expect("db should open");
         let state = Arc::new(AppStateInner::new(db));
