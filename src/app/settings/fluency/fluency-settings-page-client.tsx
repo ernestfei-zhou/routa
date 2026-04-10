@@ -176,7 +176,7 @@ export function FluencySettingsPageClient({ defaultRepoPath }: FluencySettingsPa
       <div className="flex h-full min-h-0 overflow-hidden bg-desktop-bg-primary text-desktop-text-primary" data-testid="fluency-console-root">
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="border-b border-desktop-border bg-desktop-bg-secondary/50 px-4 py-2 text-[11px] text-desktop-text-secondary">
-            <span>{t.workspace.workspace}: </span>
+            <span>{t.workspace.workspaceLabel} </span>
             <span className="text-desktop-text-primary">{activeWorkspaceStatus}</span>
             <span className="mx-2 text-desktop-text-tertiary">|</span>
             <span>{t.settings.repository}: </span>
