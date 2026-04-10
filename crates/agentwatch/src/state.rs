@@ -219,6 +219,7 @@ impl RuntimeState {
         for event in attrib_events {
             self.push_attribution_event(now_ms, event);
         }
+        self.clamp_selection();
     }
 
     pub fn session_items(&self) -> &[SessionListItem] {

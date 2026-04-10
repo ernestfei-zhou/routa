@@ -312,6 +312,26 @@ fn assign_selected_file_to_selected_session_updates_owner() {
 }
 
 #[test]
+fn sync_dirty_files_rebuilds_unknown_session_and_file_views() {
+    let mut state = RuntimeState::new(
+        "/tmp/project".to_string(),
+        "routa-js".to_string(),
+        "main".to_string(),
+    );
+
+    state.sync_dirty_files(vec![(
+        "src/app/globals.css".to_string(),
+        "modify".to_string(),
+        Some(1_700_000_000_000),
+    )]);
+
+    assert_eq!(state.session_items().len(), 1);
+    assert_eq!(state.session_items()[0].session_id, UNKNOWN_SESSION_ID);
+    assert_eq!(state.file_items().len(), 1);
+    assert_eq!(state.file_items()[0].rel_path, "src/app/globals.css");
+}
+
+#[test]
 fn selected_file_assignment_message_is_attribution_event() {
     let mut state = sample_state();
     state.file_list_mode = FileListMode::Global;
