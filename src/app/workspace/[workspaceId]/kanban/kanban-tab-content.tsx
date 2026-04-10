@@ -32,7 +32,7 @@ type DeleteTaskModalProps = ComponentProps<typeof KanbanDeleteTaskModal>;
 type MoveBlockedModalProps = ComponentProps<typeof KanbanMoveBlockedModal>;
 type StatusBarProps = ComponentProps<typeof KanbanStatusBar>;
 
-interface KanbanTabHeaderActionProps {
+export interface KanbanTabHeaderActionProps {
   board: KanbanBoardInfo | null;
   onAgentPrompt?: KanbanAgentPromptHandler;
   availableProviders: AcpProviderInfo[];
@@ -49,7 +49,7 @@ interface KanbanTabHeaderActionProps {
   openAgentPanel: (sessionId: string) => void;
 }
 
-interface KanbanTabContentProps {
+export interface KanbanTabContentProps {
   headerProps: KanbanTabHeaderProps;
   headerActionProps: KanbanTabHeaderActionProps;
   boardSurfaceProps?: BoardSurfaceProps;
@@ -165,6 +165,10 @@ export function KanbanTabContent({
   moveBlockedModalProps,
   statusBarProps,
 }: KanbanTabContentProps) {
+  const { key: codebaseModalKey, ...codebaseModalRestProps } = codebaseModalProps as KanbanCodebaseModalProps & {
+    key?: string;
+  };
+
   const headerActionSlot = (
     <KanbanTabHeaderActionSlot
       board={headerProps.board}
@@ -207,7 +211,7 @@ export function KanbanTabContent({
       {showSettingsModal && settingsModalProps && (
         <KanbanSettingsModal {...settingsModalProps} />
       )}
-      <KanbanCodebaseModal {...codebaseModalProps}/>
+      <KanbanCodebaseModal key={codebaseModalKey} {...codebaseModalRestProps}/>
       {deleteCodebaseModalProps.show && (
         <KanbanDeleteCodebaseModal {...deleteCodebaseModalProps}/>
       )}
