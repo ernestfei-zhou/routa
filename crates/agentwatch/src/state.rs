@@ -78,6 +78,7 @@ pub struct RuntimeState {
     pub repo_root: String,
     pub repo_name: String,
     pub branch: String,
+    pub ahead_count: Option<usize>,
     pub sessions: BTreeMap<String, SessionView>,
     pub files: BTreeMap<String, FileView>,
     pub event_log: VecDeque<EventLogEntry>,
@@ -109,6 +110,7 @@ impl RuntimeState {
             repo_root,
             repo_name,
             branch,
+            ahead_count: None,
             sessions: BTreeMap::new(),
             files: BTreeMap::new(),
             event_log: VecDeque::new(),
@@ -433,6 +435,10 @@ impl RuntimeState {
 
     pub fn set_runtime_transport(&mut self, transport: impl Into<String>) {
         self.runtime_transport = transport.into();
+    }
+
+    pub fn set_ahead_count(&mut self, count: Option<usize>) {
+        self.ahead_count = count;
     }
 
     pub fn should_run_fallback_scan(&self, now_ms: i64, idle_window_ms: i64) -> bool {

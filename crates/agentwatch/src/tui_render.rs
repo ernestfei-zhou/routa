@@ -280,7 +280,10 @@ fn render_details_panel(frame: &mut Frame, area: Rect, state: &RuntimeState, cac
         ]));
         lines.push(Line::from(vec![
             Span::styled("Modified: ", Style::default().fg(colors.muted)),
-            Span::styled(time_ago(file.last_modified_at_ms), Style::default().fg(colors.text)),
+            Span::styled(
+                time_ago(file.last_modified_at_ms),
+                Style::default().fg(colors.text),
+            ),
         ]));
         if let Some(facts) = cache.file_facts(file) {
             lines.push(Line::from(vec![
@@ -394,11 +397,9 @@ fn render_log(frame: &mut Frame, area: ratatui::layout::Rect, state: &RuntimeSta
 fn render_file_header_line(state: &RuntimeState, cache: &AppCache, _width: u16) -> Line<'static> {
     let colors = palette(state.theme_mode);
     let files = state.file_items();
-    let commit_total = files
-        .iter()
-        .map(|file| cache.file_facts(file).map(|facts| facts.git_change_count))
-        .collect::<Option<Vec<_>>>()
-        .map(|counts| counts.into_iter().sum::<usize>())
+    let _ = cache;
+    let commit_total = state
+        .ahead_count
         .map(|count| count.to_string())
         .unwrap_or_else(|| "...".to_string());
     let label = match state.file_list_mode {

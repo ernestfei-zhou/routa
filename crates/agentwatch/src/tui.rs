@@ -77,6 +77,7 @@ fn run_loop(terminal: &mut DefaultTerminal, ctx: RepoContext, poll_interval_ms: 
     let branch = current_branch(&ctx).unwrap_or_else(|_| "-".to_string());
     let mut state = RuntimeState::new(repo_root, repo_name, branch);
     state.set_runtime_transport(read_runtime_transport(&ctx));
+    state.set_ahead_count(current_ahead_count(&ctx).ok());
     let mut cache = AppCache::new();
     let bootstrap_cutoff = bootstrap_history_cutoff(chrono::Utc::now().timestamp_millis());
     for message in feed.read_recent_since(bootstrap_cutoff)? {
@@ -112,6 +113,7 @@ fn run_loop(terminal: &mut DefaultTerminal, ctx: RepoContext, poll_interval_ms: 
         if force_scan {
             let dirty = observe::scan_repo(&ctx)?;
             state.sync_dirty_files(dirty);
+            state.set_ahead_count(current_ahead_count(&ctx).ok());
             last_poll = Instant::now();
         }
 
@@ -212,6 +214,65 @@ fn current_branch(ctx: &RepoContext) -> Result<String> {
         .context("decode branch output")?
         .trim()
         .to_string())
+}
+
+fn current_ahead_count(ctx: &RepoContext) -> Result<usize> {
+    let base_ref = upstream_or_main_ref(ctx)?;
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(&ctx.repo_root)
+        .arg("rev-list")
+        .arg("--count")
+        .arg(format!("{base_ref}..HEAD"))
+        .output()
+        .context("run git rev-list --count base..HEAD")?;
+    if !output.status.success() {
+        anyhow::bail!("git rev-list --count failed");
+    }
+    Ok(String::from_utf8(output.stdout)
+        .context("decode rev-list output")?
+        .trim()
+        .parse::<usize>()
+        .unwrap_or(0))
+}
+
+fn upstream_or_main_ref(ctx: &RepoContext) -> Result<String> {
+    let upstream = Command::new("git")
+        .arg("-C")
+        .arg(&ctx.repo_root)
+        .arg("rev-parse")
+        .arg("--abbrev-ref")
+        .arg("--symbolic-full-name")
+        .arg("@{upstream}")
+        .output()
+        .context("run git rev-parse @{upstream}")?;
+    if upstream.status.success() {
+        let value = String::from_utf8(upstream.stdout)
+            .context("decode upstream output")?
+            .trim()
+            .to_string();
+        if !value.is_empty() {
+            return Ok(value);
+        }
+    }
+
+    for candidate in ["origin/main", "main", "origin/master", "master"] {
+        let status = Command::new("git")
+            .arg("-C")
+            .arg(&ctx.repo_root)
+            .arg("rev-parse")
+            .arg("--verify")
+            .arg(candidate)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .with_context(|| format!("verify git ref {candidate}"))?;
+        if status.success() {
+            return Ok(candidate.to_string());
+        }
+    }
+
+    anyhow::bail!("no upstream or main ref found")
 }
 
 fn ensure_runtime_service(ctx: &RepoContext) -> Result<()> {

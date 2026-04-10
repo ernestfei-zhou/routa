@@ -485,7 +485,12 @@ fn git_file_change_count(repo_root: &str, rel_path: &str) -> Option<usize> {
         return None;
     }
     let stdout = String::from_utf8(output.stdout).ok()?;
-    Some(stdout.lines().filter(|line| !line.trim().is_empty()).count())
+    Some(
+        stdout
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .count(),
+    )
 }
 
 pub(super) fn load_diff_text(
