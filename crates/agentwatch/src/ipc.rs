@@ -2,8 +2,8 @@ use crate::models::{RuntimeMessage, RuntimeServiceInfo};
 use anyhow::{Context, Result};
 use std::fs::OpenOptions;
 use std::io::{BufRead, BufReader, Seek, SeekFrom, Write};
-use std::os::unix::net::{UnixListener, UnixStream};
 use std::net::{TcpListener, TcpStream};
+use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 
 pub struct RuntimeFeed {
@@ -82,7 +82,6 @@ impl RuntimeFeed {
         }
         Ok(messages)
     }
-
 }
 
 pub struct RuntimeSocket {
@@ -130,7 +129,8 @@ pub struct RuntimeTcp {
 
 impl RuntimeTcp {
     pub fn bind(addr: &str) -> Result<Self> {
-        let listener = TcpListener::bind(addr).with_context(|| format!("bind runtime tcp {addr}"))?;
+        let listener =
+            TcpListener::bind(addr).with_context(|| format!("bind runtime tcp {addr}"))?;
         listener
             .set_nonblocking(true)
             .context("set runtime tcp nonblocking")?;
@@ -183,7 +183,8 @@ pub fn send_socket_message(socket_path: &Path, message: &RuntimeMessage) -> Resu
 }
 
 pub fn send_tcp_message(addr: &str, message: &RuntimeMessage) -> Result<()> {
-    let mut stream = TcpStream::connect(addr).with_context(|| format!("connect runtime tcp {addr}"))?;
+    let mut stream =
+        TcpStream::connect(addr).with_context(|| format!("connect runtime tcp {addr}"))?;
     serde_json::to_writer(&mut stream, message).context("write runtime tcp json")?;
     stream
         .write_all(b"\n")
@@ -198,15 +199,16 @@ pub fn write_service_info(info_path: &Path, info: &RuntimeServiceInfo) -> Result
             .with_context(|| format!("create runtime info dir {:?}", parent))?;
     }
     let payload = serde_json::to_vec_pretty(info).context("encode runtime info json")?;
-    std::fs::write(info_path, payload).with_context(|| format!("write runtime info {:?}", info_path))
+    std::fs::write(info_path, payload)
+        .with_context(|| format!("write runtime info {:?}", info_path))
 }
 
 pub fn read_service_info(info_path: &Path) -> Result<Option<RuntimeServiceInfo>> {
     if !info_path.exists() {
         return Ok(None);
     }
-    let payload =
-        std::fs::read_to_string(info_path).with_context(|| format!("read runtime info {:?}", info_path))?;
+    let payload = std::fs::read_to_string(info_path)
+        .with_context(|| format!("read runtime info {:?}", info_path))?;
     let info = serde_json::from_str(&payload).context("decode runtime info json")?;
     Ok(Some(info))
 }
@@ -220,8 +222,7 @@ fn read_stream_message(stream: UnixStream) -> Result<Option<RuntimeMessage>> {
     if bytes == 0 || line.trim().is_empty() {
         return Ok(None);
     }
-    let message =
-        serde_json::from_str(line.trim_end()).context("decode runtime socket payload")?;
+    let message = serde_json::from_str(line.trim_end()).context("decode runtime socket payload")?;
     Ok(Some(message))
 }
 

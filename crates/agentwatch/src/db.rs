@@ -399,10 +399,7 @@ impl Db {
             .context("pick active session")
     }
 
-    pub fn list_active_sessions(
-        &self,
-        repo_root: &str,
-    ) -> Result<Vec<SessionListRow>> {
+    pub fn list_active_sessions(&self, repo_root: &str) -> Result<Vec<SessionListRow>> {
         let mut stmt = self
             .conn
             .prepare(
@@ -508,11 +505,7 @@ impl Db {
         .context("load latest file event")
     }
 
-    pub fn get_file_state(
-        &self,
-        repo_root: &str,
-        rel_path: &str,
-    ) -> Result<Option<FileStateMeta>> {
+    pub fn get_file_state(&self, repo_root: &str, rel_path: &str) -> Result<Option<FileStateMeta>> {
         let mut stmt = self
             .conn
             .prepare(

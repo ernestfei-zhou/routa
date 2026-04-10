@@ -68,8 +68,8 @@ pub fn handle_hook(
         .or_else(|| std::env::var("TMUX_SESSION").ok());
     let tmux_window = extract_field(&payload, &["tmux_window", "tmuxWindow"])
         .or_else(|| std::env::var("TMUX_WINDOW").ok());
-    let tmux_pane =
-        extract_field(&payload, &["tmux_pane", "tmuxPane"]).or_else(|| std::env::var("TMUX_PANE").ok());
+    let tmux_pane = extract_field(&payload, &["tmux_pane", "tmuxPane"])
+        .or_else(|| std::env::var("TMUX_PANE").ok());
     let session_display_name = extract_session_display_name(
         &payload,
         transcript_path.as_deref(),
@@ -158,7 +158,9 @@ pub fn try_forward_hook_to_runtime(
     let (ctx, message) =
         build_hook_runtime_message(client_name, event_name, repo_hint, db_hint, payload_raw)?;
     if let Err(err) = send_runtime_message(&ctx, &message) {
-        eprintln!("agentwatch warning: runtime transport unavailable, fallback to local store: {err}");
+        eprintln!(
+            "agentwatch warning: runtime transport unavailable, fallback to local store: {err}"
+        );
         return Ok(false);
     }
 
@@ -221,8 +223,8 @@ pub fn build_hook_runtime_message(
         .or_else(|| std::env::var("TMUX_SESSION").ok());
     let tmux_window = extract_field(&payload, &["tmux_window", "tmuxWindow"])
         .or_else(|| std::env::var("TMUX_WINDOW").ok());
-    let tmux_pane =
-        extract_field(&payload, &["tmux_pane", "tmuxPane"]).or_else(|| std::env::var("TMUX_PANE").ok());
+    let tmux_pane = extract_field(&payload, &["tmux_pane", "tmuxPane"])
+        .or_else(|| std::env::var("TMUX_PANE").ok());
     let session_display_name = extract_session_display_name(
         &payload,
         transcript_path.as_deref(),
@@ -305,8 +307,7 @@ pub fn try_forward_git_event(ctx: &RepoContext, event_name: &str, args: &[String
         head_commit: Some(current_head(&ctx.repo_root)?),
         branch: Some(current_branch(&ctx.repo_root)?),
     });
-    match send_runtime_message(ctx, &message)
-    {
+    match send_runtime_message(ctx, &message) {
         Ok(_) => Ok(true),
         Err(err) => {
             eprintln!(
@@ -434,10 +435,7 @@ fn normalized_is_stop(event: &str) -> bool {
 }
 
 fn normalize_event_name(_client: &str, event: &str) -> String {
-    let normalized = event
-        .trim()
-        .to_ascii_lowercase()
-        .replace(['_', ' '], "-");
+    let normalized = event.trim().to_ascii_lowercase().replace(['_', ' '], "-");
 
     match normalized.as_str() {
         "session-start" | "sessionstart" => "SessionStart".to_string(),
