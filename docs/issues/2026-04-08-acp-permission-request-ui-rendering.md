@@ -1,12 +1,16 @@
 ---
 title: "ACP permission request cards collapse rich request payloads into a generic UI"
 date: "2026-04-08"
-status: reported
+status: resolved
 severity: medium
 area: ui
 tags: ["acp", "ui", "permission", "codex", "chat"]
 reported_by: "Codex"
-related_issues: []
+related_issues: ["https://github.com/phodal/routa/issues/401"]
+github_issue: 401
+github_state: "closed"
+github_url: "https://github.com/phodal/routa/issues/401"
+resolved_at: "2026-04-08"
 ---
 
 # ACP permission request cards collapse rich request payloads into a generic UI

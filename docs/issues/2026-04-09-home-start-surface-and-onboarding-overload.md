@@ -1,12 +1,13 @@
 ---
 title: "Home start surface and onboarding flow overload new users"
 date: "2026-04-09"
-status: open
+status: resolved
 severity: high
 area: "ui"
 github_issue: 409
-github_state: "open"
+github_state: "closed"
 github_url: "https://github.com/phodal/routa/issues/409"
+resolved_at: "2026-04-09"
 tags: ["homepage", "onboarding", "workspace", "information-architecture", "ux"]
 reported_by: "copilot"
 related_issues:

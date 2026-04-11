@@ -1,12 +1,16 @@
 ---
 title: "CLI chat and team flows can end streaming before Codex emits visible output"
 date: "2026-04-06"
-status: in_progress
+status: resolved
 severity: high
 area: cli
 tags: ["cli", "chat", "team", "acp", "codex", "streaming", "timeout"]
 reported_by: "Codex"
 related_issues: ["https://github.com/phodal/routa/issues/363"]
+github_issue: 363
+github_state: "closed"
+github_url: "https://github.com/phodal/routa/issues/363"
+resolved_at: "2026-04-07"
 ---
 
 # CLI chat and team flows can end streaming before Codex emits visible output

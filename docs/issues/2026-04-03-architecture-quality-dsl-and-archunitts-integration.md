@@ -1,7 +1,7 @@
 ---
 title: "Architecture Quality DSL and ArchUnitTS backend-core integration"
 date: "2026-04-03"
-status: completed
+status: resolved
 severity: medium
 area: "fitness"
 tags:

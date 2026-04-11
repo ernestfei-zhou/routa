@@ -1,12 +1,15 @@
 ---
 title: "ACP provider inventory can report providers as installed when no runnable adapter exists"
 date: "2026-04-06"
-status: reported
+status: open
 severity: medium
 area: cli
 tags: ["cli", "acp", "provider", "inventory", "installation", "codex"]
 reported_by: "Codex"
 related_issues: ["https://github.com/phodal/routa/issues/364"]
+github_issue: 364
+github_state: "open"
+github_url: "https://github.com/phodal/routa/issues/364"
 ---
 
 # ACP provider inventory can report providers as installed when no runnable adapter exists

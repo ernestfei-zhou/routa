@@ -1,12 +1,13 @@
 ---
 title: "ACP failed to deserialize response during Codex permission flow was caused by terminal response schema drift"
 date: "2026-04-08"
-status: reported
+status: resolved
 severity: high
 area: acp
 tags: ["acp", "codex", "debugging", "terminal", "schema", "observability"]
 reported_by: "Codex"
 related_issues: ["https://github.com/phodal/routa/issues/399", "https://github.com/phodal/routa/issues/401"]
+resolved_at: "2026-04-08"
 ---
 
 # ACP failed to deserialize response during Codex permission flow was caused by terminal response schema drift

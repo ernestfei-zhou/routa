@@ -1,7 +1,7 @@
 ---
 title: "Codex MCP approval requests render as generic command-permission cards instead of option-driven MCP approvals"
 date: "2026-04-08"
-status: reported
+status: investigating
 severity: medium
 area: ui
 tags: ["acp", "codex", "mcp", "permission", "ui", "kanban"]

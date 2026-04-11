@@ -1,12 +1,16 @@
 ---
 title: "Next.js ACP bridge leaves Codex permission requests unresolved and collapses prompt failures into Internal error"
 date: "2026-04-08"
-status: reported
+status: resolved
 severity: high
 area: acp
 tags: ["acp", "codex", "nextjs", "permission", "parity", "observability"]
 reported_by: "Codex"
 related_issues: ["https://github.com/phodal/routa/issues/399"]
+github_issue: 399
+github_state: "closed"
+github_url: "https://github.com/phodal/routa/issues/399"
+resolved_at: "2026-04-08"
 ---
 
 # Next.js ACP bridge leaves Codex permission requests unresolved and collapses prompt failures into Internal error

@@ -1,14 +1,15 @@
 ---
 title: "Kanban Settings modal silently discards edits and overloads structure, automation, and runtime controls"
 date: "2026-04-08"
-status: open
+status: resolved
 severity: high
 area: "ui"
 tags: ["kanban", "settings", "modal", "ux", "i18n", "automation"]
 reported_by: "codex"
 github_issue: 394
-github_state: "open"
+github_state: "closed"
 github_url: "https://github.com/phodal/routa/issues/394"
+resolved_at: "2026-04-08"
 related_issues:
   - "2026-03-21-kanban-column-configurability-and-manual-lane-boundary.md"
   - "2026-04-08-kanban-detail-information-architecture-and-session-pane-friction.md"
