@@ -90,8 +90,10 @@ fn build_tool_list_inner() -> Vec<serde_json::Value> {
                 "title": { "type": "string", "description": "Task title" },
                 "objective": { "type": "string", "description": "Task objective" },
                 "workspaceId": { "type": "string" },
+                "sessionId": { "type": "string", "description": "Session that created the task" },
                 "scope": { "type": "string", "description": "Task scope" },
-                "acceptanceCriteria": { "type": "array", "items": { "type": "string" }, "description": "Acceptance criteria" }
+                "acceptanceCriteria": { "type": "array", "items": { "type": "string" }, "description": "Acceptance criteria" },
+                "creationSource": { "type": "string", "enum": ["manual", "agent", "api", "session"] }
             },
             "required": ["title", "objective"]
         })),

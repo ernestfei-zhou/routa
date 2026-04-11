@@ -7,6 +7,7 @@
 import { eq, and, sql } from "drizzle-orm";
 import type { Database } from "./index";
 import { tasks } from "./schema";
+import { normalizeTaskCreationSource } from "../kanban/task-creation-policy";
 import { hydrateTaskComments, type Task, type TaskStatus } from "../models/task";
 import type { TaskStore } from "../store/task-store";
 
@@ -246,7 +247,9 @@ export class PgTaskStore implements TaskStore {
       parallelGroup: row.parallelGroup ?? undefined,
       workspaceId: row.workspaceId,
       sessionId: row.sessionId ?? undefined,
-      creationSource: row.creationSource ?? undefined,
+      creationSource: normalizeTaskCreationSource(row.creationSource, {
+        sessionId: row.sessionId,
+      }),
       codebaseIds: (row.codebaseIds as string[]) ?? [],
       worktreeId: row.worktreeId ?? undefined,
       deliverySnapshot: row.deliverySnapshot as import("../models/task").TaskDeliverySnapshot | undefined,

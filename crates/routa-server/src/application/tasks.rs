@@ -2,7 +2,7 @@ use chrono::Utc;
 
 use crate::error::ServerError;
 use crate::models::kanban::{column_id_to_task_status, task_status_to_column_id};
-use crate::models::task::{Task, TaskPriority, TaskStatus};
+use crate::models::task::{Task, TaskCreationSource, TaskPriority, TaskStatus};
 use crate::state::AppState;
 use routa_core::kanban::{
     ensure_task_board_context, set_task_column, sync_task_column_from_status,
@@ -69,6 +69,9 @@ impl TaskApplicationService {
             dependencies,
             parallel_group,
         );
+        if task.creation_source.is_none() && task.session_id.is_some() {
+            task.creation_source = Some(TaskCreationSource::Session);
+        }
         task.board_id = board_id;
         if let Some(column_id) = column_id {
             set_task_column(&mut task, column_id);
@@ -487,7 +490,7 @@ mod tests {
 
     use super::{CreateTaskCommand, TaskApplicationService, UpdateTaskCommand};
     use crate::create_app_state;
-    use crate::models::task::{Task, TaskStatus};
+    use crate::models::task::{Task, TaskCreationSource, TaskStatus};
 
     fn random_db_path() -> PathBuf {
         std::env::temp_dir().join(format!("routa-task-service-{}.db", uuid::Uuid::new_v4()))
@@ -644,6 +647,48 @@ mod tests {
             .expect_err("invalid priority should fail");
 
         assert!(error.to_string().contains("Invalid priority"));
+        let _ = fs::remove_file(db_path);
+    }
+
+    #[tokio::test]
+    async fn create_task_marks_session_created_tasks() {
+        let (service, db_path) = setup_service().await;
+
+        let plan = service
+            .create_task(CreateTaskCommand {
+                title: "Session task".to_string(),
+                objective: "Verify session creation source".to_string(),
+                workspace_id: None,
+                session_id: Some("session-123".to_string()),
+                scope: None,
+                acceptance_criteria: None,
+                verification_commands: None,
+                test_cases: None,
+                dependencies: None,
+                parallel_group: None,
+                board_id: None,
+                column_id: None,
+                position: None,
+                priority: None,
+                labels: None,
+                assignee: None,
+                assigned_provider: None,
+                assigned_role: None,
+                assigned_specialist_id: None,
+                assigned_specialist_name: None,
+                create_github_issue: None,
+                repo_path: None,
+                codebase_ids: None,
+                github_id: None,
+                github_number: None,
+                github_url: None,
+                github_repo: None,
+                github_state: None,
+            })
+            .await
+            .expect("create task plan");
+
+        assert_eq!(plan.task.creation_source, Some(TaskCreationSource::Session));
         let _ = fs::remove_file(db_path);
     }
 

@@ -143,9 +143,8 @@ pub(super) async fn execute(
                 .get("sessionId")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
-            let task_id = uuid::Uuid::new_v4().to_string();
-            let task = crate::models::task::Task::new(
-                task_id.clone(),
+            let mut task = crate::models::task::Task::new(
+                uuid::Uuid::new_v4().to_string(),
                 title.to_string(),
                 objective.to_string(),
                 workspace_id.to_string(),
@@ -159,11 +158,20 @@ pub(super) async fn execute(
                 None,
                 None,
             );
+            if let Some(source) = args
+                .get("creationSource")
+                .and_then(|v| v.as_str())
+                .and_then(crate::models::task::TaskCreationSource::from_str)
+            {
+                task.creation_source = Some(source);
+            }
+            let task_id = task.id.clone();
             match state.task_store.save(&task).await {
                 Ok(_) => tool_result_json(&serde_json::json!({
                     "success": true,
                     "taskId": task_id,
-                    "title": title
+                    "title": title,
+                    "creationSource": task.creation_source
                 })),
                 Err(e) => tool_result_error(&e.to_string()),
             }
