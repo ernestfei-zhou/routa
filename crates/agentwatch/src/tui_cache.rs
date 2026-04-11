@@ -306,8 +306,23 @@ pub(super) fn short_state_code(state_code: &str) -> &'static str {
     }
 }
 
+pub(super) fn display_status_code(file: &crate::models::FileView) -> String {
+    if file.entry_kind.is_directory() {
+        "DIR".to_string()
+    } else {
+        short_state_code(&file.state_code).to_string()
+    }
+}
+
 fn compute_diff_stat(repo_root: &str, rel_path: &str, state_code: &str) -> DiffStatSummary {
-    let status = short_state_code(state_code).to_string();
+    let status = if std::fs::metadata(Path::new(repo_root).join(rel_path))
+        .map(|metadata| metadata.is_dir())
+        .unwrap_or(false)
+    {
+        "DIR".to_string()
+    } else {
+        short_state_code(state_code).to_string()
+    };
     let path = Path::new(repo_root).join(rel_path);
 
     if std::fs::metadata(&path)
@@ -390,6 +405,31 @@ fn compute_diff_stat(repo_root: &str, rel_path: &str, state_code: &str) -> DiffS
         status,
         additions: None,
         deletions: None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::display_status_code;
+    use crate::models::{AttributionConfidence, EntryKind, FileView};
+    use std::collections::BTreeSet;
+
+    #[test]
+    fn directory_entries_use_dir_status_label() {
+        let file = FileView {
+            rel_path: ".kiro/skills/developer-onboarding".to_string(),
+            dirty: true,
+            state_code: "untracked".to_string(),
+            entry_kind: EntryKind::Directory,
+            last_modified_at_ms: 0,
+            last_session_id: None,
+            confidence: AttributionConfidence::Unknown,
+            conflicted: false,
+            touched_by: BTreeSet::new(),
+            recent_events: Vec::new(),
+        };
+
+        assert_eq!(display_status_code(&file), "DIR");
     }
 }
 
