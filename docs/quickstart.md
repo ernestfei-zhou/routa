@@ -78,33 +78,21 @@ execution, and the three main working modes `Session`, `Kanban`, and `Team`.
     <strong>Getting Started</strong>
     The start path: overview, quick start, and changelog entry points.
   </a>
-  <a href="./core-concepts">
-    <strong>Core Concepts</strong>
-    Workspace, sessions, Kanban, Team, providers, and the product model.
-  </a>
   <a href="./use-routa">
     <strong>Use Routa</strong>
     Sessions, Kanban, Team, and the practical mode choices after setup.
   </a>
-  <a href="./platforms">
-    <strong>Platforms</strong>
-    Desktop, CLI, and Web as separate runtime surfaces and onboarding paths.
+  <a href="./developer-guide">
+    <strong>Developer Guide</strong>
+    Project structure, architecture, code style, testing, deployment, and contributing rules.
   </a>
-  <a href="./administration">
-    <strong>Administration</strong>
-    Self-hosting, deployment, operational setup, and release-oriented guidance.
-  </a>
-  <a href="./configuration">
-    <strong>Configuration</strong>
-    Providers, models, role defaults, and environment variables.
-  </a>
-  <a href="./deployment">
-    <strong>Deployment</strong>
-    Release artifacts, downloadable builds, and maintainer publishing guidance.
+  <a href="./design-docs">
+    <strong>Design Docs</strong>
+    Reviewed design intent, execution modes, and durable implementation reasoning.
   </a>
   <a href="./reference">
     <strong>Reference</strong>
-    Product specs, specialists, release process, and coding conventions.
+    Product specs, specialists, release process, and lookup-oriented material.
   </a>
   <a href="./whats-new">
     <strong>What's New</strong>
@@ -116,5 +104,6 @@ execution, and the three main working modes `Session`, `Kanban`, and `Team`.
 
 - Read [Getting Started](./getting-started) for the first 10 minutes path
 - Read [Use Routa](./use-routa) for Sessions, Kanban, Team, and common workflows
-- Read [Administration](./administration) if you are running or publishing Routa
+- Read [Developer Guide](./developer-guide) if you are contributing or operating Routa
+- Read [Design Docs](./design-docs) if you need design intent and deeper product reasoning
 - Read [What's New](./whats-new) for recent release notes and updates

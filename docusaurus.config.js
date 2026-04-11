@@ -60,38 +60,61 @@ module.exports = {
       items: [
         {
           type: "doc",
-          docId: "getting-started/index",
-          label: "Getting Started",
+          docId: "quick-start",
+          label: "Quick Start",
           position: "left",
         },
         {
-          type: "doc",
-          docId: "use-routa/index",
-          label: "Use Routa",
+          type: "dropdown",
+          label: "Developer Guide",
           position: "left",
+          items: [
+            {
+              type: "doc",
+              docId: "developer-guide/index",
+              label: "Overview",
+            },
+            {
+              type: "doc",
+              docId: "developer-guide/project-structure",
+              label: "Project Structure",
+            },
+            {
+              type: "doc",
+              docId: "ARCHITECTURE",
+              label: "Architecture",
+            },
+            {
+              type: "doc",
+              docId: "coding-style",
+              label: "Code Style",
+            },
+            {
+              type: "doc",
+              docId: "developer-guide/git-workflow",
+              label: "Git Workflow",
+            },
+            {
+              type: "doc",
+              docId: "developer-guide/testing",
+              label: "Testing",
+            },
+            {
+              type: "doc",
+              docId: "deployment/index",
+              label: "Deployment",
+            },
+            {
+              type: "doc",
+              docId: "developer-guide/contributing",
+              label: "Contributing",
+            },
+          ],
         },
         {
           type: "doc",
-          docId: "platforms/index",
-          label: "Platforms",
-          position: "left",
-        },
-        {
-          type: "doc",
-          docId: "administration/index",
-          label: "Administration",
-          position: "left",
-        },
-        {
-          type: "doc",
-          docId: "configuration/index",
-          label: "Configuration",
-          position: "left",
-        },
-        {
-          type: "doc",
-          docId: "reference/index",
-          label: "Reference",
+          docId: "design-docs/index",
+          label: "Design Docs",
           position: "left",
         },
         {
@@ -101,9 +124,9 @@ module.exports = {
           position: "left",
         },
         {
-          href: "https://github.com/phodal/routa",
-          label: "GitHub",
-          position: "right",
+          to: "/blog",
+          label: "Blog",
+          position: "left",
         },
       ],
     },
@@ -131,7 +154,7 @@ module.exports = {
             },
             {
               label: "Project Structure",
-              href: "https://github.com/phodal/routa/blob/main/README.md#repository-map",
+              to: "/developer-guide/project-structure",
             },
             {
               label: "Architecture",
@@ -143,11 +166,11 @@ module.exports = {
             },
             {
               label: "Git Workflow",
-              href: "https://github.com/phodal/routa/blob/main/AGENTS.md#git-discipline",
+              to: "/developer-guide/git-workflow",
             },
             {
               label: "Testing",
-              href: "https://github.com/phodal/routa/blob/main/docs/fitness/README.md",
+              to: "/developer-guide/testing",
             },
             {
               label: "Deployment",
@@ -155,13 +178,17 @@ module.exports = {
             },
             {
               label: "Contributing",
-              href: "https://github.com/phodal/routa/blob/main/CONTRIBUTING.md",
+              to: "/developer-guide/contributing",
             },
           ],
         },
         {
           title: "Learn",
           items: [
+            {
+              label: "Developer Guide",
+              to: "/developer-guide",
+            },
             {
               label: "Use Routa",
               to: "/use-routa",
@@ -171,28 +198,16 @@ module.exports = {
               to: "/platforms",
             },
             {
-              label: "Administration",
-              to: "/administration",
-            },
-            {
-              label: "Configuration",
-              to: "/configuration",
-            },
-            {
-              label: "Deployment",
-              to: "/deployment",
-            },
-            {
-              label: "What's New",
-              to: "/whats-new",
+              label: "Design Docs",
+              to: "/design-docs",
             },
             {
               label: "Reference",
               to: "/reference",
             },
             {
-              label: "Design Docs",
-              to: "/design-docs",
+              label: "What's New",
+              to: "/whats-new",
             },
             {
               label: "Blog",

@@ -2,11 +2,6 @@
 module.exports = {
   docsSidebar: [
     {
-      type: "doc",
-      id: "quickstart",
-      label: "Home",
-    },
-    {
       type: "category",
       label: "Getting Started",
       collapsible: false,
@@ -26,34 +21,6 @@ module.exports = {
           type: "doc",
           id: "getting-started/changelog",
           label: "Changelog",
-        },
-      ],
-    },
-    {
-      type: "category",
-      label: "Core Concepts",
-      collapsible: false,
-      collapsed: false,
-      items: [
-        {
-          type: "doc",
-          id: "core-concepts/index",
-          label: "Overview",
-        },
-        {
-          type: "doc",
-          id: "core-concepts/how-routa-works",
-          label: "How Routa Works",
-        },
-        {
-          type: "doc",
-          id: "ARCHITECTURE",
-          label: "Architecture",
-        },
-        {
-          type: "doc",
-          id: "design-docs/execution-modes",
-          label: "Execution Modes",
         },
       ],
     },
@@ -97,47 +64,54 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Platforms",
+      label: "Developer Guide",
       collapsible: false,
       collapsed: false,
       items: [
+        {
+          type: "doc",
+          id: "developer-guide/index",
+          label: "Overview",
+        },
+        {
+          type: "doc",
+          id: "developer-guide/project-structure",
+          label: "Project Structure",
+        },
+        {
+          type: "doc",
+          id: "ARCHITECTURE",
+          label: "Architecture",
+        },
         {
           type: "doc",
           id: "platforms/index",
-          label: "Overview",
+          label: "Platforms",
         },
-        {
-          type: "doc",
-          id: "platforms/desktop",
-          label: "Desktop",
-        },
-        {
-          type: "doc",
-          id: "platforms/cli",
-          label: "CLI",
-        },
-        {
-          type: "doc",
-          id: "platforms/web",
-          label: "Web",
-        },
-      ],
-    },
-    {
-      type: "category",
-      label: "Administration",
-      collapsible: false,
-      collapsed: false,
-      items: [
         {
           type: "doc",
           id: "administration/index",
-          label: "Overview",
+          label: "Administration",
         },
         {
           type: "doc",
-          id: "administration/self-hosting",
-          label: "Self-Hosting",
+          id: "configuration/index",
+          label: "Configuration",
+        },
+        {
+          type: "doc",
+          id: "coding-style",
+          label: "Code Style",
+        },
+        {
+          type: "doc",
+          id: "developer-guide/git-workflow",
+          label: "Git Workflow",
+        },
+        {
+          type: "doc",
+          id: "developer-guide/testing",
+          label: "Testing",
         },
         {
           type: "doc",
@@ -146,31 +120,56 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "release-guide",
-          label: "Release Guide",
+          id: "developer-guide/contributing",
+          label: "Contributing",
         },
       ],
     },
     {
       type: "category",
-      label: "Configuration",
+      label: "Design Docs",
       collapsible: false,
       collapsed: false,
       items: [
         {
           type: "doc",
-          id: "configuration/index",
+          id: "design-docs/index",
           label: "Overview",
         },
         {
           type: "doc",
-          id: "configuration/providers-and-models",
-          label: "Providers and Models",
+          id: "core-concepts/index",
+          label: "Core Concepts",
         },
         {
           type: "doc",
-          id: "configuration/environment-variables",
-          label: "Environment Variables",
+          id: "core-concepts/how-routa-works",
+          label: "How Routa Works",
+        },
+        {
+          type: "doc",
+          id: "design-docs/execution-modes",
+          label: "Execution Modes",
+        },
+        {
+          type: "doc",
+          id: "design-docs/core-beliefs",
+          label: "Core Beliefs",
+        },
+        {
+          type: "doc",
+          id: "design-docs/golden-rules",
+          label: "Golden Rules",
+        },
+        {
+          type: "doc",
+          id: "design-docs/workspace-centric-redesign",
+          label: "Workspace-Centric Redesign",
+        },
+        {
+          type: "doc",
+          id: "design-docs/architecture-rule-dsl",
+          label: "Architecture Rule DSL",
         },
       ],
     },
@@ -197,8 +196,8 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "coding-style",
-          label: "Code Style",
+          id: "release-guide",
+          label: "Release Guide",
         },
         {
           type: "doc",
