@@ -178,10 +178,19 @@ metrics:
   # ══════════════════════════════════════════════════════════════
 
   - name: eslint_pass
-    command: npm run lint 2>&1
+    command: |
+      changed_files=$(git diff --name-only --diff-filter=ACMR "${ROUTA_FITNESS_CHANGED_BASE:-HEAD}" -- src apps crates 2>/dev/null | \
+        grep -E '\.(ts|tsx|js|jsx|cjs|mjs)$' | \
+        grep -vE '(^|/)(node_modules|target|\.next|_next|bundled)/' || true)
+
+      if [ -z "$changed_files" ]; then
+        echo "No changed lintable files"
+      else
+        printf '%s\n' "$changed_files" | xargs npx eslint 2>&1
+      fi
     hard_gate: true
     tier: fast
-    description: "ESLint 必须通过"
+    description: "ESLint 必须通过；fast 模式优先只检查本地变更文件"
 
   - name: ts_typecheck_pass
     command: node --import tsx tools/hook-runtime/src/typecheck-smart.ts 2>&1
