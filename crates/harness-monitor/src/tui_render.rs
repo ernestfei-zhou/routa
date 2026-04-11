@@ -1070,6 +1070,10 @@ fn render_file_header_line(state: &RuntimeState, cache: &AppCache, _width: u16) 
     let colors = palette(state.theme_mode);
     let files = state.file_items();
     let _ = cache;
+    let untracked = files
+        .iter()
+        .filter(|file| file.state_code == "untracked")
+        .count();
     let commit_total = state
         .ahead_count
         .map(|count| count.to_string())
@@ -1080,8 +1084,9 @@ fn render_file_header_line(state: &RuntimeState, cache: &AppCache, _width: u16) 
         .map(|count| count.to_string())
         .unwrap_or_else(|| "...".to_string());
     let summary = format!(
-        "{}, {}, workspace: {}, {} agent{}, branch: {}, {}",
+        "{}, {}, {}, workspace: {}, {} agent{}, branch: {}, {}",
         pluralize(files.len(), "file"),
+        count_label(untracked, "untracked"),
         pluralize_count_text(&commit_total, "commit"),
         state.selected_workspace_scope_label(),
         workspace_agents,
@@ -1104,6 +1109,10 @@ fn pluralize(count: usize, noun: &str) -> String {
     } else {
         format!("{count} {noun}s")
     }
+}
+
+fn count_label(count: usize, label: &str) -> String {
+    format!("{count} {label}")
 }
 
 fn pluralize_count_text(count: &str, noun: &str) -> String {
@@ -2149,9 +2158,14 @@ fn render_agent_rows(state: &RuntimeState, colors: UiPalette) -> Vec<Line<'stati
 
 fn render_title_bar(frame: &mut Frame, area: Rect, state: &RuntimeState) {
     let colors = palette(state.theme_mode);
-    let dirty = state.file_items().len();
-    let unknown = state
-        .file_items()
+    let files = state.file_items();
+    let dirty = files.len();
+    let untracked = files
+        .iter()
+        .filter(|file| file.state_code == "untracked")
+        .count();
+    let unattributed = files
+        .iter()
         .into_iter()
         .filter(|file| {
             file.conflicted
@@ -2182,7 +2196,10 @@ fn render_title_bar(frame: &mut Frame, area: Rect, state: &RuntimeState) {
             Style::default().fg(colors.text).bg(colors.surface),
         ),
         Span::styled(
-            format!("dirty:{}  unknown:{}  ", dirty, unknown),
+            format!(
+                "dirty:{}  untracked:{}  unattributed:{}  ",
+                dirty, untracked, unattributed
+            ),
             Style::default().fg(colors.text).bg(colors.surface),
         ),
         Span::styled(
