@@ -4,6 +4,9 @@ Design docs are the canonical home for durable implementation intent in Routa. U
 you need to understand why the system is shaped the way it is, which invariants matter, and
 which product concepts must survive refactors.
 
+If you are still trying to get Routa running, this is not the right first stop. Go back to
+[Quick Start](/quick-start), [Platforms](/platforms), or [Use Routa](/use-routa).
+
 ## Start Here
 
 If you only want the highest-signal reading path:
@@ -43,6 +46,9 @@ The repository still contains historical design material under `.kiro/specs/`. T
 useful context, but they are not automatically canonical. This section exists so the public
 design-docs area stays curated instead of turning into a raw archive.
 
+<details>
+<summary>Legacy Specs Inventory</summary>
+
 | Legacy Spec | Scope | Current Handling |
 |---|---|---|
 | `.kiro/specs/docker-agent-execution/design.md` | Docker-backed ACP agent execution architecture | indexed only |
@@ -53,6 +59,8 @@ design-docs area stays curated instead of turning into a raw archive.
 | `.kiro/specs/workspace-centric-redesign/design.md` | Workspace-first redesign architecture | indexed only |
 | `.kiro/specs/workspace-centric-redesign/requirements.md` | Workspace-first redesign requirements | indexed only |
 | `.kiro/specs/workspace-centric-redesign/tasks.md` | Workspace-first redesign task breakdown | indexed only |
+
+</details>
 
 ## Curation Rules
 

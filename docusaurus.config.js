@@ -81,6 +81,12 @@ module.exports = {
           position: "left",
         },
         {
+          type: "doc",
+          docId: "use-routa/index",
+          label: "Use Routa",
+          position: "left",
+        },
+        {
           type: "dropdown",
           label: "Developer Guide",
           position: "left",
@@ -206,29 +212,45 @@ module.exports = {
           ],
         },
         {
-          title: "Developer Guide",
+          title: "Use Routa",
           items: [
             {
               label: "Overview",
-              to: "/developer-guide",
+              to: "/use-routa",
             },
             {
-              label: "Testing",
-              to: "/developer-guide/testing",
+              label: "Sessions",
+              to: "/use-routa/sessions",
             },
             {
-              label: "Deployment",
-              to: "/deployment",
+              label: "Kanban",
+              to: "/use-routa/kanban",
             },
             {
-              label: "Contributing",
-              to: "/developer-guide/contributing",
+              label: "Team",
+              to: "/use-routa/team",
+            },
+            {
+              label: "Common Workflows",
+              to: "/use-routa/common-workflows",
             },
           ],
         },
         {
-          title: "Learn",
+          title: "Build And Run",
           items: [
+            {
+              label: "Developer Guide",
+              to: "/developer-guide",
+            },
+            {
+              label: "Configuration",
+              to: "/configuration",
+            },
+            {
+              label: "Administration",
+              to: "/administration",
+            },
             {
               label: "Design Docs",
               to: "/design-docs",
@@ -237,22 +259,18 @@ module.exports = {
               label: "Reference",
               to: "/reference",
             },
-            {
-              label: "Blog",
-              to: "/blog",
-            },
           ],
         },
         {
           title: "Project",
           items: [
             {
-              label: "GitHub",
-              href: "https://github.com/phodal/routa",
+              label: "Blog",
+              to: "/blog",
             },
             {
-              label: "Issues",
-              href: "https://github.com/phodal/routa/issues",
+              label: "GitHub",
+              href: "https://github.com/phodal/routa",
             },
           ],
         },

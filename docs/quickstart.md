@@ -24,6 +24,38 @@ hide_title: true
   </div>
 </div>
 
+## Start In 5 Minutes
+
+If you are evaluating Routa, do not start by reading everything. Pick one path and aim for one
+real result:
+
+<div className="routa-start-grid">
+  <div className="routa-start-card">
+    <span className="routa-start-card__badge">Recommended</span>
+    <h3>Desktop</h3>
+    <p>Best for most users who want the full Routa product surface with the least setup work.</p>
+    <code>Download from GitHub Releases</code>
+    <p>Create a workspace, attach a repo, then start with a Session.</p>
+    <a className="routa-inline-link" href="/routa/platforms/desktop">Open Desktop Guide</a>
+  </div>
+  <div className="routa-start-card">
+    <span className="routa-start-card__badge">Terminal First</span>
+    <h3>CLI</h3>
+    <p>Best when your repository is already open in a terminal and you want the shortest path.</p>
+    <code>npm install -g routa-cli</code>
+    <p>Then run <code>routa -p "Explain this repository"</code>.</p>
+    <a className="routa-inline-link" href="/routa/platforms/cli">Open CLI Guide</a>
+  </div>
+  <div className="routa-start-card">
+    <span className="routa-start-card__badge">Self-Hosted</span>
+    <h3>Web</h3>
+    <p>Best for browser-based access in your own environment or internal deployment.</p>
+    <code>npm run dev</code>
+    <p>Use this path when you want the browser surface rather than the packaged app.</p>
+    <a className="routa-inline-link" href="/routa/platforms/web">Open Web Guide</a>
+  </div>
+</div>
+
 ## What You Can Do
 
 <div className="routa-grid">
@@ -55,23 +87,23 @@ hide_title: true
 <div className="routa-doc-map">
   <a href="/routa/getting-started">
     <strong>Getting Started</strong>
-    The start path: overview, quick start, and changelog entry points.
+    Read this only after you know whether you want Desktop, CLI, or Web.
   </a>
   <a href="/routa/use-routa">
     <strong>Use Routa</strong>
-    Sessions, Kanban, Team, and the practical mode choices after setup.
+    Learn what to do after setup: Sessions, Kanban, Team, and common workflows.
   </a>
   <a href="/routa/developer-guide">
     <strong>Developer Guide</strong>
-    Platforms, configuration, administration, and the deeper technical context behind Routa.
+    Use this when you need configuration, hosting, testing, or deeper technical context.
   </a>
   <a href="/routa/design-docs">
     <strong>Design Docs</strong>
-    Reviewed design intent, execution modes, and durable implementation reasoning.
+    Read this only when you need design intent, invariants, or implementation reasoning.
   </a>
   <a href="/routa/reference">
     <strong>Reference</strong>
-    Product specs, specialists, release process, and lookup-oriented material.
+    Lookup material for specialists, product specs, release process, and stable references.
   </a>
   <a href="/routa/whats-new">
     <strong>What's New</strong>

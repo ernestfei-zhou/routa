@@ -222,6 +222,70 @@ a.routa-pill:hover,
   margin: 1.5rem 0;
 }
 
+.theme-doc-markdown .routa-start-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin: 1.5rem 0;
+}
+
+.theme-doc-markdown .routa-start-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.2rem;
+  border: 1px solid var(--routa-border);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.98));
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+}
+
+[data-theme="dark"] .theme-doc-markdown .routa-start-card {
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.98));
+  box-shadow: none;
+}
+
+.theme-doc-markdown .routa-start-card h3,
+.theme-doc-markdown .routa-start-card p {
+  margin: 0;
+}
+
+.theme-doc-markdown .routa-start-card__badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: var(--routa-blue-soft);
+  color: var(--routa-blue);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.theme-doc-markdown .routa-start-card code {
+  display: inline-block;
+  width: fit-content;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--routa-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 0.92rem;
+}
+
+[data-theme="dark"] .theme-doc-markdown .routa-start-card code {
+  background: rgba(15, 23, 42, 0.86);
+}
+
+.theme-doc-markdown .routa-inline-link {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  font-weight: 600;
+}
+
 .theme-doc-markdown .routa-card {
   height: 100%;
   padding: 1.1rem 1.15rem;

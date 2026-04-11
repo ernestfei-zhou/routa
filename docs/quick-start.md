@@ -14,6 +14,15 @@ Routa currently has three ways to start using the product:
 If you only want the shortest path to “Routa is running and useful”, start with `Desktop` or
 `CLI`.
 
+## First Success Checklist
+
+The right goal for your first 5 minutes is not “understand all of Routa”. It is:
+
+1. choose one surface
+2. make one provider available
+3. point Routa at a real repository
+4. get one useful answer or plan back
+
 ## Which Path Should You Choose?
 
 | Path | Best for | Install method | Recommendation |
@@ -21,6 +30,27 @@ If you only want the shortest path to “Routa is running and useful”, start w
 | Desktop | Most users, visual workflows, Kanban/session/team UI | Download from [GitHub Releases](https://github.com/phodal/routa/releases) | Recommended |
 | CLI | Terminal-first users, scripting, ACP/runtime commands | `npm install -g routa-cli` or `cargo install routa-cli` | Recommended |
 | Web | Self-hosting, browser-based access, internal deployment | Run the web runtime from source | Optional |
+
+## Fastest Paths
+
+If you want the shortest “it works” path, use one of these:
+
+### Desktop In Practice
+
+1. Download Routa Desktop from [GitHub Releases](https://github.com/phodal/routa/releases).
+2. Create a workspace and enable one provider.
+3. Attach a repository.
+4. Open `Session` and ask: `Explain the architecture of this repository`.
+
+### CLI In Practice
+
+```bash
+npm install -g routa-cli
+routa -p "Explain the architecture of this repository"
+```
+
+If that returns a useful answer against a real repository, your CLI setup is already good enough
+to keep going.
 
 ## Desktop
 
@@ -153,6 +183,16 @@ Use these defaults:
 - choose `Desktop` if you want the product experience
 - choose `CLI` if you want the terminal experience
 - choose `Web` if you want browser-based access or self-hosted deployment
+
+## What To Read Next
+
+Pick the next page based on what you are trying to do:
+
+- [Use Routa](./use-routa) if setup is done and you want workflows
+- [Configuration](./configuration) if models or providers are not ready yet
+- [Platforms](./platforms) if you are still choosing between Desktop, CLI, and Web
+- [Use Routa](./use-routa/common-workflows) if you want examples rather than concepts
+- [What's New](./whats-new) if you are evaluating recent changes
 
 ## Next Steps
 
