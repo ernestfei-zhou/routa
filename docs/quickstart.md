@@ -37,9 +37,43 @@ Instead of letting one long-running chat own everything, Routa makes work explic
 - specialists are attached to stages like backlog refinement, implementation, review, and reporting
 - protocol adapters let external agent runtimes join the flow without changing the product model
 
+## Start Here
+
+Routa currently has three ways to use the product:
+
+### Desktop
+
+Best default for most users.
+
+- install by downloading the latest app from [GitHub Releases](https://github.com/phodal/routa/releases)
+- use the full workspace, session, kanban, and team UI
+- local-first runtime with bundled desktop shell and local storage
+
+### CLI
+
+Best if you already work from the terminal.
+
+- install from npm with `npm install -g routa-cli`
+- or install from Cargo with `cargo install routa-cli`
+- good for one-shot prompts, ACP runtime commands, and scripted workflows
+
+### Web
+
+Best for contributors and self-hosting.
+
+- run the Next.js web surface locally or deploy it yourself
+- shares the same domain semantics as Desktop
+- more of a runtime surface than the fastest first-install path
+
+If you want the shortest install path, read [Quick Start](./quick-start).
+
 ## Documentation Map
 
 <div className="routa-doc-map">
+  <a href="./quick-start">
+    <strong>Quick Start</strong>
+    Install and launch Routa through Desktop, CLI, or Web, with emphasis on Desktop and CLI.
+  </a>
   <a href="./ARCHITECTURE">
     <strong>Architecture</strong>
     System boundaries, runtime surfaces, domain model, and cross-backend invariants.
@@ -55,10 +89,6 @@ Instead of letting one long-running chat own everything, Routa makes work explic
   <a href="./specialists">
     <strong>Specialists</strong>
     Built-in agent roles, responsibilities, and generated specialist reference pages.
-  </a>
-  <a href="./exec-plans">
-    <strong>Execution Plans</strong>
-    Active implementation plans, completed work, and cross-cutting tech debt tracking.
   </a>
   <a href="./releases/v0.2.5-release-notes">
     <strong>Releases</strong>
@@ -91,177 +121,3 @@ Instead of letting one long-running chat own everything, Routa makes work explic
     </p>
   </div>
 </div>
-
-## Quickstart
-
-```bash
-npm install --legacy-peer-deps
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
-To run the desktop shell as well:
-
-```bash
-npm --prefix apps/desktop install
-npm run tauri:dev
-```
-
-To run the Rust backend directly:
-
-```bash
-cargo run -p routa-server
-```
-
-If you are running against a custom backend endpoint, set:
-
-```bash
-ROUTA_RUST_BACKEND_URL="http://127.0.0.1:3210"
-npm run dev
-```
-
-### CLI
-
-The Rust CLI binary is `routa`. Install it from crates.io, from the current
-checkout, or build it without installing:
-
-```bash
-cargo install routa-cli
-cargo install --path crates/routa-cli
-cargo build --release --manifest-path crates/routa-cli/Cargo.toml
-```
-
-Run a quick one-off `DEVELOPER` session from a single requirement:
-
-```bash
-routa -p "Add OAuth login with Google and GitHub providers"
-routa -p "Refactor the auth module" --workspace-id my-project
-routa -p "Investigate flaky tests" --provider claude
-```
-
-Prompt mode uses:
-
-- `--workspace-id <ID>`: target workspace, default `default`
-- `--provider <PROVIDER>`: ACP provider for the developer session, default `opencode`
-- `--db <PATH>`: SQLite database path, default `routa.db`
-
-Start the local Routa backend server:
-
-```bash
-routa server --host 127.0.0.1 --port 3210
-routa server --static-dir ../../out
-```
-
-Run Routa itself as an ACP server over stdio:
-
-```bash
-routa acp serve --workspace-id my-project --provider opencode
-```
-
-Useful ACP runtime commands:
-
-```bash
-routa acp list
-routa acp installed
-routa acp install opencode
-routa acp runtime-status
-routa acp ensure-node
-routa acp ensure-uv
-```
-
-Execute a specialist directly or run a coordinated team session:
-
-```bash
-routa specialist run crafter -p "Implement a calculator CLI"
-routa specialist run ui-journey-evaluator -p "scenario: core-home-session"
-routa team run -t "Design and implement Kanban automation" --workspace-id default
-routa team status --workspace-id default
-```
-
-## Validation Basics
-
-```bash
-npm run lint
-npm run test:run
-```
-
-## Core Usage
-
-### Web
-
-Use the home page to create or enter a workspace, connect a repository, and route a new
-requirement into the board-driven workflow.
-
-### CLI
-
-Top-level commands from `routa --help`:
-
-```text
-server      Start the Routa HTTP backend server
-acp         ACP server and runtime management
-agent       Agent lifecycle and specialist execution helpers
-specialist  Run specialist definitions directly
-task        Task CRUD and artifact operations
-kanban      Board, card, and column management
-workspace   Workspace management
-skill       Skill discovery and reload
-session     Persisted ACP session inspection and picking
-rpc         Send raw JSON-RPC requests
-delegate    Delegate a task to a specialist agent
-chat        Interactive chat with an agent
-scan        Repository static/security scans
-workflow    YAML-defined workflow execution and validation
-review      Read-only code review analysis against git changes
-team        Team coordination with an agent lead
-```
-
-Common CLI workflows:
-
-```bash
-routa workspace list
-routa workspace create --name my-project
-
-routa agent list --workspace-id default
-routa agent create --name dev-agent --role DEVELOPER --workspace-id default
-routa agent run --specialist crafter -p "Add auth middleware" --workspace-id default
-
-routa task list --workspace-id default
-routa task create --title "Add feature" --objective "Implement user authentication" --workspace-id default
-routa task update-status --id <task-id> --status COMPLETED --agent-id <agent-id>
-routa task artifact-provide --task-id <task-id> --agent-id <agent-id> --type logs --content "build ok"
-routa task artifact-list --task-id <task-id>
-
-routa session list --workspace-id default
-routa session get --id <session-id>
-routa session pick --workspace-id default
-
-routa kanban card create --title "Investigate release flow" --workspace-id default --board-id <board-id> --column-id <column-id>
-routa kanban card move --card-id <card-id> --target-column-id todo
-
-routa workflow validate .routa/workflows/release.yaml
-routa workflow run .routa/workflows/release.yaml --verbose
-
-routa chat --workspace-id default --provider opencode --role DEVELOPER
-routa scan --project-dir . --output-dir artifacts/security
-routa review --help
-routa delegate --task-id <task-id> --caller-agent-id <parent-agent-id> --caller-session-id <session-id> --specialist CRAFTER --provider opencode
-```
-
-## Recommended Reading Order
-
-- Architecture: [ARCHITECTURE](./ARCHITECTURE)
-- Design docs: [Design Docs Index](./design-docs)
-- Product spec: [Feature tree](./product-specs/FEATURE_TREE)
-- Specialists: [Specialist reference](./specialists)
-- Release notes: [v0.2.5 notes](./releases/v0.2.5-release-notes)
-
-## FAQ
-
-- If a provider command is missing, install provider CLI first (`opencode`, `claude`, etc.).
-- If Tauri dependencies are missing, install desktop dependencies with `npm --prefix apps/desktop install`.
-- If static build fails, check Node version and run from repo root.
-
-## Demo
-
-- Video walkthrough: https://www.bilibili.com/video/BV16CwyzUED5/

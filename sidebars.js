@@ -8,6 +8,11 @@ module.exports = {
     },
     {
       type: "doc",
+      id: "quick-start",
+      label: "Quick Start",
+    },
+    {
+      type: "doc",
       id: "ARCHITECTURE",
       label: "Architecture",
     },

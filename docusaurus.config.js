@@ -60,15 +60,46 @@ module.exports = {
       items: [
         {
           type: "doc",
-          docId: "quickstart",
-          label: "Overview",
+          docId: "quick-start",
+          label: "Quick Start",
           position: "left",
         },
         {
-          type: "doc",
-          docId: "ARCHITECTURE",
-          label: "Architecture",
+          label: "Developer Guide",
           position: "left",
+          items: [
+            {
+              label: "Project Structure",
+              href: "https://github.com/phodal/routa/blob/main/README.md#repository-map",
+            },
+            {
+              type: "doc",
+              docId: "ARCHITECTURE",
+              label: "Architecture",
+            },
+            {
+              type: "doc",
+              docId: "coding-style",
+              label: "Code Style",
+            },
+            {
+              label: "Git Workflow",
+              href: "https://github.com/phodal/routa/blob/main/AGENTS.md#git-discipline",
+            },
+            {
+              label: "Testing",
+              href: "https://github.com/phodal/routa/blob/main/docs/fitness/README.md",
+            },
+            {
+              type: "doc",
+              docId: "release-guide",
+              label: "Deployment",
+            },
+            {
+              label: "Contributing",
+              href: "https://github.com/phodal/routa/blob/main/CONTRIBUTING.md",
+            },
+          ],
         },
         {
           type: "doc",
@@ -92,19 +123,47 @@ module.exports = {
       style: "dark",
       links: [
         {
-          title: "Docs",
+          title: "Get Started",
           items: [
             {
-              label: "Overview",
-              to: "/",
+              label: "Quick Start",
+              to: "/quick-start",
             },
             {
-              label: "Quickstart",
-              to: "/#quickstart",
+              label: "Desktop Releases",
+              href: "https://github.com/phodal/routa/releases",
+            },
+            {
+              label: "CLI Package",
+              href: "https://www.npmjs.com/package/routa-cli",
+            },
+            {
+              label: "Project Structure",
+              href: "https://github.com/phodal/routa/blob/main/README.md#repository-map",
             },
             {
               label: "Architecture",
               to: "/ARCHITECTURE",
+            },
+            {
+              label: "Code Style",
+              to: "/coding-style",
+            },
+            {
+              label: "Git Workflow",
+              href: "https://github.com/phodal/routa/blob/main/AGENTS.md#git-discipline",
+            },
+            {
+              label: "Testing",
+              href: "https://github.com/phodal/routa/blob/main/docs/fitness/README.md",
+            },
+            {
+              label: "Deployment",
+              to: "/release-guide",
+            },
+            {
+              label: "Contributing",
+              href: "https://github.com/phodal/routa/blob/main/CONTRIBUTING.md",
             },
           ],
         },
