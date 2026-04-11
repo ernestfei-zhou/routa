@@ -78,12 +78,6 @@ module.exports = {
         },
         {
           type: "doc",
-          docId: "deployment/index",
-          label: "Deployment",
-          position: "left",
-        },
-        {
-          type: "doc",
           docId: "configuration/index",
           label: "Configuration",
           position: "left",
@@ -92,6 +86,12 @@ module.exports = {
           type: "doc",
           docId: "reference/index",
           label: "Reference",
+          position: "left",
+        },
+        {
+          type: "doc",
+          docId: "whats-new/index",
+          label: "What's New",
           position: "left",
         },
         {
@@ -171,6 +171,10 @@ module.exports = {
             {
               label: "Deployment",
               to: "/deployment",
+            },
+            {
+              label: "What's New",
+              to: "/whats-new",
             },
             {
               label: "Reference",

@@ -197,5 +197,33 @@ module.exports = {
         },
       ],
     },
+    {
+      type: "category",
+      label: "What's New",
+      collapsible: false,
+      collapsed: false,
+      items: [
+        {
+          type: "doc",
+          id: "whats-new/index",
+          label: "Overview",
+        },
+        {
+          type: "doc",
+          id: "getting-started/changelog",
+          label: "Changelog",
+        },
+        {
+          type: "doc",
+          id: "releases/v0.14.0-release-notes",
+          label: "Latest Release",
+        },
+        {
+          type: "link",
+          label: "Blog",
+          href: "/blog",
+        },
+      ],
+    },
   ],
 };

@@ -9,11 +9,23 @@ what "working" should look like after setup.
 
 ## Choose Your Surface
 
-| Surface | Start here when you want | Recommendation |
-| --- | --- | --- |
-| [Desktop](/platforms/desktop) | the full product with workspace, session, kanban, and team UI | Recommended |
-| [CLI](/platforms/cli) | terminal-first prompts, scripting, and ACP/runtime commands | Recommended |
-| [Web](/platforms/web) | local contribution or self-hosting | Optional |
+<div className="routa-doc-map">
+  <a href="/routa/platforms/desktop">
+    <strong>Desktop</strong>
+    Recommended for most users. Install from GitHub Releases and use the full workspace,
+    session, kanban, and team UI.
+  </a>
+  <a href="/routa/platforms/cli">
+    <strong>CLI</strong>
+    Best for terminal-first usage. Install with <code>npm install -g routa-cli</code> and start
+    with prompts, scripting, or ACP/runtime inspection.
+  </a>
+  <a href="/routa/platforms/web">
+    <strong>Web</strong>
+    Best for contributors and self-hosting. Run from source when you need the browser runtime
+    rather than the packaged product path.
+  </a>
+</div>
 
 If you only want the shortest path to a successful first run, start with [Quick Start](/quick-start)
 and choose `Desktop` or `CLI`.

@@ -98,6 +98,10 @@ If you want the shortest install path, read [Quick Start](./quick-start).
     <strong>Reference</strong>
     Product specs, specialists, release process, and coding conventions.
   </a>
+  <a href="./whats-new">
+    <strong>What's New</strong>
+    Recent release notes, changelog entry points, and current product updates.
+  </a>
 </div>
 
 ## Platform Surface
