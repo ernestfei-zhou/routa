@@ -1,7 +1,7 @@
 ---
 title: "Harness build/test feedback loops should be YAML-driven and visually compressed"
 date: "2026-03-29"
-status: open
+status: resolved
 severity: medium
 area: "ui"
 tags: ["harness", "build", "test", "yaml", "density", "governance-loop"]
@@ -11,6 +11,11 @@ related_issues: [
   "docs/issues/2026-03-29-harness-governance-loop-panel-orchestration-gap.md",
   "docs/issues/2026-03-28-harness-governance-loop-semantic-drift.md"
 ]
+github_issue: 250
+github_state: "closed"
+github_url: "https://github.com/phodal/routa/issues/250"
+resolved_at: "2026-03-30"
+resolution: "Resolved by adding checked-in build/test harness surface contracts and wiring compact repo-signal panels into the Harness governance experience."
 ---
 
 # Harness 的 build / test 反馈环仍然缺少稳定配置源，而且 UI 密度过高
