@@ -703,7 +703,7 @@ fn render_runs_panel(frame: &mut Frame, area: ratatui::layout::Rect, state: &Run
                 colors.surface
             };
 
-            let list_state = run_list_state_label(session);
+            let list_state = run_list_state_label(state, session);
             let status_color = run_status_color(list_state);
             let icon = crate::models::HookClient::from_str(&session.client).icon();
             let run_name = if session.is_unknown_bucket {
@@ -712,7 +712,7 @@ fn render_runs_panel(frame: &mut Frame, area: ratatui::layout::Rect, state: &Run
                 session.display_name.clone()
             };
             let role = infer_run_role(session);
-            let origin = run_origin_label(session);
+            let origin = run_origin_label(state, session);
             let run_label_width = split[1].width.saturating_sub(18) as usize;
             let event_label = match (&session.last_event_name, &session.last_tool_name) {
                 (Some(event), Some(tool)) if !tool.is_empty() => format!("{event}/{tool}"),
@@ -1455,13 +1455,13 @@ fn build_run_operator_model(
 ) -> RunOperatorModel {
     let changed_files = changed_files_for_run(state, run);
     let role = infer_run_role(run);
-    let origin_label = run_origin_label(run);
+    let origin_label = run_origin_label(state, run);
     let workspace_path = workspace_path_for_run(state, run);
     let process_cwd = process_cwd_for_run(state, run);
     let effect_classes = infer_effect_classes(run, &changed_files);
     let policy_decision = infer_policy_decision(run, &effect_classes);
     let evidence = build_evidence_requirements(cache, run, &changed_files, policy_decision.clone());
-    let integrity_warning = integrity_warning_for_run(run, &changed_files);
+    let integrity_warning = integrity_warning_for_run(state, run, &changed_files);
     let workspace_state = infer_workspace_state(
         cache,
         state,
@@ -1469,8 +1469,8 @@ fn build_run_operator_model(
         &changed_files,
         integrity_warning.as_ref(),
     );
-    let block_reason = infer_block_reason(cache, run, policy_decision.clone(), &evidence);
-    let operator_state = infer_operator_state(cache, run, block_reason.as_deref());
+    let block_reason = infer_block_reason(state, cache, run, policy_decision.clone(), &evidence);
+    let operator_state = infer_operator_state(state, cache, run, block_reason.as_deref());
     let approval_label = approval_label_for(policy_decision.clone(), &evidence);
     let next_action = next_action_for(run, policy_decision.clone(), block_reason.as_deref());
     let handoff_summary = handoff_summary_for(
@@ -1490,7 +1490,11 @@ fn build_run_operator_model(
         policy_decision,
         approval_label,
         block_reason,
-        eval_summary: cache.fitness_snapshot().map(summarize_eval_snapshot),
+        eval_summary: if is_auggie_mcp_service_run(state, run) {
+            Some("workspace-shared".to_string())
+        } else {
+            cache.fitness_snapshot().map(summarize_eval_snapshot)
+        },
         evidence,
         integrity_warning,
         next_action,
@@ -1499,9 +1503,14 @@ fn build_run_operator_model(
     }
 }
 
-fn run_list_state_label(run: &crate::state::SessionListItem) -> &'static str {
+fn run_list_state_label(
+    state: &RuntimeState,
+    run: &crate::state::SessionListItem,
+) -> &'static str {
     if run.is_unknown_bucket {
         "attention"
+    } else if is_auggie_mcp_service_run(state, run) {
+        "service"
     } else if run.is_synthetic_agent_run {
         if run.status == "active" {
             "executing"
@@ -1575,9 +1584,11 @@ fn infer_run_role(run: &crate::state::SessionListItem) -> Role {
     }
 }
 
-fn run_origin_label(run: &crate::state::SessionListItem) -> &'static str {
+fn run_origin_label(state: &RuntimeState, run: &crate::state::SessionListItem) -> &'static str {
     if run.is_unknown_bucket {
         "attribution-review"
+    } else if is_auggie_mcp_service_run(state, run) {
+        "mcp-service"
     } else if run.is_synthetic_agent_run {
         "process-scan"
     } else {
@@ -1607,6 +1618,16 @@ fn process_cwd_for_run(
         .sessions
         .get(&run.session_id)
         .map(|session| session.cwd.clone())
+}
+
+fn is_auggie_mcp_service_run(state: &RuntimeState, run: &crate::state::SessionListItem) -> bool {
+    run.attached_agent_key
+        .as_ref()
+        .and_then(|key| state.detected_agents.iter().find(|agent| &agent.key == key))
+        .is_some_and(|agent| {
+            agent.name.eq_ignore_ascii_case("auggie")
+                && agent.command.to_ascii_lowercase().contains("--mcp")
+        })
 }
 
 fn infer_effect_classes(
@@ -1747,6 +1768,7 @@ fn api_contract_dimension_passed(snapshot: &fitness::FitnessSnapshot) -> bool {
 }
 
 fn integrity_warning_for_run(
+    state: &RuntimeState,
     run: &crate::state::SessionListItem,
     changed_files: &[String],
 ) -> Option<String> {
@@ -1755,6 +1777,8 @@ fn integrity_warning_for_run(
             "{} dirty file(s) need ownership review",
             run.unknown_count.max(changed_files.len())
         ))
+    } else if is_auggie_mcp_service_run(state, run) {
+        Some("workspace MCP service".to_string())
     } else if run.is_synthetic_agent_run {
         Some("process detected without hook-backed session".to_string())
     } else if run.unknown_count > 0 {
@@ -1790,6 +1814,7 @@ fn infer_workspace_state(
 }
 
 fn infer_block_reason(
+    state: &RuntimeState,
     cache: &AppCache,
     run: &crate::state::SessionListItem,
     policy_decision: PolicyDecisionKind,
@@ -1797,6 +1822,9 @@ fn infer_block_reason(
 ) -> Option<String> {
     if run.is_unknown_bucket {
         return Some("ownership ambiguity".to_string());
+    }
+    if is_auggie_mcp_service_run(state, run) {
+        return Some("background MCP service".to_string());
     }
     if matches!(policy_decision, PolicyDecisionKind::RequireApproval) {
         return Some("approval required".to_string());
@@ -1819,10 +1847,14 @@ fn infer_block_reason(
 }
 
 fn infer_operator_state(
+    state: &RuntimeState,
     cache: &AppCache,
     run: &crate::state::SessionListItem,
     block_reason: Option<&str>,
 ) -> String {
+    if is_auggie_mcp_service_run(state, run) {
+        return "service".to_string();
+    }
     if run
         .last_event_name
         .as_deref()
