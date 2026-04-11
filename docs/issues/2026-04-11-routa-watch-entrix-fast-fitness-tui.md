@@ -47,6 +47,9 @@ related_issues: []
   - 首屏面板显示总分、维度得分、关键度量失败统计、覆盖率可见性说明。
   - 小/中屏下已将 `Fitness (Entrix Fast)` 面板置于 `Files` 下面。
   - 启动逻辑改为优先读取历史快照；无历史才触发一次 `fast` 刷新。
+  - `Fitness` 面板现已支持焦点切换与滚动；中小屏会优先展示摘要并允许继续滚动查看更多维度/TopN。
+  - `routa-watch` 的 fast fitness 执行已对 `eslint_pass` / `clippy_pass` 做本地变更增量化：优先只检查当前分支相对 upstream/main 的变更文件或受影响 Rust crate。
+  - visible files 的 diff stat 已改成批量 `git diff --numstat`，减少每个文件单独 spawn 的开销。
 - 已验证：
   - `cargo check -p routa-watch`、`cargo test -p routa-watch` 正常。
   - 快照渲染测试覆盖面可见，当前面板可在无快照数据时回退到 `idle`。

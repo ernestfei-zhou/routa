@@ -57,6 +57,7 @@ enum BackgroundCommand {
     },
     RefreshFitness {
         repo_root: String,
+        cache_key: String,
     },
 }
 
@@ -82,7 +83,7 @@ struct PendingCommands {
     stats: Option<PendingStats>,
     detail: Option<PendingDetail>,
     facts: Option<PendingFacts>,
-    fitness: Option<String>,
+    fitness: Option<(String, String)>,
 }
 
 type PendingStats = (String, Vec<(String, String, i64)>);
@@ -100,11 +101,13 @@ pub(super) struct AppCache {
     pending_diff_key: Option<String>,
     pending_facts_key: Option<String>,
     pending_fitness: bool,
+    queued_fitness_refresh: Option<(String, String, bool)>,
     fitness_trend: Vec<f64>,
     fitness_snapshot: Option<fitness::FitnessSnapshot>,
     fitness_error: Option<String>,
     fitness_last_run_ms: Option<i64>,
     fitness_is_running: bool,
+    fitness_cache_key: Option<String>,
     fitness_repo_root: String,
     worker_tx: Sender<BackgroundCommand>,
     worker_rx: Receiver<BackgroundResult>,
@@ -122,6 +125,8 @@ struct FitnessHistoryRecord {
     last_run_ms: Option<i64>,
     #[serde(default)]
     last_error: Option<String>,
+    #[serde(default)]
+    cache_key: Option<String>,
 }
 
 impl AppCache {
@@ -140,11 +145,13 @@ impl AppCache {
             pending_diff_key: None,
             pending_facts_key: None,
             pending_fitness: false,
+            queued_fitness_refresh: None,
             fitness_trend: Vec::new(),
             fitness_snapshot: None,
             fitness_error: None,
             fitness_last_run_ms: None,
             fitness_is_running: false,
+            fitness_cache_key: None,
             fitness_repo_root: repo_root.to_string(),
             worker_tx,
             worker_rx,
@@ -168,6 +175,7 @@ impl AppCache {
             trend: self.fitness_trend.clone(),
             last_run_ms: self.fitness_last_run_ms,
             last_error: self.fitness_error.clone(),
+            cache_key: self.fitness_cache_key.clone(),
         });
         let Ok(payload) = payload else {
             return;
@@ -193,6 +201,7 @@ impl AppCache {
         }
         self.fitness_last_run_ms = record.last_run_ms;
         self.fitness_error = record.last_error;
+        self.fitness_cache_key = record.cache_key;
     }
 
     pub(super) fn sync_results(&mut self) {
@@ -240,6 +249,10 @@ impl AppCache {
                     }
                     self.persist_fitness_history();
                     self.pending_fitness = false;
+                    if let Some((repo_root, cache_key, force)) = self.queued_fitness_refresh.take()
+                    {
+                        self.request_fitness_refresh(repo_root, cache_key, force);
+                    }
                 }
             }
         }
@@ -361,17 +374,28 @@ impl AppCache {
             .get(&facts_cache_key(&file.rel_path, file.last_modified_at_ms))
     }
 
-    pub(super) fn request_fitness_refresh(&mut self, repo_root: String) {
-        if self.fitness_is_running || self.pending_fitness {
-            self.pending_fitness = true;
-            let _ = self
-                .worker_tx
-                .send(BackgroundCommand::RefreshFitness { repo_root });
+    pub(super) fn request_fitness_refresh(
+        &mut self,
+        repo_root: String,
+        cache_key: String,
+        force: bool,
+    ) {
+        if !force
+            && !self.fitness_is_running
+            && self.fitness_snapshot.is_some()
+            && self.fitness_cache_key.as_deref() == Some(cache_key.as_str())
+        {
             return;
         }
-        let _ = self
-            .worker_tx
-            .send(BackgroundCommand::RefreshFitness { repo_root });
+        if self.fitness_is_running || self.pending_fitness {
+            self.queued_fitness_refresh = Some((repo_root, cache_key, force));
+            return;
+        }
+        self.fitness_cache_key = Some(cache_key.clone());
+        let _ = self.worker_tx.send(BackgroundCommand::RefreshFitness {
+            repo_root,
+            cache_key,
+        });
         self.fitness_is_running = true;
         self.fitness_error = None;
         self.pending_fitness = true;
@@ -433,6 +457,34 @@ fn read_fitness_history_record(repo_root: &str) -> Option<FitnessHistoryRecord> 
 fn fitness_history_path(repo_root: &str) -> Option<PathBuf> {
     let event_path = repo::runtime_event_path(Path::new(repo_root));
     Some(event_path.parent()?.join(FITNESS_HISTORY_FILE))
+}
+
+fn parse_numstat(stdout: &str) -> BTreeMap<String, (Option<usize>, Option<usize>)> {
+    let mut stats = BTreeMap::new();
+    for line in stdout.lines().filter(|line| !line.trim().is_empty()) {
+        let mut cols = line.split('\t');
+        let Some(add) = cols.next() else {
+            continue;
+        };
+        let Some(del) = cols.next() else {
+            continue;
+        };
+        let Some(path) = cols.next() else {
+            continue;
+        };
+        let additions = if add == "-" {
+            None
+        } else {
+            add.parse::<usize>().ok()
+        };
+        let deletions = if del == "-" {
+            None
+        } else {
+            del.parse::<usize>().ok()
+        };
+        stats.insert(path.to_string(), (additions, deletions));
+    }
+    stats
 }
 
 pub(super) fn diff_stat_key(rel_path: &str, state_code: &str, version: i64) -> String {
@@ -563,6 +615,96 @@ fn compute_diff_stat(repo_root: &str, rel_path: &str, state_code: &str) -> DiffS
     }
 }
 
+fn compute_diff_stats_batch(
+    repo_root: &str,
+    files: &[(String, String, i64)],
+) -> Vec<(String, DiffStatSummary)> {
+    let mut results = Vec::new();
+    let mut git_paths = Vec::new();
+    let mut git_entries = Vec::new();
+
+    for (rel_path, state_code, version) in files {
+        let key = diff_stat_key(rel_path, state_code, *version);
+        let path = Path::new(repo_root).join(rel_path);
+        let status = if std::fs::metadata(&path)
+            .map(|metadata| metadata.is_dir())
+            .unwrap_or(false)
+        {
+            "DIR".to_string()
+        } else {
+            short_state_code(state_code).to_string()
+        };
+
+        if status == "DIR" {
+            results.push((
+                key,
+                DiffStatSummary {
+                    status,
+                    additions: None,
+                    deletions: None,
+                },
+            ));
+            continue;
+        }
+
+        if state_code == "untracked" || state_code == "add" {
+            let added = std::fs::read_to_string(&path)
+                .ok()
+                .map(|text| text.lines().count());
+            results.push((
+                key,
+                DiffStatSummary {
+                    status,
+                    additions: added,
+                    deletions: None,
+                },
+            ));
+            continue;
+        }
+
+        if state_code == "rename" {
+            results.push((key, compute_diff_stat(repo_root, rel_path, state_code)));
+            continue;
+        }
+
+        git_paths.push(rel_path.clone());
+        git_entries.push((key, rel_path.clone(), status));
+    }
+
+    let parsed = if git_paths.is_empty() {
+        BTreeMap::new()
+    } else {
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .arg("diff")
+            .arg("--numstat")
+            .arg("--")
+            .args(&git_paths)
+            .output()
+            .ok();
+        output
+            .filter(|output| output.status.success())
+            .and_then(|output| String::from_utf8(output.stdout).ok())
+            .map(|stdout| parse_numstat(&stdout))
+            .unwrap_or_default()
+    };
+
+    for (key, rel_path, status) in git_entries {
+        let (additions, deletions) = parsed.get(&rel_path).cloned().unwrap_or((None, None));
+        results.push((
+            key,
+            DiffStatSummary {
+                status,
+                additions,
+                deletions,
+            },
+        ));
+    }
+
+    results
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
@@ -617,6 +759,7 @@ mod tests {
             trend: vec![88.5, 89.0],
             last_run_ms: Some(12_345),
             last_error: Some("cached error".to_string()),
+            cache_key: Some("branch=main;ahead=0;files=foo.rs:modify:1".to_string()),
         };
         let payload = serde_json::to_vec_pretty(&record).expect("serialize history");
         std::fs::write(&history_path, payload).expect("write history");
@@ -641,16 +784,17 @@ fn background_worker(rx: Receiver<BackgroundCommand>, tx: Sender<BackgroundResul
         }
         if let Some((repo_root, files)) = pending.stats.take() {
             let mut seen = BTreeSet::new();
-            let entries = files
+            let deduped_files = files
                 .into_iter()
-                .filter_map(|(rel_path, state_code, version)| {
-                    let key = diff_stat_key(&rel_path, &state_code, version);
+                .filter(|(rel_path, state_code, version)| {
+                    let key = diff_stat_key(rel_path, state_code, *version);
                     if !seen.insert(key.clone()) {
-                        return None;
+                        return false;
                     }
-                    Some((key, compute_diff_stat(&repo_root, &rel_path, &state_code)))
+                    true
                 })
                 .collect::<Vec<_>>();
+            let entries = compute_diff_stats_batch(&repo_root, &deduped_files);
             let _ = tx.send(BackgroundResult::Stats { entries });
         }
         if let Some((repo_root, rel_path, state_code, version, mode)) = pending.detail.take() {
@@ -679,8 +823,9 @@ fn background_worker(rx: Receiver<BackgroundCommand>, tx: Sender<BackgroundResul
                 entry: load_file_facts(&repo_root, &rel_path, version),
             });
         }
-        if let Some(repo_root) = pending.fitness.take() {
+        if let Some((repo_root, cache_key)) = pending.fitness.take() {
             let result = fitness::run_fast_fitness(&repo_root).map_err(|error| error.to_string());
+            let _ = cache_key;
             let _ = tx.send(BackgroundResult::Fitness { result });
         }
     }
@@ -707,8 +852,11 @@ fn queue_command(pending: &mut PendingCommands, command: BackgroundCommand) {
         } => {
             pending.facts = Some((repo_root, rel_path, version));
         }
-        BackgroundCommand::RefreshFitness { repo_root } => {
-            pending.fitness = Some(repo_root);
+        BackgroundCommand::RefreshFitness {
+            repo_root,
+            cache_key,
+        } => {
+            pending.fitness = Some((repo_root, cache_key));
         }
     }
 }

@@ -1,7 +1,6 @@
 use crate::models::{
-    AgentStats, AttributionConfidence, AttributionEvent, DetectedAgent, DirtyRepoEntry,
-    EntryKind, EventLogEntry, EventSource, FileView, GitEvent, HookEvent, RuntimeMessage,
-    SessionView,
+    AgentStats, AttributionConfidence, AttributionEvent, DetectedAgent, DirtyRepoEntry, EntryKind,
+    EventLogEntry, EventSource, FileView, GitEvent, HookEvent, RuntimeMessage, SessionView,
     DEFAULT_INFERENCE_WINDOW_MS, EVENT_LOG_LIMIT,
 };
 use chrono::Utc;
@@ -12,6 +11,7 @@ use std::path::Path;
 pub enum FocusPane {
     Files,
     Detail,
+    Fitness,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -91,6 +91,7 @@ pub struct RuntimeState {
     pub event_log_filter: EventLogFilter,
     pub detail_scroll: u16,
     pub detail_scroll_cache: BTreeMap<String, u16>,
+    pub fitness_scroll: u16,
     pub selected_session: usize,
     pub selected_file: usize,
     pub last_refresh_at_ms: i64,
@@ -123,6 +124,7 @@ impl RuntimeState {
             event_log_filter: EventLogFilter::All,
             detail_scroll: 0,
             detail_scroll_cache: BTreeMap::new(),
+            fitness_scroll: 0,
             selected_session: 0,
             selected_file: 0,
             last_refresh_at_ms: Utc::now().timestamp_millis(),
@@ -376,7 +378,8 @@ impl RuntimeState {
     pub fn cycle_focus(&mut self) {
         self.focus = match self.focus {
             FocusPane::Files => FocusPane::Detail,
-            FocusPane::Detail => FocusPane::Files,
+            FocusPane::Detail => FocusPane::Fitness,
+            FocusPane::Fitness => FocusPane::Files,
         };
     }
 
@@ -387,6 +390,9 @@ impl RuntimeState {
             }
             FocusPane::Detail => {
                 self.set_detail_scroll(self.detail_scroll.saturating_sub(1));
+            }
+            FocusPane::Fitness => {
+                self.fitness_scroll = self.fitness_scroll.saturating_sub(1);
             }
         }
     }
@@ -402,6 +408,9 @@ impl RuntimeState {
             FocusPane::Detail => {
                 self.set_detail_scroll(self.detail_scroll.saturating_add(1));
             }
+            FocusPane::Fitness => {
+                self.fitness_scroll = self.fitness_scroll.saturating_add(1);
+            }
         }
     }
 
@@ -413,6 +422,9 @@ impl RuntimeState {
             }
             FocusPane::Detail => {
                 self.set_detail_scroll(self.detail_scroll.saturating_sub(DETAIL_PAGE_STEP));
+            }
+            FocusPane::Fitness => {
+                self.fitness_scroll = self.fitness_scroll.saturating_sub(DETAIL_PAGE_STEP);
             }
         }
     }
@@ -428,6 +440,9 @@ impl RuntimeState {
             }
             FocusPane::Detail => {
                 self.set_detail_scroll(self.detail_scroll.saturating_add(DETAIL_PAGE_STEP));
+            }
+            FocusPane::Fitness => {
+                self.fitness_scroll = self.fitness_scroll.saturating_add(DETAIL_PAGE_STEP);
             }
         }
     }
@@ -455,6 +470,27 @@ impl RuntimeState {
         self.agent_stats = crate::detect::calculate_stats(&agents);
         self.detected_agents = agents;
         self.clamp_selection();
+    }
+
+    pub fn fitness_cache_key(&self) -> String {
+        let mut file_markers = self
+            .files
+            .values()
+            .filter(|file| file.dirty || file.conflicted)
+            .map(|file| {
+                format!(
+                    "{}:{}:{}",
+                    file.rel_path, file.state_code, file.last_modified_at_ms
+                )
+            })
+            .collect::<Vec<_>>();
+        file_markers.sort();
+        format!(
+            "branch={};ahead={};files={}",
+            self.branch,
+            self.ahead_count.unwrap_or(0),
+            file_markers.join("|")
+        )
     }
 
     pub fn toggle_theme_mode(&mut self) {

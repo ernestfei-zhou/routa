@@ -375,6 +375,17 @@ fn page_down_scrolls_file_preview_when_detail_has_focus() {
 }
 
 #[test]
+fn page_down_scrolls_fitness_panel_when_fitness_has_focus() {
+    let mut state = sample_state();
+    state.focus = FocusPane::Fitness;
+    state.fitness_scroll = 0;
+
+    state.page_down();
+
+    assert!(state.fitness_scroll > 0);
+}
+
+#[test]
 fn selected_file_assignment_message_is_attribution_event() {
     let mut state = sample_state();
     state.file_list_mode = FileListMode::Global;

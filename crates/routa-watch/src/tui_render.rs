@@ -173,7 +173,11 @@ fn render_main_area(
 
 fn render_fitness_panel(frame: &mut Frame, area: Rect, state: &RuntimeState, cache: &AppCache) {
     let colors = palette(state.theme_mode);
-    let block = panel_block("Fitness (Entrix Fast)", false, colors);
+    let block = panel_block(
+        "Fitness (Entrix Fast)",
+        state.focus == FocusPane::Fitness,
+        colors,
+    );
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
@@ -208,6 +212,8 @@ fn render_fitness_panel(frame: &mut Frame, area: Rect, state: &RuntimeState, cac
         } else {
             "PASS"
         };
+        let compact_height = inner.height <= 8;
+        let medium_height = inner.height <= 13;
         let bar_width = inner.width.saturating_sub(36).max(8).min(28) as usize;
 
         lines.push(Line::from(vec![
@@ -258,7 +264,7 @@ fn render_fitness_panel(frame: &mut Frame, area: Rect, state: &RuntimeState, cac
             ]));
         }
         let trend = cache.fitness_trend();
-        if trend.len() >= 2 {
+        if trend.len() >= 2 && !compact_height {
             let latest = trend.last().copied().unwrap_or(0.0);
             let prev = trend
                 .get(trend.len().saturating_sub(2))
@@ -292,7 +298,14 @@ fn render_fitness_panel(frame: &mut Frame, area: Rect, state: &RuntimeState, cac
                 .fg(colors.text)
                 .add_modifier(Modifier::BOLD),
         )]));
-        for dim in snapshot.dimensions.iter().take(3) {
+        let dimension_limit = if compact_height {
+            2
+        } else if medium_height {
+            3
+        } else {
+            4
+        };
+        for dim in snapshot.dimensions.iter().take(dimension_limit) {
             let dim_bar_width = inner.width.saturating_sub(28).max(8).min(24) as usize;
             let warning = if dim.hard_gate_failures.is_empty() {
                 String::new()
@@ -325,70 +338,72 @@ fn render_fitness_panel(frame: &mut Frame, area: Rect, state: &RuntimeState, cac
             )]));
         }
 
-        lines.push(Line::from(""));
-        lines.push(Line::from(vec![
-            Span::styled("Slowest:", Style::default().fg(colors.text)),
-            Span::raw(" "),
-            Span::styled(
-                fitness::critical_metric_hint(snapshot),
-                Style::default().fg(colors.muted),
-            ),
-        ]));
-        let slow_metric_limit = 5;
-        let slowest_metrics = snapshot
-            .slowest_metrics
-            .iter()
-            .take(slow_metric_limit)
-            .collect::<Vec<_>>();
-        if !slowest_metrics.is_empty() {
-            let mut max_duration = slowest_metrics
+        if !compact_height {
+            lines.push(Line::from(""));
+            lines.push(Line::from(vec![
+                Span::styled("Slowest:", Style::default().fg(colors.text)),
+                Span::raw(" "),
+                Span::styled(
+                    fitness::critical_metric_hint(snapshot),
+                    Style::default().fg(colors.muted),
+                ),
+            ]));
+            let slow_metric_limit = if medium_height { 3 } else { 5 };
+            let slowest_metrics = snapshot
+                .slowest_metrics
                 .iter()
-                .map(|metric| metric.duration_ms)
-                .reduce(f64::max)
-                .unwrap_or(1.0);
-            if max_duration <= 0.0 {
-                max_duration = 1.0;
-            }
-            lines.push(Line::from(vec![Span::styled(
-                format!("Top {slow_metric_limit} slowest metrics:"),
-                Style::default().fg(colors.text),
-            )]));
-            let metric_bar_width = inner.width.saturating_sub(48).max(8).min(20) as usize;
-            for metric in slowest_metrics {
-                let mut metric_name = metric.name.clone();
-                if metric_name.is_empty() {
-                    metric_name = "<unnamed>".to_string();
+                .take(slow_metric_limit)
+                .collect::<Vec<_>>();
+            if !slowest_metrics.is_empty() {
+                let mut max_duration = slowest_metrics
+                    .iter()
+                    .map(|metric| metric.duration_ms)
+                    .reduce(f64::max)
+                    .unwrap_or(1.0);
+                if max_duration <= 0.0 {
+                    max_duration = 1.0;
                 }
-                let metric_color = metric_color(metric);
-                lines.push(Line::from(vec![
-                    Span::styled(
-                        format!("{:>7.1}", metric.duration_ms),
-                        Style::default().fg(metric_color),
-                    ),
-                    Span::raw("ms "),
-                    Span::styled(
-                        format!("{:<18}", truncate_short(&metric_name, 18)),
-                        Style::default().fg(colors.text),
-                    ),
-                    Span::raw(" "),
-                    render_metric_bar(
-                        metric.duration_ms,
-                        max_duration,
-                        metric_bar_width,
-                        metric_color,
-                    ),
-                    Span::raw(" "),
-                    Span::styled(
-                        format!("[{}]", metric.state),
-                        Style::default().fg(metric_color),
-                    ),
-                ]));
+                lines.push(Line::from(vec![Span::styled(
+                    format!("Top {slow_metric_limit} slowest metrics:"),
+                    Style::default().fg(colors.text),
+                )]));
+                let metric_bar_width = inner.width.saturating_sub(48).max(8).min(20) as usize;
+                for metric in slowest_metrics {
+                    let mut metric_name = metric.name.clone();
+                    if metric_name.is_empty() {
+                        metric_name = "<unnamed>".to_string();
+                    }
+                    let metric_color = metric_color(metric);
+                    lines.push(Line::from(vec![
+                        Span::styled(
+                            format!("{:>7.1}", metric.duration_ms),
+                            Style::default().fg(metric_color),
+                        ),
+                        Span::raw("ms "),
+                        Span::styled(
+                            format!("{:<18}", truncate_short(&metric_name, 18)),
+                            Style::default().fg(colors.text),
+                        ),
+                        Span::raw(" "),
+                        render_metric_bar(
+                            metric.duration_ms,
+                            max_duration,
+                            metric_bar_width,
+                            metric_color,
+                        ),
+                        Span::raw(" "),
+                        Span::styled(
+                            format!("[{}]", metric.state),
+                            Style::default().fg(metric_color),
+                        ),
+                    ]));
+                }
+            } else {
+                lines.push(Line::from(vec![Span::styled(
+                    "no slow metrics in this run",
+                    Style::default().fg(colors.muted),
+                )]));
             }
-        } else {
-            lines.push(Line::from(vec![Span::styled(
-                "no slow metrics in this run",
-                Style::default().fg(colors.muted),
-            )]));
         }
 
         if cache.is_fitness_running() {
@@ -400,6 +415,7 @@ fn render_fitness_panel(frame: &mut Frame, area: Rect, state: &RuntimeState, cac
         frame.render_widget(
             Paragraph::new(lines)
                 .block(Block::default())
+                .scroll((state.fitness_scroll, 0))
                 .style(Style::default().bg(colors.surface).fg(colors.text))
                 .wrap(Wrap { trim: true }),
             inner,
@@ -424,6 +440,7 @@ fn render_fitness_panel(frame: &mut Frame, area: Rect, state: &RuntimeState, cac
     frame.render_widget(
         Paragraph::new(lines)
             .block(Block::default())
+            .scroll((state.fitness_scroll, 0))
             .style(Style::default().bg(colors.surface).fg(colors.text))
             .wrap(Wrap { trim: true }),
         inner,

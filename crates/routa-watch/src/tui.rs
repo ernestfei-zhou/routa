@@ -92,7 +92,7 @@ fn run_loop(terminal: &mut DefaultTerminal, ctx: RepoContext, poll_interval_ms: 
     let mut last_agent_refresh = Instant::now() - Duration::from_millis(AGENT_SCAN_REFRESH_MS);
     let mut last_fitness_refresh = Instant::now();
     if !cache.has_fitness_data() {
-        cache.request_fitness_refresh(state.repo_root.clone());
+        cache.request_fitness_refresh(state.repo_root.clone(), state.fitness_cache_key(), false);
     }
 
     loop {
@@ -143,7 +143,11 @@ fn run_loop(terminal: &mut DefaultTerminal, ctx: RepoContext, poll_interval_ms: 
             last_agent_refresh = Instant::now();
         }
         if last_fitness_refresh.elapsed() >= Duration::from_millis(FITNESS_AUTO_REFRESH_MS) {
-            cache.request_fitness_refresh(state.repo_root.clone());
+            cache.request_fitness_refresh(
+                state.repo_root.clone(),
+                state.fitness_cache_key(),
+                false,
+            );
             last_fitness_refresh = Instant::now();
         }
         cache.sync_results();
@@ -189,7 +193,11 @@ fn handle_event(state: &mut RuntimeState, cache: &mut AppCache) -> Result<bool> 
                 KeyCode::Esc => state.clear_search(),
                 KeyCode::Char('r') | KeyCode::Char('f') => state.toggle_follow_mode(),
                 KeyCode::Char('g') | KeyCode::Char('G') => {
-                    cache.request_fitness_refresh(state.repo_root.clone());
+                    cache.request_fitness_refresh(
+                        state.repo_root.clone(),
+                        state.fitness_cache_key(),
+                        true,
+                    );
                 }
                 KeyCode::Char('s') => state.cycle_file_list_mode(),
                 KeyCode::Char('u') => {
