@@ -46,7 +46,7 @@ jobs:
           version="${version#v}"
 
           echo "Checking crate versions..."
-          for crate in crates/routa-core crates/routa-rpc crates/routa-scanner crates/routa-server crates/routa-cli crates/routa-watch; do
+          for crate in crates/routa-core crates/routa-rpc crates/routa-scanner crates/routa-server crates/routa-cli crates/routa-entrix crates/harness-monitor; do
             crate_version=$(grep '^version = ' "$crate/Cargo.toml" | head -n1 | sed 's/version = "\(.*\)"/\1/')
             echo "$crate: $crate_version"
             if [[ "$crate_version" != "$version" ]]; then
@@ -106,6 +106,19 @@ jobs:
         if: ${{ !inputs.dry_run && github.event.inputs.dry_run != 'true' && github.event.inputs.dry_run != true }}
         run: sleep 30
 
+      - name: Publish routa-entrix
+        run: |
+          cd crates/routa-entrix
+          if [[ "$DRY_RUN" == "true" ]]; then
+            cargo publish --dry-run
+          else
+            cargo publish --no-verify || echo "routa-entrix may already be published"
+          fi
+
+      - name: Wait for crates.io index update after routa-entrix
+        if: ${{ !inputs.dry_run && github.event.inputs.dry_run != 'true' && github.event.inputs.dry_run != true }}
+        run: sleep 30
+
       - name: Publish routa-cli
         run: |
           cd crates/routa-cli
@@ -115,13 +128,13 @@ jobs:
             cargo publish --no-verify || echo "routa-cli may already be published"
           fi
 
-      - name: Publish routa-watch
+      - name: Publish harness-monitor
         run: |
-          cd crates/routa-watch
+          cd crates/harness-monitor
           if [[ "$DRY_RUN" == "true" ]]; then
             cargo publish --dry-run
           else
-            cargo publish --no-verify || echo "routa-watch may already be published"
+            cargo publish --no-verify || echo "harness-monitor may already be published"
           fi
 
       - name: Summary
@@ -135,5 +148,5 @@ jobs:
           echo "Install via cargo:" >> "$GITHUB_STEP_SUMMARY"
           echo '```bash' >> "$GITHUB_STEP_SUMMARY"
           echo "cargo install routa-cli@$version" >> "$GITHUB_STEP_SUMMARY"
-          echo "cargo install routa-watch@$version" >> "$GITHUB_STEP_SUMMARY"
+          echo "cargo install harness-monitor@$version" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"

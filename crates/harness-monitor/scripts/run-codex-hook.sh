@@ -16,7 +16,12 @@ if [ -n "${TMUX:-}" ]; then
   export TMUX_PANE_TITLE="${TMUX_PANE_TITLE:-$(tmux display-message -p '#{pane_title}' 2>/dev/null || true)}"
 fi
 
-resolve_routa_watch_bin() {
+resolve_harness_monitor_bin() {
+  if [ -n "${HARNESS_MONITOR_BIN:-}" ] && [ -x "${HARNESS_MONITOR_BIN}" ]; then
+    printf '%s\n' "${HARNESS_MONITOR_BIN}"
+    return 0
+  fi
+
   if [ -n "${ROUTA_WATCH_BIN:-}" ] && [ -x "${ROUTA_WATCH_BIN}" ]; then
     printf '%s\n' "${ROUTA_WATCH_BIN}"
     return 0
@@ -24,6 +29,11 @@ resolve_routa_watch_bin() {
 
   if [ -n "${AGENTWATCH_BIN:-}" ] && [ -x "${AGENTWATCH_BIN}" ]; then
     printf '%s\n' "${AGENTWATCH_BIN}"
+    return 0
+  fi
+
+  if [ -x "$REPO_ROOT/target/debug/harness-monitor" ]; then
+    printf '%s\n' "$REPO_ROOT/target/debug/harness-monitor"
     return 0
   fi
 
@@ -37,6 +47,11 @@ resolve_routa_watch_bin() {
     return 0
   fi
 
+  if [ -x "$REPO_ROOT/target/release/harness-monitor" ]; then
+    printf '%s\n' "$REPO_ROOT/target/release/harness-monitor"
+    return 0
+  fi
+
   if [ -x "$REPO_ROOT/target/release/routa-watch" ]; then
     printf '%s\n' "$REPO_ROOT/target/release/routa-watch"
     return 0
@@ -44,6 +59,11 @@ resolve_routa_watch_bin() {
 
   if [ -x "$REPO_ROOT/target/release/agentwatch" ]; then
     printf '%s\n' "$REPO_ROOT/target/release/agentwatch"
+    return 0
+  fi
+
+  if command -v harness-monitor >/dev/null 2>&1; then
+    command -v harness-monitor
     return 0
   fi
 
@@ -60,10 +80,10 @@ resolve_routa_watch_bin() {
   return 1
 }
 
-ROUTA_WATCH_BIN="$(resolve_routa_watch_bin || true)"
-if [ -z "$ROUTA_WATCH_BIN" ]; then
+HARNESS_MONITOR_BIN="$(resolve_harness_monitor_bin || true)"
+if [ -z "$HARNESS_MONITOR_BIN" ]; then
   cat >/dev/null 2>&1 || true
   exit 0
 fi
 
-exec "$ROUTA_WATCH_BIN" --repo "$REPO_ROOT" hook codex "$HOOK_EVENT"
+exec "$HARNESS_MONITOR_BIN" --repo "$REPO_ROOT" hook codex "$HOOK_EVENT"

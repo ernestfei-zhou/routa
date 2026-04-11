@@ -1,9 +1,9 @@
 ---
-source: crates/routa-watch/src/tui_tests.rs
-assertion_line: 441
+source: crates/harness-monitor/src/tui_tests.rs
+assertion_line: 475
 expression: "render_snapshot(&state, &mut cache, 120, 24)"
 ---
- RoutaWatch   repo:routa-js  branch:main  agents:2 active:1  dirty:2  unknown:1  synced 2m ago
+ Harness Monitor   repo:routa-js  branch:main  agents:2 active:1  dirty:2  unknown:1  synced 2m ago
 ┌Files───────────────────────────────────────────────────────────────────────────────┐┌File Preview────────────────────┐
 │ ALL FILES  2 files  commits:...                                                    ││ 1 fn render(frame: &mut Frame) │
 │────────────────────────────────────────────────────────────────────────────────────││{                               │
@@ -17,7 +17,7 @@ expression: "render_snapshot(&state, &mut cache, 120, 24)"
 │                                                                                    │└────────────────────────────────┘
 │                                                                                    │┌Details─────────────────────────┐
 │                                                                                    ││tui.rs                          │
-│                                                                                    ││crates/routa-watch/src          │
+│                                                                                    ││crates/harness-monitor/src      │
 └────────────────────────────────────────────────────────────────────────────────────┘│Lines: ...  Size: ...  Git      │
 ┌Fitness (Entrix Fast)───────────────────────────────────────────────────────────────┐│changes: ...                    │
 │Health Run: idle (press g refresh, m switch mode)                                   ││                                │

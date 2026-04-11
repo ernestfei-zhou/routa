@@ -190,7 +190,7 @@ Fitness = Σ (Weight_i × Score_i) / 100
 - `ts_test_pass`
   - 运行 `npm run test:run:fast`
   - 基于 git base ref 只跑受影响的 Vitest 范围；如果当前改动与 Vitest 无关，会输出 `Tests 0 passed`
-  - 适用于 `entrix run --tier fast`、本地快速验证、`routa-watch` 的 fast fitness 体验
+  - 适用于 `entrix run --tier fast`、本地快速验证、`harness-monitor` 的 fast fitness 体验
 - `ts_test_pass_full`
   - 运行 `npm run test:run`
   - 保留全量 Vitest hard gate，适用于 `entrix run --tier normal` 以及 `pre-push` / `local-validate`
@@ -204,7 +204,7 @@ Fitness = Σ (Weight_i × Score_i) / 100
 - `normal` = 在 `fast` 之上补全量 TS 测试、Rust 测试、API 测试和更重的质量门禁
 - hook runtime 的 `pre-push` 与 `local-validate` 默认只保留 `ts_test_pass_full`
   - hook 关注 push 前的整仓回归把关，避免在同一轮里重复执行增量与全量 TS 测试
-  - `ts_test_pass` 仍然保留给 `entrix run --tier fast`、`routa-watch` 和手工本地快速检查
+  - `ts_test_pass` 仍然保留给 `entrix run --tier fast`、`harness-monitor` 和手工本地快速检查
 
 ## CI Fan-out
 

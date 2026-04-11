@@ -360,7 +360,7 @@ fn ensure_runtime_service(ctx: &RepoContext) -> Result<()> {
         return Ok(());
     }
 
-    let current_exe = env::current_exe().context("resolve current routa-watch executable")?;
+    let current_exe = env::current_exe().context("resolve current harness-monitor executable")?;
     let mut command = Command::new(current_exe);
     command
         .arg("--repo")
@@ -371,7 +371,7 @@ fn ensure_runtime_service(ctx: &RepoContext) -> Result<()> {
         .stderr(Stdio::null());
     let _child = command
         .spawn()
-        .context("spawn routa-watch runtime service")?;
+        .context("spawn harness-monitor runtime service")?;
 
     let deadline = Instant::now() + Duration::from_millis(1200);
     while Instant::now() < deadline {

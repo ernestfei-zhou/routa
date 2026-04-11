@@ -27,7 +27,7 @@ describe("run-vitest-fast helpers", () => {
 
   it("skips unrelated changes", () => {
     expect(isVitestRelevantChange("docs/fitness/README.md")).toBe(false);
-    expect(isVitestRelevantChange("crates/routa-watch/src/tui.rs")).toBe(false);
+    expect(isVitestRelevantChange("crates/harness-monitor/src/tui.rs")).toBe(false);
   });
 
   it("normalizes vitest success summaries", () => {

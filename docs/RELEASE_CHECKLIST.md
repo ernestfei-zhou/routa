@@ -46,13 +46,14 @@ git push origin main --tags
 ## Post-Release
 
 - [ ] Monitor [GitHub Actions](https://github.com/phodal/routa/actions)
-- [ ] Verify crates.io publish (all 6 crates):
+- [ ] Verify crates.io publish (all 7 crates):
   - [ ] [routa-core](https://crates.io/crates/routa-core)
   - [ ] [routa-rpc](https://crates.io/crates/routa-rpc)
   - [ ] [routa-scanner](https://crates.io/crates/routa-scanner)
   - [ ] [routa-server](https://crates.io/crates/routa-server)
   - [ ] [routa-cli](https://crates.io/crates/routa-cli)
-  - [ ] [routa-watch](https://crates.io/crates/routa-watch)
+  - [ ] [routa-entrix](https://crates.io/crates/routa-entrix)
+  - [ ] [harness-monitor](https://crates.io/crates/harness-monitor)
 - [ ] Verify npm publish (all 5 packages):
   - [ ] [routa-cli](https://www.npmjs.com/package/routa-cli) (main package)
   - [ ] [routa-cli-linux-x64](https://www.npmjs.com/package/routa-cli-linux-x64)
@@ -63,7 +64,7 @@ git push origin main --tags
 - [ ] Test installation:
   ```bash
   cargo install routa-cli@0.2.9
-  cargo install routa-watch@0.2.9
+  cargo install harness-monitor@0.2.9
   npm install -g routa-cli@0.2.9
   routa --version  # Should show the new version
   ```
@@ -79,7 +80,7 @@ git push origin :refs/tags/v0.2.5
 
 # Yank from crates.io (cannot unpublish)
 cargo yank routa-cli@0.2.5
-cargo yank routa-watch@0.2.5
+cargo yank harness-monitor@0.2.5
 ```
 
 ## Full Documentation

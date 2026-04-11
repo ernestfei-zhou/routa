@@ -4,9 +4,11 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-const APP_SLUG: &str = "routa-watch";
+const APP_SLUG: &str = "harness-monitor";
+const LEGACY_APP_SLUG_ROUTA: &str = "routa-watch";
 const LEGACY_APP_SLUG: &str = "agentwatch";
-const DB_FILE_NAME: &str = "routa-watch.db";
+const DB_FILE_NAME: &str = "harness-monitor.db";
+const LEGACY_DB_FILE_NAME_ROUTA: &str = "routa-watch.db";
 const LEGACY_DB_FILE_NAME: &str = "agentwatch.db";
 
 #[allow(dead_code)]
@@ -86,9 +88,14 @@ pub fn resolve(path_opt: Option<&str>, db_path_opt: Option<&str>) -> Result<Repo
         PathBuf::from(db_path)
     } else {
         let primary_db_path = git_dir.join(APP_SLUG).join(DB_FILE_NAME);
-        let legacy_db_path = git_dir.join(LEGACY_APP_SLUG).join(LEGACY_DB_FILE_NAME);
-        let preferred_db_path = if legacy_db_path.exists() && !primary_db_path.exists() {
-            legacy_db_path
+        let routa_legacy_db_path = git_dir
+            .join(LEGACY_APP_SLUG_ROUTA)
+            .join(LEGACY_DB_FILE_NAME_ROUTA);
+        let agentwatch_legacy_db_path = git_dir.join(LEGACY_APP_SLUG).join(LEGACY_DB_FILE_NAME);
+        let preferred_db_path = if routa_legacy_db_path.exists() && !primary_db_path.exists() {
+            routa_legacy_db_path
+        } else if agentwatch_legacy_db_path.exists() && !primary_db_path.exists() {
+            agentwatch_legacy_db_path
         } else {
             primary_db_path
         };
@@ -101,7 +108,7 @@ pub fn resolve(path_opt: Option<&str>, db_path_opt: Option<&str>) -> Result<Repo
                     format!("create fallback db directory {:?}", fallback_parent)
                 })?;
                 eprintln!(
-                    "routa-watch warning: cannot write {:?}, fallback to {:?}: {}",
+                    "harness-monitor warning: cannot write {:?}, fallback to {:?}: {}",
                     preferred_db_path, fallback, err
                 );
                 fallback
@@ -178,6 +185,11 @@ fn fallback_db_path(repo_root: &Path) -> Result<PathBuf> {
     let marker = runtime_marker(repo_root);
 
     let mut candidate_bases = Vec::new();
+    if let Ok(custom_base) = std::env::var("HARNESS_MONITOR_DB_DIR") {
+        if !custom_base.trim().is_empty() {
+            candidate_bases.push(PathBuf::from(custom_base));
+        }
+    }
     if let Ok(custom_base) = std::env::var("ROUTA_WATCH_DB_DIR") {
         if !custom_base.trim().is_empty() {
             candidate_bases.push(PathBuf::from(custom_base));

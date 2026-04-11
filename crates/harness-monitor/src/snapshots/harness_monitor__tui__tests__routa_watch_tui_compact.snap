@@ -1,14 +1,14 @@
 ---
-source: crates/routa-watch/src/tui_tests.rs
-assertion_line: 451
+source: crates/harness-monitor/src/tui_tests.rs
+assertion_line: 485
 expression: "render_snapshot(&state, &mut cache, 96, 24)"
 ---
- RoutaWatch   repo:routa-js  branch:main  agents:2 active:1  dirty:2  unknown:1  synced 2m ago
+ Harness Monitor   repo:routa-js  branch:main  agents:2 active:1  dirty:2  unknown:1  synced 2m
 ┌Files─────────────────────────────────────────────────────────────────────────────────────────┐
 │ ALL FILES  2 files  commits:...                                                              │
 │──────────────────────────────────────────────────────────────────────────────────────────────│
 │> tui.rs                                                                                      │
-│  ...uta-watch/src  M  +38 -5     4m                                                          │
+│  ...s-monitor/src  M  +38 -5     4m                                                          │
 │  route.ts                                                                                    │
 │  .../api/a2a/card  D  -12        5m                                                          │
 │                                                                                              │

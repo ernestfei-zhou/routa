@@ -6,7 +6,7 @@ This guide covers the process for releasing new Routa artifacts to multiple dist
 
 The release process publishes to three channels simultaneously:
 
-1. **crates.io** - Rust users can `cargo install routa-cli` and `cargo install routa-watch`
+1. **crates.io** - Rust users can `cargo install routa-cli` and `cargo install harness-monitor`
 2. **npm** - Node.js users can `npm install -g routa-cli`
 3. **GitHub Releases** - Desktop binaries and release notes
 
@@ -131,8 +131,9 @@ Publishes these crates in order:
 2. `routa-rpc` - RPC layer
 3. `routa-scanner` - Repository scanner
 4. `routa-server` - HTTP server
-5. `routa-cli` - CLI binary
-6. `routa-watch` - terminal watch and attribution tool
+5. `routa-entrix` - Entrix fitness engine shared by Harness Monitor
+6. `routa-cli` - CLI binary
+7. `harness-monitor` - terminal watch and attribution tool
 
 **Note**: Each crate waits for the previous one to be indexed on crates.io before publishing.
 
@@ -181,9 +182,9 @@ cargo search routa-cli
 cargo install routa-cli@0.2.5
 routa --version
 
-cargo search routa-watch
-cargo install routa-watch@0.2.5
-routa-watch --version
+cargo search harness-monitor
+cargo install harness-monitor@0.2.5
+harness-monitor --version
 ```
 
 ### NPM
@@ -232,7 +233,7 @@ Common issues:
 
 1. Manually update all release crate versions:
    ```bash
-   for crate in crates/routa-core crates/routa-rpc crates/routa-scanner crates/routa-server crates/routa-cli crates/routa-watch; do
+   for crate in crates/routa-core crates/routa-rpc crates/routa-scanner crates/routa-server crates/routa-entrix crates/routa-cli crates/harness-monitor; do
      sed -i '' 's/version = "OLD_VERSION"/version = "NEW_VERSION"/g' "$crate/Cargo.toml"
    done
    ```
@@ -244,8 +245,9 @@ Common issues:
    cd ../routa-rpc && cargo publish --no-verify
    cd ../routa-scanner && cargo publish --no-verify
    cd ../routa-server && cargo publish --no-verify
+   cd ../routa-entrix && cargo publish --no-verify
    cd ../routa-cli && cargo publish --no-verify
-   cd ../routa-watch && cargo publish --no-verify
+   cd ../harness-monitor && cargo publish --no-verify
    ```
 
 **Root Cause**: The `sync-release-version.mjs` script doesn't sync Rust crate versions (only Desktop Tauri and npm packages).

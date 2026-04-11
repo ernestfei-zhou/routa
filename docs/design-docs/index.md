@@ -64,7 +64,7 @@ If you are still trying to get Routa running, go back to [Quick Start](/quick-st
 
 Use these when you already know the main product model and need a narrower topic:
 
-- [agentwatch-tui.md](./agentwatch-tui.md): TUI-first runtime model, information architecture, and keybindings for Routa Watch
+- [agentwatch-tui.md](./agentwatch-tui.md): TUI-first runtime model, information architecture, and keybindings for Harness Monitor
 - [harness-trace-learning-phase2.md](./harness-trace-learning-phase2.md): trace learning and playbook-driven guidance
 
 ## Legacy Specs And Migration Status

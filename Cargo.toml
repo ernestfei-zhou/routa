@@ -8,7 +8,7 @@ members = [
     "crates/routa-scanner",
     "crates/routa-entrix",
     "apps/desktop/src-tauri",
-    "crates/routa-watch",
+    "crates/harness-monitor",
 ]
 
 [workspace.package]

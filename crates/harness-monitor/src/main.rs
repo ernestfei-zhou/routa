@@ -22,9 +22,9 @@ use std::time::Duration;
 
 #[derive(Parser)]
 #[command(
-    name = "routa-watch",
+    name = "harness-monitor",
     version,
-    about = "Routa Watch - local multi-agent file watch and attribution"
+    about = "Harness Monitor - local multi-agent file attribution and fitness monitor"
 )]
 struct Cli {
     /// Optional repository root/path used for non-hook commands.
@@ -36,7 +36,7 @@ struct Cli {
     infer_window_ms: i64,
 
     /// SQLite database path override (fallback location used when .git is not writable)
-    #[arg(long, env = "ROUTA_WATCH_DB_PATH")]
+    #[arg(long, env = "HARNESS_MONITOR_DB_PATH")]
     db: Option<String>,
 
     #[command(subcommand)]
@@ -45,7 +45,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Launch the realtime Routa Watch terminal UI.
+    /// Launch the realtime Harness Monitor terminal UI.
     Tui {
         /// Poll interval in milliseconds for git status refresh.
         #[arg(long, default_value_t = models::DEFAULT_TUI_POLL_MS)]
@@ -151,6 +151,7 @@ fn main() -> Result<()> {
 fn resolve_db_hint(cli_db: Option<&str>) -> Option<String> {
     cli_db
         .map(ToString::to_string)
+        .or_else(|| std::env::var("HARNESS_MONITOR_DB_PATH").ok())
         .or_else(|| std::env::var("AGENTWATCH_DB_PATH").ok())
         .filter(|value| !value.trim().is_empty())
 }
@@ -369,7 +370,7 @@ fn print_file_owner(db: &Db, repo_root: &str, root: &Path, raw_path: &str) -> Re
 fn print_watch_once(db: &Db, repo_root: &str, snapshot: &Snapshot, since_ms: i64) -> Result<()> {
     print!("\x1b[2J\x1b[H");
     let now = chrono::Utc::now();
-    println!("routa-watch: {}", now.format("%Y-%m-%d %H:%M:%S"));
+    println!("harness-monitor: {}", now.format("%Y-%m-%d %H:%M:%S"));
     println!("repo: {repo_root}");
     println!("changed: {}", snapshot.changed_paths.len());
 

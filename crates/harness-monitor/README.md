@@ -1,6 +1,6 @@
-# Routa Watch
+# Harness Monitor
 
-`routa-watch` is a Rust terminal tool for tracking multiple coding-agent sessions inside one git repository.
+`harness-monitor` is a Rust terminal tool for tracking multiple coding-agent sessions inside one git repository.
 
 It is `TUI-first`: the main path is a live terminal view that answers:
 
@@ -38,10 +38,10 @@ That means a session can stay visible even when it is only reading/searching, no
 
 ## Runtime Model
 
-Routa Watch now starts in TUI mode by default. Running:
+Harness Monitor now starts in TUI mode by default. Running:
 
 ```bash
-routa-watch --repo .
+harness-monitor --repo .
 ```
 
 will:
@@ -58,17 +58,17 @@ The runtime transport layers are attempted in this order:
 
 The current commands are:
 
-- `routa-watch`
-- `routa-watch tui`
-- `routa-watch serve`
-- `routa-watch hook <client> <event>`
-- `routa-watch git-hook <event>`
+- `harness-monitor`
+- `harness-monitor tui`
+- `harness-monitor serve`
+- `harness-monitor hook <client> <event>`
+- `harness-monitor git-hook <event>`
 
 Recommended local flow:
 
 ```bash
-cargo build -p routa-watch
-target/debug/routa-watch --repo .
+cargo build -p harness-monitor
+target/debug/harness-monitor --repo .
 ```
 
 If local socket/port binding is unavailable, hooks automatically fall back to the JSONL feed. The title bar shows the current runtime mode as `rpc:socket`, `rpc:tcp`, or `rpc:feed`.
@@ -78,7 +78,7 @@ If local socket/port binding is unavailable, hooks automatically fall back to th
 Example layout:
 
 ```text
- RoutaWatch   repo:routa-js  branch:main  agents:2 active:1  dirty:2  unknown:1  synced <1m ago
+ Harness Monitor   repo:routa-js  branch:main  agents:2 active:1  dirty:2  unknown:1  synced <1m ago
 ┌Files───────────────────────────────────────────────────────────────────────────────┐┌File Preview────────────────────┐
 │ ALL FILES  2 files  commits:5                                                      ││ 1 fn render(frame: &mut Frame) │
 │────────────────────────────────────────────────────────────────────────────────────││{                               │
@@ -87,7 +87,7 @@ Example layout:
 │                                                                                    │└────────────────────────────────┘
 │                                                                                    │┌Details─────────────────────────┐
 │                                                                                    ││tui.rs                          │
-│                                                                                    ││crates/routa-watch/src          │
+│                                                                                    ││crates/harness-monitor/src          │
 │                                                                                    ││Lines: 387  Size: 16.5 KB       │
 │                                                                                    ││Git changes: 3                  │
 └────────────────────────────────────────────────────────────────────────────────────┘└────────────────────────────────┘
@@ -125,13 +125,13 @@ Main regions:
 Build first:
 
 ```bash
-cargo build -p routa-watch
+cargo build -p harness-monitor
 ```
 
 Install templates:
 
 ```bash
-ROUTA_WATCH_BIN=$PWD/target/debug/routa-watch ./crates/routa-watch/scripts/install-hooks.sh
+HARNESS_MONITOR_BIN=$PWD/target/debug/harness-monitor ./crates/harness-monitor/scripts/install-hooks.sh
 ```
 
 This installs:
@@ -145,6 +145,6 @@ In this repository, the repo-local [`.codex/hooks.json`](/Users/phodal/ai/routa-
 
 ## Notes
 
-- `routa-watch sessions`, `files`, `who`, and `watch` still exist as legacy/debug commands.
+- `harness-monitor sessions`, `files`, `who`, and `watch` still exist as legacy/debug commands.
 - The SQLite store is still present for fallback/debug paths, but the primary direction is realtime transport plus TUI.
-- When multiple sessions touch the same worktree and attribution is ambiguous, Routa Watch intentionally shows `unknown/conflict` instead of faking certainty.
+- When multiple sessions touch the same worktree and attribution is ambiguous, Harness Monitor intentionally shows `unknown/conflict` instead of faking certainty.

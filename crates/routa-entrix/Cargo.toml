@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 description = "Entrix fitness function engine — Rust implementation of tools/entrix"
+repository = "https://github.com/phodal/routa-js"
+homepage = "https://github.com/phodal/routa-js"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

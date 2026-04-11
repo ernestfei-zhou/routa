@@ -28,7 +28,7 @@ fn sample_state() -> RuntimeState {
             last_seen_at_ms: now - 180_000,
             status: "active".to_string(),
             tmux_pane: Some("%12".to_string()),
-            touched_files: ["crates/routa-watch/src/tui.rs".to_string()]
+            touched_files: ["crates/harness-monitor/src/tui.rs".to_string()]
                 .into_iter()
                 .collect(),
             last_turn_id: Some("turn-1".to_string()),
@@ -57,9 +57,9 @@ fn sample_state() -> RuntimeState {
 
     let mut files = BTreeMap::new();
     files.insert(
-        "crates/routa-watch/src/tui.rs".to_string(),
+        "crates/harness-monitor/src/tui.rs".to_string(),
         FileView {
-            rel_path: "crates/routa-watch/src/tui.rs".to_string(),
+            rel_path: "crates/harness-monitor/src/tui.rs".to_string(),
             dirty: true,
             state_code: "modify".to_string(),
             entry_kind: EntryKind::File,
@@ -91,7 +91,7 @@ fn sample_state() -> RuntimeState {
         EventLogEntry {
             observed_at_ms: now - 240_000,
             source: EventSource::Watch,
-            message: "watch modify crates/routa-watch/src/tui.rs".to_string(),
+            message: "watch modify crates/harness-monitor/src/tui.rs".to_string(),
         },
         EventLogEntry {
             observed_at_ms: now - 180_000,
@@ -514,7 +514,7 @@ fn transport_degrades_to_feed_when_socket_is_unreachable() {
     let ctx = RepoContext {
         repo_root,
         git_dir,
-        db_path: dir.path().join("routa-watch.db"),
+        db_path: dir.path().join("harness-monitor.db"),
         runtime_event_path: event_path,
         runtime_socket_path: socket_path,
         runtime_info_path: info_path,

@@ -1023,7 +1023,7 @@ fn render_title_bar(frame: &mut Frame, area: Rect, state: &RuntimeState) {
         .count();
     let line = Line::from(vec![
         Span::styled(
-            " RoutaWatch ",
+            " Harness Monitor ",
             Style::default()
                 .fg(colors.text)
                 .bg(colors.accent)

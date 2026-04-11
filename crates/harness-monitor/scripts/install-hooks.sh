@@ -21,4 +21,4 @@ for hook in post-commit post-merge post-checkout; do
   echo "Installed .git/hooks/$hook"
 done
 
-echo "Routa Watch hook scripts installed."
+echo "Harness Monitor hook scripts installed."
