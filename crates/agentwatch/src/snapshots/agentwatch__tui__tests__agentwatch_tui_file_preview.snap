@@ -1,28 +1,27 @@
 ---
 source: crates/agentwatch/src/tui_tests.rs
-assertion_line: 427
 expression: "render_snapshot(&state, &mut cache, 120, 24)"
 ---
  AgentWatch   repo:routa-js  branch:main  agents:2 active:1  dirty:2  unknown:1  synced 2m ago
-┌Files───────────────────────────────────────────────────────────────────────────────┐┌Details─────────────────────────┐
-│ ALL FILES  2 files  commits:...                                                    ││tui.rs                          │
-│────────────────────────────────────────────────────────────────────────────────────││crates/agentwatch/src           │
-│> tui.rs                                                   ...h/src  M  +38 -5     4││Last by: impl-buddy             │
-│  route.ts                                                 .../card  D  -12        5││Modified: 4m                    │
+┌Files───────────────────────────────────────────────────────────────────────────────┐┌File Preview────────────────────┐
+│ ALL FILES  2 files  commits:...                                                    ││ 1 fn render(frame: &mut Frame) │
+│────────────────────────────────────────────────────────────────────────────────────││{                               │
+│> tui.rs                                                   ...h/src  M  +38 -5     4││ 2     // preview               │
+│  route.ts                                                 .../card  D  -12        5││ 3 }                            │
+│                                                                                    ││                                │
+│                                                                                    ││                                │
+│                                                                                    ││                                │
+│                                                                                    ││                                │
+│                                                                                    ││                                │
+│                                                                                    ││                                │
+│                                                                                    ││                                │
+│                                                                                    │└────────────────────────────────┘
+│                                                                                    │┌Details─────────────────────────┐
+│                                                                                    ││tui.rs                          │
+│                                                                                    ││crates/agentwatch/src           │
+│                                                                                    ││Last by: impl-buddy             │
 │                                                                                    ││Lines: ...  Size: ...  Git      │
 │                                                                                    ││changes: ...                    │
-│                                                                                    ││                                │
-│                                                                                    ││                                │
-│                                                                                    ││                                │
-│                                                                                    ││                                │
-│                                                                                    ││                                │
-│                                                                                    ││                                │
-│                                                                                    ││                                │
-│                                                                                    ││                                │
-│                                                                                    ││                                │
-│                                                                                    ││                                │
-│                                                                                    ││                                │
-│                                                                                    ││                                │
 │                                                                                    ││                                │
 │                                                                                    ││                                │
 └────────────────────────────────────────────────────────────────────────────────────┘└────────────────────────────────┘

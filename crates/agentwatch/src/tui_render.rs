@@ -110,10 +110,15 @@ fn render_main_area(
     if layout_mode == LayoutMode::Compact {
         let split = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Percentage(68), Constraint::Percentage(32)])
+            .constraints([Constraint::Percentage(56), Constraint::Percentage(44)])
             .split(area);
+        let lower = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(56), Constraint::Percentage(44)])
+            .split(split[1]);
         render_files(frame, split[0], state, cache, FileRowDensity::TwoLine);
-        render_details_panel(frame, split[1], state, cache);
+        render_preview_panel(frame, lower[0], state, cache);
+        render_details_panel(frame, lower[1], state, cache);
         return;
     }
 
@@ -122,8 +127,13 @@ fn render_main_area(
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(72), Constraint::Percentage(28)])
             .split(area);
+        let right = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+            .split(columns[1]);
         render_files(frame, columns[0], state, cache, FileRowDensity::SingleLine);
-        render_details_panel(frame, columns[1], state, cache);
+        render_preview_panel(frame, right[0], state, cache);
+        render_details_panel(frame, right[1], state, cache);
         return;
     }
 
@@ -274,17 +284,12 @@ fn render_details_panel(frame: &mut Frame, area: Rect, state: &RuntimeState, cac
             .and_then(|session_id| state.sessions.get(session_id))
             .map(session_display_label)
             .unwrap_or_else(|| "unknown".to_string());
-        lines.push(Line::from(vec![
-            Span::styled("Last by: ", Style::default().fg(colors.muted)),
-            Span::styled(owner, Style::default().fg(colors.accent)),
-        ]));
-        lines.push(Line::from(vec![
-            Span::styled("Modified: ", Style::default().fg(colors.muted)),
-            Span::styled(
-                time_ago(file.last_modified_at_ms),
-                Style::default().fg(colors.text),
-            ),
-        ]));
+        if owner != "unknown" {
+            lines.push(Line::from(vec![
+                Span::styled("Last by: ", Style::default().fg(colors.muted)),
+                Span::styled(owner, Style::default().fg(colors.accent)),
+            ]));
+        }
         if let Some(facts) = cache.file_facts(file) {
             lines.push(Line::from(vec![
                 Span::styled("Type: ", Style::default().fg(colors.muted)),
