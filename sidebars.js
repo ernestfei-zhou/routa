@@ -228,6 +228,11 @@ module.exports = {
           label: "Latest Release",
         },
         {
+          type: "doc",
+          id: "releases/v0.14.0-changelog",
+          label: "Technical Changelog",
+        },
+        {
           type: "link",
           label: "Blog",
           href: "/blog",

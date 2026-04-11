@@ -1,6 +1,8 @@
 ---
 slug: /
 title: Routa Docs
+displayed_sidebar: docsSidebar
+hide_table_of_contents: true
 ---
 
 ## Routa Overview
