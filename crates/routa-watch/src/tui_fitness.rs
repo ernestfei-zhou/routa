@@ -6,6 +6,7 @@ use routa_entrix::runner::ShellRunner;
 use routa_entrix::scoring::{score_dimension, score_report};
 use std::cmp::Ordering;
 use std::path::Path;
+use std::thread;
 use std::time::Instant;
 
 #[derive(Debug, Clone)]
@@ -73,44 +74,66 @@ pub fn run_fast_fitness(repo_root: &str) -> Result<FitnessSnapshot> {
     let mut all_results = Vec::new();
     let mut coverage_metric_available = false;
 
-    for dim in dimensions {
-        let metric_results: Vec<MetricResult> = if dim.metrics.is_empty() {
-            Vec::new()
-        } else {
-            runner.run_batch(&dim.metrics, true, false, None)
-        };
-        let dimension_score = score_dimension(&metric_results, &dim.name, dim.weight);
-        coverage_metric_available |= metric_results.iter().any(|metric| {
-            metric.metric_name.to_lowercase().contains("coverage")
-                || metric.metric_name.to_lowercase().contains("cover")
-        });
-        let metrics: Vec<FitnessMetricSummary> = metric_results
-            .iter()
-            .map(|result| FitnessMetricSummary {
-                name: result.metric_name.clone(),
-                passed: result.passed,
-                state: result.state.as_str().to_string(),
-                hard_gate: result.hard_gate,
-                duration_ms: result.duration_ms,
-            })
-            .collect();
-        all_results.push(dimension_score.clone());
-        dim_summaries.push(FitnessDimensionSummary {
-            name: dim.name,
-            weight: dim.weight,
-            score: dimension_score.score,
-            passed: dimension_score.passed,
-            total: dimension_score.total,
-            hard_gate_failures: dimension_score.hard_gate_failures,
-            metrics,
-        });
-    }
+    thread::scope(|scope| {
+        let mut handles = Vec::new();
+        for dim in dimensions {
+            let name = dim.name.clone();
+            let runner = &runner;
+            handles.push(scope.spawn(move || {
+                let metric_results: Vec<MetricResult> = if dim.metrics.is_empty() {
+                    Vec::new()
+                } else {
+                    runner.run_batch(&dim.metrics, true, false, None)
+                };
+                let dimension_score = score_dimension(&metric_results, &dim.name, dim.weight);
+                let has_coverage_metric = metric_results.iter().any(|metric| {
+                    metric.metric_name.to_lowercase().contains("coverage")
+                        || metric.metric_name.to_lowercase().contains("cover")
+                });
+                let metrics: Vec<FitnessMetricSummary> = metric_results
+                    .iter()
+                    .map(|result| FitnessMetricSummary {
+                        name: result.metric_name.clone(),
+                        passed: result.passed,
+                        state: result.state.as_str().to_string(),
+                        hard_gate: result.hard_gate,
+                        duration_ms: result.duration_ms,
+                    })
+                    .collect();
+                (
+                    name,
+                    dim.weight,
+                    dimension_score,
+                    has_coverage_metric,
+                    metrics,
+                )
+            }));
+        }
 
-    let report = score_report(&all_results, policy.min_score);
+        for handle in handles {
+            let (name, weight, dimension_score, has_coverage_metric, metrics) =
+                handle.join().expect("dimension fitness worker panicked");
+            coverage_metric_available |= has_coverage_metric;
+            let passed = dimension_score.passed;
+            let total = dimension_score.total;
+            all_results.push(dimension_score.clone());
+            dim_summaries.push(FitnessDimensionSummary {
+                name,
+                weight,
+                score: dimension_score.score,
+                passed,
+                total,
+                hard_gate_failures: dimension_score.hard_gate_failures,
+                metrics,
+            });
+        }
+    });
+
     let metric_count: usize = dim_summaries
         .iter()
         .flat_map(|dim| dim.metrics.iter())
         .count();
+
     let mut slowest_metrics: Vec<FitnessMetricSummary> = dim_summaries
         .iter()
         .flat_map(|dim| dim.metrics.iter().cloned())
@@ -120,6 +143,7 @@ pub fn run_fast_fitness(repo_root: &str) -> Result<FitnessSnapshot> {
             .partial_cmp(&a.duration_ms)
             .unwrap_or(Ordering::Equal)
     });
+    let report = score_report(&all_results, policy.min_score);
 
     Ok(FitnessSnapshot {
         final_score: report.final_score,

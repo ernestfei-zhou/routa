@@ -257,6 +257,33 @@ fn render_fitness_panel(frame: &mut Frame, area: Rect, state: &RuntimeState, cac
                 ),
             ]));
         }
+        let trend = cache.fitness_trend();
+        if trend.len() >= 2 {
+            let latest = trend.last().copied().unwrap_or(0.0);
+            let prev = trend
+                .get(trend.len().saturating_sub(2))
+                .copied()
+                .unwrap_or(0.0);
+            let delta = latest - prev;
+            let delta_text = if delta >= 0.0 {
+                format!("+{delta:.1}")
+            } else {
+                format!("{delta:.1}")
+            };
+            let delta_color = if delta >= 0.0 { ACTIVE } else { STOPPED };
+            lines.push(Line::from(vec![
+                Span::styled("Trend:", Style::default().fg(colors.text)),
+                Span::raw(" "),
+                render_score_sparkline(trend),
+                Span::raw(" "),
+                Span::styled(format!("({delta_text})"), Style::default().fg(delta_color)),
+                Span::raw(" "),
+                Span::styled(
+                    format!("n={}", trend.len()),
+                    Style::default().fg(colors.muted),
+                ),
+            ]));
+        }
 
         lines.push(Line::from(""));
         lines.push(Line::from(vec![Span::styled(
@@ -307,28 +334,63 @@ fn render_fitness_panel(frame: &mut Frame, area: Rect, state: &RuntimeState, cac
                 Style::default().fg(colors.muted),
             ),
         ]));
-        for metric in snapshot.slowest_metrics.iter().take(3) {
-            let mut metric_name = metric.name.clone();
-            if metric_name.is_empty() {
-                metric_name = "<unnamed>".to_string();
+        let slow_metric_limit = 5;
+        let slowest_metrics = snapshot
+            .slowest_metrics
+            .iter()
+            .take(slow_metric_limit)
+            .collect::<Vec<_>>();
+        if !slowest_metrics.is_empty() {
+            let mut max_duration = slowest_metrics
+                .iter()
+                .map(|metric| metric.duration_ms)
+                .reduce(f64::max)
+                .unwrap_or(1.0);
+            if max_duration <= 0.0 {
+                max_duration = 1.0;
             }
-            lines.push(Line::from(vec![
-                Span::styled(
-                    format!("{:>6.2}", metric.duration_ms),
-                    Style::default().fg(score_color_for_value(snapshot.final_score)),
-                ),
-                Span::raw("ms "),
-                Span::styled(
-                    format!("{:<18}", truncate_short(&metric_name, 18)),
-                    Style::default().fg(colors.text),
-                ),
-                Span::raw(" "),
-                Span::styled(
-                    format!("[{}]", metric.state),
-                    Style::default().fg(metric_color(metric)),
-                ),
-            ]));
+            lines.push(Line::from(vec![Span::styled(
+                format!("Top {slow_metric_limit} slowest metrics:"),
+                Style::default().fg(colors.text),
+            )]));
+            let metric_bar_width = inner.width.saturating_sub(48).max(8).min(20) as usize;
+            for metric in slowest_metrics {
+                let mut metric_name = metric.name.clone();
+                if metric_name.is_empty() {
+                    metric_name = "<unnamed>".to_string();
+                }
+                let metric_color = metric_color(metric);
+                lines.push(Line::from(vec![
+                    Span::styled(
+                        format!("{:>7.1}", metric.duration_ms),
+                        Style::default().fg(metric_color),
+                    ),
+                    Span::raw("ms "),
+                    Span::styled(
+                        format!("{:<18}", truncate_short(&metric_name, 18)),
+                        Style::default().fg(colors.text),
+                    ),
+                    Span::raw(" "),
+                    render_metric_bar(
+                        metric.duration_ms,
+                        max_duration,
+                        metric_bar_width,
+                        metric_color,
+                    ),
+                    Span::raw(" "),
+                    Span::styled(
+                        format!("[{}]", metric.state),
+                        Style::default().fg(metric_color),
+                    ),
+                ]));
+            }
+        } else {
+            lines.push(Line::from(vec![Span::styled(
+                "no slow metrics in this run",
+                Style::default().fg(colors.muted),
+            )]));
         }
+
         if cache.is_fitness_running() {
             lines.push(Line::from(vec![
                 Span::raw(" "),
@@ -366,6 +428,43 @@ fn render_fitness_panel(frame: &mut Frame, area: Rect, state: &RuntimeState, cac
             .wrap(Wrap { trim: true }),
         inner,
     );
+}
+
+fn render_metric_bar(value: f64, max_value: f64, width: usize, color: Color) -> Span<'static> {
+    let width = width.clamp(6, 30);
+    let filled = if max_value <= 0.0 {
+        0
+    } else {
+        ((value / max_value) * width as f64).round() as usize
+    };
+    let filled = filled.min(width);
+    let empty = width.saturating_sub(filled);
+    Span::styled(
+        format!("{}{}", "█".repeat(filled), "░".repeat(empty)),
+        Style::default().fg(color),
+    )
+}
+
+fn render_score_sparkline(values: &[f64]) -> Span<'static> {
+    if values.len() < 2 {
+        return Span::styled("-", Style::default().fg(STOPPED));
+    }
+
+    let min = values.iter().copied().fold(f64::INFINITY, f64::min);
+    let max = values.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let range = (max - min).max(0.01);
+    let bars = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+    let mut spark = String::new();
+    for value in values.iter().copied() {
+        let ratio = ((value - min) / range).clamp(0.0, 1.0);
+        let idx = (ratio * (bars.len() as f64 - 1.0)).round() as usize;
+        let idx = idx.min(bars.len() - 1);
+        spark.push(bars[idx]);
+    }
+    Span::styled(
+        spark,
+        Style::default().fg(score_color_for_value(*values.last().unwrap_or(&0.0))),
+    )
 }
 
 fn render_score_bar(score: f64, width: usize) -> Span<'static> {

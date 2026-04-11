@@ -7,6 +7,8 @@ use std::process::Command;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 
+const FITNESS_TREND_CAPACITY: usize = 12;
+
 #[derive(Clone, Debug, Default)]
 pub(super) struct DiffStatSummary {
     pub(super) status: String,
@@ -93,6 +95,7 @@ pub(super) struct AppCache {
     pending_diff_key: Option<String>,
     pending_facts_key: Option<String>,
     pending_fitness: bool,
+    fitness_trend: Vec<f64>,
     fitness_snapshot: Option<fitness::FitnessSnapshot>,
     fitness_error: Option<String>,
     fitness_last_run_ms: Option<i64>,
@@ -117,6 +120,7 @@ impl AppCache {
             pending_diff_key: None,
             pending_facts_key: None,
             pending_fitness: false,
+            fitness_trend: Vec::new(),
             fitness_snapshot: None,
             fitness_error: None,
             fitness_last_run_ms: None,
@@ -158,6 +162,12 @@ impl AppCache {
                         Ok(snapshot) => {
                             self.fitness_error = None;
                             self.fitness_snapshot = Some(snapshot);
+                            self.fitness_trend
+                                .push(self.fitness_snapshot.as_ref().unwrap().final_score);
+                            if self.fitness_trend.len() > FITNESS_TREND_CAPACITY {
+                                let overflow = self.fitness_trend.len() - FITNESS_TREND_CAPACITY;
+                                self.fitness_trend.drain(0..overflow);
+                            }
                         }
                         Err(message) => {
                             self.fitness_error = Some(message);
@@ -315,6 +325,10 @@ impl AppCache {
 
     pub(super) fn fitness_last_run_ms(&self) -> Option<i64> {
         self.fitness_last_run_ms
+    }
+
+    pub(super) fn fitness_trend(&self) -> &[f64] {
+        &self.fitness_trend
     }
 
     pub(super) fn highlighted_detail_text(

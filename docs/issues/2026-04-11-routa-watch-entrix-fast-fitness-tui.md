@@ -39,6 +39,23 @@ related_issues: []
 - Fast 执行时长较高，直接放在主循环会阻塞交互，需要后台异步计算与缓存。
 - 规则侧写中 fast 模式主要覆盖 lint/typecheck/contract/security 等可执行检查，缺少标准化覆盖率指标。
 
+## Progress Update (2026-04-11)
+
+- 已完成：
+  - 在 `crates/routa-watch` 增加 `Entrix` fast 健康快照获取与展示。
+  - 背景异步刷新机制接通（启动时、手动 `g`、10 分钟周期刷新）。
+  - 首屏面板显示总分、维度得分、关键度量失败统计、覆盖率可见性说明。
+- 已验证：
+  - `cargo check -p routa-watch`、`cargo test -p routa-watch` 正常。
+  - 快照渲染测试覆盖面可见，当前面板可在无快照数据时回退到 `idle`。
+- 风险：
+  - 已在 UI 上补齐 TopN 和趋势展示，后续可考虑增加趋势窗口配置与导出快照。
+
+## Next Actions
+
+1. 完善并稳定化测试：为 `run_fast_fitness` 增加并发路径/历史趋势字段覆盖。
+2. 评估可配置化：将 TopN（当前 5）与趋势窗口（当前 12）提为可配置参数，和偏好配置联动。
+
 ## Relevant Files
 
 - `crates/routa-watch/src/tui.rs`
