@@ -1,7 +1,7 @@
 ---
 title: "Rust tasks API performance analysis confirmed similar hot-path issues"
 date: "2026-04-09"
-status: investigating
+status: resolved
 severity: medium
 area: "backend"
 tags: ["rust", "tasks-api", "performance", "analysis"]
@@ -9,6 +9,8 @@ reported_by: "agent"
 related_issues:
   - "https://github.com/phodal/routa/issues/406"
   - "2026-04-09-next-task-api-head-of-line-blocking.md"
+resolved_at: "2026-04-11"
+resolution: "Merged into the broader task API performance tracker so Next.js and Rust evidence live under one active issue family."
 ---
 
 # Rust Tasks API Performance Analysis
@@ -20,6 +22,14 @@ related_issues:
 ## Executive Summary
 
 The Rust backend has **similar performance issues** to the Next.js version identified in #406. While Rust's async runtime provides better baseline performance, the API design patterns introduce the same N+1 query and synchronous Git execution problems.
+
+## Deduplication Note
+
+This file remains as supporting evidence, but it is no longer treated as a
+separate active issue. The active tracker is
+`docs/issues/2026-04-09-next-task-api-head-of-line-blocking.md`, which now
+covers both the Next.js bottleneck and the Rust parity findings tied to GitHub
+issue `#406`.
 
 ## Issues Identified
 

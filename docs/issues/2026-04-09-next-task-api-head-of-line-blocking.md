@@ -11,6 +11,7 @@ github_url: "https://github.com/phodal/routa/issues/406"
 related_issues:
   - "docs/issues/2026-04-07-task-changes-api-performance.md"
   - "docs/issues/2026-03-19-kanban-initial-refresh-storm.md"
+  - "docs/issues/2026-04-09-rust-tasks-api-performance-analysis.md"
 fitness_tracking:
   dimension: "performance"
   rulebook: "docs/fitness/runtime/performance.md"
@@ -78,6 +79,12 @@ When the Kanban page refreshes task list, a simultaneous `/changes` request wait
 The file changes tab can look broken even when the changes endpoint and git repository are healthy.
 
 This also obscures root cause: the browser network waterfall points at `/api/tasks/{id}/changes`, while the actual pressure may come from a neighboring Kanban refresh or task-list hydration request on the same Next.js dev server.
+
+## Deduplication Note
+
+The narrower Rust-side analysis record has been merged into this issue as a
+supporting backend parity note. The authoritative active tracker for this task
+API performance family is this file plus GitHub issue `#406`.
 
 ## Proposed Fix
 

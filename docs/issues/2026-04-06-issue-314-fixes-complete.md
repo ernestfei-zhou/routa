@@ -1,7 +1,7 @@
 ---
 title: "Issue #314 fix batch completed for harness engineering follow-up"
 date: "2026-04-06"
-status: investigating
+status: resolved
 severity: medium
 area: "fitness"
 tags: ["harness", "playbook", "verification", "github-sync"]
@@ -12,6 +12,8 @@ related_issues:
 github_issue: 314
 github_state: "open"
 github_url: "https://github.com/phodal/routa/issues/314"
+resolved_at: "2026-04-11"
+resolution: "Reclassified as a progress note under the still-open GitHub issue #314, not a separate active local issue."
 ---
 
 # Issue #314 修复完成报告
@@ -94,6 +96,13 @@ $ cargo run -p routa-cli -- harness evolve --learn
 
 #### 3. Patch 重新排序
 - ✅ Playbook 中的补丁优先执行
+
+## Deduplication Note
+
+This document records one completed fix batch for GitHub issue `#314`, but it
+is not the authoritative active tracker for the still-open upstream work. The
+open item remains GitHub issue `#314`; this local file is kept as historical
+implementation evidence only.
 - ✅ 按 playbook 定义的顺序
 - ✅ 其他补丁字母序排在后面
 
