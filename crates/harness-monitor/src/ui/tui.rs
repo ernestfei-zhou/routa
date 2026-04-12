@@ -53,8 +53,7 @@ const AGENT_SCAN_REFRESH_MS: u64 = 15_000;
 const FITNESS_AUTO_REFRESH_MS: u64 = 10 * 60 * 1000;
 const FITNESS_CACHE_CHECK_MS: u64 = 1500;
 const SCC_REFRESH_MS: u64 = 60 * 1000;
-const FALLBACK_SCAN_REFRESH_MS: u64 = 15_000;
-const FALLBACK_SCAN_IDLE_WINDOW_MS: i64 = 15_000;
+const RECONCILE_SCAN_REFRESH_MS: u64 = 5_000;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 struct RepoStatusSummary {
@@ -75,7 +74,7 @@ pub fn run(ctx: RepoContext, poll_interval_ms: u64) -> Result<()> {
     let result = run_loop(
         &mut terminal,
         ctx,
-        poll_interval_ms.max(FALLBACK_SCAN_REFRESH_MS),
+        poll_interval_ms.max(RECONCILE_SCAN_REFRESH_MS),
     );
     ratatui::restore();
     let _ = execute!(stdout(), LeaveAlternateScreen);
@@ -137,10 +136,7 @@ fn run_loop(terminal: &mut DefaultTerminal, ctx: RepoContext, poll_interval_ms: 
         }
 
         let mut force_scan = false;
-        let now_ms = chrono::Utc::now().timestamp_millis();
-        if last_poll.elapsed() >= Duration::from_millis(poll_interval_ms)
-            && state.should_run_fallback_scan(now_ms, FALLBACK_SCAN_IDLE_WINDOW_MS)
-        {
+        if last_poll.elapsed() >= Duration::from_millis(poll_interval_ms) {
             let dirty = observe::scan_repo(&ctx)?;
             state.sync_dirty_files(dirty);
             last_poll = Instant::now();

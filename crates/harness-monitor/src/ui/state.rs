@@ -423,13 +423,6 @@ impl RuntimeState {
         self.worktree_count = count;
     }
 
-    pub fn should_run_fallback_scan(&self, now_ms: i64, idle_window_ms: i64) -> bool {
-        match self.last_file_hook_at_ms {
-            Some(last_hook_ms) => now_ms.saturating_sub(last_hook_ms) >= idle_window_ms,
-            None => true,
-        }
-    }
-
     pub fn set_detected_agents(&mut self, agents: Vec<DetectedAgent>) {
         self.agent_stats = crate::observe::detect::calculate_stats(&agents);
         self.detected_agents = agents;
