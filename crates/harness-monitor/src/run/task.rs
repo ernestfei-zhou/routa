@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::evaluate::eval::EvalSnapshot;
 use crate::govern::evidence::EvidenceRequirement;
 use crate::shared::ids::{RunId, TaskId};

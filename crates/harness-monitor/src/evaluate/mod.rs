@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 pub mod eval;
 pub mod evaluator;
 pub mod entrix;

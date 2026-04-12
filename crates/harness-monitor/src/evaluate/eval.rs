@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::shared::ids::{RunId, TaskId, WorkspaceId};
 use serde::{Deserialize, Serialize};
 

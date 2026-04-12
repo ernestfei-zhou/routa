@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use super::eval::{DimensionScore, EvalInput, EvalMode, EvalSnapshot, EvaluatorKind};
 use anyhow::Result;
 

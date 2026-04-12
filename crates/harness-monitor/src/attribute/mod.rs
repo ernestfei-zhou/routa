@@ -1,6 +1,8 @@
+#![allow(unused_imports)]
+
 pub mod attribution;
 pub mod confidence;
 pub mod matching;
 pub mod conflicts;
 
-pub use attribution::*;
+pub(crate) use self::attribution::*;

@@ -1,3 +1,6 @@
+#![allow(unused_imports)]
+#![allow(clippy::module_inception)]
+
 pub mod policy;
 pub mod run;
 pub mod task;

@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 pub mod ids;
 pub mod models;
 pub mod db;
