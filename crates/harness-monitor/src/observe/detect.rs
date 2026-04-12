@@ -191,25 +191,40 @@ fn classify_vendor(
     command: &str,
 ) -> Option<(&'static str, &'static str, &'static str)> {
     let lower = format!("{comm} {command}").to_ascii_lowercase();
-    if lower.contains("codex") {
+    let tokens = lower
+        .split(|ch: char| !ch.is_ascii_alphanumeric())
+        .filter(|token| !token.is_empty())
+        .collect::<Vec<_>>();
+
+    if contains_token_or_prefixed(&tokens, "codex") {
         Some(("Codex", "OpenAI", "◈"))
-    } else if lower.contains("claude") {
+    } else if contains_token_or_prefixed(&tokens, "claude") {
         Some(("Claude", "Anthropic", "◆"))
-    } else if lower.contains("qodercli") || lower.contains("qoder") {
+    } else if contains_token(&tokens, "qodercli") || contains_token_or_prefixed(&tokens, "qoder") {
         Some(("Qoder", "Qoder", "◌"))
-    } else if lower.contains("auggie") {
+    } else if contains_token_or_prefixed(&tokens, "auggie") {
         Some(("Auggie", "Auggie", "▣"))
-    } else if lower.contains("cursor") {
+    } else if contains_token(&tokens, "cursor") {
         Some(("Cursor", "Cursor", "⌘"))
-    } else if lower.contains("copilot") {
+    } else if contains_token_or_prefixed(&tokens, "copilot") {
         Some(("Copilot", "GitHub", "⬡"))
-    } else if lower.contains("gemini") {
+    } else if contains_token_or_prefixed(&tokens, "gemini") {
         Some(("Gemini", "Google", "✦"))
-    } else if lower.contains("aider") {
+    } else if contains_token_or_prefixed(&tokens, "aider") {
         Some(("Aider", "Aider", "⚡"))
     } else {
         None
     }
+}
+
+fn contains_token(tokens: &[&str], needle: &str) -> bool {
+    tokens.contains(&needle)
+}
+
+fn contains_token_or_prefixed(tokens: &[&str], needle: &str) -> bool {
+    tokens
+        .iter()
+        .any(|token| *token == needle || token.starts_with(needle))
 }
 
 pub fn extract_project(cwd: &str) -> String {
@@ -358,6 +373,31 @@ mod tests {
             Some((
                 "Auggie".to_string(),
                 "Auggie".to_string(),
+                "project".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn ignore_cursor_ui_service_processes() {
+        assert!(parse_agent_line(
+            "999998 1 0.0 32768 1-22:15:40 CursorUIViewService CursorUIViewService",
+            "/tmp/project"
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn classify_cursor_binary_processes() {
+        assert_eq!(
+            parse_agent_line(
+                "999999 1 0.2 32768 00:30 Cursor /Applications/Cursor.app/Contents/MacOS/Cursor --cwd /tmp/project",
+                "/tmp/project"
+            )
+            .map(|agent| (agent.name, agent.vendor, agent.project)),
+            Some((
+                "Cursor".to_string(),
+                "Cursor".to_string(),
                 "project".to_string()
             ))
         );
