@@ -1063,6 +1063,7 @@ fn render_file_secondary_line(
     Line::from(spans)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_file_meta_line(
     file: &crate::shared::models::FileView,
     parent_dir: &str,

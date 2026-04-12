@@ -1,8 +1,8 @@
-use crate::observe::ipc;
 use crate::observe::codex_transcript::{
     derive_task_identity, recover_prompt_from_transcript, task_identity_from_prompt,
     transcript_display_name,
 };
+use crate::observe::ipc;
 use crate::observe::repo::{resolve, resolve_runtime, RepoContext};
 use crate::shared::db::Db;
 use crate::shared::models::{
@@ -368,7 +368,8 @@ pub fn build_hook_runtime_message(
             prompt_preview: task_identity
                 .as_ref()
                 .map(|(_, _, prompt_preview)| prompt_preview.clone()),
-            recovered_from_transcript: task_prompt.is_some() && prompt.as_deref() != task_prompt.as_deref(),
+            recovered_from_transcript: task_prompt.is_some()
+                && prompt.as_deref() != task_prompt.as_deref(),
             tmux_session,
             tmux_window,
             tmux_pane,
@@ -587,6 +588,7 @@ pub(crate) fn infer_git_refresh_event(event: &HookEvent) -> Option<&'static str>
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn build_git_runtime_event(
     repo_root: &std::path::Path,
     observed_at_ms: i64,
@@ -925,9 +927,8 @@ mod tests {
 
     #[test]
     fn parse_command_paths_extracts_git_paths_after_separator() {
-        let paths = parse_command_paths(
-            "git add -- 'src/app/page.tsx' 'docs/design-docs/example.md'",
-        );
+        let paths =
+            parse_command_paths("git add -- 'src/app/page.tsx' 'docs/design-docs/example.md'");
 
         assert_eq!(
             paths,

@@ -807,6 +807,7 @@ impl Db {
         Ok(updated)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn upsert_task_from_prompt(
         &self,
         repo_root: &str,
