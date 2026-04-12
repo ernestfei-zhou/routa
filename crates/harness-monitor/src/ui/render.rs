@@ -653,16 +653,8 @@ fn render_runs_panel(
             } else {
                 crate::shared::models::HookClient::from_str(&session.client).icon()
             };
-            let run_name = if session.is_all_runs_bucket {
-                "All".to_string()
-            } else if session.is_unknown_bucket {
-                "unattributed".to_string()
-            } else if let Some(task_title) = &session.task_title {
-                task_title.clone()
-            } else {
-                session.display_name.clone()
-            };
-            let session_label = if session.task_title.is_some() {
+            let run_name = session.primary_label().to_string();
+            let session_label = if session.has_task_context() {
                 shorten_path(&session.session_id, 14)
             } else {
                 String::new()

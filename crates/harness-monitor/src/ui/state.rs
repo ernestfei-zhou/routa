@@ -129,6 +129,7 @@ pub struct SessionListItem {
     pub display_name: String,
     pub task_id: Option<String>,
     pub task_title: Option<String>,
+    pub prompt_preview: Option<String>,
     pub recovered_from_transcript: bool,
     pub client: String,
     pub source: Option<String>,
@@ -148,6 +149,37 @@ pub struct SessionListItem {
     pub is_synthetic_agent_run: bool,
     pub is_unknown_bucket: bool,
     pub is_all_runs_bucket: bool,
+}
+
+impl SessionListItem {
+    pub fn primary_label(&self) -> &str {
+        if self.is_all_runs_bucket {
+            return "All";
+        }
+        if self.is_unknown_bucket {
+            return "unattributed";
+        }
+        self.prompt_preview
+            .as_deref()
+            .filter(|value| !value.trim().is_empty())
+            .or_else(|| {
+                self.task_title
+                    .as_deref()
+                    .filter(|value| !value.trim().is_empty())
+            })
+            .unwrap_or(&self.display_name)
+    }
+
+    pub fn has_task_context(&self) -> bool {
+        self.prompt_preview
+            .as_deref()
+            .is_some_and(|value| !value.trim().is_empty())
+            || self
+                .task_title
+                .as_deref()
+                .is_some_and(|value| !value.trim().is_empty())
+            || self.task_id.is_some()
+    }
 }
 
 #[derive(Debug)]

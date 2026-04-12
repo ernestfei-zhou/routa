@@ -593,10 +593,7 @@ fn render_run_details(
 
     let mut lines = vec![
         Line::from(Span::styled(
-            shorten_path(
-                run.task_title.as_deref().unwrap_or(&run.display_name),
-                width.saturating_sub(4) as usize,
-            ),
+            shorten_path(run.primary_label(), width.saturating_sub(4) as usize),
             Style::default()
                 .fg(colors.text)
                 .add_modifier(Modifier::BOLD),
@@ -609,6 +606,20 @@ fn render_run_details(
             Span::styled(model.origin.as_str(), Style::default().fg(colors.accent)),
         ]),
     ];
+
+    if let Some(task_title) = run
+        .task_title
+        .as_deref()
+        .filter(|title| !title.trim().is_empty() && *title != run.primary_label())
+    {
+        lines.push(Line::from(vec![
+            Span::styled("Task: ", Style::default().fg(colors.muted)),
+            Span::styled(
+                shorten_path(task_title, width.saturating_sub(12) as usize),
+                Style::default().fg(colors.text),
+            ),
+        ]));
+    }
 
     if let Some(model_name) = &run.model {
         lines.push(Line::from(vec![
@@ -623,10 +634,7 @@ fn render_run_details(
     if run.recovered_from_transcript {
         lines.push(Line::from(vec![
             Span::styled("Prompt: ", Style::default().fg(colors.muted)),
-            Span::styled(
-                "recovered-from-transcript",
-                Style::default().fg(INFERRED),
-            ),
+            Span::styled("recovered-from-transcript", Style::default().fg(INFERRED)),
         ]));
     }
 
@@ -872,6 +880,7 @@ pub(super) fn build_run_operator_model(
     let journey_files = journey_files_for_run(state, run);
     let workspace_path = workspace_path_for_run(state, run);
     let process_cwd = process_cwd_for_run(state, run);
+    let fitness_snapshot = fitness_snapshot_for_run(cache, run, &changed_files, &journey_files);
     let assessment = assess_run(&RunAssessmentInput {
         run_id: &run.session_id,
         display_name: &run.display_name,
@@ -893,19 +902,12 @@ pub(super) fn build_run_operator_model(
         workspace_detached: false,
         workspace_missing: std::path::Path::new(&state.repo_root).exists()
             && !std::path::Path::new(&workspace_path).exists(),
-        has_eval: cache.fitness_snapshot().is_some(),
-        hard_gate_blocked: cache
-            .fitness_snapshot()
-            .is_some_and(|snapshot| snapshot.hard_gate_blocked),
-        score_blocked: cache
-            .fitness_snapshot()
-            .is_some_and(|snapshot| snapshot.score_blocked),
-        has_coverage: cache
-            .fitness_snapshot()
+        has_eval: fitness_snapshot.is_some(),
+        hard_gate_blocked: fitness_snapshot.is_some_and(|snapshot| snapshot.hard_gate_blocked),
+        score_blocked: fitness_snapshot.is_some_and(|snapshot| snapshot.score_blocked),
+        has_coverage: fitness_snapshot
             .is_some_and(|snapshot| snapshot.coverage_summary.has_any_sampled_source()),
-        api_contract_passed: cache
-            .fitness_snapshot()
-            .is_some_and(api_contract_dimension_passed),
+        api_contract_passed: fitness_snapshot.is_some_and(api_contract_dimension_passed),
     });
 
     RunOperatorModel {
@@ -923,7 +925,7 @@ pub(super) fn build_run_operator_model(
         eval_summary: if is_auggie_mcp_service_run(state, run) {
             Some("workspace-shared".to_string())
         } else {
-            cache.fitness_snapshot().map(summarize_eval_snapshot)
+            fitness_snapshot.map(summarize_eval_snapshot)
         },
         evidence: assessment.evidence,
         integrity_warning: assessment.integrity_warning,
@@ -969,7 +971,23 @@ fn journey_files_for_run(
         return Vec::new();
     };
 
-    let mut files: Vec<_> = session.touched_files.iter().cloned().collect();
+    let mut files: Vec<_> = if let Some(task_id) = run.task_id.as_deref() {
+        let mut task_files: Vec<_> = state
+            .files
+            .values()
+            .filter(|file| file.last_task_id.as_deref() == Some(task_id))
+            .map(|file| file.rel_path.clone())
+            .collect();
+        task_files.sort();
+        task_files.dedup();
+        if task_files.is_empty() {
+            session.touched_files.iter().cloned().collect()
+        } else {
+            task_files
+        }
+    } else {
+        session.touched_files.iter().cloned().collect()
+    };
     files.sort();
     files.truncate(3);
     files
@@ -987,6 +1005,14 @@ fn file_matches_run(file: &FileView, run: &crate::ui::state::SessionListItem) ->
     }
     if run.is_synthetic_agent_run {
         return false;
+    }
+    if let Some(task_id) = run.task_id.as_deref() {
+        if file.last_task_id.as_deref() == Some(task_id) {
+            return true;
+        }
+        if file.last_task_id.is_some() {
+            return false;
+        }
     }
     file.last_session_id.as_deref() == Some(run.session_id.as_str())
         || file.touched_by.contains(&run.session_id)
@@ -1054,6 +1080,39 @@ fn summarize_eval_snapshot(snapshot: &fitness::FitnessSnapshot) -> String {
         status,
         snapshot.final_score
     )
+}
+
+fn fitness_snapshot_for_run<'a>(
+    cache: &'a AppCache,
+    run: &crate::ui::state::SessionListItem,
+    changed_files: &[String],
+    journey_files: &[String],
+) -> Option<&'a fitness::FitnessSnapshot> {
+    if run_uses_fitness_snapshot(run, changed_files, journey_files) {
+        cache.fitness_snapshot()
+    } else {
+        None
+    }
+}
+
+fn run_uses_fitness_snapshot(
+    run: &crate::ui::state::SessionListItem,
+    changed_files: &[String],
+    journey_files: &[String],
+) -> bool {
+    if run.is_synthetic_agent_run {
+        return false;
+    }
+    if run.is_unknown_bucket {
+        return !changed_files.is_empty() || run.unknown_count > 0;
+    }
+    if run.is_all_runs_bucket {
+        return !changed_files.is_empty() || run.touched_files_count > 0 || run.unknown_count > 0;
+    }
+    !changed_files.is_empty()
+        || !journey_files.is_empty()
+        || run.touched_files_count > 0
+        || run.unknown_count > 0
 }
 
 pub(super) fn render_title_bar(

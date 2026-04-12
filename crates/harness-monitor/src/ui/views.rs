@@ -40,12 +40,14 @@ impl RuntimeState {
             })
             .map(|session| {
                 let (exact_count, inferred_count, unknown_count) =
-                    self.session_confidence_counts(&session.session_id);
+                    self.session_confidence_counts(session);
+                let touched_files_count = exact_count + inferred_count + unknown_count;
                 SessionListItem {
                     session_id: session.session_id.clone(),
                     display_name: session_display_name(session),
                     task_id: session.active_task_id.clone(),
                     task_title: session.active_task_title.clone(),
+                    prompt_preview: session.last_prompt_preview.clone(),
                     recovered_from_transcript: session.active_task_recovered_from_transcript,
                     client: session.client.clone(),
                     source: session.source.clone(),
@@ -54,10 +56,7 @@ impl RuntimeState {
                     tmux_pane: session.tmux_pane.clone(),
                     started_at_ms: session.started_at_ms,
                     last_seen_at_ms: session.last_seen_at_ms,
-                    touched_files_count: session
-                        .touched_files
-                        .len()
-                        .max(exact_count + inferred_count + unknown_count),
+                    touched_files_count,
                     exact_count,
                     inferred_count,
                     unknown_count,
@@ -85,6 +84,7 @@ impl RuntimeState {
                     display_name: format!("{}#{}", agent.name, agent.pid),
                     task_id: None,
                     task_title: None,
+                    prompt_preview: None,
                     recovered_from_transcript: false,
                     client: agent.name.to_ascii_lowercase(),
                     source: Some("process-scan".to_string()),
@@ -127,6 +127,7 @@ impl RuntimeState {
                 display_name: "Unknown / review".to_string(),
                 task_id: None,
                 task_title: None,
+                prompt_preview: None,
                 recovered_from_transcript: false,
                 client: "unknown".to_string(),
                 source: None,
@@ -174,6 +175,7 @@ impl RuntimeState {
                 display_name: "All".to_string(),
                 task_id: None,
                 task_title: None,
+                prompt_preview: None,
                 recovered_from_transcript: false,
                 client: "all".to_string(),
                 source: Some("aggregate".to_string()),
@@ -311,6 +313,12 @@ impl RuntimeState {
         let needle = self.search_query.to_ascii_lowercase();
         session.session_id.to_ascii_lowercase().contains(&needle)
             || session
+                .last_prompt_preview
+                .as_deref()
+                .unwrap_or_default()
+                .to_ascii_lowercase()
+                .contains(&needle)
+            || session
                 .active_task_title
                 .as_deref()
                 .unwrap_or_default()
@@ -368,15 +376,18 @@ impl RuntimeState {
             || file.state_code.to_ascii_lowercase().contains(&needle)
     }
 
-    fn session_confidence_counts(&self, session_id: &str) -> (usize, usize, usize) {
+    fn session_confidence_counts(&self, session: &SessionView) -> (usize, usize, usize) {
         let mut exact_count = 0;
         let mut inferred_count = 0;
         let mut unknown_count = 0;
 
         for file in self.files.values().filter(|file| {
             file.dirty
-                && (file.last_session_id.as_deref() == Some(session_id)
-                    || file.touched_by.contains(session_id))
+                && file_matches_session_run(
+                    file,
+                    &session.session_id,
+                    session.active_task_id.as_deref(),
+                )
         }) {
             if file.conflicted {
                 unknown_count += 1;
@@ -467,8 +478,11 @@ impl RuntimeState {
     }
 
     fn session_has_dirty_signal(&self, session_id: &str) -> bool {
-        let (exact_count, inferred_count, unknown_count) = self.session_confidence_counts(session_id);
-        exact_count + inferred_count + unknown_count > 0
+        self.sessions.get(session_id).is_some_and(|session| {
+            let (exact_count, inferred_count, unknown_count) =
+                self.session_confidence_counts(session);
+            exact_count + inferred_count + unknown_count > 0
+        })
     }
 }
 
@@ -572,9 +586,9 @@ fn compare_run_items(
             .cmp(&a.touched_files_count)
             .then_with(|| b.unknown_count.cmp(&a.unknown_count)),
         RunSortMode::Name => a
-            .display_name
+            .primary_label()
             .to_ascii_lowercase()
-            .cmp(&b.display_name.to_ascii_lowercase()),
+            .cmp(&b.primary_label().to_ascii_lowercase()),
     };
 
     a.is_unknown_bucket
@@ -593,6 +607,18 @@ fn is_repo_local_agent(agent: &DetectedAgent, repo_root: &str) -> bool {
             || path_contains(&repo_root, &cwd)
             || canonical_repo_identity(&cwd) == canonical_repo_identity(&repo_root)
     })
+}
+
+fn file_matches_session_run(file: &FileView, session_id: &str, task_id: Option<&str>) -> bool {
+    if let Some(task_id) = task_id {
+        if file.last_task_id.as_deref() == Some(task_id) {
+            return true;
+        }
+        if file.last_task_id.is_some() {
+            return false;
+        }
+    }
+    file.last_session_id.as_deref() == Some(session_id) || file.touched_by.contains(session_id)
 }
 
 fn session_display_name(session: &SessionView) -> String {

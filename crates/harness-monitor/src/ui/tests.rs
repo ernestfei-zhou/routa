@@ -4,7 +4,7 @@ use crate::shared::models::{
     FitnessEvent, RuntimeMessage, RuntimeServiceInfo, SessionView,
 };
 use crate::ui::state::{
-    ALL_RUNS_SESSION_ID, DetailMode, FileListMode, FocusPane, ThemeMode, UNKNOWN_SESSION_ID,
+    DetailMode, FileListMode, FocusPane, ThemeMode, ALL_RUNS_SESSION_ID, UNKNOWN_SESSION_ID,
 };
 use crate::ui::tui::highlight::highlight_code_text;
 use pretty_assertions::assert_eq;
@@ -742,7 +742,7 @@ fn synthetic_run_details_surface_process_scan_origin() {
         fitness::FitnessSnapshot {
             mode: fitness::FitnessRunMode::Fast,
             final_score: 88.0,
-            hard_gate_blocked: false,
+            hard_gate_blocked: true,
             score_blocked: false,
             duration_ms: 1000.0,
             metric_count: 4,
@@ -756,6 +756,7 @@ fn synthetic_run_details_surface_process_scan_origin() {
 
     assert!(snapshot.contains("process-scan"));
     assert!(snapshot.contains("observing"));
+    assert!(!snapshot.contains("failed"));
 }
 
 #[test]
@@ -935,6 +936,73 @@ fn run_sort_by_name_orders_named_runs_alphabetically() {
     assert_eq!(
         runs.get(2).map(|run| run.display_name.as_str()),
         Some("Unknown / review")
+    );
+}
+
+#[test]
+fn runs_prefer_recent_prompt_preview_as_primary_label() {
+    let mut state = sample_state();
+    let session = state
+        .sessions
+        .get_mut("live-hook-check")
+        .expect("live session");
+    session.display_name = Some("impl-buddy".to_string());
+    session.active_task_title = Some("Task title summary".to_string());
+    session.last_prompt_preview = Some(
+        "show the latest user input in Runs so file changes align after selection".to_string(),
+    );
+    state.refresh_views();
+
+    let run = state
+        .runs()
+        .iter()
+        .find(|run| run.session_id == "live-hook-check")
+        .expect("run");
+
+    assert_eq!(
+        run.primary_label(),
+        "show the latest user input in Runs so file changes align after selection"
+    );
+}
+
+#[test]
+fn changed_files_for_selected_run_prefer_active_task_id() {
+    let now = chrono::Utc::now().timestamp_millis();
+    let mut state = sample_state();
+    state.files.insert(
+        "crates/harness-monitor/src/legacy.rs".to_string(),
+        FileView {
+            rel_path: "crates/harness-monitor/src/legacy.rs".to_string(),
+            dirty: true,
+            state_code: "modify".to_string(),
+            entry_kind: EntryKind::File,
+            last_modified_at_ms: now - 60_000,
+            last_session_id: Some("live-hook-check".to_string()),
+            last_task_id: Some("task:live-hook-check:turn-0".to_string()),
+            confidence: AttributionConfidence::Exact,
+            conflicted: false,
+            touched_by: ["live-hook-check".to_string()].into_iter().collect(),
+            recent_events: vec!["Edit live-hook-check".to_string()],
+        },
+    );
+    state.focus = FocusPane::Runs;
+    state.refresh_views();
+    let run = state
+        .runs()
+        .iter()
+        .find(|run| run.session_id == "live-hook-check")
+        .expect("live run");
+    let cache = sample_cache(&state);
+
+    let model = build_run_operator_model(&state, &cache, run);
+
+    assert_eq!(
+        model.changed_files,
+        vec!["crates/harness-monitor/src/tui.rs".to_string()]
+    );
+    assert_eq!(
+        model.journey_files,
+        vec!["crates/harness-monitor/src/tui.rs".to_string()]
     );
 }
 
