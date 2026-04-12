@@ -189,6 +189,7 @@ pub enum RuntimeMessage {
 pub struct HookEvent {
     pub repo_root: String,
     pub observed_at_ms: i64,
+    #[serde(default)]
     pub status: Option<String>,
     pub client: String,
     pub session_id: String,
@@ -205,6 +206,7 @@ pub struct HookEvent {
     pub task_id: Option<String>,
     pub task_title: Option<String>,
     pub prompt_preview: Option<String>,
+    #[serde(default)]
     pub recovered_from_transcript: bool,
     pub tmux_session: Option<String>,
     pub tmux_window: Option<String>,

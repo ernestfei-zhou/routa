@@ -35,6 +35,7 @@ pub(super) struct RunOperatorModel {
     pub(super) handoff_summary: Option<String>,
     pub(super) recovery_hints: Vec<String>,
     pub(super) changed_files: Vec<String>,
+    pub(super) journey_files: Vec<String>,
     pub(super) planes: Vec<PlaneAssessment>,
 }
 
@@ -725,6 +726,21 @@ fn render_run_details(
         ]));
     }
 
+    if !model.journey_files.is_empty()
+        && (model.changed_files.is_empty() || model.journey_files != model.changed_files)
+    {
+        lines.push(Line::from(vec![
+            Span::styled("Journey: ", Style::default().fg(colors.muted)),
+            Span::styled(
+                shorten_path(
+                    &model.journey_files.join(", "),
+                    width.saturating_sub(14) as usize,
+                ),
+                Style::default().fg(colors.text),
+            ),
+        ]));
+    }
+
     lines
 }
 
@@ -838,6 +854,7 @@ pub(super) fn build_run_operator_model(
     run: &crate::ui::state::SessionListItem,
 ) -> RunOperatorModel {
     let changed_files = changed_files_for_run(state, run);
+    let journey_files = journey_files_for_run(state, run);
     let workspace_path = workspace_path_for_run(state, run);
     let process_cwd = process_cwd_for_run(state, run);
     let assessment = assess_run(&RunAssessmentInput {
@@ -899,6 +916,7 @@ pub(super) fn build_run_operator_model(
         handoff_summary: assessment.handoff_summary,
         recovery_hints: assessment.recovery_hints,
         changed_files,
+        journey_files,
         planes: assessment.planes,
     }
 }
@@ -923,6 +941,23 @@ fn changed_files_for_run(
         .take(3)
         .map(|file| file.rel_path.clone())
         .collect()
+}
+
+fn journey_files_for_run(
+    state: &RuntimeState,
+    run: &crate::ui::state::SessionListItem,
+) -> Vec<String> {
+    if run.is_all_runs_bucket || run.is_unknown_bucket || run.is_synthetic_agent_run {
+        return Vec::new();
+    }
+    let Some(session) = state.sessions.get(&run.session_id) else {
+        return Vec::new();
+    };
+
+    let mut files: Vec<_> = session.touched_files.iter().cloned().collect();
+    files.sort();
+    files.truncate(3);
+    files
 }
 
 fn file_matches_run(file: &FileView, run: &crate::ui::state::SessionListItem) -> bool {
