@@ -554,6 +554,41 @@ fn render_run_details(
     if run.is_synthetic_agent_run {
         return render_process_scan_run_details(state, run, &model, width, colors);
     }
+    if run.is_all_runs_bucket {
+        return vec![
+            Line::from(Span::styled(
+                "All",
+                Style::default()
+                    .fg(colors.text)
+                    .add_modifier(Modifier::BOLD),
+            )),
+            Line::from(vec![
+                Span::styled("aggregate", Style::default().fg(colors.accent)),
+                Span::raw("  "),
+                Span::styled(
+                    format!("{} dirty files", run.touched_files_count),
+                    Style::default().fg(colors.text),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("Confidence: ", Style::default().fg(colors.muted)),
+                Span::styled(
+                    format!(
+                        "{} exact / {} inferred / {} unknown",
+                        run.exact_count, run.inferred_count, run.unknown_count
+                    ),
+                    Style::default().fg(colors.text),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("Workspace: ", Style::default().fg(colors.muted)),
+                Span::styled(
+                    shorten_path(&state.repo_root, width.saturating_sub(16) as usize),
+                    Style::default().fg(colors.text),
+                ),
+            ]),
+        ];
+    }
 
     let mut lines = vec![
         Line::from(Span::styled(
@@ -580,6 +615,16 @@ fn render_run_details(
             Span::styled(
                 shorten_path(model_name, width.saturating_sub(12) as usize),
                 Style::default().fg(colors.text),
+            ),
+        ]));
+    }
+
+    if run.recovered_from_transcript {
+        lines.push(Line::from(vec![
+            Span::styled("Prompt: ", Style::default().fg(colors.muted)),
+            Span::styled(
+                "recovered-from-transcript",
+                Style::default().fg(INFERRED),
             ),
         ]));
     }
@@ -881,6 +926,9 @@ fn changed_files_for_run(
 }
 
 fn file_matches_run(file: &FileView, run: &crate::ui::state::SessionListItem) -> bool {
+    if run.is_all_runs_bucket {
+        return file.dirty || file.conflicted;
+    }
     if run.is_unknown_bucket {
         return file.conflicted
             || matches!(file.confidence, AttributionConfidence::Unknown)
@@ -905,6 +953,9 @@ fn process_cwd_for_run(
     state: &RuntimeState,
     run: &crate::ui::state::SessionListItem,
 ) -> Option<String> {
+    if run.is_all_runs_bucket {
+        return Some(state.repo_root.clone());
+    }
     if let Some(agent) = run
         .attached_agent_key
         .as_ref()

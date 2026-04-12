@@ -96,6 +96,9 @@ fn run_loop(terminal: &mut DefaultTerminal, ctx: RepoContext, poll_interval_ms: 
     cache.set_fitness_mode(state.fitness_view_mode);
     cache.request_scc_refresh(state.repo_root.clone(), false);
     let bootstrap_cutoff = bootstrap_history_cutoff(chrono::Utc::now().timestamp_millis());
+    for message in crate::observe::hooks::bootstrap_codex_transcript_messages(&ctx.repo_root)? {
+        state.apply_message(message);
+    }
     for message in feed.read_recent_since(bootstrap_cutoff)? {
         state.apply_message(message);
     }

@@ -41,6 +41,7 @@ impl RuntimeState {
                     display_name: session_display_name(session),
                     task_id: session.active_task_id.clone(),
                     task_title: session.active_task_title.clone(),
+                    recovered_from_transcript: session.active_task_recovered_from_transcript,
                     client: session.client.clone(),
                     source: session.source.clone(),
                     model: session.model.clone(),
@@ -61,6 +62,7 @@ impl RuntimeState {
                     attached_agent_key: None,
                     is_synthetic_agent_run: false,
                     is_unknown_bucket: false,
+                    is_all_runs_bucket: false,
                 }
             })
             .collect();
@@ -74,6 +76,7 @@ impl RuntimeState {
                     display_name: format!("{}#{}", agent.name, agent.pid),
                     task_id: None,
                     task_title: None,
+                    recovered_from_transcript: false,
                     client: agent.name.to_ascii_lowercase(),
                     source: Some("process-scan".to_string()),
                     model: None,
@@ -95,6 +98,7 @@ impl RuntimeState {
                     attached_agent_key: Some(agent.key.clone()),
                     is_synthetic_agent_run: true,
                     is_unknown_bucket: false,
+                    is_all_runs_bucket: false,
                 }),
         );
         let unknown_count = self
@@ -114,6 +118,7 @@ impl RuntimeState {
                 display_name: "Unknown / review".to_string(),
                 task_id: None,
                 task_title: None,
+                recovered_from_transcript: false,
                 client: "unknown".to_string(),
                 source: None,
                 model: None,
@@ -131,10 +136,62 @@ impl RuntimeState {
                 attached_agent_key: None,
                 is_synthetic_agent_run: false,
                 is_unknown_bucket: true,
+                is_all_runs_bucket: false,
+            });
+        }
+        if !items.is_empty() {
+            let (exact_count, inferred_count, unknown_count) = items.iter().fold(
+                (0usize, 0usize, 0usize),
+                |(exact, inferred, unknown), item| {
+                    (
+                        exact + item.exact_count,
+                        inferred + item.inferred_count,
+                        unknown + item.unknown_count,
+                    )
+                },
+            );
+            let touched_files_count = self
+                .files
+                .values()
+                .filter(|file| file.dirty || file.conflicted)
+                .count();
+            let last_seen_at_ms = items
+                .iter()
+                .map(|item| item.last_seen_at_ms)
+                .max()
+                .unwrap_or(self.last_refresh_at_ms);
+            items.push(SessionListItem {
+                session_id: ALL_RUNS_SESSION_ID.to_string(),
+                display_name: "All".to_string(),
+                task_id: None,
+                task_title: None,
+                recovered_from_transcript: false,
+                client: "all".to_string(),
+                source: Some("aggregate".to_string()),
+                model: None,
+                status: "active".to_string(),
+                tmux_pane: None,
+                started_at_ms: self.last_refresh_at_ms,
+                last_seen_at_ms,
+                touched_files_count,
+                exact_count,
+                inferred_count,
+                unknown_count,
+                agent_summary: None,
+                last_event_name: Some("aggregate".to_string()),
+                last_tool_name: None,
+                attached_agent_key: None,
+                is_synthetic_agent_run: false,
+                is_unknown_bucket: false,
+                is_all_runs_bucket: true,
             });
         }
         items.retain(|item| self.matches_run_filter(item));
         items.sort_by(|a, b| compare_run_items(a, b, self.run_sort_mode));
+        if let Some(index) = items.iter().position(|item| item.is_all_runs_bucket) {
+            let all_item = items.remove(index);
+            items.insert(0, all_item);
+        }
         items
     }
 
@@ -227,6 +284,9 @@ impl RuntimeState {
             return agent.cwd.clone().or_else(|| Some(self.repo_root.clone()));
         }
         if run.is_unknown_bucket {
+            return Some(self.repo_root.clone());
+        }
+        if run.is_all_runs_bucket {
             return Some(self.repo_root.clone());
         }
         self.sessions

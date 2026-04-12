@@ -3,7 +3,9 @@ use crate::shared::models::{
     AttributionConfidence, DetectedAgent, EntryKind, EventLogEntry, EventSource, FileView,
     FitnessEvent, RuntimeMessage, RuntimeServiceInfo, SessionView,
 };
-use crate::ui::state::{DetailMode, FileListMode, FocusPane, ThemeMode, UNKNOWN_SESSION_ID};
+use crate::ui::state::{
+    ALL_RUNS_SESSION_ID, DetailMode, FileListMode, FocusPane, ThemeMode, UNKNOWN_SESSION_ID,
+};
 use crate::ui::tui::highlight::highlight_code_text;
 use pretty_assertions::assert_eq;
 use ratatui::backend::TestBackend;
@@ -38,6 +40,7 @@ fn sample_state() -> RuntimeState {
             active_task_id: Some("task:live-hook-check:turn-1".to_string()),
             active_task_title: Some("Fix harness monitor task journey".to_string()),
             last_prompt_preview: Some("Fix harness monitor task journey".to_string()),
+            active_task_recovered_from_transcript: false,
         },
     );
     sessions.insert(
@@ -63,6 +66,7 @@ fn sample_state() -> RuntimeState {
             active_task_id: Some("task:idle-review:turn-2".to_string()),
             active_task_title: Some("Review harness monitor UI".to_string()),
             last_prompt_preview: Some("Review harness monitor UI".to_string()),
+            active_task_recovered_from_transcript: false,
         },
     );
 
@@ -423,8 +427,9 @@ fn sync_dirty_files_rebuilds_unknown_session_and_file_views() {
         EntryKind::File,
     )]);
 
-    assert_eq!(state.session_items().len(), 1);
-    assert_eq!(state.session_items()[0].session_id, UNKNOWN_SESSION_ID);
+    assert_eq!(state.session_items().len(), 2);
+    assert_eq!(state.session_items()[0].session_id, ALL_RUNS_SESSION_ID);
+    assert_eq!(state.session_items()[1].session_id, UNKNOWN_SESSION_ID);
     assert_eq!(state.file_items().len(), 1);
     assert_eq!(state.file_items()[0].rel_path, "src/app/globals.css");
 }
@@ -625,6 +630,11 @@ fn tui_snapshot_full_runs_mode() {
 fn run_details_surface_run_centric_operator_context() {
     let mut state = sample_state();
     state.focus = FocusPane::Runs;
+    state.selected_run = state
+        .runs()
+        .iter()
+        .position(|run| run.session_id == "live-hook-check")
+        .expect("live run");
     let mut cache = sample_cache(&state);
 
     let snapshot = render_snapshot(&state, &mut cache, 180, 40);
@@ -652,6 +662,11 @@ fn file_detail_surfaces_test_mapping_context() {
 fn hard_gate_failure_blocks_selected_run() {
     let mut state = sample_state();
     state.focus = FocusPane::Runs;
+    state.selected_run = state
+        .runs()
+        .iter()
+        .position(|run| run.session_id == "live-hook-check")
+        .expect("live run");
     let mut cache = sample_cache(&state);
     cache.set_fitness_snapshot_for_tests(
         fitness::FitnessRunMode::Fast,
@@ -908,10 +923,14 @@ fn run_sort_by_name_orders_named_runs_alphabetically() {
     let runs = state.runs();
     assert_eq!(
         runs.first().map(|run| run.display_name.as_str()),
-        Some("Fix harness monitor task journey")
+        Some("All")
     );
     assert_eq!(
         runs.get(1).map(|run| run.display_name.as_str()),
+        Some("Fix harness monitor task journey")
+    );
+    assert_eq!(
+        runs.get(2).map(|run| run.display_name.as_str()),
         Some("Review harness monitor UI")
     );
 }

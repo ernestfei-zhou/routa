@@ -556,9 +556,14 @@ fn handle_task_command(action: TaskCommand, db: &Db, repo_root: &str) -> Result<
             println!("{:<36}  {:<20}  {:<12}  TITLE", "TASK", "SESSION", "STATUS");
             println!("{}", "-".repeat(120));
             for task in &tasks {
+                let title = if task.recovered_from_transcript {
+                    format!("{} [recovered-from-transcript]", task.title)
+                } else {
+                    task.title.clone()
+                };
                 println!(
                     "{:<36}  {:<20}  {:<12}  {}",
-                    task.task_id, task.session_id, task.status, task.title
+                    task.task_id, task.session_id, task.status, title
                 );
             }
         }
@@ -567,6 +572,9 @@ fn handle_task_command(action: TaskCommand, db: &Db, repo_root: &str) -> Result<
                 println!("id:         {}", task.task_id);
                 println!("title:      {}", task.title);
                 println!("status:     {}", task.status);
+                if task.recovered_from_transcript {
+                    println!("prompt:     recovered-from-transcript");
+                }
                 println!("session:    {}", task.session_id);
                 if let Some(turn_id) = &task.turn_id {
                     println!("turn:       {turn_id}");

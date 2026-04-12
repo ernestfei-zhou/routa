@@ -648,8 +648,14 @@ fn render_runs_panel(
 
             let model = build_run_operator_model(state, cache, session);
             let status_color = run_status_color(&model.operator_state);
-            let icon = crate::shared::models::HookClient::from_str(&session.client).icon();
-            let run_name = if session.is_unknown_bucket {
+            let icon = if session.is_all_runs_bucket {
+                "="
+            } else {
+                crate::shared::models::HookClient::from_str(&session.client).icon()
+            };
+            let run_name = if session.is_all_runs_bucket {
+                "All".to_string()
+            } else if session.is_unknown_bucket {
                 "unattributed".to_string()
             } else if let Some(task_title) = &session.task_title {
                 task_title.clone()
@@ -703,14 +709,19 @@ fn render_runs_panel(
             let secondary = Line::from(vec![
                 Span::styled(
                     format!(
-                        "  {}  {}  {}  files:{}  e/i/?:{}/{}/{}",
+                        "  {}  {}  {}  files:{}  e/i/?:{}/{}/{}{}",
                         model.role.as_str(),
                         model.origin.as_str(),
                         session.client,
                         session.touched_files_count,
                         session.exact_count,
                         session.inferred_count,
-                        session.unknown_count
+                        session.unknown_count,
+                        if session.recovered_from_transcript {
+                            "  recovered"
+                        } else {
+                            ""
+                        }
                     ),
                     Style::default().fg(colors.muted).bg(bg),
                 ),

@@ -4,6 +4,13 @@ use std::collections::BTreeSet;
 
 impl RuntimeState {
     pub(super) fn apply_hook_event(&mut self, event: HookEvent) {
+        let event_status = event.status.clone().unwrap_or_else(|| {
+            if is_stop_event(&event.event_name) {
+                "stopped".to_string()
+            } else {
+                "active".to_string()
+            }
+        });
         if !event.file_paths.is_empty() {
             self.last_file_hook_at_ms = Some(event.observed_at_ms);
         }
@@ -21,7 +28,7 @@ impl RuntimeState {
                     source: event.session_source.clone(),
                     started_at_ms: event.observed_at_ms,
                     last_seen_at_ms: event.observed_at_ms,
-                    status: "active".to_string(),
+                    status: event_status.clone(),
                     tmux_pane: event.tmux_pane.clone(),
                     touched_files: BTreeSet::new(),
                     last_turn_id: event.turn_id.clone(),
@@ -30,6 +37,7 @@ impl RuntimeState {
                     active_task_id: event.task_id.clone(),
                     active_task_title: event.task_title.clone(),
                     last_prompt_preview: event.prompt_preview.clone(),
+                    active_task_recovered_from_transcript: event.recovered_from_transcript,
                 });
 
             session.cwd = event.cwd.clone();
@@ -57,15 +65,14 @@ impl RuntimeState {
             if event.prompt_preview.is_some() {
                 session.last_prompt_preview = event.prompt_preview.clone();
             }
+            if event.task_id.is_some() {
+                session.active_task_recovered_from_transcript = event.recovered_from_transcript;
+            }
             session.tmux_pane = event
                 .tmux_pane
                 .clone()
                 .or_else(|| session.tmux_pane.clone());
-            session.status = if is_stop_event(&event.event_name) {
-                "stopped".to_string()
-            } else {
-                "active".to_string()
-            };
+            session.status = event_status.clone();
         }
 
         if let Some(task_id) = event.task_id.clone() {
@@ -86,8 +93,9 @@ impl RuntimeState {
                         .transcript_path
                         .clone()
                         .or(task.transcript_path.clone());
+                    task.recovered_from_transcript = event.recovered_from_transcript;
                     task.updated_at_ms = event.observed_at_ms;
-                    task.status = "active".to_string();
+                    task.status = event_status.clone();
                 })
                 .or_insert_with(|| crate::shared::models::TaskView {
                     task_id,
@@ -97,7 +105,8 @@ impl RuntimeState {
                     objective,
                     prompt_preview: event.prompt_preview.clone(),
                     transcript_path: event.transcript_path.clone(),
-                    status: "active".to_string(),
+                    recovered_from_transcript: event.recovered_from_transcript,
+                    status: event_status.clone(),
                     created_at_ms: event.observed_at_ms,
                     updated_at_ms: event.observed_at_ms,
                 });

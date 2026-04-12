@@ -118,6 +118,7 @@ impl RunFilterMode {
 }
 
 pub const UNKNOWN_SESSION_ID: &str = "__unknown__";
+pub const ALL_RUNS_SESSION_ID: &str = "__all__";
 const PAGE_STEP: usize = 10;
 const DETAIL_PAGE_STEP: u16 = 12;
 
@@ -128,6 +129,7 @@ pub struct SessionListItem {
     pub display_name: String,
     pub task_id: Option<String>,
     pub task_title: Option<String>,
+    pub recovered_from_transcript: bool,
     pub client: String,
     pub source: Option<String>,
     pub model: Option<String>,
@@ -145,6 +147,7 @@ pub struct SessionListItem {
     pub attached_agent_key: Option<String>,
     pub is_synthetic_agent_run: bool,
     pub is_unknown_bucket: bool,
+    pub is_all_runs_bucket: bool,
 }
 
 #[derive(Debug)]
@@ -407,9 +410,12 @@ impl RuntimeState {
         if session_id == UNKNOWN_SESSION_ID {
             return None;
         }
+        if session_id == ALL_RUNS_SESSION_ID {
+            return None;
+        }
         if self
             .selected_run_item()
-            .is_some_and(|item| item.is_synthetic_agent_run)
+            .is_some_and(|item| item.is_synthetic_agent_run || item.is_all_runs_bucket)
         {
             return None;
         }

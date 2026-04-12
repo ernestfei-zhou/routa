@@ -4,6 +4,7 @@ use crate::shared::models::{
 use anyhow::{Context, Result};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::json;
+use serde_json::Value;
 
 pub type SessionListRow = (
     String,
@@ -18,12 +19,40 @@ pub type SessionListRow = (
 
 type FileStateMeta = (Option<i64>, Option<i64>, bool);
 
+fn task_recovered_from_metadata(metadata_json: &str) -> bool {
+    serde_json::from_str::<Value>(metadata_json)
+        .ok()
+        .and_then(|value| {
+            value
+                .get("recovered_from_transcript")
+                .and_then(Value::as_bool)
+        })
+        .unwrap_or(false)
+}
+
 pub struct Db {
     conn: Connection,
 }
 
 #[allow(dead_code)]
 impl Db {
+    fn task_view_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<TaskView> {
+        let metadata_json: String = row.get(10)?;
+        Ok(TaskView {
+            task_id: row.get(0)?,
+            session_id: row.get(1)?,
+            turn_id: row.get(2)?,
+            title: row.get(3)?,
+            objective: row.get(4)?,
+            prompt_preview: row.get(5)?,
+            transcript_path: row.get(6)?,
+            recovered_from_transcript: task_recovered_from_metadata(&metadata_json),
+            status: row.get(7)?,
+            created_at_ms: row.get(8)?,
+            updated_at_ms: row.get(9)?,
+        })
+    }
+
     pub fn open(path: &std::path::Path) -> Result<Self> {
         let parent = path.parent().unwrap_or(std::path::Path::new("."));
         std::fs::create_dir_all(parent).context("create db directory")?;
@@ -777,6 +806,7 @@ impl Db {
         title: &str,
         objective: &str,
         prompt_preview: Option<&str>,
+        recovered_from_transcript: bool,
         observed_at_ms: i64,
     ) -> Result<TaskView> {
         self.conn
@@ -822,7 +852,15 @@ impl Db {
                     transcript_path,
                     observed_at_ms,
                     observed_at_ms,
-                    json!({ "source": "UserPromptSubmit" }).to_string(),
+                    json!({
+                        "source": if recovered_from_transcript {
+                            "transcript_recovery"
+                        } else {
+                            "UserPromptSubmit"
+                        },
+                        "recovered_from_transcript": recovered_from_transcript,
+                    })
+                    .to_string(),
                 ],
             )
             .context("upsert task")?;
@@ -857,27 +895,14 @@ impl Db {
             .conn
             .prepare(
                 "SELECT task_id, session_id, turn_id, title, objective, prompt_preview, transcript_path,
-                        status, created_at_ms, updated_at_ms
+                        status, created_at_ms, updated_at_ms, metadata_json
                  FROM tasks
                  WHERE repo_root = ?1
                  ORDER BY updated_at_ms DESC",
             )
             .context("prepare task list query")?;
         let rows = stmt
-            .query_map(params![repo_root], |row| {
-                Ok(TaskView {
-                    task_id: row.get(0)?,
-                    session_id: row.get(1)?,
-                    turn_id: row.get(2)?,
-                    title: row.get(3)?,
-                    objective: row.get(4)?,
-                    prompt_preview: row.get(5)?,
-                    transcript_path: row.get(6)?,
-                    status: row.get(7)?,
-                    created_at_ms: row.get(8)?,
-                    updated_at_ms: row.get(9)?,
-                })
-            })
+            .query_map(params![repo_root], Self::task_view_from_row)
             .context("query tasks")?;
         let mut out = Vec::new();
         for row in rows {
@@ -891,25 +916,12 @@ impl Db {
             .conn
             .prepare(
                 "SELECT task_id, session_id, turn_id, title, objective, prompt_preview, transcript_path,
-                        status, created_at_ms, updated_at_ms
+                        status, created_at_ms, updated_at_ms, metadata_json
                  FROM tasks
                  WHERE repo_root = ?1 AND task_id = ?2",
             )
             .context("prepare task query")?;
-        stmt.query_row(params![repo_root, task_id], |row| {
-            Ok(TaskView {
-                task_id: row.get(0)?,
-                session_id: row.get(1)?,
-                turn_id: row.get(2)?,
-                title: row.get(3)?,
-                objective: row.get(4)?,
-                prompt_preview: row.get(5)?,
-                transcript_path: row.get(6)?,
-                status: row.get(7)?,
-                created_at_ms: row.get(8)?,
-                updated_at_ms: row.get(9)?,
-            })
-        })
+        stmt.query_row(params![repo_root, task_id], Self::task_view_from_row)
         .optional()
         .context("read task")
     }
@@ -923,7 +935,7 @@ impl Db {
             .conn
             .prepare(
                 "SELECT t.task_id, t.session_id, t.turn_id, t.title, t.objective, t.prompt_preview,
-                        t.transcript_path, t.status, t.created_at_ms, t.updated_at_ms
+                        t.transcript_path, t.status, t.created_at_ms, t.updated_at_ms, t.metadata_json
                  FROM tasks t
                  JOIN session_task_links l
                    ON l.repo_root = t.repo_root
@@ -935,20 +947,7 @@ impl Db {
                  LIMIT 1",
             )
             .context("prepare active task query")?;
-        stmt.query_row(params![repo_root, session_id], |row| {
-            Ok(TaskView {
-                task_id: row.get(0)?,
-                session_id: row.get(1)?,
-                turn_id: row.get(2)?,
-                title: row.get(3)?,
-                objective: row.get(4)?,
-                prompt_preview: row.get(5)?,
-                transcript_path: row.get(6)?,
-                status: row.get(7)?,
-                created_at_ms: row.get(8)?,
-                updated_at_ms: row.get(9)?,
-            })
-        })
+        stmt.query_row(params![repo_root, session_id], Self::task_view_from_row)
         .optional()
         .context("load active task for session")
     }
@@ -963,7 +962,7 @@ impl Db {
             .conn
             .prepare(
                 "SELECT t.task_id, t.session_id, t.turn_id, t.title, t.objective, t.prompt_preview,
-                        t.transcript_path, t.status, t.created_at_ms, t.updated_at_ms
+                        t.transcript_path, t.status, t.created_at_ms, t.updated_at_ms, t.metadata_json
                  FROM tasks t
                  JOIN turn_task_links l
                    ON l.repo_root = t.repo_root
@@ -974,20 +973,7 @@ impl Db {
                  LIMIT 1",
             )
             .context("prepare turn task query")?;
-        stmt.query_row(params![repo_root, session_id, turn_id], |row| {
-            Ok(TaskView {
-                task_id: row.get(0)?,
-                session_id: row.get(1)?,
-                turn_id: row.get(2)?,
-                title: row.get(3)?,
-                objective: row.get(4)?,
-                prompt_preview: row.get(5)?,
-                transcript_path: row.get(6)?,
-                status: row.get(7)?,
-                created_at_ms: row.get(8)?,
-                updated_at_ms: row.get(9)?,
-            })
-        })
+        stmt.query_row(params![repo_root, session_id, turn_id], Self::task_view_from_row)
         .optional()
         .context("load task for turn")
     }

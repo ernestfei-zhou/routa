@@ -189,6 +189,7 @@ pub enum RuntimeMessage {
 pub struct HookEvent {
     pub repo_root: String,
     pub observed_at_ms: i64,
+    pub status: Option<String>,
     pub client: String,
     pub session_id: String,
     pub session_display_name: Option<String>,
@@ -204,6 +205,7 @@ pub struct HookEvent {
     pub task_id: Option<String>,
     pub task_title: Option<String>,
     pub prompt_preview: Option<String>,
+    pub recovered_from_transcript: bool,
     pub tmux_session: Option<String>,
     pub tmux_window: Option<String>,
     pub tmux_pane: Option<String>,
@@ -238,6 +240,7 @@ pub struct TaskView {
     pub objective: String,
     pub prompt_preview: Option<String>,
     pub transcript_path: Option<String>,
+    pub recovered_from_transcript: bool,
     pub status: String,
     pub created_at_ms: i64,
     pub updated_at_ms: i64,
@@ -278,6 +281,7 @@ pub struct SessionView {
     pub active_task_id: Option<String>,
     pub active_task_title: Option<String>,
     pub last_prompt_preview: Option<String>,
+    pub active_task_recovered_from_transcript: bool,
 }
 
 impl SessionView {

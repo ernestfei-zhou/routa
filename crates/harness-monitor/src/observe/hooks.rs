@@ -154,6 +154,7 @@ pub fn handle_hook(
             task_title,
             objective,
             Some(prompt_preview.as_str()),
+            task_prompt.is_some() && prompt.as_deref() != task_prompt.as_deref(),
             now_ms,
         )?;
     }
@@ -290,12 +291,25 @@ pub fn build_hook_runtime_message(
     .unwrap_or_else(|| normalize_event_name(client_name, event_name));
     let tool_name = extract_field(&payload, &["tool_name", "toolName"])
         .or_else(|| extract_field_from_cmd_path(&payload));
-    let task_identity = derive_task_identity(
+    let mut task_prompt = prompt.clone();
+    let mut task_identity = derive_task_identity(
         &hook_event_name,
         &session_id,
         turn_id.as_deref(),
-        prompt.as_deref(),
+        task_prompt.as_deref(),
     );
+    if task_identity.is_none() {
+        if let Some(recovered_prompt) =
+            recover_prompt_from_transcript(turn_id.as_deref(), transcript_path.as_deref())
+        {
+            task_identity = task_identity_from_prompt(
+                &session_id,
+                turn_id.as_deref(),
+                recovered_prompt.as_str(),
+            );
+            task_prompt = Some(recovered_prompt);
+        }
+    }
     let tool_command = extract_tool_command(&payload);
     let tmux_session = extract_field(&payload, &["tmux_session", "tmuxSession"])
         .or_else(|| std::env::var("TMUX_SESSION").ok());
@@ -327,6 +341,7 @@ pub fn build_hook_runtime_message(
         RuntimeMessage::Hook(HookEvent {
             repo_root,
             observed_at_ms: now_ms,
+            status: None,
             client: client.as_str().to_string(),
             session_id,
             session_display_name,
@@ -348,6 +363,7 @@ pub fn build_hook_runtime_message(
             prompt_preview: task_identity
                 .as_ref()
                 .map(|(_, _, prompt_preview)| prompt_preview.clone()),
+            recovered_from_transcript: task_prompt.is_some() && prompt.as_deref() != task_prompt.as_deref(),
             tmux_session,
             tmux_window,
             tmux_pane,
@@ -383,6 +399,89 @@ pub fn handle_git_event(ctx: &RepoContext, event_name: &str, args: &[String]) ->
     )?;
     db.clear_inconsistent_state(&ctx.repo_root.to_string_lossy())?;
     Ok(())
+}
+
+struct TranscriptSessionBackfill {
+    session_id: String,
+    cwd: String,
+    model: Option<String>,
+    transcript_path: String,
+    source: Option<String>,
+    last_seen_at_ms: i64,
+    status: String,
+    turn_id: Option<String>,
+    prompt: Option<String>,
+}
+
+pub fn bootstrap_codex_transcript_messages(
+    repo_root: &std::path::Path,
+) -> Result<Vec<RuntimeMessage>> {
+    const BACKFILL_WINDOW_MS: i64 = 24 * 60 * 60 * 1000;
+    const ACTIVE_WINDOW_MS: i64 = 30 * 60 * 1000;
+    const MAX_TRANSCRIPTS: usize = 48;
+
+    let sessions_root = std::env::var_os("HOME")
+        .map(std::path::PathBuf::from)
+        .map(|home| home.join(".codex").join("sessions"));
+    let Some(sessions_root) = sessions_root.filter(|path| path.exists()) else {
+        return Ok(Vec::new());
+    };
+
+    let now_ms = Utc::now().timestamp_millis();
+    let mut transcripts = collect_recent_transcripts(&sessions_root)?;
+    transcripts.retain(|(_, modified_ms)| now_ms.saturating_sub(*modified_ms) <= BACKFILL_WINDOW_MS);
+    transcripts.sort_by(|a, b| b.1.cmp(&a.1));
+    transcripts.truncate(MAX_TRANSCRIPTS);
+
+    let repo_root_text = repo_root.to_string_lossy().to_string();
+    let mut messages = Vec::new();
+    for (path, modified_ms) in transcripts {
+        let Some(summary) = parse_transcript_backfill(&path, modified_ms) else {
+            continue;
+        };
+        if summary.cwd != repo_root_text {
+            continue;
+        }
+        if summary.status != "active" && now_ms.saturating_sub(summary.last_seen_at_ms) > ACTIVE_WINDOW_MS
+        {
+            continue;
+        }
+
+        let task_identity = summary
+            .prompt
+            .as_deref()
+            .and_then(|prompt| task_identity_from_prompt(&summary.session_id, summary.turn_id.as_deref(), prompt));
+        let session_display_name = transcript_display_name(&summary.transcript_path);
+        messages.push(RuntimeMessage::Hook(HookEvent {
+            repo_root: repo_root_text.clone(),
+            observed_at_ms: summary.last_seen_at_ms,
+            status: Some(summary.status),
+            client: "codex".to_string(),
+            session_id: summary.session_id,
+            session_display_name,
+            turn_id: summary.turn_id,
+            cwd: summary.cwd,
+            model: summary.model,
+            transcript_path: Some(summary.transcript_path),
+            session_source: summary.source,
+            event_name: "TranscriptRecover".to_string(),
+            tool_name: None,
+            tool_command: None,
+            file_paths: Vec::new(),
+            task_id: task_identity.as_ref().map(|(task_id, _, _)| task_id.clone()),
+            task_title: task_identity.as_ref().map(|(_, title, _)| title.clone()),
+            prompt_preview: task_identity
+                .as_ref()
+                .map(|(_, _, preview)| preview.clone()),
+            recovered_from_transcript: true,
+            tmux_session: None,
+            tmux_window: None,
+            tmux_pane: None,
+        }));
+    }
+
+    messages.sort_by_key(RuntimeMessage::observed_at_ms);
+    Ok(messages)
 }
 
 pub fn try_forward_git_event(ctx: &RepoContext, event_name: &str, args: &[String]) -> Result<bool> {
@@ -846,6 +945,135 @@ fn current_branch(repo_root: &std::path::Path) -> Result<String> {
         .unwrap_or_else(|_| "unknown".to_string())
         .trim()
         .to_string())
+}
+
+fn collect_recent_transcripts(root: &std::path::Path) -> Result<Vec<(std::path::PathBuf, i64)>> {
+    let mut stack = vec![root.to_path_buf()];
+    let mut files = Vec::new();
+    while let Some(dir) = stack.pop() {
+        let entries = match std::fs::read_dir(&dir) {
+            Ok(entries) => entries,
+            Err(_) => continue,
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let Ok(file_type) = entry.file_type() else {
+                continue;
+            };
+            if file_type.is_dir() {
+                stack.push(path);
+                continue;
+            }
+            if !file_type.is_file() || path.extension().and_then(|ext| ext.to_str()) != Some("jsonl") {
+                continue;
+            }
+            let modified_ms = entry
+                .metadata()
+                .ok()
+                .and_then(|meta| meta.modified().ok())
+                .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|dur| dur.as_millis() as i64)
+                .unwrap_or_default();
+            files.push((path, modified_ms));
+        }
+    }
+    Ok(files)
+}
+
+fn parse_transcript_backfill(
+    transcript_path: &std::path::Path,
+    modified_ms: i64,
+) -> Option<TranscriptSessionBackfill> {
+    let file = std::fs::File::open(transcript_path).ok()?;
+    let reader = BufReader::new(file);
+    let mut session_id = None;
+    let mut cwd = None;
+    let mut model = None;
+    let mut source = None;
+    let mut last_seen_at_ms = modified_ms;
+    let mut current_turn_id = None;
+    let mut current_prompt = None;
+    let mut current_completed = false;
+    let mut latest_turn_id = None;
+    let mut latest_prompt = None;
+    let mut latest_completed = false;
+
+    for line in reader.lines() {
+        let line = line.ok()?;
+        let entry: Value = serde_json::from_str(&line).ok()?;
+        if let Some(timestamp) = entry.get("timestamp").and_then(Value::as_str) {
+            if let Ok(parsed) = chrono::DateTime::parse_from_rfc3339(timestamp) {
+                last_seen_at_ms = parsed.timestamp_millis();
+            }
+        }
+
+        match entry.get("type").and_then(Value::as_str) {
+            Some("session_meta") => {
+                session_id = entry.pointer("/payload/id").and_then(Value::as_str).map(str::to_string);
+                cwd = entry.pointer("/payload/cwd").and_then(Value::as_str).map(str::to_string);
+                model = entry
+                    .pointer("/payload/model")
+                    .and_then(Value::as_str)
+                    .map(str::to_string)
+                    .or_else(|| {
+                        entry.pointer("/payload/model_provider").and_then(Value::as_str).map(str::to_string)
+                    });
+                source = entry.pointer("/payload/source").and_then(Value::as_str).map(str::to_string);
+            }
+            Some("event_msg") => match entry.pointer("/payload/type").and_then(Value::as_str) {
+                Some("task_started") => {
+                    latest_turn_id = current_turn_id.take();
+                    latest_prompt = current_prompt.take();
+                    latest_completed = current_completed;
+                    current_turn_id = entry.pointer("/payload/turn_id").and_then(Value::as_str).map(str::to_string);
+                    current_prompt = None;
+                    current_completed = false;
+                }
+                Some("user_message") if current_turn_id.is_some() => {
+                    current_prompt = entry.pointer("/payload/message").and_then(Value::as_str).map(str::to_string);
+                }
+                Some("task_complete") => {
+                    if entry.pointer("/payload/turn_id").and_then(Value::as_str)
+                        == current_turn_id.as_deref()
+                    {
+                        current_completed = true;
+                    }
+                }
+                _ => {}
+            },
+            Some("response_item")
+                if entry.pointer("/payload/type").and_then(Value::as_str) == Some("message")
+                    && entry.pointer("/payload/role").and_then(Value::as_str) == Some("user")
+                    && current_turn_id.is_some() =>
+            {
+                if let Some(message) = extract_user_prompt_from_response_item(&entry) {
+                    current_prompt = Some(message);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let use_current_turn = current_turn_id.is_some();
+    let turn_id = current_turn_id.clone().or(latest_turn_id);
+    let prompt = current_prompt.or(latest_prompt);
+    let completed = if use_current_turn {
+        current_completed
+    } else {
+        latest_completed
+    };
+
+    Some(TranscriptSessionBackfill {
+        session_id: session_id?,
+        cwd: cwd?,
+        model,
+        transcript_path: transcript_path.to_string_lossy().to_string(),
+        source,
+        last_seen_at_ms,
+        status: if completed { "idle".to_string() } else { "active".to_string() },
+        turn_id,
+        prompt,
+    })
 }
 
 #[cfg(test)]
