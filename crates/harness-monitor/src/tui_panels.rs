@@ -115,6 +115,18 @@ pub(super) fn render_details_panel(
                     Style::default().fg(colors.accent),
                 ),
             ]));
+            if let Some(review_hint) = cache.review_hint(file) {
+                let review_color = match review_hint.level {
+                    crate::tui::cache::ReviewRiskLevel::High => STOPPED,
+                    crate::tui::cache::ReviewRiskLevel::Medium => INFERRED,
+                };
+                lines.push(Line::from(vec![
+                    Span::styled("Review: ", Style::default().fg(colors.muted)),
+                    Span::styled(review_hint.label, Style::default().fg(review_color)),
+                    Span::raw("  "),
+                    Span::styled(review_hint.rule_name, Style::default().fg(colors.text)),
+                ]));
+            }
         } else {
             lines.push(Line::from(Span::styled(
                 "Lines: ...  Size: ...  Git changes: ...",

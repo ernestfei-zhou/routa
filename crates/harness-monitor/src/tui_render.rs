@@ -815,6 +815,7 @@ fn render_files(
                     additions: None,
                     deletions: None,
                 });
+            let review_hint = cache.review_hint(file);
             let (file_name, parent_dir) = split_display_path(file);
             let display_name = display_file_name(state, file, &file_name);
             let rows = match density {
@@ -823,6 +824,7 @@ fn render_files(
                     &display_name,
                     file,
                     &diff_stat,
+                    review_hint.as_ref(),
                     colors,
                     state.focus == FocusPane::Files,
                     split[1].width as usize,
@@ -834,6 +836,7 @@ fn render_files(
                             &display_name,
                             file,
                             &diff_stat,
+                            review_hint.as_ref(),
                             colors,
                             state.focus == FocusPane::Files,
                             split[1].width as usize,
@@ -848,7 +851,13 @@ fn render_files(
                         row_style(selected, state.focus == FocusPane::Files, colors)
                             .add_modifier(Modifier::BOLD),
                     )]);
-                    let secondary = render_file_meta_line(file, &parent_dir, &diff_stat, colors);
+                    let secondary = render_file_meta_line(
+                        file,
+                        &parent_dir,
+                        &diff_stat,
+                        review_hint.as_ref(),
+                        colors,
+                    );
                     vec![primary, secondary]
                     }
                 }
@@ -1004,10 +1013,18 @@ pub(super) fn time_ago(timestamp_ms: i64) -> String {
 fn render_file_secondary_line(
     file: &crate::models::FileView,
     diff_stat: &DiffStatSummary,
+    review_hint: Option<&crate::tui::cache::ReviewHint>,
     colors: UiPalette,
 ) -> Line<'static> {
     let age = pad_left(&time_ago(file.last_modified_at_ms), 5);
     let mut spans = render_diff_stat_spans(diff_stat);
+    if let Some(hint) = review_hint {
+        spans.push(Span::raw("  "));
+        spans.push(Span::styled(
+            hint.label,
+            Style::default().fg(review_hint_color(hint, colors)),
+        ));
+    }
     spans.push(Span::raw(" "));
     spans.push(Span::styled(age, Style::default().fg(colors.muted)));
     if file.conflicted {
@@ -1021,6 +1038,7 @@ fn render_file_meta_line(
     file: &crate::models::FileView,
     parent_dir: &str,
     diff_stat: &DiffStatSummary,
+    review_hint: Option<&crate::tui::cache::ReviewHint>,
     colors: UiPalette,
 ) -> Line<'static> {
     let mut spans = Vec::new();
@@ -1029,7 +1047,7 @@ fn render_file_meta_line(
         Style::default().fg(colors.muted),
     ));
     spans.push(Span::styled("  ", Style::default().fg(colors.muted)));
-    spans.extend(render_file_secondary_line(file, diff_stat, colors).spans);
+    spans.extend(render_file_secondary_line(file, diff_stat, review_hint, colors).spans);
     Line::from(spans)
 }
 
@@ -1038,6 +1056,7 @@ fn render_file_single_line(
     file_name: &str,
     file: &crate::models::FileView,
     diff_stat: &DiffStatSummary,
+    review_hint: Option<&crate::tui::cache::ReviewHint>,
     colors: UiPalette,
     focused: bool,
     area_width: usize,
@@ -1068,8 +1087,15 @@ fn render_file_single_line(
         ));
         spans.push(Span::raw(" "));
     }
-    spans.extend(render_file_secondary_line(file, diff_stat, colors).spans);
+    spans.extend(render_file_secondary_line(file, diff_stat, review_hint, colors).spans);
     Line::from(spans)
+}
+
+fn review_hint_color(hint: &crate::tui::cache::ReviewHint, _colors: UiPalette) -> Color {
+    match hint.level {
+        crate::tui::cache::ReviewRiskLevel::High => STOPPED,
+        crate::tui::cache::ReviewRiskLevel::Medium => INFERRED,
+    }
 }
 
 pub(super) fn render_event_line(

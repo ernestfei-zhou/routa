@@ -44,6 +44,43 @@ fn submodule_entries_use_sub_status_label() {
 }
 
 #[test]
+fn review_trigger_rules_surface_high_risk_hint_for_matching_file() {
+    let dir = tempdir().expect("tempdir");
+    std::fs::create_dir_all(dir.path().join("docs").join("fitness")).expect("fitness dir");
+    std::fs::write(
+        dir.path().join("docs").join("fitness").join("review-triggers.yaml"),
+        r#"
+review_triggers:
+  - name: high_risk_directory_change
+    type: changed_paths
+    paths:
+      - crates/routa-server/src/api/**
+    severity: high
+    action: require_human_review
+"#,
+    )
+    .expect("write review triggers");
+
+    let cache = AppCache::new(&dir.path().to_string_lossy());
+    let file = FileView {
+        rel_path: "crates/routa-server/src/api/harness.rs".to_string(),
+        dirty: true,
+        state_code: "modify".to_string(),
+        entry_kind: EntryKind::File,
+        last_modified_at_ms: 0,
+        last_session_id: None,
+        confidence: AttributionConfidence::Unknown,
+        conflicted: false,
+        touched_by: BTreeSet::new(),
+        recent_events: Vec::new(),
+    };
+
+    let hint = cache.review_hint(&file).expect("review hint");
+    assert_eq!(hint.label, "HIGH");
+    assert_eq!(hint.rule_name, "high_risk_directory_change");
+}
+
+#[test]
 fn submodule_diff_preview_lists_nested_dirty_entries() {
     let dir = tempdir().expect("tempdir");
     let repo_root = dir.path();

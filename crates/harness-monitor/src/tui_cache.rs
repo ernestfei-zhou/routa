@@ -1,8 +1,10 @@
 use super::fitness;
 use super::*;
 use crate::state::FitnessViewMode;
+use glob::Pattern;
 use ratatui::text::Text;
 use serde::{Deserialize, Serialize};
+use serde_yaml::Value;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::process::Command;
@@ -45,6 +47,27 @@ pub(super) struct FileFactsEntry {
     pub(super) byte_size: u64,
     pub(super) child_count: Option<usize>,
     pub(super) git_change_count: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) enum ReviewRiskLevel {
+    High,
+    Medium,
+}
+
+#[derive(Clone, Debug)]
+pub(super) struct ReviewHint {
+    pub(super) label: &'static str,
+    pub(super) level: ReviewRiskLevel,
+    pub(super) rule_name: String,
+}
+
+#[derive(Clone, Debug)]
+struct ReviewTriggerRule {
+    name: String,
+    severity: String,
+    paths: Vec<String>,
+    directories: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -128,6 +151,7 @@ pub(super) struct AppCache {
     fitness_cache_key: Option<String>,
     fitness_repo_root: String,
     scc_summary: Option<SccSummary>,
+    review_trigger_rules: Vec<ReviewTriggerRule>,
     worker_tx: Sender<BackgroundCommand>,
     worker_rx: Receiver<BackgroundResult>,
 }
@@ -188,6 +212,7 @@ impl AppCache {
             fitness_cache_key: None,
             fitness_repo_root: repo_root.to_string(),
             scc_summary: None,
+            review_trigger_rules: load_review_trigger_rules(repo_root),
             worker_tx,
             worker_rx,
         };
@@ -590,6 +615,158 @@ impl AppCache {
         }
         self.highlighted_detail_cache.get(&render_key)
     }
+
+    pub(super) fn review_hint(&self, file: &crate::models::FileView) -> Option<ReviewHint> {
+        let mut best: Option<ReviewHint> = None;
+        for rule in &self.review_trigger_rules {
+            let matches = if file.entry_kind.is_container() {
+                matches_rule_as_container(rule, &file.rel_path)
+            } else {
+                matches_review_trigger_rule(rule, &file.rel_path)
+            };
+            if !matches {
+                continue;
+            }
+            let level = match rule.severity.as_str() {
+                "high" => ReviewRiskLevel::High,
+                _ => ReviewRiskLevel::Medium,
+            };
+            let candidate = ReviewHint {
+                label: match level {
+                    ReviewRiskLevel::High => "HIGH",
+                    ReviewRiskLevel::Medium => "REV",
+                },
+                level: level.clone(),
+                rule_name: rule.name.clone(),
+            };
+            if best
+                .as_ref()
+                .map(|current| review_level_rank(&candidate.level) > review_level_rank(&current.level))
+                .unwrap_or(true)
+            {
+                best = Some(candidate);
+            }
+        }
+        best
+    }
+}
+
+fn review_level_rank(level: &ReviewRiskLevel) -> u8 {
+    match level {
+        ReviewRiskLevel::High => 2,
+        ReviewRiskLevel::Medium => 1,
+    }
+}
+
+fn load_review_trigger_rules(repo_root: &str) -> Vec<ReviewTriggerRule> {
+    let path = Path::new(repo_root).join("docs/fitness/review-triggers.yaml");
+    let Ok(source) = std::fs::read_to_string(path) else {
+        return Vec::new();
+    };
+    let Ok(parsed) = serde_yaml::from_str::<Value>(&source) else {
+        return Vec::new();
+    };
+    parsed
+        .get("review_triggers")
+        .and_then(Value::as_sequence)
+        .map(|entries| {
+            entries
+                .iter()
+                .filter_map(Value::as_mapping)
+                .map(|rule| ReviewTriggerRule {
+                    name: rule
+                        .get(Value::String("name".to_string()))
+                        .and_then(Value::as_str)
+                        .unwrap_or("review_trigger")
+                        .to_string(),
+                    severity: rule
+                        .get(Value::String("severity".to_string()))
+                        .and_then(Value::as_str)
+                        .unwrap_or("medium")
+                        .to_string(),
+                    paths: normalize_yaml_string_list(
+                        rule.get(Value::String("paths".to_string())),
+                    ),
+                    directories: normalize_yaml_string_list(
+                        rule.get(Value::String("directories".to_string())),
+                    ),
+                })
+                .filter(|rule| !rule.paths.is_empty() || !rule.directories.is_empty())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn normalize_yaml_string_list(value: Option<&Value>) -> Vec<String> {
+    match value {
+        Some(Value::Sequence(entries)) => entries
+            .iter()
+            .filter_map(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(ToString::to_string)
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+fn matches_rule_as_container(rule: &ReviewTriggerRule, rel_path: &str) -> bool {
+    let prefix = format!("{}/", rel_path.trim_end_matches('/'));
+    rule.paths
+        .iter()
+        .any(|pattern| pattern_starts_with_path(pattern, &prefix) || match_file(rel_path, pattern))
+        || rule
+            .directories
+            .iter()
+            .any(|directory| rel_path == directory || prefix.starts_with(&format!("{directory}/")))
+}
+
+fn pattern_starts_with_path(pattern: &str, prefix: &str) -> bool {
+    let normalized = pattern.trim_start_matches('/').replace('\\', "/");
+    normalized.starts_with(prefix)
+}
+
+fn matches_review_trigger_rule(rule: &ReviewTriggerRule, rel_path: &str) -> bool {
+    rule.paths.iter().any(|pattern| match_file(rel_path, pattern))
+        || rule.directories.iter().any(|directory| {
+            rel_path == directory || rel_path.starts_with(&format!("{directory}/"))
+        })
+}
+
+fn normalize_pattern(pattern: &str) -> (String, bool) {
+    let anchored_to_root = pattern.starts_with('/');
+    let trimmed = pattern.trim_start_matches('/');
+    (trimmed.replace('\\', "/"), anchored_to_root)
+}
+
+fn match_file(file_path: &str, pattern: &str) -> bool {
+    let (normalized, anchored_to_root) = normalize_pattern(pattern);
+    let is_dir = pattern.ends_with('/');
+    let match_pattern = if is_dir {
+        format!("{normalized}**")
+    } else {
+        normalized
+    };
+    let requires_root_match = anchored_to_root && !match_pattern.contains('/');
+
+    if requires_root_match && file_path.contains('/') {
+        return false;
+    }
+
+    let dir_variant = if !match_pattern.ends_with("/**") {
+        Some(format!("{match_pattern}/**"))
+    } else {
+        None
+    };
+
+    Pattern::new(&match_pattern)
+        .map(|p| p.matches(file_path))
+        .unwrap_or(false)
+        || dir_variant
+            .as_deref()
+            .and_then(|p| Pattern::new(p).ok())
+            .map(|p| p.matches(file_path))
+            .unwrap_or(false)
 }
 
 fn parse_numstat(stdout: &str) -> BTreeMap<String, (Option<usize>, Option<usize>)> {
