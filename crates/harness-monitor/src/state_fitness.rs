@@ -1,4 +1,5 @@
 use super::{FitnessViewMode, RuntimeState};
+use std::path::Path;
 
 impl FitnessViewMode {
     pub fn as_str(self) -> &'static str {
@@ -31,10 +32,11 @@ impl RuntimeState {
             .collect::<Vec<_>>();
         file_markers.sort();
         format!(
-            "mode={};branch={};ahead={};files={}",
+            "mode={};branch={};ahead={};coverage={};files={}",
             self.fitness_view_mode.as_str(),
             self.branch,
             self.ahead_count.unwrap_or(0),
+            coverage_artifact_marker(&self.repo_root),
             file_markers.join("|")
         )
     }
@@ -45,5 +47,24 @@ impl RuntimeState {
             FitnessViewMode::Full => FitnessViewMode::Fast,
         };
         self.fitness_scroll = 0;
+    }
+}
+
+fn coverage_artifact_marker(repo_root: &str) -> String {
+    let artifact_path = Path::new(repo_root)
+        .join("target")
+        .join("coverage")
+        .join("fitness-summary.json");
+    match std::fs::metadata(&artifact_path) {
+        Ok(metadata) => {
+            let modified_ms = metadata
+                .modified()
+                .ok()
+                .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|duration| duration.as_millis())
+                .unwrap_or(0);
+            format!("{modified_ms}:{}", metadata.len())
+        }
+        Err(_) => "missing".to_string(),
     }
 }

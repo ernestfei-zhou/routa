@@ -49,6 +49,7 @@ const TRANSPORT_REFRESH_MS: u64 = 1200;
 const REPO_STATUS_REFRESH_MS: u64 = 5000;
 const AGENT_SCAN_REFRESH_MS: u64 = 15_000;
 const FITNESS_AUTO_REFRESH_MS: u64 = 10 * 60 * 1000;
+const FITNESS_CACHE_CHECK_MS: u64 = 1500;
 const SCC_REFRESH_MS: u64 = 60 * 1000;
 const FALLBACK_SCAN_REFRESH_MS: u64 = 15_000;
 const FALLBACK_SCAN_IDLE_WINDOW_MS: i64 = 15_000;
@@ -91,6 +92,8 @@ fn run_loop(terminal: &mut DefaultTerminal, ctx: RepoContext, poll_interval_ms: 
         Instant::now() - Duration::from_millis(REPO_STATUS_REFRESH_MS);
     let mut last_agent_refresh = Instant::now() - Duration::from_millis(AGENT_SCAN_REFRESH_MS);
     let mut last_fitness_refresh = Instant::now();
+    let mut last_fitness_cache_check =
+        Instant::now() - Duration::from_millis(FITNESS_CACHE_CHECK_MS);
     let mut last_scc_refresh = Instant::now();
     if !cache.has_fitness_data() {
         cache.request_fitness_refresh(
@@ -161,6 +164,15 @@ fn run_loop(terminal: &mut DefaultTerminal, ctx: RepoContext, poll_interval_ms: 
                 fitness_run_mode_for(&state),
             );
             last_fitness_refresh = Instant::now();
+        }
+        if last_fitness_cache_check.elapsed() >= Duration::from_millis(FITNESS_CACHE_CHECK_MS) {
+            cache.request_fitness_refresh(
+                state.repo_root.clone(),
+                state.fitness_cache_key(),
+                false,
+                fitness_run_mode_for(&state),
+            );
+            last_fitness_cache_check = Instant::now();
         }
         if last_scc_refresh.elapsed() >= Duration::from_millis(SCC_REFRESH_MS) {
             cache.request_scc_refresh(state.repo_root.clone(), false);
