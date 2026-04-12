@@ -409,7 +409,9 @@ fn ensure_runtime_service(ctx: &RepoContext) -> Result<()> {
         return Ok(());
     }
 
-    let current_exe = env::current_exe().context("resolve current harness-monitor executable")?;
+    let Ok(current_exe) = env::current_exe() else {
+        return Ok(());
+    };
     let mut command = Command::new(current_exe);
     command
         .arg("--repo")
@@ -418,17 +420,7 @@ fn ensure_runtime_service(ctx: &RepoContext) -> Result<()> {
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
-    let _child = command
-        .spawn()
-        .context("spawn harness-monitor runtime service")?;
-
-    let deadline = Instant::now() + Duration::from_millis(1200);
-    while Instant::now() < deadline {
-        if runtime_service_is_fresh(ctx) {
-            return Ok(());
-        }
-        std::thread::sleep(Duration::from_millis(60));
-    }
+    let _ = command.spawn();
 
     Ok(())
 }

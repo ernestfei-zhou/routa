@@ -13,6 +13,8 @@ use std::thread;
 const FITNESS_HISTORY_SCHEMA_VERSION: u32 = 1;
 const FITNESS_HISTORY_FILE: &str = "fitness-history.json";
 const FITNESS_TREND_CAPACITY: usize = 12;
+const TEST_MAPPING_STARTUP_DELAY_MS: i64 = 2_000;
+const TEST_MAPPING_FAILURE_BACKOFF_MS: i64 = 30_000;
 
 #[derive(Clone, Debug, Default)]
 pub(super) struct SccSummary {
@@ -134,6 +136,7 @@ pub(super) struct AppCache {
     pending_facts_key: Option<String>,
     pending_fitness: bool,
     pending_test_mapping_key: Option<String>,
+    test_mapping_not_before_ms: Option<i64>,
     pending_scc: bool,
     queued_fitness_refresh: Option<(String, String, bool, fitness::FitnessRunMode)>,
     fitness_mode: fitness::FitnessRunMode,
@@ -197,6 +200,9 @@ impl AppCache {
             pending_facts_key: None,
             pending_fitness: false,
             pending_test_mapping_key: None,
+            test_mapping_not_before_ms: Some(
+                chrono::Utc::now().timestamp_millis() + TEST_MAPPING_STARTUP_DELAY_MS,
+            ),
             pending_scc: false,
             queued_fitness_refresh: None,
             fitness_mode: fitness::FitnessRunMode::Fast,
@@ -334,11 +340,16 @@ impl AppCache {
                 BackgroundResult::TestMapping { result } => match result {
                     Ok(snapshot) => {
                         self.pending_test_mapping_key = None;
+                        self.test_mapping_not_before_ms = None;
                         self.test_mapping_snapshot = Some(snapshot);
                     }
                     Err(_) => {
                         self.pending_test_mapping_key = None;
                         self.test_mapping_snapshot = None;
+                        self.test_mapping_not_before_ms = Some(
+                            chrono::Utc::now().timestamp_millis()
+                                + TEST_MAPPING_FAILURE_BACKOFF_MS,
+                        );
                     }
                 },
                 BackgroundResult::Scc { result } => {
@@ -439,6 +450,14 @@ impl AppCache {
     }
 
     pub(super) fn warm_test_mappings(&mut self, state: &RuntimeState) {
+        let now_ms = chrono::Utc::now().timestamp_millis();
+        if self
+            .test_mapping_not_before_ms
+            .is_some_and(|not_before_ms| now_ms < not_before_ms)
+        {
+            return;
+        }
+
         let files = state
             .file_items()
             .iter()

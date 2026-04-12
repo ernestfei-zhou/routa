@@ -4,8 +4,30 @@ use super::{
 };
 use crate::shared::models::{AttributionConfidence, EntryKind, FileView};
 use crate::observe as repo;
+use crate::ui::state::RuntimeState;
 use std::collections::BTreeSet;
 use tempfile::tempdir;
+
+fn sample_runtime_state_with_dirty_file() -> RuntimeState {
+    let mut state = RuntimeState::new("/tmp/project".to_string(), "main".to_string());
+    state.files.insert(
+        "src/lib.rs".to_string(),
+        FileView {
+            rel_path: "src/lib.rs".to_string(),
+            dirty: true,
+            state_code: "modify".to_string(),
+            entry_kind: EntryKind::File,
+            last_modified_at_ms: 1,
+            last_session_id: None,
+            confidence: AttributionConfidence::Unknown,
+            conflicted: false,
+            touched_by: BTreeSet::new(),
+            recent_events: Vec::new(),
+        },
+    );
+    state.refresh_views();
+    state
+}
 
 #[test]
 fn directory_entries_use_dir_status_label() {
@@ -374,4 +396,25 @@ fn app_cache_restores_fitness_history_on_startup() {
         88.5
     );
     assert_eq!(cache.fitness_trend(), &[88.5, 89.0]);
+}
+
+#[test]
+fn warm_test_mappings_waits_for_startup_delay() {
+    let state = sample_runtime_state_with_dirty_file();
+    let mut cache = AppCache::new(&state.repo_root);
+
+    cache.warm_test_mappings(&state);
+
+    assert!(cache.pending_test_mapping_key.is_none());
+}
+
+#[test]
+fn warm_test_mappings_respects_retry_backoff() {
+    let state = sample_runtime_state_with_dirty_file();
+    let mut cache = AppCache::new(&state.repo_root);
+    cache.test_mapping_not_before_ms = Some(chrono::Utc::now().timestamp_millis() + 30_000);
+
+    cache.warm_test_mappings(&state);
+
+    assert!(cache.pending_test_mapping_key.is_none());
 }
