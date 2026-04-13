@@ -507,8 +507,8 @@ fn summarize_metric_output(output: &str) -> Option<String> {
         return None;
     }
     let mut excerpt = lines.join(" | ");
-    if excerpt.len() > 180 {
-        excerpt.truncate(177);
+    if excerpt.chars().count() > 180 {
+        excerpt = excerpt.chars().take(177).collect::<String>();
         excerpt.push_str("...");
     }
     Some(excerpt)
@@ -564,4 +564,19 @@ fn coverage_source_label(name: &str, source: &CoverageSourceSummary) -> String {
         return format!("{name} {line_percent:.1}%");
     }
     format!("{name} missing")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::summarize_metric_output;
+
+    #[test]
+    fn summarize_metric_output_truncates_multibyte_text_on_char_boundary() {
+        let output = format!("{}\n", "中文输出".repeat(80));
+
+        let excerpt = summarize_metric_output(&output).expect("excerpt");
+
+        assert!(excerpt.ends_with("..."));
+        assert!(excerpt.chars().count() <= 180);
+    }
 }
