@@ -570,6 +570,10 @@ mod review {
 mod panels;
 use panels::*;
 
+#[path = "file_rows.rs"]
+mod file_rows;
+use file_rows::*;
+
 #[path = "render.rs"]
 mod render;
 use render::*;
