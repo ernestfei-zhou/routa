@@ -17,17 +17,19 @@ use entrix::review_trigger::{
     collect_changed_files, collect_diff_stats, evaluate_review_triggers, load_review_triggers,
 };
 use entrix::run_support::run_metric_batch;
-use entrix::runner::ShellRunner;
+use entrix::runner::{OutputCallback, ProgressCallback, ShellRunner};
 use entrix::sarif::SarifRunner;
 use entrix::scoring::{score_dimension, score_report};
 use entrix::server;
 use entrix::test_mapping;
+use entrix::terminal::{AsciiReporter, StreamMode, TerminalReporter};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Parser, Debug)]
@@ -382,14 +384,12 @@ fn main() {
 
 fn cmd_run(args: RunArgs) -> i32 {
     let repo_root = find_project_root();
-    let _ = (
-        args.stream.as_str(),
-        args.format.as_str(),
-        args.progress_refresh,
-    );
+    let _ = args.progress_refresh;
     let fitness_dir = repo_root.join("docs/fitness");
     let all_dimensions = load_dimensions(&fitness_dir);
     let changed_files = collect_run_files(&repo_root, &args);
+    let stream_mode = StreamMode::parse(&args.stream);
+    let show_tier = args.tier.is_none() && args.tier_positional.is_none();
 
     let policy = GovernancePolicy {
         tier_filter: args
@@ -459,7 +459,47 @@ fn cmd_run(args: RunArgs) -> i32 {
     }
 
     let runner_env = build_runner_env(&changed_files, &args.base);
-    let shell_runner = ShellRunner::new(&repo_root).with_env_overrides(runner_env.clone());
+    let reporter = (!args.json && args.format == "text")
+        .then(|| Arc::new(TerminalReporter::new(args.verbose, stream_mode)));
+    if let Some(reporter) = &reporter {
+        reporter.print_header(
+            policy.dry_run,
+            args.tier.as_deref().or(args.tier_positional.as_deref()),
+            policy.parallel,
+        );
+    }
+
+    let progress_callback: Option<ProgressCallback> = reporter.as_ref().map(|reporter| {
+        let reporter = Arc::clone(reporter);
+        Box::new(
+            move |event: &str,
+                  metric: &entrix::model::Metric,
+                  result: Option<&entrix::model::MetricResult>| {
+            reporter.print_metric_progress(
+                event,
+                &metric.name,
+                metric.tier.as_str(),
+                metric.gate == entrix::model::Gate::Hard,
+                result,
+            );
+        },
+        ) as ProgressCallback
+    });
+    let output_callback: Option<OutputCallback> =
+        reporter.as_ref().and_then(|reporter| match stream_mode {
+            StreamMode::Off => None,
+            _ => Some(Arc::new({
+                let reporter = Arc::clone(reporter);
+                move |metric: &entrix::model::Metric, source: &str, line: &str| {
+                    reporter.print_metric_output(&metric.name, source, line);
+                }
+            }) as OutputCallback),
+        });
+
+    let mut shell_runner = ShellRunner::new(&repo_root).with_env_overrides(runner_env.clone());
+    if let Some(callback) = output_callback {
+        shell_runner = shell_runner.with_output_callback(callback);
+    }
     let sarif_runner = SarifRunner::new(&repo_root).with_env_overrides(runner_env);
     let mut dimension_scores = Vec::new();
 
@@ -473,6 +513,7 @@ fn cmd_run(args: RunArgs) -> i32 {
             policy.parallel,
             &changed_files,
             &args.base,
+            progress_callback.as_ref(),
         );
         let scored = score_dimension(&results, &dimension.name, dimension.weight);
         dimension_scores.push(scored);
@@ -487,7 +528,16 @@ fn cmd_run(args: RunArgs) -> i32 {
             serde_json::to_string_pretty(&report_json).expect("serialize report")
         );
     } else {
-        print_report_text(&report, policy.verbose);
+        match args.format.as_str() {
+            "ascii" => AsciiReporter::new(18).report(&report),
+            _ => {
+                if let Some(reporter) = &reporter {
+                    reporter.report(&report, show_tier);
+                } else {
+                    print_report_text(&report, policy.verbose);
+                }
+            }
+        }
     }
 
     if let Err(error) = write_report_output(args.output.as_deref(), &report_json) {

@@ -186,6 +186,7 @@ fn run_fitness_report_json(
             policy.parallel,
             &[],
             "HEAD",
+            None,
         );
         dimension_scores.push(score_dimension(&results, &dimension.name, dimension.weight));
     }

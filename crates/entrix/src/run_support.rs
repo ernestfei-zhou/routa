@@ -2,7 +2,7 @@ use crate::model::{EvidenceType, Metric, MetricResult, ResultState};
 use crate::review_context::{
     analyze_impact, analyze_test_radius, ImpactOptions, ReviewBuildMode, TestRadiusOptions,
 };
-use crate::runner::ShellRunner;
+use crate::runner::{ProgressCallback, ShellRunner};
 use crate::sarif::SarifRunner;
 use crate::test_mapping;
 use std::collections::BTreeMap;
@@ -21,6 +21,7 @@ pub fn run_metric_batch(
     parallel: bool,
     changed_files: &[String],
     base: &str,
+    progress_callback: Option<&ProgressCallback>,
 ) -> Vec<MetricResult> {
     let mut results = metrics
         .iter()
@@ -38,7 +39,13 @@ pub fn run_metric_batch(
     for (index, metric) in metrics.iter().enumerate() {
         match metric.evidence_type {
             EvidenceType::Probe => {
+                if let Some(callback) = progress_callback {
+                    callback("start", metric, None);
+                }
                 results[index] = run_probe_metric(repo_root, metric, dry_run, changed_files, base);
+                if let Some(callback) = progress_callback {
+                    callback("end", metric, Some(&results[index]));
+                }
             }
             EvidenceType::Sarif => {
                 sarif_batch.push(metric.clone());
@@ -52,16 +59,29 @@ pub fn run_metric_batch(
     }
 
     if !shell_batch.is_empty() {
-        let shell_results = shell_runner.run_batch(&shell_batch, parallel, dry_run, None);
+        let shell_results =
+            shell_runner.run_batch(&shell_batch, parallel, dry_run, progress_callback);
         for (index, result) in shell_indexes.into_iter().zip(shell_results) {
             results[index] = result;
         }
     }
 
     if !sarif_batch.is_empty() {
+        for metric in &sarif_batch {
+            if let Some(callback) = progress_callback {
+                callback("start", metric, None);
+            }
+        }
         let sarif_results = sarif_runner.run_batch(&sarif_batch, dry_run);
-        for (index, result) in sarif_indexes.into_iter().zip(sarif_results) {
+        for ((index, metric), result) in sarif_indexes
+            .into_iter()
+            .zip(sarif_batch.iter())
+            .zip(sarif_results)
+        {
             results[index] = result;
+            if let Some(callback) = progress_callback {
+                callback("end", metric, Some(&results[index]));
+            }
         }
     }
 

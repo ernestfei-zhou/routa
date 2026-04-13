@@ -18,3 +18,4 @@ pub mod sarif;
 pub mod scoring;
 pub mod server;
 pub mod test_mapping;
+pub mod terminal;
