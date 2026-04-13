@@ -146,7 +146,7 @@ await updateTomlVersion("crates/routa-rpc/Cargo.toml", version, { updateWorkspac
 await updateTomlVersion("crates/routa-scanner/Cargo.toml", version);
 await updateTomlVersion("crates/routa-server/Cargo.toml", version, { updateWorkspaceDeps: true });
 await updateTomlVersion("crates/routa-cli/Cargo.toml", version, { updateWorkspaceDeps: true });
-await updateTomlVersion("crates/routa-entrix/Cargo.toml", version);
+await updateTomlVersion("crates/entrix/Cargo.toml", version);
 await updateTomlVersion("crates/harness-monitor/Cargo.toml", version, { updateWorkspaceDeps: true });
 
 console.log(`Synchronized release version to ${version}`);
