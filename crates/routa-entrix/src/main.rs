@@ -2,7 +2,7 @@ use clap::{Args, Parser, Subcommand};
 use routa_entrix::file_budgets::{
     evaluate_paths, is_tracked_source_file, load_config, resolve_paths,
 };
-use routa_entrix::review_context::{build_review_context, ReviewContextOptions};
+use routa_entrix::review_context::{build_review_context, ReviewBuildMode, ReviewContextOptions};
 use routa_entrix::review_trigger::{
     collect_changed_files, collect_diff_stats, evaluate_review_triggers, load_review_triggers,
 };
@@ -118,6 +118,8 @@ struct GraphReviewContextArgs {
     max_lines_per_file: usize,
     #[arg(long)]
     no_source: bool,
+    #[arg(long, default_value = "auto")]
+    build_mode: String,
     #[arg(long)]
     json: bool,
     #[arg(long)]
@@ -230,6 +232,8 @@ fn cmd_graph_review_context(args: GraphReviewContextArgs) -> i32 {
             include_source: !args.no_source,
             max_files: args.max_files,
             max_lines_per_file: args.max_lines_per_file,
+            build_mode: parse_build_mode(&args.build_mode),
+            max_targets: args.max_targets,
         },
     );
 
@@ -253,6 +257,14 @@ fn cmd_graph_review_context(args: GraphReviewContextArgs) -> i32 {
     }
 
     0
+}
+
+fn parse_build_mode(value: &str) -> ReviewBuildMode {
+    match value {
+        "skip" => ReviewBuildMode::Skip,
+        "full" => ReviewBuildMode::Full,
+        _ => ReviewBuildMode::Auto,
+    }
 }
 
 fn cmd_hook_file_length(args: HookFileLengthArgs) -> i32 {
