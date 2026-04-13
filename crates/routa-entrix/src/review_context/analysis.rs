@@ -4,10 +4,12 @@ use super::model::{
     ReviewBuildInfo, ReviewBuildMode, ReviewTarget, SymbolGraphNode, TestRadiusOptions,
     TestRadiusReport, UntestedTarget,
 };
-use super::tree_sitter::{node_to_payload, parse_changed_files, parse_repo_graph, query_graph, QueryResult};
+use super::tree_sitter::{
+    node_to_payload, parse_changed_files, parse_repo_graph, query_graph, QueryResult,
+};
 use std::collections::{BTreeMap, BTreeSet};
-use std::process::Command;
 use std::path::Path;
+use std::process::Command;
 
 pub fn analyze_impact(
     repo_root: &Path,
@@ -519,7 +521,11 @@ fn is_test_file(path: &str) -> bool {
         || lowered.contains(".spec.")
 }
 
-fn git_recent_commits(repo_root: &Path, count: usize, git_ref: &str) -> Vec<(String, String, String)> {
+fn git_recent_commits(
+    repo_root: &Path,
+    count: usize,
+    git_ref: &str,
+) -> Vec<(String, String, String)> {
     let output = Command::new("git")
         .args([
             "log",
@@ -547,7 +553,13 @@ fn git_recent_commits(repo_root: &Path, count: usize, git_ref: &str) -> Vec<(Str
 
 fn git_commit_changed_files(repo_root: &Path, commit: &str) -> Vec<String> {
     let output = Command::new("git")
-        .args(["show", "--pretty=", "--name-only", "--diff-filter=ACMR", commit])
+        .args([
+            "show",
+            "--pretty=",
+            "--name-only",
+            "--diff-filter=ACMR",
+            commit,
+        ])
         .current_dir(repo_root)
         .output();
     let Ok(output) = output else {
