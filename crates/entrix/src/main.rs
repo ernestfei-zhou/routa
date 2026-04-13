@@ -1,7 +1,9 @@
 use clap::{Args, Parser, Subcommand};
-use entrix::file_budgets::{
-    evaluate_paths, is_tracked_source_file, load_config, resolve_paths,
-};
+use entrix::evidence::{load_dimensions, validate_weights};
+use entrix::file_budgets::{evaluate_paths, is_tracked_source_file, load_config, resolve_paths};
+use entrix::governance::{enforce, filter_dimensions, GovernancePolicy};
+use entrix::model::{ExecutionScope, Tier};
+use entrix::reporting::{report_to_dict, write_report_output};
 use entrix::review_context::{
     analyze_file, analyze_history, analyze_impact, analyze_test_radius, build_graph,
     build_review_context, graph_stats, query_current_graph, ImpactOptions, ReviewBuildMode,
@@ -10,6 +12,8 @@ use entrix::review_context::{
 use entrix::review_trigger::{
     collect_changed_files, collect_diff_stats, evaluate_review_triggers, load_review_triggers,
 };
+use entrix::runner::ShellRunner;
+use entrix::scoring::{score_dimension, score_report};
 use entrix::test_mapping;
 use serde_json::json;
 use std::path::{Path, PathBuf};
@@ -24,10 +28,44 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Command {
+    Run(RunArgs),
+    Validate(ValidateArgs),
     #[command(name = "review-trigger")]
     ReviewTrigger(ReviewTriggerArgs),
     Hook(HookArgs),
     Graph(GraphArgs),
+}
+
+#[derive(Args, Debug)]
+struct RunArgs {
+    #[arg(value_name = "tier")]
+    tier_positional: Option<String>,
+    #[arg(long)]
+    tier: Option<String>,
+    #[arg(long)]
+    parallel: bool,
+    #[arg(long)]
+    dry_run: bool,
+    #[arg(long)]
+    verbose: bool,
+    #[arg(long, default_value_t = 80.0)]
+    min_score: f64,
+    #[arg(long)]
+    scope: Option<String>,
+    #[arg(long = "dimension")]
+    dimensions: Vec<String>,
+    #[arg(long = "metric")]
+    metrics: Vec<String>,
+    #[arg(long)]
+    json: bool,
+    #[arg(long)]
+    output: Option<String>,
+}
+
+#[derive(Args, Debug)]
+struct ValidateArgs {
+    #[arg(long)]
+    json: bool,
 }
 
 #[derive(Args, Debug)]
@@ -227,6 +265,8 @@ struct GraphReviewContextArgs {
 fn main() {
     let cli = Cli::parse();
     let exit_code = match cli.command {
+        Command::Run(args) => cmd_run(args),
+        Command::Validate(args) => cmd_validate(args),
         Command::ReviewTrigger(args) => cmd_review_trigger(args),
         Command::Hook(args) => match args.command {
             HookCommand::FileLength(args) => cmd_hook_file_length(args),
@@ -244,6 +284,150 @@ fn main() {
         },
     };
     std::process::exit(exit_code);
+}
+
+fn cmd_run(args: RunArgs) -> i32 {
+    let repo_root = find_project_root();
+    let fitness_dir = repo_root.join("docs/fitness");
+    let all_dimensions = load_dimensions(&fitness_dir);
+
+    let policy = GovernancePolicy {
+        tier_filter: args
+            .tier
+            .as_deref()
+            .or(args.tier_positional.as_deref())
+            .and_then(parse_tier),
+        parallel: args.parallel,
+        dry_run: args.dry_run,
+        verbose: args.verbose,
+        min_score: args.min_score,
+        fail_on_hard_gate: true,
+        execution_scope: args.scope.as_deref().and_then(parse_scope_filter),
+        dimension_filters: args.dimensions,
+        metric_filters: args.metrics,
+    };
+
+    let dimensions = filter_dimensions(&all_dimensions, &policy);
+    if dimensions.is_empty() {
+        eprintln!("No matching fitness dimensions or metrics found.");
+        return 1;
+    }
+
+    let runner = ShellRunner::new(&repo_root);
+    let mut dimension_scores = Vec::new();
+
+    for dimension in &dimensions {
+        let results = runner.run_batch(&dimension.metrics, policy.parallel, policy.dry_run, None);
+        let scored = score_dimension(&results, &dimension.name, dimension.weight);
+        dimension_scores.push(scored);
+    }
+
+    let report = score_report(&dimension_scores, policy.min_score);
+    let report_json = report_to_dict(&report);
+
+    if args.json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&report_json).expect("serialize report")
+        );
+    } else {
+        print_report_text(&report, policy.verbose);
+    }
+
+    if let Err(error) = write_report_output(args.output.as_deref(), &report_json) {
+        eprintln!("Failed to write report: {error}");
+        return 1;
+    }
+
+    enforce(&report, &policy)
+}
+
+fn cmd_validate(args: ValidateArgs) -> i32 {
+    let repo_root = find_project_root();
+    let fitness_dir = repo_root.join("docs/fitness");
+    let dimensions = load_dimensions(&fitness_dir);
+    let (weights_valid, total_weight) = validate_weights(&dimensions);
+
+    let payload = json!({
+        "valid": weights_valid,
+        "total_weight": total_weight,
+        "dimension_count": dimensions.len(),
+        "dimensions": dimensions.iter().map(|dimension| {
+            json!({
+                "name": dimension.name,
+                "weight": dimension.weight,
+                "metrics": dimension.metrics.len(),
+                "source_file": dimension.source_file,
+            })
+        }).collect::<Vec<_>>(),
+    });
+
+    if args.json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).expect("serialize validation report")
+        );
+    } else {
+        println!(
+            "Entrix validation: {}",
+            if weights_valid { "PASS" } else { "FAIL" }
+        );
+        println!("Dimensions: {}", dimensions.len());
+        println!("Total weight: {}", total_weight);
+    }
+
+    if weights_valid {
+        0
+    } else {
+        1
+    }
+}
+
+fn print_report_text(report: &entrix::model::FitnessReport, verbose: bool) {
+    let status = if report.hard_gate_blocked || report.score_blocked {
+        "FAIL"
+    } else {
+        "PASS"
+    };
+
+    println!("Entrix fitness: {status}");
+    println!("Final score: {:.1}%", report.final_score);
+    println!("Hard gate blocked: {}", report.hard_gate_blocked);
+    println!("Score blocked: {}", report.score_blocked);
+
+    for dimension in &report.dimensions {
+        println!(
+            "- {}: {:.1}% ({}/{})",
+            dimension.dimension, dimension.score, dimension.passed, dimension.total
+        );
+
+        if verbose {
+            for result in &dimension.results {
+                println!(
+                    "  {} [{}] {} ({:.0}ms)",
+                    if result.passed { "PASS" } else { "FAIL" },
+                    result.tier.as_str(),
+                    result.metric_name,
+                    result.duration_ms
+                );
+            }
+        }
+    }
+}
+
+fn parse_tier(value: &str) -> Option<Tier> {
+    Tier::from_str_opt(value.trim())
+}
+
+fn parse_scope_filter(value: &str) -> Option<ExecutionScope> {
+    match value.trim() {
+        // Python Entrix examples and current workflows use `--scope ci` as a
+        // compatibility flag without expecting local-default metrics to drop out.
+        // Keep strict filtering only for non-default runtime scopes.
+        "staging" => Some(ExecutionScope::Staging),
+        "prod_observation" => Some(ExecutionScope::ProdObservation),
+        _ => None,
+    }
 }
 
 fn cmd_review_trigger(args: ReviewTriggerArgs) -> i32 {
