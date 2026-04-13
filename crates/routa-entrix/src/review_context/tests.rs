@@ -2,7 +2,10 @@ use super::{
     analyze_file, analyze_impact, analyze_test_radius, build_review_context, query_current_graph,
     GraphNodePayload, ImpactOptions, ReviewBuildMode, ReviewContextOptions, TestRadiusOptions,
 };
+use serde_json::Value;
 use std::fs;
+use std::path::Path;
+use std::process::Command;
 use tempfile::tempdir;
 
 #[test]
@@ -327,7 +330,7 @@ fn review_context_links_typescript_companion_spec_file() {
     assert_eq!(run_target.tests_count, 1);
     assert_eq!(
         run_target.tests[0].qualified_name,
-        "src/service.test.ts:run"
+        "src/service.test.ts:test:3"
     );
     assert_eq!(
         result.context.tests.test_files,
@@ -379,7 +382,7 @@ fn review_context_emits_impacted_graph_edges_for_companion_tests() {
     );
     assert!(result.summary.contains("1 impacted nodes in 1 files"));
     assert!(result.context.graph.edges.iter().any(|edge| {
-        edge["source_qualified"] == "src/service.test.ts:run"
+        edge["source_qualified"] == "src/service.test.ts:test:3"
             && edge["target_qualified"] == "src/service.ts:run"
             && edge["kind"] == "TESTED_BY"
     }));
@@ -502,7 +505,7 @@ fn query_current_graph_returns_tests_for_target() {
     assert_eq!(result.results.len(), 1);
     assert!(matches!(
         &result.results[0],
-        GraphNodePayload::Symbol(node) if node.qualified_name == "src/service.test.ts:run"
+        GraphNodePayload::Symbol(node) if node.qualified_name == "src/service.test.ts:test:3"
     ));
     assert_eq!(result.edges.len(), 1);
     assert_eq!(result.edges[0].kind, "TESTED_BY");
@@ -688,4 +691,234 @@ fn analyze_file_reports_symbols_imports_and_basename() {
     assert!(symbols
         .iter()
         .any(|symbol| symbol.qualified_name == "src/service.test.ts:run"));
+}
+
+#[test]
+fn parity_with_python_entrix_for_analyze_file() {
+    let temp = tempdir().unwrap();
+    let root = temp.path();
+    fs::create_dir_all(root.join("src")).unwrap();
+    fs::write(root.join("src/lib.ts"), "export const value = 1;\n").unwrap();
+    fs::write(
+        root.join("src/service.test.ts"),
+        "import { value } from './lib';\nexport function run() { return value; }\n",
+    )
+    .unwrap();
+
+    let Some(python) = python_entrix_adapter_json(root, "analyze_file", &["src/service.test.ts"])
+    else {
+        return;
+    };
+    let rust = serde_json::to_value(analyze_file(root, "src/service.test.ts")).unwrap();
+
+    assert_eq!(rust["status"], python["status"]);
+    assert_eq!(rust["file_path"], python["file_path"]);
+    assert_eq!(rust["language"], python["language"]);
+    assert_eq!(rust["is_test_file"], python["is_test_file"]);
+    assert_eq!(rust["imports"], python["imports"]);
+    assert_eq!(rust["source_basename"], python["source_basename"]);
+    assert_eq!(
+        qualified_names(rust["symbols"].as_array().map_or(&[], |v| v)),
+        qualified_names(python["symbols"].as_array().map_or(&[], |v| v))
+    );
+}
+
+#[test]
+fn parity_with_python_entrix_for_query_shapes() {
+    let temp = tempdir().unwrap();
+    let root = temp.path();
+    fs::create_dir_all(root.join("src")).unwrap();
+    fs::write(
+        root.join("src/service.ts"),
+        "export function run() { return helper(); }\nfunction helper() { return 1; }\n",
+    )
+    .unwrap();
+    fs::write(
+        root.join("src/service.test.ts"),
+        "import { run } from './service';\n\ntest('run works', () => { expect(run()).toBe(1); });\n",
+    )
+    .unwrap();
+
+    let Some(python_tests) =
+        python_entrix_adapter_json(root, "query", &["tests_for", "src/service.ts:run"])
+    else {
+        return;
+    };
+    let rust_tests = serde_json::to_value(query_current_graph(
+        root,
+        "src/service.ts:run",
+        "tests_for",
+        ReviewBuildMode::Auto,
+    ))
+    .unwrap();
+    assert_eq!(rust_tests["status"], python_tests["status"]);
+    assert_eq!(
+        qualified_names(rust_tests["results"].as_array().map_or(&[], |v| v)),
+        qualified_names(python_tests["results"].as_array().map_or(&[], |v| v))
+    );
+    assert_eq!(
+        edge_keys(rust_tests["edges"].as_array().map_or(&[], |v| v)),
+        edge_keys(python_tests["edges"].as_array().map_or(&[], |v| v))
+    );
+
+    let Some(python_summary) =
+        python_entrix_adapter_json(root, "query", &["file_summary", "src/service.ts"])
+    else {
+        return;
+    };
+    let rust_summary = serde_json::to_value(query_current_graph(
+        root,
+        "src/service.ts",
+        "file_summary",
+        ReviewBuildMode::Auto,
+    ))
+    .unwrap();
+    assert_eq!(rust_summary["status"], python_summary["status"]);
+    assert_eq!(
+        qualified_names(rust_summary["results"].as_array().map_or(&[], |v| v)),
+        qualified_names(python_summary["results"].as_array().map_or(&[], |v| v))
+    );
+}
+
+#[test]
+fn parity_with_python_entrix_for_review_context_core_fields() {
+    let temp = tempdir().unwrap();
+    let root = temp.path();
+    fs::create_dir_all(root.join("src")).unwrap();
+    fs::write(
+        root.join("src/service.ts"),
+        "export function run() { return helper(); }\nfunction helper() { return 1; }\n",
+    )
+    .unwrap();
+    fs::write(
+        root.join("src/service.test.ts"),
+        "import { run } from './service';\n\ntest('run', () => { expect(run()).toBe(1); });\n",
+    )
+    .unwrap();
+
+    let Some(python) = python_entrix_runner_json(root, "review_context", &["src/service.ts"])
+    else {
+        return;
+    };
+    let rust = serde_json::to_value(build_review_context(
+        root,
+        &["src/service.ts".to_string()],
+        ReviewContextOptions {
+            base: "HEAD",
+            include_source: false,
+            max_files: 12,
+            max_lines_per_file: 120,
+            build_mode: ReviewBuildMode::Auto,
+            max_targets: 25,
+        },
+    ))
+    .unwrap();
+
+    assert_eq!(rust["status"], python["status"]);
+    assert_eq!(rust["analysis_mode"], python["analysis_mode"]);
+    assert_eq!(
+        rust["context"]["changed_files"],
+        python["context"]["changed_files"]
+    );
+    assert_eq!(
+        rust["context"]["impacted_files"],
+        python["context"]["impacted_files"]
+    );
+    assert_eq!(
+        qualified_names(rust["context"]["targets"].as_array().map_or(&[], |v| v)),
+        qualified_names(python["context"]["targets"].as_array().map_or(&[], |v| v))
+    );
+    assert_eq!(
+        rust["context"]["tests"]["test_files"],
+        python["context"]["tests"]["test_files"]
+    );
+    assert_eq!(
+        rust["context"]["tests"]["untested_targets"],
+        python["context"]["tests"]["untested_targets"]
+    );
+}
+
+fn python_entrix_adapter_json(repo_root: &Path, action: &str, args: &[&str]) -> Option<Value> {
+    python_entrix_json("adapter", repo_root, action, args)
+}
+
+fn python_entrix_runner_json(repo_root: &Path, action: &str, args: &[&str]) -> Option<Value> {
+    python_entrix_json("runner", repo_root, action, args)
+}
+
+fn python_entrix_json(kind: &str, repo_root: &Path, action: &str, args: &[&str]) -> Option<Value> {
+    if !Path::new("/Users/phodal/ai/entrix").exists() {
+        return None;
+    }
+
+    let script = r#"
+import json, sys
+from pathlib import Path
+
+sys.path.insert(0, '/Users/phodal/ai/entrix')
+
+try:
+    if sys.argv[1] == 'adapter':
+        from entrix.structure.builtin import BuiltinGraphAdapter
+        repo = Path(sys.argv[2])
+        adapter = BuiltinGraphAdapter(repo)
+        action = sys.argv[3]
+        if action == 'analyze_file':
+            payload = adapter.analyze_file(sys.argv[4])
+        elif action == 'query':
+            adapter.build_or_update(full=True)
+            payload = adapter.query(sys.argv[4], sys.argv[5])
+        else:
+            raise SystemExit(2)
+    else:
+        from entrix.runners.graph import GraphRunner
+        repo = Path(sys.argv[2])
+        runner = GraphRunner(repo)
+        action = sys.argv[3]
+        if action == 'review_context':
+            payload = runner.review_context([sys.argv[4]], include_source=False, build_mode='auto')
+        else:
+            raise SystemExit(2)
+except Exception:
+    raise SystemExit(3)
+
+print(json.dumps(payload, ensure_ascii=False))
+"#;
+
+    let mut command = Command::new("python3");
+    command.arg("-c").arg(script).arg(kind).arg(repo_root);
+    command.arg(action);
+    for arg in args {
+        command.arg(arg);
+    }
+    let output = command.output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    serde_json::from_slice(&output.stdout).ok()
+}
+
+fn qualified_names(items: &[Value]) -> Vec<String> {
+    let mut values = items
+        .iter()
+        .filter_map(|item| item.get("qualified_name").and_then(Value::as_str))
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    values.sort();
+    values
+}
+
+fn edge_keys(items: &[Value]) -> Vec<(String, String, String)> {
+    let mut values = items
+        .iter()
+        .filter_map(|item| {
+            Some((
+                item.get("kind")?.as_str()?.to_string(),
+                item.get("source_qualified")?.as_str()?.to_string(),
+                item.get("target_qualified")?.as_str()?.to_string(),
+            ))
+        })
+        .collect::<Vec<_>>();
+    values.sort();
+    values
 }

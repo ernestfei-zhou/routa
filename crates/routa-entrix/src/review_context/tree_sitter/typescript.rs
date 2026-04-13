@@ -1,4 +1,4 @@
-use super::{collect_identifier_mentions, resolve_relative_import, sanitize_test_name};
+use super::{collect_identifier_mentions, resolve_relative_import};
 use crate::review_context::model::ChangedNode;
 use std::path::Path;
 use tree_sitter::Node;
@@ -264,14 +264,9 @@ fn collect_test_calls(
         return;
     };
 
-    let test_name = sanitize_test_name(&label);
-    if test_name.is_empty() {
-        return;
-    }
-
     out.push(ChangedNode {
-        qualified_name: format!("{relative_path}:{test_name}"),
-        name: test_name,
+        qualified_name: format!("{relative_path}:test:{}", node.start_position().row + 1),
+        name: label.clone(),
         kind: "Test".to_string(),
         file_path: relative_path.to_string(),
         language: "typescript".to_string(),
