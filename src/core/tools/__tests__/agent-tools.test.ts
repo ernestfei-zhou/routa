@@ -71,6 +71,7 @@ describe("AgentTools.updateTask synthetic completion", () => {
       provider: "codex",
       role: "GATE",
       status: "running",
+      completionRequirement: "verification_report",
       stepId: "qa-frontend",
       stepIndex: 0,
       stepName: "QA Frontend",
@@ -97,6 +98,69 @@ describe("AgentTools.updateTask synthetic completion", () => {
     });
 
     expect(result.success).toBe(true);
+    expect(events).toContain(AgentEventType.AGENT_COMPLETED);
+    expect(completionPayload).toMatchObject({
+      sessionId: "session-review-1",
+      success: true,
+      synthesizedBy: "updateTask",
+      trigger: "verification_report",
+      taskId: task.id,
+    });
+  });
+
+  it("emits AGENT_COMPLETED only after verdict and report are both persisted across separate updates", async () => {
+    const task = createTask({
+      id: "task-review-split",
+      title: "Review task split updates",
+      objective: "Allow review guard to continue after separate writes",
+      workspaceId: "workspace-1",
+      columnId: "review",
+      triggerSessionId: "session-review-1",
+    });
+    task.laneSessions = [{
+      sessionId: "session-review-1",
+      columnId: "review",
+      columnName: "Review",
+      provider: "codex",
+      role: "GATE",
+      status: "running",
+      completionRequirement: "verification_report",
+      stepId: "qa-frontend",
+      stepIndex: 0,
+      stepName: "QA Frontend",
+      startedAt: new Date().toISOString(),
+    }];
+    await taskStore.save(task);
+
+    const events: AgentEventType[] = [];
+    let completionPayload: Record<string, unknown> | undefined;
+    eventBus.on("capture", (event) => {
+      events.push(event.type);
+      if (event.type === AgentEventType.AGENT_COMPLETED) {
+        completionPayload = event.data;
+      }
+    });
+
+    const verdictResult = await tools.updateTask({
+      taskId: task.id,
+      updates: {
+        verificationVerdict: "APPROVED",
+      },
+      agentId: "system",
+    });
+
+    expect(verdictResult.success).toBe(true);
+    expect(events).not.toContain(AgentEventType.AGENT_COMPLETED);
+
+    const reportResult = await tools.updateTask({
+      taskId: task.id,
+      updates: {
+        verificationReport: "QA passed with screenshot and test results.",
+      },
+      agentId: "system",
+    });
+
+    expect(reportResult.success).toBe(true);
     expect(events).toContain(AgentEventType.AGENT_COMPLETED);
     expect(completionPayload).toMatchObject({
       sessionId: "session-review-1",
