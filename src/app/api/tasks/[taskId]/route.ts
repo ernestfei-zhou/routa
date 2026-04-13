@@ -39,6 +39,7 @@ import {
   appendTaskComment,
   appendTaskCommentEntry,
 } from "@/core/kanban/task-comment-log";
+import { resolveReviewLaneConvergenceTarget } from "@/core/kanban/review-lane-convergence";
 import {
   buildContractGateNote,
   buildContractLoopBreakerMessage,
@@ -434,6 +435,18 @@ export async function PATCH(
   }
   if (body.status && !body.columnId) {
     nextTask.columnId = taskStatusToColumnId(body.status);
+  }
+
+  if (body.columnId === undefined && body.status === undefined) {
+    const boardId = nextTask.boardId ?? existing.boardId;
+    const board = boardId
+      ? await system.kanbanBoardStore.get(boardId)
+      : null;
+    const convergenceColumnId = resolveReviewLaneConvergenceTarget(nextTask, board?.columns ?? []);
+    if (convergenceColumnId && convergenceColumnId !== nextTask.columnId) {
+      nextTask.columnId = convergenceColumnId;
+      nextTask.status = columnIdToTaskStatus(convergenceColumnId);
+    }
   }
 
   Object.assign(nextTask, await ensureTaskBoardContext(system, nextTask));

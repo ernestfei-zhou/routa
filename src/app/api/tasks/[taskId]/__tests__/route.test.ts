@@ -354,6 +354,69 @@ describe("/api/tasks/[taskId]", () => {
     });
   });
 
+  it("converges a final approved review verdict into done", async () => {
+    const task = createTask({
+      id: "task-1",
+      title: "Finalize review verdict",
+      objective: "Leave review after Review Guard approval",
+      workspaceId: "workspace-1",
+      boardId: "board-1",
+      columnId: "review",
+      status: TaskStatus.REVIEW_REQUIRED,
+    });
+    task.assignedSpecialistId = "kanban-review-guard";
+    task.assignedSpecialistName = "Review Guard";
+    taskStore.get.mockResolvedValue(task);
+    system.kanbanBoardStore.get = vi.fn().mockResolvedValue({
+      id: "board-1",
+      columns: [
+        { id: "dev", name: "Dev", position: 0, stage: "dev" },
+        {
+          id: "review",
+          name: "Review",
+          position: 1,
+          stage: "review",
+          automation: {
+            enabled: true,
+            steps: [
+              {
+                id: "qa-frontend",
+                role: "GATE",
+                specialistId: "kanban-qa-frontend",
+                specialistName: "QA Frontend",
+              },
+              {
+                id: "review-guard",
+                role: "GATE",
+                specialistId: "kanban-review-guard",
+                specialistName: "Review Guard",
+              },
+            ],
+          },
+        },
+        { id: "done", name: "Done", position: 2, stage: "done" },
+      ],
+    });
+
+    const response = await PATCH(new NextRequest("http://localhost/api/tasks/task-1", {
+      method: "PATCH",
+      body: JSON.stringify({
+        verificationVerdict: VerificationVerdict.APPROVED,
+        verificationReport: "Visual and functional checks passed",
+      }),
+    }), {
+      params: Promise.resolve({ taskId: "task-1" }),
+    });
+
+    expect(response.status).toBe(200);
+    const savedTask = taskStore.save.mock.calls.at(-1)?.[0];
+    expect(savedTask).toMatchObject({
+      columnId: "done",
+      status: TaskStatus.COMPLETED,
+      verificationVerdict: VerificationVerdict.APPROVED,
+    });
+  });
+
   it("rejects malformed canonical YAML when updating a backlog card description", async () => {
     const existingTask = createTask({
       id: "task-1",

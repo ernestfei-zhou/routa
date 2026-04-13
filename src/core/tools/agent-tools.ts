@@ -30,6 +30,7 @@ import {
   createAgent as createAgentModel,
 } from "../models/agent";
 import { Task, TaskStatus, createTask as createTaskModel } from "../models/task";
+import type { KanbanBoardStore } from "../store/kanban-board-store";
 import { MessageRole, createMessage, CompletionReport } from "../models/message";
 import {
   ArtifactType,
@@ -45,6 +46,8 @@ import { getKanbanEventBroadcaster } from "../kanban/kanban-event-broadcaster";
 import type { TaskCreationSource } from "../kanban/task-creation-policy";
 import { ToolResult, successResult, errorResult } from './tool-result';
 import { applySandboxPermissionConstraints, SandboxPermissionConstraints } from "../sandbox";
+import { columnIdToTaskStatus } from "../models/kanban";
+import { resolveReviewLaneConvergenceTarget } from "../kanban/review-lane-convergence";
 import {
   PermissionStore,
   PermissionRequest,
@@ -99,6 +102,7 @@ function notifyKanbanArtifactChanged(workspaceId: string, taskId: string): void 
 export class AgentTools {
   private artifactStore?: ArtifactStore;
   private permissionStore?: PermissionStore;
+  private kanbanBoardStore?: Pick<KanbanBoardStore, "get">;
 
   constructor(
     private agentStore: AgentStore,
@@ -117,6 +121,10 @@ export class AgentTools {
 
   setPermissionStore(store: PermissionStore): void {
     this.permissionStore = store;
+  }
+
+  setKanbanBoardStore(store: Pick<KanbanBoardStore, "get">): void {
+    this.kanbanBoardStore = store;
   }
 
   // ─── EventBus Access ─────────────────────────────────────────────────
@@ -787,7 +795,6 @@ export class AgentTools {
       );
     }
 
-    // Apply updates
     const oldStatus = task.status;
     if (updates.title) task.title = updates.title;
     if (updates.objective) task.objective = updates.objective;
@@ -805,12 +812,31 @@ export class AgentTools {
     if (updates.acceptanceCriteria !== undefined) task.acceptanceCriteria = updates.acceptanceCriteria;
     if (updates.verificationCommands !== undefined) task.verificationCommands = updates.verificationCommands;
     if (updates.testCases !== undefined) task.testCases = updates.testCases;
+
+    if (updates.status === undefined) {
+      const board = task.boardId && this.kanbanBoardStore
+        ? await this.kanbanBoardStore.get(task.boardId)
+        : undefined;
+      const convergenceColumnId = resolveReviewLaneConvergenceTarget(task, board?.columns ?? []);
+      if (convergenceColumnId && convergenceColumnId !== task.columnId) {
+        task.columnId = convergenceColumnId;
+        task.status = columnIdToTaskStatus(convergenceColumnId);
+      }
+    }
+
     task.updatedAt = new Date();
 
     await this.taskStore.save(task);
 
-    // Emit events if status changed
-    if (updates.status && oldStatus !== task.status) {
+    getKanbanEventBroadcaster().notify({
+      workspaceId: task.workspaceId,
+      entity: "task",
+      action: "updated",
+      resourceId: taskId,
+      source: "agent",
+    });
+
+    if (oldStatus !== task.status) {
       this.eventBus.emit({
         type: AgentEventType.TASK_STATUS_CHANGED,
         agentId,
