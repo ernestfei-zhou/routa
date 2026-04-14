@@ -298,7 +298,44 @@ async fn build_board_queue_snapshot(
 }
 
 async fn is_session_actively_running(state: &AppState, session_id: &str) -> bool {
-    state.acp_manager.get_session(session_id).await.is_some()
+    if state.acp_manager.get_session(session_id).await.is_some() {
+        return true;
+    }
+
+    let Ok(Some(session)) = state.acp_session_store.get(session_id).await else {
+        return false;
+    };
+
+    !persisted_session_is_explicitly_terminal(&session.message_history)
+}
+
+fn persisted_session_is_explicitly_terminal(history: &[serde_json::Value]) -> bool {
+    history
+        .iter()
+        .rev()
+        .any(session_history_entry_marks_runtime_error)
+}
+
+fn session_history_entry_marks_runtime_error(entry: &serde_json::Value) -> bool {
+    let update = entry.get("update").and_then(serde_json::Value::as_object);
+    let session_update = update
+        .and_then(|update| update.get("sessionUpdate"))
+        .and_then(serde_json::Value::as_str);
+
+    if session_update == Some("error") {
+        return true;
+    }
+
+    if session_update == Some("acp_status")
+        && update
+            .and_then(|update| update.get("status"))
+            .and_then(serde_json::Value::as_str)
+            == Some("error")
+    {
+        return true;
+    }
+
+    entry.get("type").and_then(serde_json::Value::as_str) == Some("error")
 }
 
 fn resolve_stale_lane_session_terminal_status(task: &Task) -> TaskLaneSessionStatus {
@@ -1145,12 +1182,14 @@ async fn add_board_runtime_meta(
 mod tests {
     use super::{
         default_dev_session_supervision, get_dev_session_supervision,
-        normalize_dev_session_supervision, sanitize_stale_current_lane_automation,
-        translate_agent_event_to_kanban_payload, PartialKanbanDevSessionSupervision,
+        normalize_dev_session_supervision, persisted_session_is_explicitly_terminal,
+        sanitize_stale_current_lane_automation, translate_agent_event_to_kanban_payload,
+        PartialKanbanDevSessionSupervision,
     };
     use chrono::Utc;
     use routa_core::events::{AgentEvent, AgentEventType};
     use routa_core::models::task::{Task, TaskLaneSession, TaskLaneSessionStatus, TaskStatus};
+    use routa_core::store::acp_session_store::CreateAcpSessionParams;
     use routa_core::{AppState, AppStateInner, Database};
     use serde_json::json;
     use std::collections::HashMap;
@@ -1185,6 +1224,29 @@ mod tests {
         task.column_id = Some("review".to_string());
         task.status = TaskStatus::ReviewRequired;
         task
+    }
+
+    async fn persist_session(state: &AppState, session_id: &str, history: &[serde_json::Value]) {
+        state
+            .acp_session_store
+            .create(CreateAcpSessionParams {
+                id: session_id,
+                cwd: ".",
+                branch: None,
+                workspace_id: "default",
+                provider: Some("codex-acp"),
+                role: Some("GATE"),
+                custom_command: None,
+                custom_args: None,
+                parent_session_id: None,
+            })
+            .await
+            .expect("session should persist");
+        state
+            .acp_session_store
+            .save_history(session_id, history)
+            .await
+            .expect("history should persist");
     }
 
     #[test]
@@ -1407,5 +1469,157 @@ mod tests {
             TaskLaneSessionStatus::Running
         );
         assert_eq!(updated.lane_sessions[0].completed_at, None);
+    }
+
+    #[test]
+    fn persisted_session_history_only_becomes_terminal_on_explicit_runtime_error() {
+        assert!(!persisted_session_is_explicitly_terminal(&[
+            json!({
+                "sessionId": "session-4",
+                "update": {
+                    "sessionUpdate": "acp_status",
+                    "status": "ready",
+                }
+            }),
+            json!({
+                "sessionId": "session-4",
+                "update": {
+                    "sessionUpdate": "agent_message",
+                    "content": { "text": "still resumable" }
+                }
+            }),
+        ]));
+
+        assert!(!persisted_session_is_explicitly_terminal(&[json!({
+            "sessionId": "session-4",
+            "update": {
+                "sessionUpdate": "acp_status",
+                "content": { "text": "connected" }
+            }
+        })]));
+
+        assert!(persisted_session_is_explicitly_terminal(&[json!({
+            "sessionId": "session-4",
+            "update": {
+                "sessionUpdate": "acp_status",
+                "status": "error",
+                "error": "session crashed"
+            }
+        })]));
+    }
+
+    #[tokio::test]
+    async fn persisted_restorable_sessions_keep_lane_ownership_after_restart() {
+        let state = setup_state().await;
+        persist_session(
+            &state,
+            "session-4",
+            &[json!({
+                "sessionId": "session-4",
+                "update": {
+                    "sessionUpdate": "agent_message",
+                    "content": { "text": "restorable" }
+                }
+            })],
+        )
+        .await;
+
+        let mut task = build_task("task-4");
+        task.trigger_session_id = Some("session-4".to_string());
+        task.lane_sessions.push(TaskLaneSession {
+            session_id: "session-4".to_string(),
+            routa_agent_id: None,
+            column_id: Some("review".to_string()),
+            column_name: Some("Review".to_string()),
+            step_id: None,
+            step_index: None,
+            step_name: None,
+            provider: Some("codex-acp".to_string()),
+            role: Some("GATE".to_string()),
+            specialist_id: None,
+            specialist_name: None,
+            transport: Some("acp".to_string()),
+            external_task_id: None,
+            context_id: None,
+            attempt: Some(1),
+            loop_mode: None,
+            completion_requirement: None,
+            objective: Some(task.objective.clone()),
+            last_activity_at: None,
+            recovered_from_session_id: None,
+            recovery_reason: None,
+            status: TaskLaneSessionStatus::Running,
+            started_at: Utc::now().to_rfc3339(),
+            completed_at: None,
+        });
+
+        let updated = sanitize_stale_current_lane_automation(&state, task)
+            .await
+            .expect("sanitize should succeed");
+
+        assert_eq!(updated.trigger_session_id.as_deref(), Some("session-4"));
+        assert_eq!(
+            updated.lane_sessions[0].status,
+            TaskLaneSessionStatus::Running
+        );
+        assert_eq!(updated.lane_sessions[0].completed_at, None);
+    }
+
+    #[tokio::test]
+    async fn persisted_error_sessions_release_lane_ownership_after_restart() {
+        let state = setup_state().await;
+        persist_session(
+            &state,
+            "session-5",
+            &[json!({
+                "sessionId": "session-5",
+                "update": {
+                    "sessionUpdate": "acp_status",
+                    "status": "error",
+                    "error": "worker exited"
+                }
+            })],
+        )
+        .await;
+
+        let mut task = build_task("task-5");
+        task.trigger_session_id = Some("session-5".to_string());
+        task.lane_sessions.push(TaskLaneSession {
+            session_id: "session-5".to_string(),
+            routa_agent_id: None,
+            column_id: Some("review".to_string()),
+            column_name: Some("Review".to_string()),
+            step_id: None,
+            step_index: None,
+            step_name: None,
+            provider: Some("codex-acp".to_string()),
+            role: Some("GATE".to_string()),
+            specialist_id: None,
+            specialist_name: None,
+            transport: Some("acp".to_string()),
+            external_task_id: None,
+            context_id: None,
+            attempt: Some(1),
+            loop_mode: None,
+            completion_requirement: None,
+            objective: Some(task.objective.clone()),
+            last_activity_at: None,
+            recovered_from_session_id: None,
+            recovery_reason: None,
+            status: TaskLaneSessionStatus::Running,
+            started_at: Utc::now().to_rfc3339(),
+            completed_at: None,
+        });
+
+        let updated = sanitize_stale_current_lane_automation(&state, task)
+            .await
+            .expect("sanitize should succeed");
+
+        assert_eq!(updated.trigger_session_id, None);
+        assert_eq!(
+            updated.lane_sessions[0].status,
+            TaskLaneSessionStatus::TimedOut
+        );
+        assert!(updated.lane_sessions[0].completed_at.is_some());
     }
 }
