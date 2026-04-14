@@ -2,7 +2,7 @@ use crate::{
     parse_scope_filter, status_exit_code, AnalyzeArgs, AnalyzeCommand, Cli, Command, ExecutionScope,
     GraphArgs, GraphCommand, GraphStatsArgs, HookArgs, HookCommand, StreamMode,
 };
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 
 #[test]
 fn graph_stats_accepts_json_flag() {
@@ -180,6 +180,31 @@ fn review_trigger_defaults() {
 }
 
 #[test]
+fn review_trigger_flags() {
+    let cli = Cli::parse_from([
+        "entrix",
+        "review-trigger",
+        "--base",
+        "main",
+        "--config",
+        "docs/fitness/review-triggers.yaml",
+        "--fail-on-trigger",
+        "--json",
+        "src/core/acp/foo.ts",
+    ]);
+    match cli.command {
+        Some(Command::ReviewTrigger(args)) => {
+            assert_eq!(args.base, "main");
+            assert_eq!(args.config.as_deref(), Some("docs/fitness/review-triggers.yaml"));
+            assert!(args.fail_on_trigger);
+            assert!(args.json);
+            assert_eq!(args.files, vec!["src/core/acp/foo.ts"]);
+        }
+        _ => panic!("expected review-trigger command"),
+    }
+}
+
+#[test]
 fn release_trigger_defaults() {
     let cli = Cli::parse_from(["entrix", "release-trigger", "--manifest", "manifest.json"]);
     match cli.command {
@@ -191,6 +216,43 @@ fn release_trigger_defaults() {
             assert!(args.config.is_none());
             assert!(!args.fail_on_trigger);
             assert!(!args.json);
+        }
+        _ => panic!("expected release-trigger command"),
+    }
+}
+
+#[test]
+fn release_trigger_flags() {
+    let cli = Cli::parse_from([
+        "entrix",
+        "release-trigger",
+        "--manifest",
+        "dist/release/manifest.json",
+        "--baseline-manifest",
+        "dist/release/baseline.json",
+        "--base",
+        "main",
+        "--config",
+        "docs/fitness/release-triggers.yaml",
+        "--fail-on-trigger",
+        "--json",
+        "scripts/release/stage-routa-cli-npm.mjs",
+    ]);
+    match cli.command {
+        Some(Command::ReleaseTrigger(args)) => {
+            assert_eq!(args.manifest, "dist/release/manifest.json");
+            assert_eq!(
+                args.baseline_manifest.as_deref(),
+                Some("dist/release/baseline.json")
+            );
+            assert_eq!(args.base, "main");
+            assert_eq!(
+                args.config.as_deref(),
+                Some("docs/fitness/release-triggers.yaml")
+            );
+            assert!(args.fail_on_trigger);
+            assert!(args.json);
+            assert_eq!(args.files, vec!["scripts/release/stage-routa-cli-npm.mjs"]);
         }
         _ => panic!("expected release-trigger command"),
     }
@@ -218,6 +280,151 @@ fn hook_file_length_flags() {
             assert!(!args.overrides_only);
         }
         _ => panic!("expected hook file-length command"),
+    }
+}
+
+#[test]
+fn graph_impact_defaults() {
+    let cli = Cli::parse_from(["entrix", "graph", "impact"]);
+    match cli.command {
+        Some(Command::Graph(GraphArgs {
+            command: Some(GraphCommand::Impact(args)),
+        })) => {
+            assert_eq!(args.base, "HEAD");
+            assert_eq!(args.depth, 2);
+            assert!(args.files.is_empty());
+        }
+        _ => panic!("expected graph impact command"),
+    }
+}
+
+#[test]
+fn graph_test_radius_flags() {
+    let cli = Cli::parse_from([
+        "entrix",
+        "graph",
+        "test-radius",
+        "--base",
+        "HEAD~3",
+        "--depth",
+        "4",
+        "--max-targets",
+        "12",
+        "src/a.ts",
+    ]);
+    match cli.command {
+        Some(Command::Graph(GraphArgs {
+            command: Some(GraphCommand::TestRadius(args)),
+        })) => {
+            assert_eq!(args.base, "HEAD~3");
+            assert_eq!(args.depth, 4);
+            assert_eq!(args.max_targets, 12);
+            assert_eq!(args.files, vec!["src/a.ts"]);
+        }
+        _ => panic!("expected graph test-radius command"),
+    }
+}
+
+#[test]
+fn graph_query_flags() {
+    let cli = Cli::parse_from(["entrix", "graph", "query", "tests_for", "MyService.run", "--json"]);
+    match cli.command {
+        Some(Command::Graph(GraphArgs {
+            command: Some(GraphCommand::Query(args)),
+        })) => {
+            assert_eq!(args.pattern, "tests_for");
+            assert_eq!(args.target, "MyService.run");
+            assert!(args.json);
+        }
+        _ => panic!("expected graph query command"),
+    }
+}
+
+#[test]
+fn graph_test_mapping_flags() {
+    let cli = Cli::parse_from([
+        "entrix",
+        "graph",
+        "test-mapping",
+        "--base",
+        "HEAD~2",
+        "--build-mode",
+        "skip",
+        "--no-graph",
+        "--fail-on-missing",
+        "--json",
+        "src/a.ts",
+    ]);
+    match cli.command {
+        Some(Command::Graph(GraphArgs {
+            command: Some(GraphCommand::TestMapping(args)),
+        })) => {
+            assert_eq!(args.base, "HEAD~2");
+            assert_eq!(args.build_mode, "skip");
+            assert!(args.no_graph);
+            assert!(args.fail_on_missing);
+            assert!(args.json);
+            assert_eq!(args.files, vec!["src/a.ts"]);
+        }
+        _ => panic!("expected graph test-mapping command"),
+    }
+}
+
+#[test]
+fn graph_history_flags() {
+    let cli = Cli::parse_from(["entrix", "graph", "history", "--count", "5", "--ref", "main"]);
+    match cli.command {
+        Some(Command::Graph(GraphArgs {
+            command: Some(GraphCommand::History(args)),
+        })) => {
+            assert_eq!(args.count, 5);
+            assert_eq!(args.git_ref, "main");
+        }
+        _ => panic!("expected graph history command"),
+    }
+}
+
+#[test]
+fn graph_review_context_flags() {
+    let cli = Cli::parse_from([
+        "entrix",
+        "graph",
+        "review-context",
+        "--base",
+        "HEAD~2",
+        "--head",
+        "HEAD",
+        "--depth",
+        "3",
+        "--max-targets",
+        "10",
+        "--max-files",
+        "4",
+        "--max-lines-per-file",
+        "80",
+        "--output",
+        "-",
+        "--files",
+        "src/b.ts",
+        "--no-source",
+        "src/a.ts",
+    ]);
+    match cli.command {
+        Some(Command::Graph(GraphArgs {
+            command: Some(GraphCommand::ReviewContext(args)),
+        })) => {
+            assert_eq!(args.base, "HEAD~2");
+            assert_eq!(args.head, "HEAD");
+            assert_eq!(args.depth, 3);
+            assert_eq!(args.max_targets, 10);
+            assert_eq!(args.max_files, 4);
+            assert_eq!(args.max_lines_per_file, 80);
+            assert_eq!(args.output.as_deref(), Some("-"));
+            assert!(args.no_source);
+            assert_eq!(args.files, vec!["src/b.ts"]);
+            assert_eq!(args.files_positional, vec!["src/a.ts"]);
+        }
+        _ => panic!("expected graph review-context command"),
     }
 }
 
@@ -292,4 +499,12 @@ fn scope_filter_parse_parity() {
         Some(ExecutionScope::ProdObservation)
     );
     assert_eq!(parse_scope_filter("unknown"), None);
+}
+
+#[test]
+fn help_formats_without_error() {
+    let help_text = Cli::command().render_help().to_string();
+    assert!(help_text.contains("entrix"));
+    assert!(help_text.contains("validate"));
+    assert!(help_text.contains("Evolutionary architecture fitness engine"));
 }

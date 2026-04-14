@@ -44,7 +44,7 @@ mod cli_runtime;
 
 #[derive(Parser, Debug)]
 #[command(name = "entrix")]
-#[command(about = "Rust Entrix CLI")]
+#[command(about = "Evolutionary architecture fitness engine for change-aware verification")]
 struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
