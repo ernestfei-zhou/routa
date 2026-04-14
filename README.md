@@ -254,6 +254,10 @@ npm run lint
 - [Releases](https://github.com/phodal/routa/releases)
 - [Issues](https://github.com/phodal/routa/issues)
 
+### WeChat Group
+
+<img src="https://github.com/user-attachments/assets/78270d2e-e512-4e6a-8116-a88b13b80fa0" alt="Routa WeChat Group QR Code" width="480" />
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

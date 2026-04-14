@@ -94,7 +94,7 @@ const platformPackages = [
   },
   {
     key: "win32-x64",
-    artifact: "entrix-windows-x64",
+    artifact: "entrix-win32-x64",  // Must match GitHub Actions matrix.key
     packageName: "entrix-windows-x64",
     os: ["win32"],
     cpu: ["x64"],
