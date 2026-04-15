@@ -51,10 +51,16 @@ class WebProcess implements IPlatformProcess {
       throw new Error("Process spawning is not available in serverless environments");
     }
     const { spawn } = require("child_process");
+    // Normalize backslashes to forward slashes on Windows.
+    // When shell:true, cmd.exe cannot handle backslash cwd paths and exits
+    // with ENOENT. Forward slashes work correctly in all Node.js APIs on Windows.
+    const cwd = options?.cwd
+      ? (process.platform === "win32" ? options.cwd.replace(/\\/g, "/") : options.cwd)
+      : undefined;
     // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process
     return spawn(command, args, { // Platform abstraction layer intentionally exposes spawn with shell disabled by default.
       stdio: options?.stdio ?? ["pipe", "pipe", "pipe"],
-      cwd: options?.cwd,
+      cwd,
       env: options?.env ? { ...process.env, ...options.env } : process.env,
       shell: options?.shell ?? false,
       detached: options?.detached ?? false,

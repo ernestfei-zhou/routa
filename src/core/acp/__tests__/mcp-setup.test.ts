@@ -11,7 +11,7 @@ vi.mock("@/core/store/custom-mcp-server-store", () => ({
 }));
 
 describe("ensureMcpForProvider", () => {
-  it("keeps Claude MCP config inline so SDK parsing still works", async () => {
+  it("writes Claude MCP config to a temp file so SDK parsing still works", async () => {
     const result = await ensureMcpForProvider("claude", {
       routaServerUrl: "http://127.0.0.1:3000",
       workspaceId: "ws-test",
@@ -19,7 +19,8 @@ describe("ensureMcpForProvider", () => {
     });
 
     expect(result.mcpConfigs).toHaveLength(1);
-    expect(result.mcpConfigs[0]).toContain("\"mcpServers\"");
+    // After fix: config is a file path (contains "mcp-tmp"), not inline JSON
+    expect(result.mcpConfigs[0]).toContain("mcp-tmp");
 
     const parsed = parseMcpServersFromConfigs(result.mcpConfigs);
     expect(parsed?.["routa-coordination"]).toMatchObject({
