@@ -16,6 +16,16 @@ use crate::state::AppState;
 
 type SseStream = Pin<Box<dyn tokio_stream::Stream<Item = Result<Event, Infallible>> + Send>>;
 
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+fn clone_progress_git_command() -> tokio::process::Command {
+    let mut command = tokio::process::Command::new("git");
+    #[cfg(windows)]
+    command.creation_flags(CREATE_NO_WINDOW);
+    command
+}
+
 pub fn router() -> Router<AppState> {
     Router::new().route("/", post(clone_with_progress))
 }
@@ -146,7 +156,7 @@ async fn clone_with_progress(
             )))
             .await;
 
-        let child = tokio::process::Command::new("git")
+        let child = clone_progress_git_command()
             .args(["clone", "--progress", &clone_url, &target_str])
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::piped())
@@ -212,7 +222,7 @@ async fn clone_with_progress(
         let status = child.wait().await;
         match status {
             Ok(s) if s.success() => {
-                let _ = std::process::Command::new("git")
+                let _ = git::git_command()
                     .args(["fetch", "--all"])
                     .current_dir(&target_str)
                     .output();

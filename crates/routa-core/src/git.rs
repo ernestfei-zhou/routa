@@ -14,7 +14,7 @@ const GIT_LOG_SEARCH_SCAN_LIMIT: usize = 2000;
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
-fn git_command() -> Command {
+pub fn git_command() -> Command {
     let mut command = Command::new("git");
     #[cfg(windows)]
     command.creation_flags(CREATE_NO_WINDOW);
@@ -160,7 +160,7 @@ pub fn get_branch_info(repo_path: &str) -> RepoBranchInfo {
 }
 
 pub fn checkout_branch(repo_path: &str, branch: &str) -> bool {
-    let ok = Command::new("git")
+    let ok = git_command()
         .args(["checkout", branch])
         .current_dir(repo_path)
         .output()
@@ -169,7 +169,7 @@ pub fn checkout_branch(repo_path: &str, branch: &str) -> bool {
     if ok {
         return true;
     }
-    Command::new("git")
+    git_command()
         .args(["checkout", "-b", branch])
         .current_dir(repo_path)
         .output()
@@ -190,7 +190,7 @@ pub fn delete_branch(repo_path: &str, branch: &str) -> Result<(), String> {
         return Err(format!("Branch '{branch}' not found"));
     }
 
-    let output = Command::new("git")
+    let output = git_command()
         .args(["branch", "-D", branch])
         .current_dir(repo_path)
         .output()
@@ -204,7 +204,7 @@ pub fn delete_branch(repo_path: &str, branch: &str) -> Result<(), String> {
 }
 
 pub fn fetch_remote(repo_path: &str) -> bool {
-    Command::new("git")
+    git_command()
         .args(["fetch", "--all", "--prune"])
         .current_dir(repo_path)
         .output()
@@ -213,7 +213,7 @@ pub fn fetch_remote(repo_path: &str) -> bool {
 }
 
 pub fn pull_branch(repo_path: &str) -> Result<(), String> {
-    let output = Command::new("git")
+    let output = git_command()
         .args(["pull", "--ff-only"])
         .current_dir(repo_path)
         .output()
@@ -273,7 +273,7 @@ pub fn get_branch_status(repo_path: &str, branch: &str) -> BranchStatus {
 }
 
 pub fn reset_local_changes(repo_path: &str) -> Result<(), String> {
-    let reset_output = Command::new("git")
+    let reset_output = git_command()
         .args(["reset", "--hard", "HEAD"])
         .current_dir(repo_path)
         .output()
@@ -284,7 +284,7 @@ pub fn reset_local_changes(repo_path: &str) -> Result<(), String> {
             .to_string());
     }
 
-    let clean_output = Command::new("git")
+    let clean_output = git_command()
         .args(["clean", "-fd"])
         .current_dir(repo_path)
         .output()
