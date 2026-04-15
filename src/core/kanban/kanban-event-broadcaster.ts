@@ -1,4 +1,4 @@
-export type KanbanWorkspaceEvent = {
+export type KanbanWorkspaceChangedEvent = {
   type: "kanban:changed";
   workspaceId: string;
   entity: "task" | "board" | "column" | "queue";
@@ -7,6 +7,18 @@ export type KanbanWorkspaceEvent = {
   source: "agent" | "user" | "system";
   timestamp: string;
 };
+
+export type KanbanFitnessChangedEvent = {
+  type: "fitness:changed";
+  workspaceId: string;
+  source: "agent" | "user" | "system";
+  timestamp: string;
+  codebaseId?: string;
+  repoPath?: string;
+  status?: "running" | "passed" | "failed" | "skipped";
+};
+
+export type KanbanWorkspaceEvent = KanbanWorkspaceChangedEvent | KanbanFitnessChangedEvent;
 
 type SSEController = ReadableStreamDefaultController<Uint8Array>;
 
@@ -43,10 +55,18 @@ export class KanbanEventBroadcaster {
     }
   }
 
-  notify(event: Omit<KanbanWorkspaceEvent, "type" | "timestamp">): void {
+  notify(event: Omit<KanbanWorkspaceChangedEvent, "type" | "timestamp">): void {
     this.broadcast({
       ...event,
       type: "kanban:changed",
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  notifyFitness(event: Omit<KanbanFitnessChangedEvent, "type" | "timestamp">): void {
+    this.broadcast({
+      ...event,
+      type: "fitness:changed",
       timestamp: new Date().toISOString(),
     });
   }

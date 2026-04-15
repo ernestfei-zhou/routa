@@ -43,7 +43,7 @@ export function useKanbanEvents({ workspaceId, onInvalidate }: UseKanbanEventsOp
           }
           return;
         }
-        if (data.type === "kanban:changed") {
+        if (data.type === "kanban:changed" || data.type === "fitness:changed") {
           onInvalidateRef.current();
         }
       } catch {

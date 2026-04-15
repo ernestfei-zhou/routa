@@ -56,6 +56,19 @@ describe("useKanbanEvents", () => {
     expect(onInvalidate).toHaveBeenCalledTimes(1);
   });
 
+  it("invalidates on fitness change events as well", () => {
+    const onInvalidate = vi.fn();
+    vi.stubGlobal("EventSource", MockEventSource as unknown as typeof EventSource);
+
+    render(<HookHarness workspaceId="workspace-1" onInvalidate={onInvalidate} />);
+
+    const source = MockEventSource.instances[0];
+    source.emit({ type: "connected" });
+    source.emit({ type: "fitness:changed" });
+
+    expect(onInvalidate).toHaveBeenCalledTimes(1);
+  });
+
   it("invalidates when the SSE connection reconnects after the first connect", () => {
     vi.useFakeTimers();
     const onInvalidate = vi.fn();
