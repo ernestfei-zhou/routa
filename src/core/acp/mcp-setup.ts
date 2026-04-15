@@ -33,6 +33,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { createHash } from "crypto";
 import TOML from "smol-toml";
 import type { McpServerConfig } from "@anthropic-ai/claude-agent-sdk";
 import {
@@ -266,7 +267,78 @@ async function ensureMcpForAuggie(
 
 // ─── Claude Code ───────────────────────────────────────────────────────
 //
-// Claude Code accepts inline JSON via --mcp-config <json>
+// Claude Code accepts --mcp-config <json|file-path>.
+// We write a temporary JSON file and pass the file path to avoid shell
+// escaping issues on Windows (cmd.exe mangles {}, :, & in inline JSON
+// when shell:true is used for .cmd/.bat binaries).
+
+const CLAUDE_MCP_CONFIG_PREFIX = "routa-mcp-";
+const CLAUDE_MCP_CONFIG_DIRNAME = path.join(".claude", "mcp-tmp");
+const CLAUDE_MCP_CONFIG_MAX_FILES = 64;
+const CLAUDE_MCP_CONFIG_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+function getClaudeMcpConfigDir(): string {
+  return path.join(os.homedir(), CLAUDE_MCP_CONFIG_DIRNAME);
+}
+
+function pruneClaudeMcpConfigDir(configDir: string, currentConfigPath: string): void {
+  const now = Date.now();
+
+  type ClaudeConfigFile = {
+    path: string;
+    mtimeMs: number;
+  };
+
+  const files: ClaudeConfigFile[] = [];
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(configDir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  for (const entry of entries) {
+    if (!entry.isFile()) {
+      continue;
+    }
+    if (!entry.name.startsWith(CLAUDE_MCP_CONFIG_PREFIX) || !entry.name.endsWith(".json")) {
+      continue;
+    }
+
+    const filePath = path.join(configDir, entry.name);
+    try {
+      const stats = fs.statSync(filePath);
+      files.push({ path: filePath, mtimeMs: stats.mtimeMs });
+    } catch {
+      // Ignore files that disappear mid-prune.
+    }
+  }
+
+  files.sort((left, right) => right.mtimeMs - left.mtimeMs);
+
+  let keptStaleConfigs = 0;
+  for (const file of files) {
+    if (file.path === currentConfigPath) {
+      continue;
+    }
+
+    const ageMs = Math.max(0, now - file.mtimeMs);
+    const shouldKeep =
+      ageMs <= CLAUDE_MCP_CONFIG_MAX_AGE_MS &&
+      keptStaleConfigs < CLAUDE_MCP_CONFIG_MAX_FILES;
+
+    if (shouldKeep) {
+      keptStaleConfigs += 1;
+      continue;
+    }
+
+    try {
+      fs.unlinkSync(file.path);
+    } catch {
+      // Best-effort cleanup only.
+    }
+  }
+}
 
 function ensureMcpForClaude(
   mcpEndpoint: string,
@@ -280,13 +352,54 @@ function ensureMcpForClaude(
       env: { ROUTA_WORKSPACE_ID: workspaceId || "" },
     },
   };
-  const json = JSON.stringify({
+  const mcpConfigObj = {
     mcpServers: mergeCustomMcpServers(builtIn, customServers),
-  });
+  };
+  const json = JSON.stringify(mcpConfigObj);
+
+  // Write to a temp file so shell:true on Windows doesn't mangle the JSON.
+  // Use a stable filename keyed by workspaceId + mcpEndpoint hash so that
+  // sessions with different mcpProfile (e.g. kanban-planning vs coordination)
+  // get separate config files instead of overwriting each other.
+  const hash = workspaceId
+    ? Buffer.from(workspaceId).toString("base64url").slice(0, 16)
+    : "default";
+  // Include a short hash of the mcpEndpoint so different profiles (which have
+  // different query params like mcpProfile=kanban-planning) produce different
+  // files. This prevents a later session without mcpProfile from overwriting
+  // an earlier kanban-planning session's config file.
+  // SHA-256 digest ensures uniform distribution even when URLs share a long
+  // common prefix (e.g. http://localhost:3000/api/mcp?wsId=...).
+  const endpointDigest = createHash("sha256")
+    .update(mcpEndpoint)
+    .digest("base64url")
+    .slice(0, 12);
+  const configDir = getClaudeMcpConfigDir();
+  const configPath = path.join(configDir, `${CLAUDE_MCP_CONFIG_PREFIX}${hash}-${endpointDigest}.json`);
+
+  try {
+    fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
+    fs.writeFileSync(configPath, json, { encoding: "utf-8", mode: 0o600 });
+    pruneClaudeMcpConfigDir(configDir, configPath);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (process.platform === "win32") {
+      throw new Error(`Failed to write Claude MCP config file: ${msg}`, {
+        cause: err,
+      });
+    }
+
+    // Fallback to inline JSON if file write fails on non-Windows.
+    console.warn(`[MCP:Claude] Failed to write config file: ${msg}, falling back to inline JSON`);
+    return {
+      mcpConfigs: [json],
+      summary: `claude: inline JSON fallback (${json.length} bytes)`,
+    };
+  }
 
   return {
-    mcpConfigs: [json],
-    summary: `claude: inline JSON (${json.length} bytes)`,
+    mcpConfigs: [configPath],
+    summary: `claude: config file ${configPath}`,
   };
 }
 
@@ -629,7 +742,8 @@ export function isMcpConfigured(mcpConfigs?: string[]): boolean {
 }
 
 /**
- * Parse Claude-style inline MCP config JSON into the SDK's `mcpServers` object.
+ * Parse MCP config into the SDK's `mcpServers` object.
+ * Supports both inline JSON strings and file paths (reads file content).
  * Ignores unreadable entries so callers can fall back safely.
  */
 export function parseMcpServersFromConfigs(mcpConfigs?: string[]): Record<string, McpServerConfig> | undefined {
@@ -640,13 +754,25 @@ export function parseMcpServersFromConfigs(mcpConfigs?: string[]): Record<string
   const merged: Record<string, McpServerConfig> = {};
 
   for (const rawConfig of mcpConfigs) {
+    let jsonStr = rawConfig;
+
+    // If it looks like a file path (not starting with '{'), try reading the file
+    if (!rawConfig.trimStart().startsWith("{")) {
+      try {
+        jsonStr = fs.readFileSync(rawConfig, "utf-8");
+      } catch {
+        // Not a readable file path — skip
+        continue;
+      }
+    }
+
     try {
-      const parsed = JSON.parse(rawConfig) as { mcpServers?: Record<string, McpServerConfig> } | null;
+      const parsed = JSON.parse(jsonStr) as { mcpServers?: Record<string, McpServerConfig> } | null;
       if (parsed?.mcpServers && typeof parsed.mcpServers === "object") {
         Object.assign(merged, parsed.mcpServers);
       }
     } catch {
-      // Ignore non-inline configs; Claude SDK path only relies on JSON strings.
+      // Ignore unparseable configs
     }
   }
 
