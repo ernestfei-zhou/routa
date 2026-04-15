@@ -49,10 +49,14 @@ export function DockerStatusIndicator({ compact = false, className = "" }: Docke
   const available = !!status?.available;
   const isChecking = loading && !status;
   const isRetryable = !available && !isChecking;
+
+  const versionLabel = status?.version?.trim() || "ready";
+  const readyLabel = t.dockerStatus.ready.replace("{version}", versionLabel);
+
   const label = isChecking
     ? t.dockerStatus.checking
     : available
-      ? t.dockerStatus.ready.replace("{version}", status?.version ?? "ready")
+      ? readyLabel
       : loading
         ? t.dockerStatus.retrying
         : t.dockerStatus.unavailable;
