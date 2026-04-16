@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use axum::{
     extract::{Query, State},
@@ -154,7 +154,7 @@ fn normalize_status(raw: &str) -> String {
     }
 }
 
-fn empty_surface_index_response(repo_root: &PathBuf, warnings: Vec<String>) -> JsonValue {
+fn empty_surface_index_response(repo_root: &Path, warnings: Vec<String>) -> JsonValue {
     json!({
         "generatedAt": "",
         "pages": [],
@@ -164,7 +164,7 @@ fn empty_surface_index_response(repo_root: &PathBuf, warnings: Vec<String>) -> J
     })
 }
 
-fn normalize_surface_index(index: FeatureSurfaceIndexFile, repo_root: &PathBuf) -> JsonValue {
+fn normalize_surface_index(index: FeatureSurfaceIndexFile, repo_root: &Path) -> JsonValue {
     let pages: Vec<JsonValue> = index
         .pages
         .into_iter()
