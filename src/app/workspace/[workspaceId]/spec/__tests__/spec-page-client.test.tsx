@@ -174,7 +174,6 @@ describe("SpecPageClient", () => {
     expect(requestedPaths).toContain("/api/spec/surface-index?workspaceId=default");
 
     expect(screen.getAllByText("Families").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Workspace / Kanban").length).toBeGreaterThan(0);
 
     const detailPane = await screen.findByRole("region", { name: "Spec board" });
     expect(within(detailPane).getByText("Feature Footprint")).toBeTruthy();

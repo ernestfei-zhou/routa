@@ -30,6 +30,7 @@ import {
   HarnessUnsupportedState,
   getHarnessUnsupportedRepoMessage,
 } from "@/client/components/harness-support-state";
+import { SpecBoardPanel } from "@/app/workspace/[workspaceId]/spec/spec-page-client";
 import { useHarnessSettingsData } from "@/client/hooks/use-harness-settings-data";
 import { useCodebases, useWorkspaces } from "@/client/hooks/use-workspaces";
 import { loadRepoSelection, saveRepoSelection } from "@/client/utils/repo-selection-storage";
@@ -37,6 +38,7 @@ import { normalizeWorkspaceQueryId, resolveWorkspaceSelection } from "@/client/u
 
 type SectionId =
   | "overview"
+  | "spec"
   | "architecture-quality"
   | "spec-sources"
   | "agent-instructions"
@@ -93,6 +95,7 @@ function clamp(value: number, min: number, max: number) {
 
 function resolveSectionId(value: string | null | undefined): SectionId {
   switch (value) {
+    case "spec":
     case "architecture-quality":
     case "spec-sources":
     case "agent-instructions":
@@ -425,6 +428,7 @@ export default function HarnessConsolePage() {
 
   const sections = useMemo((): SectionDef[] => [
     { id: "overview", label: t.settings.harness.overview, shortLabel: "Overview", code: "OV" },
+    { id: "spec", label: t.nav.spec, shortLabel: t.nav.spec, code: "IB", group: "intent" },
     {
       id: "architecture-quality",
       label: t.settings.harness.architectureQuality.title,
@@ -851,6 +855,8 @@ export default function HarnessConsolePage() {
     switch (sectionId) {
       case "overview":
         return renderOverview();
+      case "spec":
+        return <SpecBoardPanel workspaceId={workspaceId} />;
       case "architecture-quality":
         return (
           <HarnessArchitectureQualityPanel

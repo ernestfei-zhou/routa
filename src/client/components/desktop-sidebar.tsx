@@ -5,7 +5,7 @@
  *
  * Provides a compact icon-based navigation with:
  * - Primary navigation icons (Home, Sessions, Kanban, Team)
- * - Secondary tools (Harness, Spec, Fluency, Settings)
+ * - Secondary tools (Harness, Fluency, Settings)
  * - Workspace indicator
  */
 
@@ -14,7 +14,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "@/i18n";
-import { ChevronLeft, ClipboardList, Columns2, House, MonitorUp, ScrollText, Settings, Share2 } from "lucide-react";
+import { ChevronLeft, Columns2, House, MonitorUp, ScrollText, Settings, Share2 } from "lucide-react";
 import { HarnessMark } from "./harness-mark";
 
 
@@ -100,14 +100,6 @@ export function DesktopSidebar({
       label: t.nav.harness,
       href: settingsHarnessHref,
       icon: <HarnessMark className="h-4 w-4" title="" />,
-    },
-    {
-      id: "spec",
-      label: t.nav.spec,
-      href: workspaceBaseHref ? `${workspaceBaseHref}/spec` : "/",
-      icon: (
-        <ClipboardList className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
-      ),
     },
     {
       id: "fluency",

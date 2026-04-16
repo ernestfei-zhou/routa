@@ -764,6 +764,8 @@ const zh: TranslationDictionary = {
     noSurfaceHits: "暂时没有命中的产品面。",
     surfaceMapUnavailable: "产品面索引不可用",
     body: "正文",
+    expandBranch: "展开分支",
+    collapseBranch: "收起分支",
     statusOpen: "待处理",
     statusInvestigating: "调查中",
     statusResolved: "已解决",

@@ -9,6 +9,7 @@ describe("zh spec board copy", () => {
     expect(zh.specBoard.connectedIssues).toBe("已连接问题");
     expect(zh.specBoard.families).toBe("关系簇");
     expect(zh.specBoard.featureFootprint).toBe("影响面");
+    expect(zh.specBoard.expandBranch).toBe("展开分支");
     expect(zh.specBoard.issueLinks).toBe("关联 Issue");
     expect(zh.specBoard.linkedFrom).toBe("被这些 Issue 引用");
     expect(zh.specBoard.noLinkedIssues).toBe("当前没有记录关联 issue。");

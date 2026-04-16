@@ -775,6 +775,8 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     noSurfaceHits: string;
     surfaceMapUnavailable: string;
     body: string;
+    expandBranch: string;
+    collapseBranch: string;
     statusOpen: string;
     statusInvestigating: string;
     statusResolved: string;

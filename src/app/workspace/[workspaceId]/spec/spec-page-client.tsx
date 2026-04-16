@@ -2,7 +2,17 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowUpRight, ClipboardList, GitBranch, Link2, PieChart, Rows3, Route } from "lucide-react";
+import {
+  ArrowUpRight,
+  ChevronDown,
+  ChevronRight,
+  ClipboardList,
+  GitBranch,
+  Link2,
+  PieChart,
+  Rows3,
+  Route,
+} from "lucide-react";
 import { resolveApiPath } from "@/client/config/backend";
 import { DesktopAppShell } from "@/client/components/desktop-app-shell";
 import { MarkdownViewer } from "@/client/components/markdown/markdown-viewer";
@@ -258,101 +268,6 @@ function SurfacePreviewPill({ hit }: { hit: SurfaceHit }) {
   );
 }
 
-function LocalRelationPreview({
-  issue,
-}: {
-  issue: SpecIssue;
-}) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-black/6 bg-black/[0.03] px-2 py-0.5 text-[10px] text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
-      <Link2 className="h-3 w-3" strokeWidth={1.8} />
-      <span className="max-w-52 truncate">{issue.title || issue.filename}</span>
-    </span>
-  );
-}
-
-function SpecIssueRow({
-  issue,
-  relations,
-  surfaceHits,
-  selected,
-  onClick,
-}: {
-  issue: SpecIssue;
-  relations: IssueRelations;
-  surfaceHits: SurfaceHit[];
-  selected: boolean;
-  onClick: () => void;
-}) {
-  const { t } = useTranslation();
-  const statusLabels = getStatusLabels(t);
-  const normalizedStatus = normalizeSpecStatus(issue.status);
-  const theme = STATUS_THEMES[normalizedStatus];
-  const severityClass = SEVERITY_STYLES[issue.severity] ?? SEVERITY_STYLES.info;
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full rounded-lg border px-2.5 py-2 text-left transition-colors ${
-        selected
-          ? theme.selected
-          : "border-black/6 bg-white/70 hover:border-black/12 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-white/20 dark:hover:bg-white/[0.06]"
-      }`}
-    >
-      <div className="flex items-start gap-2">
-        <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${theme.dot}`} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <div className="line-clamp-2 text-[12px] font-medium leading-5 text-slate-900 dark:text-slate-50">
-                {issue.title || issue.filename}
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
-                <CompactBadge className={theme.badge}>{statusLabels[normalizedStatus]}</CompactBadge>
-                {issue.area ? (
-                  <CompactBadge className="bg-black/[0.04] text-slate-600 dark:bg-white/6 dark:text-slate-200">
-                    {issue.area}
-                  </CompactBadge>
-                ) : null}
-                {issue.githubIssue != null ? (
-                  <CompactBadge className="bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-200">
-                    #{issue.githubIssue}
-                  </CompactBadge>
-                ) : null}
-                {relations.incoming.length > 0 ? (
-                  <CompactBadge className="bg-black/[0.04] text-slate-600 dark:bg-white/6 dark:text-slate-200">
-                    <GitBranch className="h-3 w-3" strokeWidth={1.8} />
-                    {relations.incoming.length}
-                  </CompactBadge>
-                ) : null}
-              </div>
-            </div>
-
-            <CompactBadge className={`border font-semibold uppercase ${severityClass}`}>
-              {issue.severity}
-            </CompactBadge>
-          </div>
-
-          {(relations.localOutgoing.length > 0 || surfaceHits.length > 0) ? (
-            <div className="mt-1.5 flex flex-wrap gap-1">
-              {relations.localOutgoing.slice(0, 2).map((localIssue) => (
-                <LocalRelationPreview
-                  key={localIssue.filename}
-                  issue={localIssue}
-                />
-              ))}
-              {surfaceHits.slice(0, 2).map((hit) => (
-                <SurfacePreviewPill key={hit.key} hit={hit} />
-              ))}
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </button>
-  );
-}
-
 function SpecFamilyExplorer({
   families,
   relationsByFilename,
@@ -367,6 +282,36 @@ function SpecFamilyExplorer({
   onSelectIssue: (issue: SpecIssue) => void;
 }) {
   const { t } = useTranslation();
+  const [expandedFamilyIds, setExpandedFamilyIds] = useState<Set<string>>(
+    () => new Set(families.slice(0, 5).map((family) => family.id)),
+  );
+  const [expandedIssueIds, setExpandedIssueIds] = useState<Set<string>>(
+    () => new Set(selectedIssue ? [selectedIssue.filename] : []),
+  );
+
+  const toggleFamily = useCallback((familyId: string) => {
+    setExpandedFamilyIds((current) => {
+      const next = new Set(current);
+      if (next.has(familyId)) {
+        next.delete(familyId);
+      } else {
+        next.add(familyId);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleIssue = useCallback((filename: string) => {
+    setExpandedIssueIds((current) => {
+      const next = new Set(current);
+      if (next.has(filename)) {
+        next.delete(filename);
+      } else {
+        next.add(filename);
+      }
+      return next;
+    });
+  }, []);
 
   return (
     <section className="flex min-h-[28rem] flex-col overflow-hidden rounded-2xl border border-black/6 bg-white/84 dark:border-white/10 dark:bg-[#0f1722]/84">
@@ -382,18 +327,30 @@ function SpecFamilyExplorer({
         ) : null}
 
         {families.map((family) => {
-          const selectedInFamily = family.issues.some((issue) => issue.filename === selectedIssue?.filename);
+          const isFamilyExpanded = expandedFamilyIds.has(family.id)
+            || selectedIssue != null
+            && (relationsByFilename.get(selectedIssue.filename)?.familyId === family.id);
+          const visibleFamilySurfaces = family.surfaces.filter(
+            (surface) =>
+              (surface.explicit || surface.confidence !== "low") &&
+              surface.secondaryLabel !== "/" &&
+              surface.secondaryLabel !== "/workspace/:workspaceId" &&
+              !surface.label.toLowerCase().includes("wrapper"),
+          );
+
           return (
-            <section
-              key={family.id}
-              className={`rounded-xl border px-2.5 py-2 ${
-                selectedInFamily
-                  ? "border-slate-300 bg-slate-50/80 dark:border-white/20 dark:bg-white/[0.05]"
-                  : "border-black/6 bg-[#f8fafc] dark:border-white/10 dark:bg-white/[0.02]"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
+            <section key={family.id} className="rounded-lg border border-black/6 bg-[#f8fafc] dark:border-white/10 dark:bg-white/[0.02]">
+              <button
+                type="button"
+                onClick={() => toggleFamily(family.id)}
+                className="flex w-full items-start gap-2 px-2.5 py-2 text-left"
+              >
+                {isFamilyExpanded ? (
+                  <ChevronDown className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={1.8} />
+                ) : (
+                  <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={1.8} />
+                )}
+                <div className="min-w-0 flex-1">
                   <div className="truncate text-[12px] font-semibold text-slate-900 dark:text-slate-50">
                     {family.label}
                   </div>
@@ -407,47 +364,156 @@ function SpecFamilyExplorer({
                     <CompactBadge className="bg-black/[0.04] text-slate-600 dark:bg-white/6 dark:text-slate-200">
                       {family.relationCount} {t.specBoard.relations}
                     </CompactBadge>
+                    {visibleFamilySurfaces[0] ? <SurfacePreviewPill hit={visibleFamilySurfaces[0]} /> : null}
+                    {!visibleFamilySurfaces[0] && family.dominantAreas[0] ? (
+                      <CompactBadge className="bg-black/[0.04] text-slate-600 dark:bg-white/6 dark:text-slate-200">
+                        {family.dominantAreas[0]}
+                      </CompactBadge>
+                    ) : null}
                   </div>
                 </div>
-              </div>
+              </button>
 
-              {(family.surfaces.length > 0 || family.dominantAreas.length > 0) ? (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {family.surfaces.slice(0, 3).map((surface) => (
-                    <SurfacePreviewPill key={surface.key} hit={surface} />
-                  ))}
-                  {family.dominantAreas
-                    .filter((area) => !family.surfaces.some((surface) => surface.secondaryLabel.includes(area)))
-                    .slice(0, 2)
-                    .map((area) => (
-                      <CompactBadge
-                        key={area}
-                        className="bg-black/[0.04] text-slate-600 dark:bg-white/6 dark:text-slate-200"
-                      >
-                        {area}
-                      </CompactBadge>
-                    ))}
+              {isFamilyExpanded ? (
+                <div className="mx-2.5 mb-2.5 border-l border-black/8 pl-2.5 dark:border-white/10">
+                  <div className="space-y-1.5">
+                    {family.issues.map((issue) => {
+                      const relations = relationsByFilename.get(issue.filename) ?? {
+                        outgoing: [],
+                        incoming: [],
+                        localOutgoing: [],
+                        familyId: issue.filename,
+                        familyIssues: [],
+                      };
+                      const visibleHits = (surfaceHitsByFilename.get(issue.filename) ?? [])
+                        .filter((hit) => hit.explicit || hit.confidence !== "low")
+                        .slice(0, 2);
+                      const isSelected = selectedIssue?.filename === issue.filename;
+                      const isIssueExpanded = isSelected || expandedIssueIds.has(issue.filename);
+                      const normalizedStatus = normalizeSpecStatus(issue.status);
+                      const theme = STATUS_THEMES[normalizedStatus];
+                      const severityClass = SEVERITY_STYLES[issue.severity] ?? SEVERITY_STYLES.info;
+
+                      return (
+                        <div key={issue.filename} className="space-y-1">
+                          <div className="flex items-start gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => toggleIssue(issue.filename)}
+                              className="mt-1 shrink-0 text-slate-400"
+                              aria-label={isIssueExpanded ? t.specBoard.collapseBranch : t.specBoard.expandBranch}
+                            >
+                              {isIssueExpanded ? (
+                                <ChevronDown className="h-3 w-3" strokeWidth={1.8} />
+                              ) : (
+                                <ChevronRight className="h-3 w-3" strokeWidth={1.8} />
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onSelectIssue(issue);
+                                setExpandedIssueIds((current) => new Set([...current, issue.filename]));
+                              }}
+                              className={`min-w-0 flex-1 rounded-md border px-2 py-1.5 text-left ${
+                                isSelected
+                                  ? theme.selected
+                                  : "border-transparent bg-white/50 hover:border-black/8 hover:bg-white dark:bg-white/[0.03] dark:hover:border-white/10 dark:hover:bg-white/[0.06]"
+                              }`}
+                            >
+                              <div className="flex items-start gap-2">
+                                <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${theme.dot}`} />
+                                <div className="min-w-0 flex-1">
+                                  <div className="truncate text-[12px] font-medium text-slate-900 dark:text-slate-50">
+                                    {issue.title || issue.filename}
+                                  </div>
+                                  <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
+                                    <CompactBadge className={theme.badge}>
+                                      {getStatusLabels(t)[normalizedStatus]}
+                                    </CompactBadge>
+                                    {issue.area ? (
+                                      <CompactBadge className="bg-black/[0.04] text-slate-600 dark:bg-white/6 dark:text-slate-200">
+                                        {issue.area}
+                                      </CompactBadge>
+                                    ) : null}
+                                    {relations.localOutgoing.length > 0 ? (
+                                      <CompactBadge className="bg-black/[0.04] text-slate-600 dark:bg-white/6 dark:text-slate-200">
+                                        <Link2 className="h-3 w-3" strokeWidth={1.8} />
+                                        {relations.localOutgoing.length}
+                                      </CompactBadge>
+                                    ) : null}
+                                    {relations.incoming.length > 0 ? (
+                                      <CompactBadge className="bg-black/[0.04] text-slate-600 dark:bg-white/6 dark:text-slate-200">
+                                        <GitBranch className="h-3 w-3" strokeWidth={1.8} />
+                                        {relations.incoming.length}
+                                      </CompactBadge>
+                                    ) : null}
+                                    {visibleHits[0] ? <SurfacePreviewPill hit={visibleHits[0]} /> : null}
+                                  </div>
+                                </div>
+                                <CompactBadge className={`border font-semibold uppercase ${severityClass}`}>
+                                  {issue.severity}
+                                </CompactBadge>
+                              </div>
+                            </button>
+                          </div>
+
+                          {isIssueExpanded ? (
+                            <div className="ml-4 border-l border-black/8 pl-2.5 dark:border-white/10">
+                              <div className="space-y-1">
+                                {relations.localOutgoing.slice(0, 2).map((localIssue) => (
+                                  <button
+                                    key={`out:${localIssue.filename}`}
+                                    type="button"
+                                    onClick={() => onSelectIssue(localIssue)}
+                                    className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-[11px] text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-white/[0.04]"
+                                  >
+                                    <Link2 className="h-3 w-3 shrink-0 text-slate-400" strokeWidth={1.8} />
+                                    <span className="truncate">{localIssue.title || localIssue.filename}</span>
+                                  </button>
+                                ))}
+
+                                {relations.incoming.slice(0, 1).map((incomingIssue) => (
+                                  <button
+                                    key={`in:${incomingIssue.filename}`}
+                                    type="button"
+                                    onClick={() => onSelectIssue(incomingIssue)}
+                                    className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-[11px] text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-white/[0.04]"
+                                  >
+                                    <GitBranch className="h-3 w-3 shrink-0 text-slate-400" strokeWidth={1.8} />
+                                    <span className="truncate">{incomingIssue.title || incomingIssue.filename}</span>
+                                  </button>
+                                ))}
+
+                                {visibleHits.slice(0, 2).map((hit) => (
+                                  <div
+                                    key={`surface:${hit.key}`}
+                                    className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] text-slate-500 dark:text-slate-400"
+                                  >
+                                    {hit.kind === "page" ? (
+                                      <Rows3 className="h-3 w-3 shrink-0" strokeWidth={1.8} />
+                                    ) : (
+                                      <Route className="h-3 w-3 shrink-0" strokeWidth={1.8} />
+                                    )}
+                                    <span className="truncate">{hit.secondaryLabel}</span>
+                                  </div>
+                                ))}
+
+                                {relations.localOutgoing.length > 2 ? (
+                                  <div className="px-2 text-[11px] text-slate-400 dark:text-slate-500">
+                                    +{relations.localOutgoing.length - 2} {t.specBoard.relations}
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               ) : null}
-
-              <div className="mt-2 space-y-1.5">
-                {family.issues.map((issue) => (
-                  <SpecIssueRow
-                    key={issue.filename}
-                    issue={issue}
-                    relations={relationsByFilename.get(issue.filename) ?? {
-                      outgoing: [],
-                      incoming: [],
-                      localOutgoing: [],
-                      familyId: issue.filename,
-                      familyIssues: [],
-                    }}
-                    surfaceHits={surfaceHitsByFilename.get(issue.filename) ?? []}
-                    selected={selectedIssue?.filename === issue.filename}
-                    onClick={() => onSelectIssue(issue)}
-                  />
-                ))}
-              </div>
             </section>
           );
         })}
@@ -617,8 +683,11 @@ function SpecDetailPane({
 
   const severityClass = SEVERITY_STYLES[issue.severity] ?? SEVERITY_STYLES.info;
   const normalizedStatus = normalizeSpecStatus(issue.status);
-  const pages = surfaceHits.filter((hit) => hit.kind === "page");
-  const apis = surfaceHits.filter((hit) => hit.kind === "api");
+  const visibleSurfaceHits = surfaceHits
+    .filter((hit) => hit.explicit || hit.confidence !== "low")
+    .slice(0, 4);
+  const pages = visibleSurfaceHits.filter((hit) => hit.kind === "page");
+  const apis = visibleSurfaceHits.filter((hit) => hit.kind === "api");
 
   return (
     <section
@@ -751,9 +820,9 @@ function SpecDetailPane({
             </div>
           </div>
 
-          {surfaceHits.length > 0 ? (
+          {visibleSurfaceHits.length > 0 ? (
             <div className="mt-2 grid gap-2 xl:grid-cols-2">
-              {surfaceHits.map((hit) => (
+              {visibleSurfaceHits.map((hit) => (
                 <SurfaceHitCard key={hit.key} hit={hit} />
               ))}
             </div>
@@ -792,17 +861,8 @@ function SpecDetailPane({
   );
 }
 
-export function SpecPageClient() {
+export function SpecBoardPanel({ workspaceId }: { workspaceId: string }) {
   const { t } = useTranslation();
-  const params = useParams();
-  const router = useRouter();
-  const rawWorkspaceId = params.workspaceId as string;
-  const workspaceId =
-    rawWorkspaceId === "__placeholder__" && typeof window !== "undefined"
-      ? (window.location.pathname.match(/^\/workspace\/([^/]+)/)?.[1] ?? rawWorkspaceId)
-      : rawWorkspaceId;
-
-  const workspacesHook = useWorkspaces();
   const [allIssues, setAllIssues] = useState<SpecIssue[]>([]);
   const [surfaceIndex, setSurfaceIndex] = useState<FeatureSurfaceIndexResponse>(emptySurfaceIndexResponse());
   const [loading, setLoading] = useState(true);
@@ -921,6 +981,84 @@ export function SpecPageClient() {
     });
   }, [filteredIssues]);
 
+  const handleSelectLinkedIssue = useCallback((filename: string) => {
+    const issue = boardModel.issueByFilename.get(filename);
+    if (issue) {
+      setSelectedIssue(issue);
+    }
+  }, [boardModel.issueByFilename]);
+
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-2.5">
+      <SpecToolbar
+        filters={filters}
+        filteredCount={filteredIssues.length}
+        totalCount={allIssues.length}
+        issues={allIssues}
+        surfaceWarnings={surfaceIndex.warnings}
+        onFiltersChange={setFilters}
+      />
+
+      {loading ? (
+        <div className="flex min-h-[28rem] flex-1 items-center justify-center rounded-2xl border border-black/6 bg-white/75 text-slate-500 dark:border-white/10 dark:bg-white/6 dark:text-slate-300">
+          <span className="animate-pulse">{t.common.loading}</span>
+        </div>
+      ) : null}
+
+      {!loading && error ? (
+        <div className="flex min-h-[20rem] flex-1 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50/90 px-6 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200">
+          <span>{error}</span>
+        </div>
+      ) : null}
+
+      {!loading && !error ? (
+        <section className="grid min-h-0 flex-1 gap-2.5 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
+          <SpecFamilyExplorer
+            families={visibleFamilies}
+            relationsByFilename={boardModel.relationsByFilename}
+            surfaceHitsByFilename={boardModel.surfaceHitsByFilename}
+            selectedIssue={selectedIssue}
+            onSelectIssue={setSelectedIssue}
+          />
+
+          <SpecDetailPane
+            issue={selectedIssue}
+            relations={selectedIssue
+              ? boardModel.relationsByFilename.get(selectedIssue.filename) ?? {
+                outgoing: [],
+                incoming: [],
+                localOutgoing: [],
+                familyId: selectedIssue.filename,
+                familyIssues: [],
+              }
+              : {
+                outgoing: [],
+                incoming: [],
+                localOutgoing: [],
+                familyId: "",
+                familyIssues: [],
+              }}
+            surfaceHits={selectedIssue ? boardModel.surfaceHitsByFilename.get(selectedIssue.filename) ?? [] : []}
+            surfaceWarnings={surfaceIndex.warnings}
+            onSelectLinkedIssue={handleSelectLinkedIssue}
+          />
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+export function SpecPageClient() {
+  const { t } = useTranslation();
+  const params = useParams();
+  const router = useRouter();
+  const rawWorkspaceId = params.workspaceId as string;
+  const workspaceId =
+    rawWorkspaceId === "__placeholder__" && typeof window !== "undefined"
+      ? (window.location.pathname.match(/^\/workspace\/([^/]+)/)?.[1] ?? rawWorkspaceId)
+      : rawWorkspaceId;
+
+  const workspacesHook = useWorkspaces();
   const workspace = workspacesHook.workspaces.find((item) => item.id === workspaceId);
 
   const handleWorkspaceSelect = useCallback((nextWorkspaceId: string) => {
@@ -933,13 +1071,6 @@ export function SpecPageClient() {
       router.push(`/workspace/${workspaceResult.id}/spec`);
     }
   }, [router, workspacesHook]);
-
-  const handleSelectLinkedIssue = useCallback((filename: string) => {
-    const issue = boardModel.issueByFilename.get(filename);
-    if (issue) {
-      setSelectedIssue(issue);
-    }
-  }, [boardModel.issueByFilename]);
 
   if (workspacesHook.loading && workspaceId !== "default") {
     return (
@@ -972,62 +1103,7 @@ export function SpecPageClient() {
       <div className="flex h-full min-h-0 bg-[#f3f5f8] text-slate-900 dark:bg-[#0a0f16] dark:text-slate-50">
         <main className="flex min-w-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 overflow-hidden p-3">
-            <div className="flex h-full min-h-0 flex-col gap-2.5">
-              <SpecToolbar
-                filters={filters}
-                filteredCount={filteredIssues.length}
-                totalCount={allIssues.length}
-                issues={allIssues}
-                surfaceWarnings={surfaceIndex.warnings}
-                onFiltersChange={setFilters}
-              />
-
-              {loading ? (
-                <div className="flex min-h-[28rem] flex-1 items-center justify-center rounded-2xl border border-black/6 bg-white/75 text-slate-500 dark:border-white/10 dark:bg-white/6 dark:text-slate-300">
-                  <span className="animate-pulse">{t.common.loading}</span>
-                </div>
-              ) : null}
-
-              {!loading && error ? (
-                <div className="flex min-h-[20rem] flex-1 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50/90 px-6 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200">
-                  <span>{error}</span>
-                </div>
-              ) : null}
-
-              {!loading && !error ? (
-                <section className="grid min-h-0 flex-1 gap-2.5 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
-                  <SpecFamilyExplorer
-                    families={visibleFamilies}
-                    relationsByFilename={boardModel.relationsByFilename}
-                    surfaceHitsByFilename={boardModel.surfaceHitsByFilename}
-                    selectedIssue={selectedIssue}
-                    onSelectIssue={setSelectedIssue}
-                  />
-
-                  <SpecDetailPane
-                    issue={selectedIssue}
-                    relations={selectedIssue
-                      ? boardModel.relationsByFilename.get(selectedIssue.filename) ?? {
-                        outgoing: [],
-                        incoming: [],
-                        localOutgoing: [],
-                        familyId: selectedIssue.filename,
-                        familyIssues: [],
-                      }
-                      : {
-                        outgoing: [],
-                        incoming: [],
-                        localOutgoing: [],
-                        familyId: "",
-                        familyIssues: [],
-                      }}
-                    surfaceHits={selectedIssue ? boardModel.surfaceHitsByFilename.get(selectedIssue.filename) ?? [] : []}
-                    surfaceWarnings={surfaceIndex.warnings}
-                    onSelectLinkedIssue={handleSelectLinkedIssue}
-                  />
-                </section>
-              ) : null}
-            </div>
+            <SpecBoardPanel workspaceId={workspaceId} />
           </div>
         </main>
       </div>

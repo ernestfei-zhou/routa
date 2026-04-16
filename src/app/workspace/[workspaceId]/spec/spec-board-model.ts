@@ -62,6 +62,7 @@ export type SurfaceHit = {
   confidence: "high" | "medium" | "low";
   score: number;
   evidence: string[];
+  explicit: boolean;
 };
 
 export type IssueRelations = {
@@ -261,6 +262,15 @@ function scoreToConfidence(score: number): SurfaceHit["confidence"] {
   return "low";
 }
 
+function areaAnchorsSurface(area: string, ...fields: string[]): boolean {
+  const normalizedArea = normalizeText(area);
+  if (!normalizedArea) {
+    return false;
+  }
+
+  return fields.some((field) => normalizeText(field).includes(normalizedArea));
+}
+
 function formatFilenameLabel(value: string): string {
   return value.replace(/^docs\/issues\//u, "").replace(/\.md$/u, "");
 }
@@ -408,9 +418,32 @@ function endpointBasePath(path: string): string {
   return path.replace(/\/\{[^}]+\}/gu, "");
 }
 
+function apiPathToRouteFile(path: string): string {
+  return `src/app${path.replace(/\{([^}]+)\}/gu, "[$1]")}/route.ts`;
+}
+
+function normalizeDynamicPathKey(value: string): string {
+  return value
+    .replace(/\[([^\]]+)\]/gu, "[]")
+    .replace(/\{([^}]+)\}/gu, "[]");
+}
+
+function isGenericSurface(hit: SurfaceHit): boolean {
+  if (hit.kind !== "page") {
+    return false;
+  }
+
+  return (
+    hit.secondaryLabel === "/" ||
+    hit.secondaryLabel === "/workspace/:workspaceId" ||
+    normalizeText(hit.label).includes("wrapper")
+  );
+}
+
 function buildPageHit(issue: SpecIssue, page: FeatureSurfacePage): SurfaceHit | null {
   const evidence = new Set<string>();
   let score = 0;
+  let explicit = false;
 
   const text = `${issue.title}\n${issue.body}`;
   const routeMentions = extractRouteMentions(text);
@@ -420,18 +453,23 @@ function buildPageHit(issue: SpecIssue, page: FeatureSurfacePage): SurfaceHit | 
   if (page.sourceFile && pathMentions.has(page.sourceFile)) {
     score += 8;
     evidence.add(page.sourceFile);
+    explicit = true;
   }
 
-  const routeMatcher = makeDynamicPathMatcher(page.route);
-  if (routeMatcher && routeMatcher.test(text)) {
-    score += 7;
-    evidence.add(page.route);
-  } else {
-    for (const routeMention of routeMentions) {
-      if (routeMatcher?.test(routeMention)) {
-        score += 7;
-        evidence.add(routeMention);
-        break;
+  if (page.route !== "/") {
+    const routeMatcher = makeDynamicPathMatcher(page.route);
+    if (routeMatcher && routeMatcher.test(text)) {
+      score += 7;
+      evidence.add(page.route);
+      explicit = true;
+    } else {
+      for (const routeMention of routeMentions) {
+        if (routeMatcher?.test(routeMention)) {
+          score += 7;
+          evidence.add(routeMention);
+          explicit = true;
+          break;
+        }
       }
     }
   }
@@ -448,7 +486,10 @@ function buildPageHit(issue: SpecIssue, page: FeatureSurfacePage): SurfaceHit | 
     overlap.slice(0, 2).forEach((token) => evidence.add(token));
   }
 
-  if (score < 2) {
+  const anchoredByArea = areaAnchorsSurface(issue.area, page.route, page.title, page.sourceFile);
+  const allowedSemanticFallback = overlap.length >= 2 && anchoredByArea && page.route !== "/";
+
+  if ((!explicit && !allowedSemanticFallback) || score < 3) {
     return null;
   }
 
@@ -461,12 +502,14 @@ function buildPageHit(issue: SpecIssue, page: FeatureSurfacePage): SurfaceHit | 
     confidence: scoreToConfidence(score),
     score,
     evidence: [...evidence].slice(0, 3),
+    explicit,
   };
 }
 
 function buildApiHit(issue: SpecIssue, api: FeatureSurfaceApi): SurfaceHit | null {
   const evidence = new Set<string>();
   let score = 0;
+  let explicit = false;
 
   const text = `${issue.title}\n${issue.body}`;
   const apiMentions = extractApiMentions(text);
@@ -483,14 +526,17 @@ function buildApiHit(issue: SpecIssue, api: FeatureSurfaceApi): SurfaceHit | nul
     ) {
       score += 8;
       evidence.add(apiMention);
+      explicit = true;
       break;
     }
   }
 
-  const routeFile = `src/app${apiBasePath || api.path}/route.ts`;
-  if (pathMentions.has(routeFile)) {
+  const routeFile = apiPathToRouteFile(api.path);
+  const normalizedRouteFile = normalizeDynamicPathKey(routeFile);
+  if ([...pathMentions].some((mention) => normalizeDynamicPathKey(mention) === normalizedRouteFile)) {
     score += 6;
     evidence.add(routeFile);
+    explicit = true;
   }
 
   const apiTokens = new Set<string>([
@@ -505,7 +551,10 @@ function buildApiHit(issue: SpecIssue, api: FeatureSurfaceApi): SurfaceHit | nul
     overlap.slice(0, 2).forEach((token) => evidence.add(token));
   }
 
-  if (score < 2) {
+  const anchoredByArea = areaAnchorsSurface(issue.area, api.domain, api.path, api.summary);
+  const allowedSemanticFallback = overlap.length >= 2 && anchoredByArea;
+
+  if ((!explicit && !allowedSemanticFallback) || score < 3) {
     return null;
   }
 
@@ -518,6 +567,7 @@ function buildApiHit(issue: SpecIssue, api: FeatureSurfaceApi): SurfaceHit | nul
     confidence: scoreToConfidence(score),
     score,
     evidence: [...evidence].slice(0, 3),
+    explicit,
   };
 }
 
@@ -546,6 +596,7 @@ function aggregateFamilyHits(hits: SurfaceHit[]): SurfaceHit[] {
 
     existing.score += hit.score;
     existing.evidence = [...new Set([...existing.evidence, ...hit.evidence])].slice(0, 3);
+    existing.explicit = existing.explicit || hit.explicit;
     if (hit.confidence === "high" || (hit.confidence === "medium" && existing.confidence === "low")) {
       existing.confidence = hit.confidence;
     }
@@ -578,13 +629,16 @@ function computeDominantAreas(issues: SpecIssue[]): string[] {
 }
 
 function buildFamilyLabel(issues: SpecIssue[], surfaces: SurfaceHit[]): string {
-  if (surfaces[0]) {
-    return surfaces[0].label;
-  }
-
   const dominantArea = computeDominantAreas(issues)[0];
   if (dominantArea) {
     return dominantArea;
+  }
+
+  const topExplicitSurface = surfaces.find(
+    (surface) => !isGenericSurface(surface) && (surface.explicit || surface.confidence !== "low"),
+  );
+  if (topExplicitSurface) {
+    return topExplicitSurface.label;
   }
 
   return issues[0]?.title || issues[0]?.filename || "Issue family";

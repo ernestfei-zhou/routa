@@ -769,6 +769,8 @@ const en: TranslationDictionary = {
     noSurfaceHits: "No matched product surfaces yet.",
     surfaceMapUnavailable: "Feature map unavailable",
     body: "Body",
+    expandBranch: "Expand branch",
+    collapseBranch: "Collapse branch",
     statusOpen: "Open",
     statusInvestigating: "Investigating",
     statusResolved: "Resolved",

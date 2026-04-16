@@ -9,6 +9,7 @@ describe("en spec board copy", () => {
     expect(en.specBoard.connectedIssues).toBe("Connected issues");
     expect(en.specBoard.families).toBe("Families");
     expect(en.specBoard.featureFootprint).toBe("Feature Footprint");
+    expect(en.specBoard.expandBranch).toBe("Expand branch");
     expect(en.specBoard.issueLinks).toBe("Issue Links");
     expect(en.specBoard.linkedFrom).toBe("Linked From");
     expect(en.specBoard.noLinkedIssues).toBe("No linked issues recorded.");

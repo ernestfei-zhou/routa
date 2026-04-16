@@ -12,6 +12,8 @@ describe("translation dictionary types", () => {
     expect(specBoard.families).toBe("Families");
     expect(specBoard.sameFamily).toBe("Same Family");
     expect(specBoard.featureFootprint).toBe("Feature Footprint");
+    expect(specBoard.expandBranch).toBe("Expand branch");
+    expect(specBoard.collapseBranch).toBe("Collapse branch");
     expect(specBoard.issueLinks).toBe("Issue Links");
     expect(specBoard.linkedFrom).toBe("Linked From");
     expect(specBoard.noLinkedIssues).toBe("No linked issues recorded.");
