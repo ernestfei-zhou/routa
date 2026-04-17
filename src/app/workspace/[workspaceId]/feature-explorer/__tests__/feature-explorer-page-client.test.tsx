@@ -299,13 +299,54 @@ describe("FeatureExplorerPageClient", () => {
 
     expect(screen.getByText("Pages")).toBeTruthy();
     expect(screen.getByText("API Contract")).toBeTruthy();
-    expect(screen.getByText("Next.js API")).toBeTruthy();
-    expect(screen.getByText("Rust API")).toBeTruthy();
+    expect(screen.getAllByText("Next.js API").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Rust API").length).toBeGreaterThan(0);
     expect(screen.getByText("/workspace/:workspaceId/feature-explorer")).toBeTruthy();
     expect(screen.getAllByText("GET /api/feature-explorer").length).toBeGreaterThan(0);
     expect(screen.getByTestId("feature-section-metric-sessions").textContent).toBe("0 sessions");
     expect(screen.getByTestId("feature-metric-sessions-feature-a").textContent).toBe("0 sessions");
     expect(screen.getByTestId("feature-metric-files-feature-a").textContent).toBe("1 files");
+    expect(screen.getAllByText("1 items").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Summary")).toBeNull();
+  });
+
+  it("switches surface navigation to browser-url tree mode", async () => {
+    useFeatureExplorerData.mockReturnValue({
+      loading: false,
+      error: null,
+      capabilityGroups: [],
+      features: [],
+      surfaceIndex: {
+        generatedAt: "",
+        pages: [
+          {
+            route: "/workspace/:workspaceId/feature-explorer",
+            title: "Feature Explorer",
+            description: "Explore features.",
+            sourceFile: "src/app/workspace/[workspaceId]/feature-explorer/page.tsx",
+          },
+        ],
+        apis: [],
+        contractApis: [],
+        nextjsApis: [],
+        rustApis: [],
+        metadata: null,
+        repoRoot: "/repo/default",
+        warnings: [],
+      },
+      featureDetail: null,
+      featureDetailLoading: false,
+      initialFeatureId: "",
+      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
+    });
+
+    render(<FeatureExplorerPageClient workspaceId="default" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Browser URL" }));
+
+    expect(screen.getByText("workspace")).toBeTruthy();
+    expect(screen.getByText(":workspaceId")).toBeTruthy();
+    expect(screen.getByText("feature-explorer")).toBeTruthy();
   });
 
   it("summarizes folder session counts from descendant files", async () => {

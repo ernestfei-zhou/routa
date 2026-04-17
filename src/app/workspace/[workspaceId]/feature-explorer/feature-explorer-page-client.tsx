@@ -34,6 +34,24 @@ import type {
   FileTreeNode,
   InspectorTab,
 } from "./types";
+import {
+  type ExplorerSection,
+  type ExplorerSurfaceItem,
+  type SurfaceNavigationView,
+  type SurfaceTreeNode,
+  ExplorerSurfaceCard,
+  SurfaceTreeRow,
+  buildApiDeclaration,
+  buildApiLookupKey,
+  buildSurfaceTree,
+  dedupeFeatureIds,
+  matchesQuery,
+  parseApiDeclaration,
+  splitApiRouteSegments,
+  splitBrowserRouteSegments,
+  splitPathSegments,
+  surfaceKindBadge,
+} from "./surface-navigation";
 import { useFeatureExplorerData } from "./use-feature-explorer-data";
 
 function loadInitialRepoSelection(workspaceId: string): RepoSelection | null {
@@ -98,14 +116,6 @@ function buildTreeNodeStats(
   return statsByNodeId;
 }
 
-function featureCodeBadge(featureId: string): string {
-  const parts = featureId.split("-");
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }
-  return featureId.slice(0, 2).toUpperCase();
-}
-
 function formatShortDate(iso: string): string {
   if (!iso || iso === "-") return "-";
   const d = new Date(iso);
@@ -113,81 +123,6 @@ function formatShortDate(iso: string): string {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${mm}-${dd}`;
-}
-
-type ExplorerSurfaceKind = "feature" | "page" | "contract-api" | "nextjs-api" | "rust-api";
-
-type ExplorerSurfaceMetric = {
-  id: string;
-  label: string;
-  value: string;
-  testId?: string;
-};
-
-type ExplorerSurfaceItem = {
-  key: string;
-  kind: ExplorerSurfaceKind;
-  label: string;
-  secondary: string;
-  featureIds: string[];
-  sourceFiles: string[];
-  metrics?: ExplorerSurfaceMetric[];
-  selectable: boolean;
-};
-
-type ExplorerSection = {
-  id: string;
-  title: string;
-  items: ExplorerSurfaceItem[];
-  metrics?: ExplorerSurfaceMetric[];
-};
-
-function buildApiDeclaration(method: string, endpointPath: string): string {
-  return `${method.trim().toUpperCase()} ${endpointPath.trim()}`.trim();
-}
-
-function buildApiLookupKey(method: string, endpointPath: string): string {
-  const normalizedPath = endpointPath
-    .trim()
-    .replace(/:[A-Za-z0-9_]+/g, "{}")
-    .replace(/\{[^}]+\}/g, "{}");
-  return `${method.trim().toUpperCase()} ${normalizedPath}`;
-}
-
-function parseApiDeclaration(declaration: string): { method: string; path: string } {
-  const [method, endpointPath] = declaration.trim().split(/\s+/, 2);
-  return {
-    method: method || "GET",
-    path: endpointPath || declaration.trim(),
-  };
-}
-
-function matchesQuery(query: string, values: Array<string | undefined>): boolean {
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) {
-    return true;
-  }
-
-  return values.some((value) => value?.toLowerCase().includes(normalized));
-}
-
-function dedupeFeatureIds(featureIds: string[]): string[] {
-  return [...new Set(featureIds.filter(Boolean))];
-}
-
-function surfaceKindBadge(kind: ExplorerSurfaceKind): string {
-  switch (kind) {
-    case "feature":
-      return "FT";
-    case "page":
-      return "PG";
-    case "contract-api":
-      return "API";
-    case "nextjs-api":
-      return "NX";
-    case "rust-api":
-      return "RS";
-  }
 }
 
 export function FeatureExplorerPageClient({
@@ -244,10 +179,13 @@ export function FeatureExplorerPageClient({
 
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("context");
   const [middleView, setMiddleView] = useState<"list" | "tree">("tree");
+  const [surfaceNavigationView, setSurfaceNavigationView] = useState<SurfaceNavigationView>("sections");
   const [featureId, setFeatureId] = useState<string>("");
   const [selectedSurfaceKey, setSelectedSurfaceKey] = useState<string>("");
   const [query, setQuery] = useState("");
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
+  const [surfaceSectionCollapsed, setSurfaceSectionCollapsed] = useState<Record<string, boolean>>({});
+  const [surfaceTreeExpandedIds, setSurfaceTreeExpandedIds] = useState<Record<string, boolean>>({});
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [activeFileId, setActiveFileId] = useState<string>("");
 
@@ -462,10 +400,112 @@ export function FeatureExplorerPageClient({
       t.featureExplorer.sessionsLabel,
     ],
   );
+  const surfaceNavigationOptions = useMemo(
+    () => [
+      { id: "sections" as const, label: t.featureExplorer.sectionView },
+      { id: "browser-url" as const, label: t.featureExplorer.browserUrlView },
+      { id: "nextjs-api" as const, label: t.featureExplorer.nextjsApiSection },
+      { id: "rust-api" as const, label: t.featureExplorer.rustApiSection },
+      { id: "path" as const, label: t.featureExplorer.pathView },
+    ],
+    [
+      t.featureExplorer.browserUrlView,
+      t.featureExplorer.nextjsApiSection,
+      t.featureExplorer.pathView,
+      t.featureExplorer.rustApiSection,
+      t.featureExplorer.sectionView,
+    ],
+  );
+  const surfaceTreeSection = useMemo(() => {
+    if (surfaceNavigationView === "sections") {
+      return null;
+    }
+
+    if (surfaceNavigationView === "browser-url") {
+      return {
+        id: "browser-url",
+        title: t.featureExplorer.browserUrlView,
+        nodes: buildSurfaceTree(
+          pageItems.map((item) => ({
+            nodeId: item.key,
+            segments: splitBrowserRouteSegments(item.label),
+            item,
+          })),
+        ),
+      };
+    }
+
+    if (surfaceNavigationView === "nextjs-api") {
+      return {
+        id: "nextjs-api-tree",
+        title: t.featureExplorer.nextjsApiSection,
+        nodes: buildSurfaceTree(
+          nextjsApiItems.map((item) => ({
+            nodeId: item.key,
+            segments: splitApiRouteSegments(item.label),
+            item,
+          })),
+        ),
+      };
+    }
+
+    if (surfaceNavigationView === "rust-api") {
+      return {
+        id: "rust-api-tree",
+        title: t.featureExplorer.rustApiSection,
+        nodes: buildSurfaceTree(
+          rustApiItems.map((item) => ({
+            nodeId: item.key,
+            segments: splitApiRouteSegments(item.label),
+            item,
+          })),
+        ),
+      };
+    }
+
+    return {
+      id: "path-tree",
+      title: t.featureExplorer.pathView,
+      nodes: buildSurfaceTree(
+        [...pageItems, ...contractApiItems, ...nextjsApiItems, ...rustApiItems].flatMap((item) => {
+          const sourcePaths = item.sourceFiles.length > 0 ? item.sourceFiles : [item.label];
+          return sourcePaths.map((sourcePath) => ({
+            nodeId: `${item.key}:${sourcePath}`,
+            segments: [...splitPathSegments(sourcePath), item.label],
+            item,
+          }));
+        }),
+      ),
+    };
+  }, [
+    contractApiItems,
+    nextjsApiItems,
+    pageItems,
+    rustApiItems,
+    surfaceNavigationView,
+    t.featureExplorer.browserUrlView,
+    t.featureExplorer.nextjsApiSection,
+    t.featureExplorer.pathView,
+    t.featureExplorer.rustApiSection,
+  ]);
   const explorerItemsByKey = useMemo(() => {
-    const entries = explorerSections.flatMap((section) => section.items.map((item) => [item.key, item] as const));
+    const treeItems = surfaceTreeSection
+      ? (function collect(nodes: SurfaceTreeNode[], acc: ExplorerSurfaceItem[] = []): ExplorerSurfaceItem[] {
+          for (const node of nodes) {
+            if (node.item) {
+              acc.push(node.item);
+            }
+            if (node.children.length > 0) {
+              collect(node.children, acc);
+            }
+          }
+          return acc;
+        }(surfaceTreeSection.nodes))
+      : [];
+    const entries = [...explorerSections.flatMap((section) => section.items), ...treeItems]
+      .map((item) => [item.key, item] as const);
     return new Map(entries);
-  }, [explorerSections]);
+  }, [explorerSections, surfaceTreeSection]);
   const resolvedSurfaceKey = selectedSurfaceKey && explorerItemsByKey.has(selectedSurfaceKey)
     ? selectedSurfaceKey
     : (effectiveFeatureId ? `feature:${effectiveFeatureId}` : "");
@@ -595,6 +635,14 @@ export function FeatureExplorerPageClient({
     setExpandedIds((prev) => ({ ...prev, [nodeId]: !prev[nodeId] }));
   };
 
+  const handleToggleSurfaceSection = (sectionId: string) => {
+    setSurfaceSectionCollapsed((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }));
+  };
+
+  const handleToggleSurfaceTreeNode = (nodeId: string) => {
+    setSurfaceTreeExpandedIds((prev) => ({ ...prev, [nodeId]: !(prev[nodeId] ?? true) }));
+  };
+
   const handleToggleFileSelection = (fileId: string) => {
     setSelectedFileIds((prev) =>
       prev.includes(fileId) ? prev.filter((item) => item !== fileId) : [...prev, fileId],
@@ -646,7 +694,7 @@ export function FeatureExplorerPageClient({
     >
       <div className="flex h-full min-h-0 bg-desktop-bg-primary">
         <main className="flex min-w-0 flex-1">
-          <section className="grid min-h-0 flex-1 xl:grid-cols-[260px_minmax(0,1fr)_460px] 2xl:grid-cols-[300px_minmax(0,1fr)_520px]">
+          <section className="grid min-h-0 flex-1 xl:grid-cols-[360px_minmax(0,1fr)_500px] 2xl:grid-cols-[420px_minmax(0,1fr)_560px]">
             {/* ── Left panel: Feature list ── */}
             <aside className="flex min-h-0 flex-col border-r border-desktop-border bg-desktop-bg-secondary/20">
               <div className="border-b border-desktop-border px-3 py-2">
@@ -671,6 +719,22 @@ export function FeatureExplorerPageClient({
                     className="w-full bg-transparent text-xs text-desktop-text-primary outline-none placeholder:text-desktop-text-secondary"
                   />
                 </label>
+                <div className="mt-2 flex flex-wrap items-center gap-1">
+                  {surfaceNavigationOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setSurfaceNavigationView(option.id)}
+                      className={`rounded-sm border px-2 py-1 text-[10px] font-medium ${
+                        surfaceNavigationView === option.id
+                          ? "border-desktop-accent bg-desktop-bg-active text-desktop-text-primary"
+                          : "border-desktop-border bg-desktop-bg-primary text-desktop-text-secondary hover:text-desktop-text-primary"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="min-h-0 flex-1 overflow-y-auto">
@@ -678,96 +742,92 @@ export function FeatureExplorerPageClient({
                   <div className="px-3 py-4 text-xs text-desktop-text-secondary">Loading…</div>
                 ) : error ? (
                   <div className="px-3 py-4 text-xs text-red-400">{error}</div>
-                ) : explorerSections.length === 0 ? (
+                ) : explorerSections.length === 0 && !surfaceTreeSection ? (
                   <div className="px-3 py-4 text-xs text-desktop-text-secondary">
                     {t.featureExplorer.noFeatureMatches}
                   </div>
                 ) : (
                   <div className="space-y-3 px-2 pb-3 pt-2">
-                    {explorerSections.map((section) => (
-                      <div key={section.id}>
-                        <div className="mb-1 flex items-center justify-between px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">
-                          <span>{section.title}</span>
-                          <div className="flex items-center gap-1">
-                            {section.metrics?.map((metric) => (
-                              <span
-                                key={metric.id}
-                                data-testid={metric.testId}
-                                className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5 text-[9px] font-medium normal-case tracking-normal text-current/80"
-                              >
-                                {metric.value} {metric.label}
+                    {explorerSections
+                      .filter((section) => surfaceNavigationView === "sections" || section.id === "features")
+                      .map((section) => {
+                        const collapsed = surfaceSectionCollapsed[section.id] ?? false;
+                        return (
+                          <div key={section.id}>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleSurfaceSection(section.id)}
+                              className="mb-1 flex w-full items-center justify-between px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary hover:text-desktop-text-primary"
+                            >
+                              <span className="flex items-center gap-1.5">
+                                {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                                <span>{section.title}</span>
                               </span>
-                            ))}
-                            <span>{section.items.length}</span>
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          {section.items.map((item) => {
-                            const isActive = item.key === activeSurfaceKey;
-                            const firstFeatureId = item.featureIds[0] ?? "";
-                            const featureBadge = firstFeatureId ? featureCodeBadge(firstFeatureId) : "";
-                            const mappingLabel = item.kind === "feature"
-                              ? ""
-                              : firstFeatureId
-                                ? item.featureIds.length > 1
-                                  ? `${featureBadge}+${item.featureIds.length - 1}`
-                                  : featureBadge
-                                : t.featureExplorer.unmappedLabel;
-                            return (
-                              <button
-                                key={item.key}
-                                onClick={() => handleSelectSurface(item)}
-                                className={`w-full rounded-sm border px-2 py-1.5 text-left transition-colors ${
-                                  isActive
-                                    ? "border-desktop-accent bg-desktop-bg-active text-desktop-text-primary"
-                                    : "border-transparent text-desktop-text-secondary hover:border-desktop-border hover:bg-desktop-bg-primary/70 hover:text-desktop-text-primary"
-                                }`}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span className={`inline-flex h-5 min-w-7 items-center justify-center rounded-sm border px-1 text-[9px] font-semibold ${
-                                    isActive
-                                      ? "border-desktop-accent bg-desktop-bg-primary text-desktop-text-primary"
-                                      : "border-desktop-border bg-desktop-bg-primary text-desktop-text-secondary"
-                                  }`}>
-                                    {item.kind === "feature" ? featureCodeBadge(firstFeatureId) : surfaceKindBadge(item.kind)}
+                              <div className="flex items-center gap-1">
+                                {section.metrics?.map((metric) => (
+                                  <span
+                                    key={metric.id}
+                                    data-testid={metric.testId}
+                                    className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5 text-[9px] font-medium normal-case tracking-normal text-current/80"
+                                  >
+                                    {metric.value} {metric.label}
                                   </span>
-                                  <div className="min-w-0 flex flex-1 items-center gap-2 overflow-hidden">
-                                    <div className="min-w-0 flex items-baseline gap-1.5 overflow-hidden">
-                                      <span className="truncate text-[12px] font-medium">
-                                        {item.label}
-                                      </span>
-                                      {item.secondary ? (
-                                        <span className="truncate text-[10px] text-current/75">
-                                          {item.secondary}
-                                        </span>
-                                      ) : null}
-                                    </div>
-                                    {item.metrics?.length ? (
-                                      <div className="ml-auto flex shrink-0 items-center gap-1">
-                                        {item.metrics.map((metric) => (
-                                          <span
-                                            key={metric.id}
-                                            data-testid={metric.testId}
-                                            className="inline-flex items-center rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5 text-[9px] font-medium text-current/80"
-                                          >
-                                            {metric.value} {metric.label}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                  {mappingLabel ? (
-                                    <span className="shrink-0 rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5 text-[9px] font-medium text-current/80">
-                                      {mappingLabel}
-                                    </span>
-                                  ) : null}
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
+                                ))}
+                                <span className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5 text-[9px] font-medium normal-case tracking-normal text-current/80">
+                                  {section.items.length} {t.featureExplorer.itemsLabel}
+                                </span>
+                              </div>
+                            </button>
+                            {!collapsed ? (
+                              <div className="space-y-1">
+                                {section.items.map((item) => (
+                                  <ExplorerSurfaceCard
+                                    key={item.key}
+                                    item={item}
+                                    isActive={item.key === activeSurfaceKey}
+                                    onSelect={() => handleSelectSurface(item)}
+                                    unmappedLabel={t.featureExplorer.unmappedLabel}
+                                  />
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+
+                    {surfaceTreeSection ? (
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSurfaceSection(surfaceTreeSection.id)}
+                          className="mb-1 flex w-full items-center justify-between px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary hover:text-desktop-text-primary"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            {(surfaceSectionCollapsed[surfaceTreeSection.id] ?? false)
+                              ? <ChevronRight className="h-3.5 w-3.5" />
+                              : <ChevronDown className="h-3.5 w-3.5" />}
+                            <span>{surfaceTreeSection.title}</span>
+                          </span>
+                          <span>{surfaceTreeSection.nodes.reduce((sum, node) => sum + node.itemCount, 0)}</span>
+                        </button>
+                        {!(surfaceSectionCollapsed[surfaceTreeSection.id] ?? false) ? (
+                          <div className="space-y-1">
+                            {surfaceTreeSection.nodes.map((node) => (
+                              <SurfaceTreeRow
+                                key={node.id}
+                                node={node}
+                                depth={0}
+                                activeSurfaceKey={activeSurfaceKey}
+                                expandedIds={surfaceTreeExpandedIds}
+                                onSelectSurface={handleSelectSurface}
+                                onToggleNode={handleToggleSurfaceTreeNode}
+                                unmappedLabel={t.featureExplorer.unmappedLabel}
+                              />
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
-                    ))}
+                    ) : null}
                   </div>
                 )}
               </div>

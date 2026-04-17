@@ -236,6 +236,7 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     noFilesSelected: string;
     sessionsLabel: string;
     filesLabel: string;
+    itemsLabel: string;
     updatedLabel: string;
     nameColumn: string;
     changeColumn: string;
@@ -257,6 +258,9 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     groupWorkflow: string;
     groupGovernance: string;
     featureMetrics: string;
+    sectionView: string;
+    browserUrlView: string;
+    pathView: string;
     featureSection: string;
     pageSection: string;
     contractApiSection: string;
