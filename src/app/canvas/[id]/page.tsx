@@ -1,3 +1,7 @@
+/**
+ * Canvas - /canvas/:id
+ * Viewer page for opening a saved canvas artifact by ID, including static-export placeholder support.
+ */
 import { Suspense } from "react";
 
 import { CanvasViewerClient } from "./canvas-viewer-client";

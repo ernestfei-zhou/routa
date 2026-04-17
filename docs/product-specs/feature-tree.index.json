@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-04-17T05:47:09.706Z",
+  "generatedAt": "2026-04-17T06:21:35.195Z",
   "pages": [
     {
       "route": "/",
       "title": "Home",
-      "description": "",
+      "description": "Workspace-first landing page for selecting a workspace, connecting providers, and entering recent se",
       "sourceFile": "src/app/page.tsx"
     },
     {
@@ -22,19 +22,19 @@
     {
       "route": "/canvas/:id",
       "title": "Canvas",
-      "description": "",
+      "description": "Viewer page for opening a saved canvas artifact by ID, including static-export placeholder support.",
       "sourceFile": "src/app/canvas/[id]/page.tsx"
     },
     {
       "route": "/debug/acp-replay",
       "title": "Debug / Acp Replay",
-      "description": "",
+      "description": "Debug surface for replaying ACP transcripts and inspecting session event sequences in isolation.",
       "sourceFile": "src/app/debug/acp-replay/page.tsx"
     },
     {
       "route": "/mcp-tools",
       "title": "Mcp Tools",
-      "description": "",
+      "description": "Shortcut route that redirects to the MCP tools settings experience for browsing and executing config",
       "sourceFile": "src/app/mcp-tools/page.tsx"
     },
     {
@@ -52,55 +52,55 @@
     {
       "route": "/settings/agents",
       "title": "Settings / Agents",
-      "description": "",
+      "description": "Settings page for installing, discovering, and managing ACP-compatible agent runtimes.",
       "sourceFile": "src/app/settings/agents/page.tsx"
     },
     {
       "route": "/settings/fitness",
       "title": "Settings / Fitness",
-      "description": "",
+      "description": "Compatibility route that forwards fitness configuration requests to the fluency settings surface wit",
       "sourceFile": "src/app/settings/fitness/page.tsx"
     },
     {
       "route": "/settings/fluency",
       "title": "Settings / Fluency",
-      "description": "",
+      "description": "Settings page for repository fluency analysis, fitness snapshots, and harnessability diagnostics.",
       "sourceFile": "src/app/settings/fluency/page.tsx"
     },
     {
       "route": "/settings/harness",
       "title": "Settings / Harness",
-      "description": "",
+      "description": "Settings entry for the harness console, including repository signals, design decisions, and governan",
       "sourceFile": "src/app/settings/harness/page.tsx"
     },
     {
       "route": "/settings/mcp",
       "title": "Settings / Mcp",
-      "description": "",
+      "description": "Settings page for managing MCP servers, tools, and transport-level configuration.",
       "sourceFile": "src/app/settings/mcp/page.tsx"
     },
     {
       "route": "/settings/schedules",
       "title": "Settings / Schedules",
-      "description": "",
+      "description": "Workspace-aware schedule management page for triggers, recurring runs, and schedule tick diagnostics",
       "sourceFile": "src/app/settings/schedules/page.tsx"
     },
     {
       "route": "/settings/specialists",
       "title": "Settings / Specialists",
-      "description": "",
+      "description": "Settings page for configuring specialist personas, bindings, and model-aware specialist behavior.",
       "sourceFile": "src/app/settings/specialists/page.tsx"
     },
     {
       "route": "/settings/webhooks",
       "title": "Settings / Webhooks",
-      "description": "",
+      "description": "Settings page for configuring GitHub webhook ingestion and inspecting the webhook endpoint used by R",
       "sourceFile": "src/app/settings/webhooks/page.tsx"
     },
     {
       "route": "/settings/workflows",
       "title": "Settings / Workflows",
-      "description": "",
+      "description": "Settings page for defining reusable workflows and reviewing workflow-focused execution configuration",
       "sourceFile": "src/app/settings/workflows/page.tsx"
     },
     {
@@ -118,25 +118,25 @@
     {
       "route": "/workspace/:workspaceId/codebases/:codebaseId/reposlide",
       "title": "Codebases / Reposlide",
-      "description": "",
+      "description": "Workspace-scoped RepoSlide surface for generating and reviewing presentation outputs for a selected ",
       "sourceFile": "src/app/workspace/[workspaceId]/codebases/[codebaseId]/reposlide/page.tsx"
     },
     {
       "route": "/workspace/:workspaceId/kanban",
       "title": "Workspace / Kanban",
-      "description": "",
+      "description": "Main kanban board for workspace-scoped task coordination, lane automation, and git-aware task execut",
       "sourceFile": "src/app/workspace/[workspaceId]/kanban/page.tsx"
     },
     {
       "route": "/workspace/:workspaceId/overview",
       "title": "Workspace / Overview",
-      "description": "",
+      "description": "Workspace entry route that currently redirects to the sessions surface while preserving workspace sc",
       "sourceFile": "src/app/workspace/[workspaceId]/overview/page.tsx"
     },
     {
       "route": "/workspace/:workspaceId/sessions",
       "title": "Workspace / Sessions",
-      "description": "",
+      "description": "Workspace-scoped session index for browsing, filtering, and opening agent execution history.",
       "sourceFile": "src/app/workspace/[workspaceId]/sessions/page.tsx"
     },
     {
@@ -154,13 +154,13 @@
     {
       "route": "/workspace/:workspaceId/team",
       "title": "Workspace / Team",
-      "description": "",
+      "description": "Workspace-scoped team run index for multi-agent collaboration and coordination history.",
       "sourceFile": "src/app/workspace/[workspaceId]/team/page.tsx"
     },
     {
       "route": "/workspace/:workspaceId/team/:sessionId",
       "title": "Workspace / Team",
-      "description": "",
+      "description": "Detail page for inspecting a specific workspace team run and its coordinated session activity.",
       "sourceFile": "src/app/workspace/[workspaceId]/team/[sessionId]/page.tsx"
     }
   ],

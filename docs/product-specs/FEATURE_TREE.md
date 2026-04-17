@@ -68,7 +68,9 @@ feature_metadata:
     - id: kanban-workflow
       name: Kanban Workflow
       group: kanban-automation
-      summary: Coordinate tasks through lane transitions, automation, and git-aware execution.
+      summary: >-
+        Coordinate tasks through lane transitions, automation, and git-aware
+        execution.
       status: shipped
       pages:
         - /workspace/:workspaceId/kanban
@@ -106,7 +108,9 @@ feature_metadata:
     - id: harness-console
       name: Harness Console
       group: governance-settings
-      summary: Inspect repo signals, governance surfaces, and fitness-related runtime status.
+      summary: >-
+        Inspect repo signals, governance surfaces, and fitness-related runtime
+        status.
       status: evolving
       pages:
         - /settings/harness
@@ -137,33 +141,33 @@ Multi-agent coordination platform. This document is auto-generated from:
 
 | Page | Route | Description |
 |------|-------|-------------|
-| Home | `/` |  |
+| Home | `/` | Workspace-first landing page for selecting a workspace, connecting providers, an |
 | A2A Protocol Test Page | `/a2a` | Interactive testing interface for the Agent-to-Agent (A2A) protocol |
 | AG-UI Protocol Test Page | `/ag-ui` | Standalone page for testing AG-UI protocol integration |
-| Canvas | `/canvas/:id` |  |
-| Debug / Acp Replay | `/debug/acp-replay` |  |
-| Mcp Tools | `/mcp-tools` |  |
+| Canvas | `/canvas/:id` | Viewer page for opening a saved canvas artifact by ID, including static-export p |
+| Debug / Acp Replay | `/debug/acp-replay` | Debug surface for replaying ACP transcripts and inspecting session event sequenc |
+| Mcp Tools | `/mcp-tools` | Shortcut route that redirects to the MCP tools settings experience for browsing  |
 | Messages Page - Notification & PR Agent Execution History | `/messages` | Shows: - All notifications with filtering - PR Agent execution history from back |
 | Settings Page | `/settings` | Provides a full-page UI for all Routa settings: - Providers (default agent provi |
-| Settings / Agents | `/settings/agents` |  |
-| Settings / Fitness | `/settings/fitness` |  |
-| Settings / Fluency | `/settings/fluency` |  |
-| Settings / Harness | `/settings/harness` |  |
-| Settings / Mcp | `/settings/mcp` |  |
-| Settings / Schedules | `/settings/schedules` |  |
-| Settings / Specialists | `/settings/specialists` |  |
-| Settings / Webhooks | `/settings/webhooks` |  |
-| Settings / Workflows | `/settings/workflows` |  |
+| Settings / Agents | `/settings/agents` | Settings page for installing, discovering, and managing ACP-compatible agent run |
+| Settings / Fitness | `/settings/fitness` | Compatibility route that forwards fitness configuration requests to the fluency  |
+| Settings / Fluency | `/settings/fluency` | Settings page for repository fluency analysis, fitness snapshots, and harnessabi |
+| Settings / Harness | `/settings/harness` | Settings entry for the harness console, including repository signals, design dec |
+| Settings / Mcp | `/settings/mcp` | Settings page for managing MCP servers, tools, and transport-level configuration |
+| Settings / Schedules | `/settings/schedules` | Workspace-aware schedule management page for triggers, recurring runs, and sched |
+| Settings / Specialists | `/settings/specialists` | Settings page for configuring specialist personas, bindings, and model-aware spe |
+| Settings / Webhooks | `/settings/webhooks` | Settings page for configuring GitHub webhook ingestion and inspecting the webhoo |
+| Settings / Workflows | `/settings/workflows` | Settings page for defining reusable workflows and reviewing workflow-focused exe |
 | Trace Page | `/traces` | Full-page view for browsing and analyzing Agent Trace records |
 | Workspace Page (Server Component Wrapper) | `/workspace/:workspaceId` | This server component provides generateStaticParams for static export and redire |
-| Codebases / Reposlide | `/workspace/:workspaceId/codebases/:codebaseId/reposlide` |  |
-| Workspace / Kanban | `/workspace/:workspaceId/kanban` |  |
-| Workspace / Overview | `/workspace/:workspaceId/overview` |  |
-| Workspace / Sessions | `/workspace/:workspaceId/sessions` |  |
+| Codebases / Reposlide | `/workspace/:workspaceId/codebases/:codebaseId/reposlide` | Workspace-scoped RepoSlide surface for generating and reviewing presentation out |
+| Workspace / Kanban | `/workspace/:workspaceId/kanban` | Main kanban board for workspace-scoped task coordination, lane automation, and g |
+| Workspace / Overview | `/workspace/:workspaceId/overview` | Workspace entry route that currently redirects to the sessions surface while pre |
+| Workspace / Sessions | `/workspace/:workspaceId/sessions` | Workspace-scoped session index for browsing, filtering, and opening agent execut |
 | Workspace Session Page (Server Component Wrapper) | `/workspace/:workspaceId/sessions/:sessionId` | This server component provides generateStaticParams for static export and render |
 | Workspace / Spec | `/workspace/:workspaceId/spec` | Dense issue relationship board for local docs/issues records |
-| Workspace / Team | `/workspace/:workspaceId/team` |  |
-| Workspace / Team | `/workspace/:workspaceId/team/:sessionId` |  |
+| Workspace / Team | `/workspace/:workspaceId/team` | Workspace-scoped team run index for multi-agent collaboration and coordination h |
+| Workspace / Team | `/workspace/:workspaceId/team/:sessionId` | Detail page for inspecting a specific workspace team run and its coordinated ses |
 
 ---
 
