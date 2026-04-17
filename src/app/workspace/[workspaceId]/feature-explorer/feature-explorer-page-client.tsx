@@ -75,9 +75,6 @@ export function FeatureExplorerPageClient({
 
   const workspace = workspacesHook.workspaces.find((item) => item.id === workspaceId) ?? null;
   const defaultCodebase = codebases.find((cb) => cb.isDefault) ?? codebases[0] ?? null;
-  const repoDisplayPath = defaultCodebase?.repoPath
-    ? defaultCodebase.repoPath.replace(/\/\.routa\/.*$/, "")
-    : null;
   const repoLabel = defaultCodebase
     ? (defaultCodebase.label ?? defaultCodebase.repoPath.split("/").pop() ?? defaultCodebase.repoPath)
     : null;
@@ -267,11 +264,11 @@ export function FeatureExplorerPageClient({
           <section className="grid min-h-0 flex-1 xl:grid-cols-[280px_minmax(0,1fr)_340px]">
             {/* ── Left panel: Feature list ── */}
             <aside className="flex min-h-0 flex-col border-r border-desktop-border bg-desktop-bg-secondary/20">
-              {(repoDisplayPath || repoLabel) && (
+              {repoLabel && (
                 <div className="flex items-center gap-1.5 border-b border-desktop-border px-3 py-1.5">
                   <Folder className="h-3.5 w-3.5 shrink-0 text-desktop-text-secondary" />
-                  <span className="min-w-0 truncate text-[12px] font-medium text-desktop-text-primary" title={repoDisplayPath ?? undefined}>
-                    {repoDisplayPath ?? repoLabel}
+                  <span className="min-w-0 truncate text-[12px] font-medium text-desktop-text-primary" title={defaultCodebase?.repoPath}>
+                    {repoLabel}
                   </span>
                   {defaultCodebase?.branch && (
                     <span className="shrink-0 rounded-sm border border-desktop-border px-1 py-0.5 text-[9px] text-desktop-text-secondary">

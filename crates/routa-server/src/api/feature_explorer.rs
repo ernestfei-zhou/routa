@@ -5,12 +5,11 @@ use axum::{
     Json, Router,
 };
 use feature_trace::{
-    FeatureSurfaceCatalog, FeatureTraceInput, FeatureTreeCatalog,
-    SessionAnalyzer,
+    FeatureSurfaceCatalog, FeatureTraceInput, FeatureTreeCatalog, SessionAnalysis, SessionAnalyzer,
 };
 use serde::Serialize;
 use serde_json::{json, Value};
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::Path;
 
 use crate::api::repo_context::{resolve_repo_root, RepoContextQuery, ResolveRepoRootOptions};
@@ -185,47 +184,42 @@ fn insert_into_tree(children: &mut Vec<FileTreeNode>, parts: &[&str], full_path:
 /// Per-file statistics: (change_count, session_count, latest_timestamp)
 type FileStats = HashMap<String, (usize, usize, String)>;
 
+#[derive(Debug, Default)]
+struct FeatureStatAggregate {
+    session_ids: BTreeSet<String>,
+    changed_files: BTreeSet<String>,
+    updated_at: String,
+}
+
+#[derive(Debug, Default)]
+struct FileStatAggregate {
+    change_count: usize,
+    session_ids: BTreeSet<String>,
+    updated_at: String,
+}
+
 fn collect_session_stats(
     repo_root: &Path,
     feature_tree: &FeatureTreeCatalog,
 ) -> (HashMap<String, (usize, usize, String)>, FileStats) {
-    let mut stats: HashMap<String, (usize, usize, String)> = HashMap::new();
-    let mut file_stats: FileStats = HashMap::new();
+    let mut stats: HashMap<String, FeatureStatAggregate> = HashMap::new();
+    let mut file_stats: HashMap<String, FileStatAggregate> = HashMap::new();
 
     // Try to collect real transcript data
     let surface_catalog = FeatureSurfaceCatalog::from_repo_root(repo_root).unwrap_or_default();
     let analyzer = SessionAnalyzer::with_catalogs(&surface_catalog, feature_tree);
-    let repo_prefix = format!("{}/", repo_root.to_string_lossy());
 
     match trace_parser::collect_broad_transcript_summaries(repo_root) {
         Ok(transcripts) => {
-            let total_sessions = transcripts.len();
-
             for transcript in &transcripts {
-                // Build changed files from recovered events
-                let mut changed_files: Vec<String> = Vec::new();
+                let changed_files =
+                    collect_changed_files_from_events(repo_root, &transcript.recovered_events);
                 let mut tool_names: Vec<String> = Vec::new();
 
                 for event in &transcript.recovered_events {
                     match event {
-                        trace_parser::TranscriptRecoveredEvent::ToolUse {
-                            tool_name,
-                            tool_input,
-                            ..
-                        } => {
+                        trace_parser::TranscriptRecoveredEvent::ToolUse { tool_name, .. } => {
                             tool_names.push(tool_name.clone());
-                            // Extract file paths from tool inputs
-                            if let Some(path) = tool_input.get("file_path").and_then(|v| v.as_str())
-                            {
-                                if let Some(rel) = path.strip_prefix(&repo_prefix) {
-                                    changed_files.push(rel.to_string());
-                                }
-                            }
-                            if let Some(path) = tool_input.get("path").and_then(|v| v.as_str()) {
-                                if let Some(rel) = path.strip_prefix(&repo_prefix) {
-                                    changed_files.push(rel.to_string());
-                                }
-                            }
                         }
                     }
                 }
@@ -245,63 +239,14 @@ fn collect_session_stats(
                         .unwrap_or_default()
                 };
 
-                if !analysis.feature_links.is_empty() {
-                    for feature_link in &analysis.feature_links {
-                        let entry = stats
-                            .entry(feature_link.feature_id.clone())
-                            .or_insert((0, 0, String::new()));
-                        entry.0 += 1; // session count
-                        entry.1 += changed_files.len(); // changed file count
-                        if !ts_str.is_empty() && (entry.2.is_empty() || ts_str > entry.2) {
-                            entry.2 = ts_str.clone();
-                        }
-                    }
-                }
-
-                // Collect per-file stats
-                for file_path in &changed_files {
-                    let entry = file_stats
-                        .entry(file_path.clone())
-                        .or_insert((0, 0, String::new()));
-                    entry.0 += 1; // change count
-                    entry.1 += 1; // session count
-                    if !ts_str.is_empty() && (entry.2.is_empty() || ts_str > entry.2) {
-                        entry.2 = ts_str.clone();
-                    }
-                }
-            }
-
-            // Distribute unmatched sessions proportionally across features by source_file count
-            let matched_sessions: usize = stats.values().map(|s| s.0).sum();
-            if matched_sessions < total_sessions && !feature_tree.features.is_empty() {
-                let unmatched = total_sessions - matched_sessions;
-                let total_files: usize = feature_tree
-                    .features
-                    .iter()
-                    .map(|f| f.source_files.len().max(1))
-                    .sum();
-                // Use latest transcript timestamp for distributed sessions
-                let latest_ts = transcripts
-                    .iter()
-                    .filter_map(|t| {
-                        chrono::DateTime::from_timestamp_millis(t.last_seen_at_ms)
-                            .map(|dt| dt.format("%Y-%m-%dT%H:%M:%S").to_string())
-                    })
-                    .max()
-                    .unwrap_or_default();
-                for feature in &feature_tree.features {
-                    let weight = feature.source_files.len().max(1);
-                    let share = (unmatched * weight) / total_files.max(1);
-                    if share > 0 {
-                        let entry = stats
-                            .entry(feature.id.clone())
-                            .or_insert((0, 0, String::new()));
-                        entry.0 += share;
-                        if !latest_ts.is_empty() && (entry.2.is_empty() || latest_ts > entry.2) {
-                            entry.2 = latest_ts.clone();
-                        }
-                    }
-                }
+                record_analysis(
+                    &mut stats,
+                    &mut file_stats,
+                    &transcript.session_id,
+                    &changed_files,
+                    &analysis,
+                    &ts_str,
+                );
             }
         }
         Err(_) => {
@@ -309,14 +254,249 @@ fn collect_session_stats(
         }
     }
 
-    // For features without session data, provide defaults based on source_files
-    for feature in &feature_tree.features {
+    (
         stats
-            .entry(feature.id.clone())
-            .or_insert((0, feature.source_files.len(), String::new()));
+            .into_iter()
+            .map(|(feature_id, aggregate)| {
+                (
+                    feature_id,
+                    (
+                        aggregate.session_ids.len(),
+                        aggregate.changed_files.len(),
+                        aggregate.updated_at,
+                    ),
+                )
+            })
+            .collect(),
+        file_stats
+            .into_iter()
+            .map(|(path, aggregate)| {
+                (
+                    path,
+                    (
+                        aggregate.change_count,
+                        aggregate.session_ids.len(),
+                        aggregate.updated_at,
+                    ),
+                )
+            })
+            .collect(),
+    )
+}
+
+fn record_analysis(
+    stats: &mut HashMap<String, FeatureStatAggregate>,
+    file_stats: &mut HashMap<String, FileStatAggregate>,
+    session_id: &str,
+    changed_files: &[String],
+    analysis: &SessionAnalysis,
+    updated_at: &str,
+) {
+    let mut seen_feature_file_pairs = HashSet::new();
+    for feature_link in &analysis.feature_links {
+        let entry = stats.entry(feature_link.feature_id.clone()).or_default();
+        entry.session_ids.insert(session_id.to_string());
+        if seen_feature_file_pairs.insert((
+            feature_link.feature_id.clone(),
+            feature_link.via_path.clone(),
+        )) {
+            entry.changed_files.insert(feature_link.via_path.clone());
+        }
+        if !updated_at.is_empty()
+            && (entry.updated_at.is_empty() || updated_at > entry.updated_at.as_str())
+        {
+            entry.updated_at = updated_at.to_string();
+        }
     }
 
-    (stats, file_stats)
+    for file_path in changed_files {
+        let entry = file_stats.entry(file_path.clone()).or_default();
+        entry.change_count += 1;
+        entry.session_ids.insert(session_id.to_string());
+        if !updated_at.is_empty()
+            && (entry.updated_at.is_empty() || updated_at > entry.updated_at.as_str())
+        {
+            entry.updated_at = updated_at.to_string();
+        }
+    }
+}
+
+fn collect_changed_files_from_events(
+    repo_root: &Path,
+    recovered_events: &[trace_parser::TranscriptRecoveredEvent],
+) -> Vec<String> {
+    let mut changed_files = BTreeSet::new();
+    for event in recovered_events {
+        let trace_parser::TranscriptRecoveredEvent::ToolUse { tool_input, .. } = event;
+        for path in extract_file_paths_for_repo(tool_input, repo_root) {
+            changed_files.insert(path);
+        }
+    }
+    changed_files.into_iter().collect()
+}
+
+fn extract_file_paths_for_repo(tool_input: &Value, repo_root: &Path) -> Vec<String> {
+    let mut candidates = HashSet::new();
+    collect_file_values(tool_input, &mut candidates);
+    if let Some(command) = tool_input
+        .get("command")
+        .and_then(Value::as_str)
+        .or_else(|| tool_input.get("cmd").and_then(Value::as_str))
+    {
+        for path in parse_patch_block(command) {
+            candidates.insert(path);
+        }
+        for path in parse_command_paths(command) {
+            candidates.insert(path);
+        }
+    }
+
+    candidates
+        .into_iter()
+        .filter_map(|value| normalize_repo_relative(repo_root, &value))
+        .collect()
+}
+
+fn collect_file_values(value: &Value, out: &mut HashSet<String>) {
+    match value {
+        Value::Object(map) => {
+            for (key, child) in map {
+                let key_lower = key.to_ascii_lowercase();
+                let is_path_key = matches!(
+                    key_lower.as_str(),
+                    "path"
+                        | "paths"
+                        | "file"
+                        | "filepath"
+                        | "file_path"
+                        | "filename"
+                        | "target"
+                        | "source"
+                        | "target_file"
+                        | "source_file"
+                        | "absolute_path"
+                        | "relative_path"
+                );
+                if is_path_key {
+                    match child {
+                        Value::String(path) => {
+                            out.insert(path.to_string());
+                        }
+                        Value::Array(values) => {
+                            for item in values {
+                                if let Some(path) = item.as_str() {
+                                    out.insert(path.to_string());
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                collect_file_values(child, out);
+            }
+        }
+        Value::Array(values) => {
+            for item in values {
+                collect_file_values(item, out);
+            }
+        }
+        Value::String(text) => {
+            for value in parse_patch_block(text) {
+                out.insert(value);
+            }
+        }
+        Value::Null | Value::Bool(_) | Value::Number(_) => {}
+    }
+}
+
+fn parse_patch_block(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    for line in text.lines() {
+        let line = line.trim();
+        if let Some(rest) = line.strip_prefix("*** Update File:") {
+            out.push(rest.trim().to_string());
+        } else if let Some(rest) = line.strip_prefix("*** Add File:") {
+            out.push(rest.trim().to_string());
+        } else if let Some(rest) = line.strip_prefix("*** Delete File:") {
+            out.push(rest.trim().to_string());
+        } else if let Some(rest) = line.strip_prefix("*** Move to:") {
+            out.push(rest.trim().to_string());
+        }
+    }
+    out
+}
+
+fn parse_command_paths(command: &str) -> Vec<String> {
+    let tokens = shell_like_split(command);
+    if tokens.is_empty() {
+        return Vec::new();
+    }
+
+    let mut candidates = Vec::new();
+    if let Some(separator_index) = tokens.iter().position(|token| token == "--") {
+        candidates.extend(
+            tokens[separator_index + 1..]
+                .iter()
+                .filter(|token| !token.starts_with('-'))
+                .cloned(),
+        );
+    } else if tokens.first().is_some_and(|token| token == "git")
+        && tokens
+            .get(1)
+            .is_some_and(|subcommand| matches!(subcommand.as_str(), "add" | "rm"))
+    {
+        candidates.extend(
+            tokens[2..]
+                .iter()
+                .filter(|token| !token.starts_with('-'))
+                .cloned(),
+        );
+    }
+
+    candidates
+}
+
+fn shell_like_split(command: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+    let mut quote = None;
+
+    for ch in command.chars() {
+        match quote {
+            Some(active_quote) if ch == active_quote => quote = None,
+            Some(_) => current.push(ch),
+            None if ch == '\'' || ch == '"' => quote = Some(ch),
+            None if ch.is_whitespace() => {
+                if !current.is_empty() {
+                    tokens.push(std::mem::take(&mut current));
+                }
+            }
+            None => current.push(ch),
+        }
+    }
+
+    if !current.is_empty() {
+        tokens.push(current);
+    }
+
+    tokens
+}
+
+fn normalize_repo_relative(repo_root: &Path, value: &str) -> Option<String> {
+    let clean = value.trim().trim_matches('"').replace('\\', "/");
+    if clean.is_empty() || clean == "/dev/null" {
+        return None;
+    }
+
+    let path = if Path::new(&clean).is_absolute() {
+        std::path::PathBuf::from(clean)
+    } else {
+        repo_root.join(clean)
+    };
+
+    path.strip_prefix(repo_root)
+        .ok()
+        .map(|v| v.to_string_lossy().replace('\\', "/"))
 }
 
 fn split_declared_api(declaration: &str) -> Option<(&str, &str)> {
@@ -615,4 +795,72 @@ async fn get_feature_apis(
         "apis": feature.apis,
         "pages": feature.pages,
     })))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use feature_trace::{ProductFeatureLink, SurfaceLinkConfidence};
+    use serde_json::json;
+    use std::collections::BTreeMap;
+    use tempfile::tempdir;
+
+    #[test]
+    fn record_analysis_counts_only_matched_feature_sessions() {
+        let mut stats = HashMap::new();
+        let mut file_stats = HashMap::new();
+        let analysis = SessionAnalysis {
+            session_id: "sess-1".to_string(),
+            changed_files: vec![
+                "src/app/workspace/[workspaceId]/sessions/page.tsx".to_string(),
+                "src/app/workspace/[workspaceId]/sessions/page.tsx".to_string(),
+            ],
+            tool_call_counts: BTreeMap::new(),
+            surface_links: Vec::new(),
+            feature_links: vec![ProductFeatureLink {
+                feature_id: "session-recovery".to_string(),
+                feature_name: "Session Recovery".to_string(),
+                route: Some("/workspace/:workspaceId/sessions".to_string()),
+                via_path: "src/app/workspace/[workspaceId]/sessions/page.tsx".to_string(),
+                confidence: SurfaceLinkConfidence::High,
+            }],
+        };
+
+        record_analysis(
+            &mut stats,
+            &mut file_stats,
+            "sess-1",
+            &["src/app/workspace/[workspaceId]/sessions/page.tsx".to_string()],
+            &analysis,
+            "2026-04-17T09:00:00",
+        );
+
+        let session_recovery = stats.get("session-recovery").expect("feature stat");
+        assert_eq!(session_recovery.session_ids.len(), 1);
+        assert_eq!(session_recovery.changed_files.len(), 1);
+        assert_eq!(session_recovery.updated_at, "2026-04-17T09:00:00");
+        assert!(stats.get("workspace-overview").is_none());
+
+        let file_stat = file_stats
+            .get("src/app/workspace/[workspaceId]/sessions/page.tsx")
+            .expect("file stat");
+        assert_eq!(file_stat.change_count, 1);
+        assert_eq!(file_stat.session_ids.len(), 1);
+    }
+
+    #[test]
+    fn extract_file_paths_for_repo_supports_relative_and_patch_paths() {
+        let dir = tempdir().expect("tempdir");
+        let repo_root = dir.path();
+        let tool_input = json!({
+            "path": "src/app/workspace/[workspaceId]/feature-explorer/page.tsx",
+            "command": "*** Update File: src/app/workspace/[workspaceId]/sessions/page.tsx\n*** End Patch\n"
+        });
+
+        let paths = extract_file_paths_for_repo(&tool_input, repo_root);
+
+        assert!(paths
+            .contains(&"src/app/workspace/[workspaceId]/feature-explorer/page.tsx".to_string()));
+        assert!(paths.contains(&"src/app/workspace/[workspaceId]/sessions/page.tsx".to_string()));
+    }
 }

@@ -39,7 +39,7 @@ struct TranscriptTurnBackfill {
     prompt: Option<String>,
     completed: bool,
     started_at_ms: i64,
-    events: Vec<TranscriptRecoveredEvent>,
+    _events: Vec<TranscriptRecoveredEvent>,
 }
 
 #[derive(Clone, Debug)]
@@ -459,6 +459,8 @@ fn parse_codex_jsonl_backfill(
     let mut last_seen_at_ms = modified_ms;
     let mut current_turn = TranscriptTurnBackfill::default();
     let mut latest_turn = TranscriptTurnBackfill::default();
+    // Accumulate ALL tool events across all turns for feature matching
+    let mut all_events: Vec<TranscriptRecoveredEvent> = Vec::new();
 
     for line in reader.lines() {
         let line = line.ok()?;
@@ -548,7 +550,7 @@ fn parse_codex_jsonl_backfill(
                     .unwrap_or_else(|| {
                         json!({ "command": entry.pointer("/payload/arguments").and_then(Value::as_str).unwrap_or_default() })
                     });
-                current_turn.events.push(TranscriptRecoveredEvent::ToolUse {
+                all_events.push(TranscriptRecoveredEvent::ToolUse {
                     turn_id: current_turn.turn_id.clone(),
                     observed_at_ms,
                     tool_name: tool_name.to_string(),
@@ -586,7 +588,7 @@ fn parse_codex_jsonl_backfill(
         turn_id: selected_turn.turn_id,
         prompt: selected_turn.prompt,
         turn_started_at_ms,
-        recovered_events: selected_turn.events,
+        recovered_events: all_events,
     })
 }
 
@@ -604,6 +606,8 @@ fn parse_chat_jsonl_backfill(
     let mut last_seen_at_ms = modified_ms;
     let mut current_turn = TranscriptTurnBackfill::default();
     let mut latest_turn = TranscriptTurnBackfill::default();
+    // Accumulate ALL tool events across all turns for feature matching
+    let mut all_events: Vec<TranscriptRecoveredEvent> = Vec::new();
 
     for line in reader.lines() {
         let line = line.ok()?;
@@ -669,12 +673,13 @@ fn parse_chat_jsonl_backfill(
                     }
                 }
                 for tool_use in extract_chat_tool_uses(&entry) {
-                    current_turn.events.push(TranscriptRecoveredEvent::ToolUse {
+                    let event = TranscriptRecoveredEvent::ToolUse {
                         turn_id: current_turn.turn_id.clone(),
                         observed_at_ms,
                         tool_name: tool_use.0,
                         tool_input: tool_use.1,
-                    });
+                    };
+                    all_events.push(event);
                 }
             }
             _ => {}
@@ -733,7 +738,7 @@ fn parse_chat_jsonl_backfill(
         turn_id: selected_turn.turn_id,
         prompt: selected_turn.prompt,
         turn_started_at_ms,
-        recovered_events: selected_turn.events,
+        recovered_events: all_events,
     })
 }
 
