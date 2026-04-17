@@ -6,6 +6,15 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CANVAS_SDK_MANIFEST_RESOURCE_URI } from "@/core/canvas/sdk-resource-contract";
 import { registerCanvasSdkResources } from "../canvas-sdk-resources";
 
+function getTextContent(
+  content:
+    | { uri: string; text: string; mimeType?: string; _meta?: Record<string, unknown> }
+    | { uri: string; blob: string; mimeType?: string; _meta?: Record<string, unknown> }
+    | undefined,
+): string {
+  return content && "text" in content ? content.text : "";
+}
+
 describe("canvas sdk mcp resources", () => {
   const cleanup: Array<() => Promise<void>> = [];
 
@@ -42,12 +51,12 @@ describe("canvas sdk mcp resources", () => {
     );
 
     const manifest = await client.readResource({ uri: CANVAS_SDK_MANIFEST_RESOURCE_URI });
-    const manifestText = manifest.contents[0]?.text ?? "";
+    const manifestText = getTextContent(manifest.contents[0]);
     expect(manifestText).toContain('"moduleSpecifier": "@canvas-sdk"');
     expect(manifestText).toContain('"resource://routa/canvas-sdk/defs/primitives"');
 
     const primitives = await client.readResource({ uri: "resource://routa/canvas-sdk/defs/primitives" });
-    const primitivesText = primitives.contents[0]?.text ?? "";
+    const primitivesText = getTextContent(primitives.contents[0]);
     expect(primitivesText).toContain("export type StackProps");
     expect(primitivesText).toContain("export declare function Stack");
   });
