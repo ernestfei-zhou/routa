@@ -5,6 +5,7 @@ import {
   parseContext,
   parseFeatureTree,
   resolveRepoRoot,
+  tryProxyToRustBackend,
 } from "../shared";
 
 export const runtime = "nodejs";
@@ -26,8 +27,14 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ featureId: string }> },
 ) {
+  const { featureId } = await params;
+
+  // Try proxying to routa-server first
+  const qs = request.nextUrl.searchParams.toString();
+  const proxied = await tryProxyToRustBackend(`/${encodeURIComponent(featureId)}`, qs);
+  if (proxied) return proxied;
+
   try {
-    const { featureId } = await params;
     const context = parseContext(request.nextUrl.searchParams);
     const repoRoot = await resolveRepoRoot(context);
     const { features, frontendPages, apiEndpoints } = parseFeatureTree(repoRoot);

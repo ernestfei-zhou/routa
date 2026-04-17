@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isContextError, parseContext, parseFeatureTree, resolveRepoRoot } from "./shared";
+import { isContextError, parseContext, parseFeatureTree, resolveRepoRoot, tryProxyToRustBackend } from "./shared";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,6 +9,11 @@ function toMessage(error: unknown): string {
 }
 
 export async function GET(request: NextRequest) {
+  // Try proxying to routa-server first
+  const qs = request.nextUrl.searchParams.toString();
+  const proxied = await tryProxyToRustBackend("", qs);
+  if (proxied) return proxied;
+
   try {
     const context = parseContext(request.nextUrl.searchParams);
     const repoRoot = await resolveRepoRoot(context);

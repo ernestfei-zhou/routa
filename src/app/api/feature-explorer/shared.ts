@@ -5,6 +5,40 @@ import * as yaml from "js-yaml";
 export { parseContext, resolveRepoRoot, isContextError } from "../harness/hooks/shared";
 export type { HarnessContext as FeatureExplorerContext } from "../harness/hooks/shared";
 
+/**
+ * Try to proxy a feature-explorer request to the Rust backend (routa-server).
+ * Returns the Response if the backend is available, or null to fall back to the TS implementation.
+ */
+export async function tryProxyToRustBackend(
+  requestPath: string,
+  queryString: string,
+): Promise<Response | null> {
+  const backendUrl = process.env.ROUTA_SERVER_URL?.trim();
+  if (!backendUrl) return null;
+
+  const base = backendUrl.replace(/\/+$/, "");
+  const url = `${base}/api/feature-explorer${requestPath}${queryString ? `?${queryString}` : ""}`;
+
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(3000),
+    });
+    if (response.ok) {
+      const body = await response.json();
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    // Non-OK → fall through to TS implementation
+    return null;
+  } catch {
+    // Backend unreachable → fall through to TS implementation
+    return null;
+  }
+}
+
 export interface CapabilityGroup {
   id: string;
   name: string;
