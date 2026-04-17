@@ -5,6 +5,7 @@ pub mod error;
 pub mod model;
 pub mod provider;
 pub mod transcript_discovery;
+pub mod transcript_parser;
 
 pub use analyzer::{SessionAnalysis, SessionAnalyzer};
 pub use catalog::{
@@ -21,4 +22,12 @@ pub use provider::{AdapterRegistry, SessionAdapter};
 pub use transcript_discovery::{
     discover_transcript_session_roots, discover_transcript_session_roots_with_overrides,
     TranscriptSessionRoot, TranscriptSessionSource,
+};
+pub use transcript_parser::{
+    collect_active_transcript_summaries, collect_recent_claude_project_transcripts,
+    collect_recent_codex_transcripts, collect_recent_transcript_summaries,
+    collect_recent_transcripts, collect_recent_transcripts_from_dirs,
+    parse_matching_transcript_summaries, parse_transcript_backfill,
+    recent_prompt_previews_from_transcript, recover_prompt_from_transcript,
+    TranscriptRecoveredEvent, TranscriptSessionBackfill,
 };
