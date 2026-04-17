@@ -433,7 +433,7 @@ export const zhExtended: ExtendedTranslationDictionarySections = {
     fitnessScoreBlocked: "分数未达标",
     fitnessSkipped: "已跳过",
     fitnessLast: "上次结果",
-    fitnessOpenDetails: "打开 Fluency 详情",
+    fitnessOpenDetails: "打开实时 Fitness 画布",
     missing: "缺失",
     sessionMismatch: "会话不匹配",
     backendAgents: "后端代理",

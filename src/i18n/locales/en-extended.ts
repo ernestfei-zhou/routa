@@ -433,7 +433,7 @@ export const enExtended: ExtendedTranslationDictionarySections = {
     fitnessScoreBlocked: "Score blocked",
     fitnessSkipped: "Skipped",
     fitnessLast: "Last",
-    fitnessOpenDetails: "Open Fluency details",
+    fitnessOpenDetails: "Open live Fitness canvas",
     missing: "missing",
     sessionMismatch: "session mismatch",
     backendAgents: "Backend Agents",

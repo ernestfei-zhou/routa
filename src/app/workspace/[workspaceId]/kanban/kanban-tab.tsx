@@ -1999,11 +1999,14 @@ export function KanbanTab({
       // Could open provider settings or do nothing
     },
     onFitnessClick: () => {
-      const query = new URLSearchParams({ workspaceId });
+      const query = new URLSearchParams();
       if (defaultCodebase?.id) {
         query.set("codebaseId", defaultCodebase.id);
+      } else if (defaultCodebase?.repoPath) {
+        query.set("repoPath", defaultCodebase.repoPath);
       }
-      window.location.assign(`/settings/fluency?${query.toString()}`);
+      const target = `/workspace/${encodeURIComponent(workspaceId)}/kanban/fitness${query.size > 0 ? `?${query.toString()}` : ""}`;
+      window.location.assign(target);
     },
     fileChangesOpen,
     gitLogOpen,
