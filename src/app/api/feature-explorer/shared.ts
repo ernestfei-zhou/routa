@@ -172,6 +172,7 @@ export interface FileSessionSignal {
   sessionId: string;
   updatedAt: string;
   promptSnippet: string;
+  promptHistory: string[];
   toolNames: string[];
   resumeCommand?: string;
 }
@@ -1769,6 +1770,7 @@ export function collectFeatureSessionStats(repoRoot: string, featureTree: Featur
           sessionId: transcript.sessionId,
           updatedAt: transcript.updatedAt,
           promptSnippet: transcript.promptHistory[0] ?? "",
+          promptHistory: transcript.promptHistory.slice(0, MAX_FILE_SIGNAL_PROMPTS),
           toolNames: transcript.toolHistory.slice(0, MAX_FILE_SIGNAL_TOOLS),
           ...(transcript.resumeCommand ? { resumeCommand: transcript.resumeCommand } : {}),
         });

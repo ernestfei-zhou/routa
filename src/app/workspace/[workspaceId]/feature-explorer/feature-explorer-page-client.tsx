@@ -124,6 +124,45 @@ function formatShortDate(iso: string): string {
   return `${mm}-${dd}`;
 }
 
+type FeatureExplorerUrlState = {
+  featureId: string;
+  filePath: string;
+};
+
+function readFeatureExplorerUrlState(): FeatureExplorerUrlState {
+  if (typeof window === "undefined") {
+    return { featureId: "", filePath: "" };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  return {
+    featureId: params.get("feature") ?? "",
+    filePath: params.get("file") ?? "",
+  };
+}
+
+function replaceFeatureExplorerUrlState(nextState: FeatureExplorerUrlState): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  if (nextState.featureId) {
+    params.set("feature", nextState.featureId);
+  } else {
+    params.delete("feature");
+  }
+  if (nextState.filePath) {
+    params.set("file", nextState.filePath);
+  } else {
+    params.delete("file");
+  }
+
+  const query = params.toString();
+  const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+  window.history.replaceState(window.history.state, "", nextUrl);
+}
+
 function formatSignalProvider(provider: string): string {
   switch (provider) {
     case "codex":
@@ -209,7 +248,8 @@ export function FeatureExplorerPageClient({
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("context");
   const [middleView, setMiddleView] = useState<"list" | "tree">("tree");
   const [surfaceNavigationView, setSurfaceNavigationView] = useState<SurfaceNavigationView>("sections");
-  const [featureId, setFeatureId] = useState<string>("");
+  const [initialUrlState] = useState<FeatureExplorerUrlState>(() => readFeatureExplorerUrlState());
+  const [featureId, setFeatureId] = useState<string>(initialUrlState.featureId);
   const [selectedSurfaceKey, setSelectedSurfaceKey] = useState<string>("");
   const [query, setQuery] = useState("");
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
@@ -217,6 +257,10 @@ export function FeatureExplorerPageClient({
   const [surfaceTreeExpandedIds, setSurfaceTreeExpandedIds] = useState<Record<string, boolean>>({});
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [activeFileId, setActiveFileId] = useState<string>("");
+  const [desiredFilePath, setDesiredFilePath] = useState<string>(initialUrlState.filePath);
+  const [hasResolvedInitialUrlSelection, setHasResolvedInitialUrlSelection] = useState(
+    initialUrlState.featureId === "",
+  );
 
   // Derive effective feature ID: user-selected or auto-initialized from hook
   const effectiveFeatureId = featureId || initialFeatureId;
@@ -560,11 +604,17 @@ export function FeatureExplorerPageClient({
   const surfaceOnlySelection = Boolean(
     selectedSurface && selectedSurface.kind !== "feature" && selectedSurface.featureIds.length === 0,
   );
-
-  const fileTree = useMemo(() => (surfaceOnlySelection ? [] : featureDetail?.fileTree ?? []), [featureDetail, surfaceOnlySelection]);
+  const resolvedFeatureDetail = useMemo(
+    () => (featureDetail?.id === effectiveFeatureId ? featureDetail : null),
+    [effectiveFeatureId, featureDetail],
+  );
+  const fileTree = useMemo(
+    () => (surfaceOnlySelection ? [] : resolvedFeatureDetail?.fileTree ?? []),
+    [resolvedFeatureDetail, surfaceOnlySelection],
+  );
   const fileStats = useMemo(
-    () => (surfaceOnlySelection ? {} : featureDetail?.fileStats ?? {}),
-    [featureDetail, surfaceOnlySelection],
+    () => (surfaceOnlySelection ? {} : resolvedFeatureDetail?.fileStats ?? {}),
+    [resolvedFeatureDetail, surfaceOnlySelection],
   );
   const flatMap = useMemo(() => flattenFiles(fileTree), [fileTree]);
   const treeNodeStats = useMemo(() => buildTreeNodeStats(fileTree, fileStats), [fileTree, fileStats]);
@@ -586,7 +636,7 @@ export function FeatureExplorerPageClient({
 
   const activeFile = flatMap[activeFileId] ?? null;
   const activeFileSignal = activeFile
-    ? (featureDetail?.fileSignals?.[activeFile.path] ?? null)
+    ? (resolvedFeatureDetail?.fileSignals?.[activeFile.path] ?? null)
     : null;
   const activeFeature = features.find((f) => f.id === effectiveFeatureId);
   const activeGroup = activeFeature
@@ -620,12 +670,17 @@ export function FeatureExplorerPageClient({
     setRepoSelectionOverrides((prev) => ({ ...prev, [workspaceId]: selection }));
   };
 
-  const applyFileAutoSelect = (detail: FeatureDetail) => {
+  const applyFileAutoSelect = (detail: FeatureDetail, preferredFilePath = "") => {
     const flat = flattenFiles(detail.fileTree);
-    const firstFile = Object.values(flat).find((n) => n.kind === "file");
-    if (firstFile) {
-      setActiveFileId(firstFile.id);
-      setSelectedFileIds([firstFile.id]);
+    const leafFiles = Object.values(flat).filter((node) => node.kind === "file");
+    const nextFile = (preferredFilePath
+      ? leafFiles.find((node) => node.path === preferredFilePath)
+      : null) ?? leafFiles[0];
+
+    if (nextFile) {
+      setActiveFileId(nextFile.id);
+      setSelectedFileIds([nextFile.id]);
+      setDesiredFilePath(nextFile.path);
       const expanded: Record<string, boolean> = {};
       for (const node of Object.values(flat)) {
         if (node.kind === "folder") {
@@ -633,24 +688,70 @@ export function FeatureExplorerPageClient({
         }
       }
       setExpandedIds(expanded);
+      return;
     }
+
+    setActiveFileId("");
+    setSelectedFileIds([]);
+    setDesiredFilePath("");
   };
 
   // Auto-select first file when initial detail loads from hook
   const [prevDetailId, setPrevDetailId] = useState<string>("");
   useEffect(() => {
-    if (featureDetail && featureDetail.id !== prevDetailId) {
+    if (resolvedFeatureDetail && resolvedFeatureDetail.id !== prevDetailId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate initialization of derived selection state
-      setPrevDetailId(featureDetail.id);
-      applyFileAutoSelect(featureDetail);
+      setPrevDetailId(resolvedFeatureDetail.id);
+      applyFileAutoSelect(
+        resolvedFeatureDetail,
+        resolvedFeatureDetail.id === effectiveFeatureId ? desiredFilePath : "",
+      );
     }
-  }, [featureDetail, prevDetailId]);
+  }, [desiredFilePath, effectiveFeatureId, prevDetailId, resolvedFeatureDetail]);
+
+  useEffect(() => {
+    if (hasResolvedInitialUrlSelection || !initialUrlState.featureId || loading || featureDetailLoading) {
+      return;
+    }
+
+    if (resolvedFeatureDetail?.id === initialUrlState.featureId) {
+      setHasResolvedInitialUrlSelection(true);
+      return;
+    }
+
+    fetchFeatureDetail(initialUrlState.featureId).then((detail) => {
+      if (detail) {
+        applyFileAutoSelect(detail, initialUrlState.filePath);
+      }
+      setHasResolvedInitialUrlSelection(true);
+    });
+  }, [
+    featureDetailLoading,
+    fetchFeatureDetail,
+    hasResolvedInitialUrlSelection,
+    initialUrlState.featureId,
+    initialUrlState.filePath,
+    loading,
+    resolvedFeatureDetail,
+  ]);
+
+  useEffect(() => {
+    if (!hasResolvedInitialUrlSelection) {
+      return;
+    }
+
+    replaceFeatureExplorerUrlState({
+      featureId: effectiveFeatureId,
+      filePath: activeFile?.path ?? "",
+    });
+  }, [activeFile?.path, effectiveFeatureId, hasResolvedInitialUrlSelection]);
 
   const handleSelectFeature = (nextFeatureId: string) => {
     setFeatureId(nextFeatureId);
     setInspectorTab("context");
     setSelectedFileIds([]);
     setActiveFileId("");
+    setDesiredFilePath("");
     setExpandedIds({});
     fetchFeatureDetail(nextFeatureId).then((detail) => {
       if (detail) applyFileAutoSelect(detail);
@@ -687,11 +788,16 @@ export function FeatureExplorerPageClient({
     setSurfaceTreeExpandedIds((prev) => ({ ...prev, [nodeId]: !(prev[nodeId] ?? true) }));
   };
 
+  const handleSetActiveFile = (fileId: string) => {
+    setActiveFileId(fileId);
+    setDesiredFilePath(flatMap[fileId]?.path ?? "");
+  };
+
   const handleToggleFileSelection = (fileId: string) => {
     setSelectedFileIds((prev) =>
       prev.includes(fileId) ? prev.filter((item) => item !== fileId) : [...prev, fileId],
     );
-    setActiveFileId(fileId);
+    handleSetActiveFile(fileId);
   };
 
   const handleClearSelection = () => {
@@ -962,7 +1068,7 @@ export function FeatureExplorerPageClient({
                               onChange={() => handleToggleFileSelection(node.id)}
                               className="h-3.5 w-3.5 rounded border-black/15 bg-transparent dark:border-white/20"
                             />
-                            <button onClick={() => setActiveFileId(node.id)} className="flex min-w-0 items-center gap-1.5 text-left">
+                            <button onClick={() => handleSetActiveFile(node.id)} className="flex min-w-0 items-center gap-1.5 text-left">
                               <FileIcon path={node.path} />
                               <span className="break-all text-[12px] text-desktop-text-primary" title={node.path}>{node.path}</span>
                             </button>
@@ -987,7 +1093,7 @@ export function FeatureExplorerPageClient({
                         treeNodeStats={treeNodeStats}
                         onToggleNode={handleToggleNode}
                         onToggleFileSelection={handleToggleFileSelection}
-                        onSetActiveFile={setActiveFileId}
+                        onSetActiveFile={handleSetActiveFile}
                       />
                     ))}
                   </div>
@@ -1055,7 +1161,7 @@ export function FeatureExplorerPageClient({
                     activeFile={activeFile}
                     activeFileSignal={activeFileSignal}
                     activeGroup={activeGroup}
-                    featureDetail={surfaceOnlySelection ? null : featureDetail}
+                    featureDetail={surfaceOnlySelection ? null : resolvedFeatureDetail}
                     selectedSurface={selectedSurface}
                     selectedSurfaceFeatureNames={selectedSurfaceFeatureNames}
                     t={t}
@@ -1063,12 +1169,12 @@ export function FeatureExplorerPageClient({
                 )}
 
                 {inspectorTab === "screenshot" && (
-                  <ScreenshotPanel featureDetail={surfaceOnlySelection ? null : featureDetail} t={t} />
+                  <ScreenshotPanel featureDetail={surfaceOnlySelection ? null : resolvedFeatureDetail} t={t} />
                 )}
 
                 {inspectorTab === "api" && (
                   <ApiPanel
-                    featureDetail={surfaceOnlySelection ? null : featureDetail}
+                    featureDetail={surfaceOnlySelection ? null : resolvedFeatureDetail}
                     t={t}
                     onRequest={handleApiRequest}
                   />
@@ -1130,7 +1236,7 @@ function ContextPanel({
     <div className="space-y-2">
       {selectedSurface && !isFeatureSurface ? (
         <ContextSection title={t.featureExplorer.selectedSurface}>
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div>
               <div className="text-[13px] font-semibold text-desktop-text-primary">{selectedSurface.label}</div>
               {selectedSurface.badges?.length ? (
@@ -1147,18 +1253,27 @@ function ContextPanel({
               ) : null}
             </div>
 
-            <div className="grid gap-px overflow-hidden rounded-sm border border-desktop-border bg-desktop-border sm:grid-cols-2">
-              <MetricCell label={t.featureExplorer.surfaceTypeLabel} value={selectedSurfaceKindLabel} />
-              <MetricCell
+            <div className="flex flex-wrap gap-1.5">
+              <InlineMetricPill label={t.featureExplorer.surfaceTypeLabel} value={selectedSurfaceKindLabel} />
+              <InlineMetricPill
                 label={t.featureExplorer.linkedFeatures}
                 value={selectedSurfaceFeatureNames.length > 0 ? String(selectedSurfaceFeatureNames.length) : t.featureExplorer.unmappedLabel}
               />
             </div>
 
             {selectedSurfaceFeatureNames.length > 0 ? (
-              <div className="rounded-sm border border-desktop-border bg-desktop-bg-secondary px-2.5 py-2 text-[11px] leading-5 text-desktop-text-secondary">
-                <span className="font-medium text-desktop-text-primary">{t.featureExplorer.linkedFeatures}: </span>
-                {selectedSurfaceFeatureNames.join(", ")}
+              <div className="space-y-1">
+                <div className="text-[10px] font-medium text-desktop-text-secondary">{t.featureExplorer.linkedFeatures}</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedSurfaceFeatureNames.map((featureName) => (
+                    <span
+                      key={featureName}
+                      className="rounded-sm border border-desktop-border bg-desktop-bg-secondary px-2 py-1 text-[11px] text-desktop-text-secondary"
+                    >
+                      {featureName}
+                    </span>
+                  ))}
+                </div>
               </div>
             ) : null}
 
@@ -1170,28 +1285,37 @@ function ContextPanel({
       ) : null}
 
       {featureDetail ? (
-        <ContextSection title={t.featureExplorer.featureSummary}>
-          <div className="space-y-3">
+        <section className="rounded-sm border border-desktop-border bg-desktop-bg-primary p-2.5">
+          <div className="space-y-2">
             <div>
-              <div className="text-[13px] font-semibold text-desktop-text-primary">{featureDetail.name}</div>
-              <div className="mt-1 text-[11px] leading-5 text-desktop-text-secondary">{featureDetail.summary}</div>
+              <div className="text-[14px] font-semibold text-desktop-text-primary">{featureDetail.name}</div>
+              {featureDetail.summary ? (
+                <div className="mt-1 text-[11px] leading-5 text-desktop-text-secondary">{featureDetail.summary}</div>
+              ) : null}
             </div>
-
-            <div className="grid gap-px overflow-hidden rounded-sm border border-desktop-border bg-desktop-border sm:grid-cols-2">
-              <MetricCell label={t.featureExplorer.capabilityGroup} value={activeGroup?.name ?? featureDetail.group} />
-              <MetricCell label={t.featureExplorer.statusLabel} value={featureDetail.status} />
-              <MetricCell label={t.featureExplorer.sourceFilesLabel} value={String(featureDetail.sourceFiles.length)} />
-              <MetricCell label={t.featureExplorer.sessionsLabel} value={String(featureDetail.sessionCount)} />
+            <div className="flex flex-wrap gap-1.5">
+              <InlineMetricPill label={t.featureExplorer.capabilityGroup} value={activeGroup?.name ?? featureDetail.group} />
+              <InlineMetricPill label={t.featureExplorer.statusLabel} value={featureDetail.status} />
+              <InlineMetricPill label={t.featureExplorer.sourceFilesLabel} value={String(featureDetail.sourceFiles.length)} />
+              <InlineMetricPill label={t.featureExplorer.sessionsLabel} value={String(featureDetail.sessionCount)} />
             </div>
-
-            {activeGroup?.description ? (
-              <div className="rounded-sm border border-desktop-border bg-desktop-bg-secondary px-2.5 py-2 text-[11px] leading-5 text-desktop-text-secondary">
-                <span className="font-medium text-desktop-text-primary">{t.featureExplorer.groupDescription}: </span>
-                {activeGroup.description}
+            {featureDetail.relatedFeatures.length > 0 ? (
+              <div className="space-y-1">
+                <div className="text-[10px] font-medium text-desktop-text-secondary">{t.featureExplorer.relatedFeaturesLabel}</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {featureDetail.relatedFeatures.map((relId) => (
+                    <span
+                      key={relId}
+                      className="rounded-sm border border-desktop-border bg-desktop-bg-secondary px-2 py-1 text-[11px] text-desktop-text-secondary"
+                    >
+                      {relId}
+                    </span>
+                  ))}
+                </div>
               </div>
             ) : null}
           </div>
-        </ContextSection>
+        </section>
       ) : null}
 
       {activeFile && (
@@ -1208,94 +1332,54 @@ function ContextPanel({
 
       <ContextSection title={t.featureExplorer.selectedFileSignals}>
         {activeFile ? (
-          <div className="space-y-2">
-            <div>
-              <div className="text-[10px] font-medium text-desktop-text-secondary">{t.featureExplorer.sessionEvidence}</div>
-              {activeFileSignal?.sessions.length ? (
-                <div className="mt-1 space-y-1.5">
-                  {activeFileSignal.sessions.map((session) => (
-                    <div
-                      key={`${session.provider}:${session.sessionId}`}
-                      className="rounded-sm border border-desktop-border bg-desktop-bg-secondary px-2.5 py-2"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className={`rounded-sm border px-1.5 py-0.5 text-[10px] font-semibold ${getSignalProviderBadgeClass(session.provider)}`}>
-                              {formatSignalProvider(session.provider)}
-                            </span>
-                            <code className="break-all text-[10px] text-desktop-text-primary">{session.sessionId}</code>
-                          </div>
-                          {session.resumeCommand ? (
-                            <div className="mt-1 break-all text-[10px] text-desktop-text-secondary">
-                              <span className="font-medium text-desktop-text-primary">{t.featureExplorer.resumeCommandLabel}: </span>
-                              <code>{session.resumeCommand}</code>
-                            </div>
-                          ) : null}
-                        </div>
-                        <span className="shrink-0 text-[10px] text-desktop-text-secondary">
-                          {formatShortDate(session.updatedAt)}
+          activeFileSignal?.sessions.length ? (
+            <div className="space-y-1.5">
+              {activeFileSignal.sessions.map((session) => (
+                <div
+                  key={`${session.provider}:${session.sessionId}`}
+                  className="rounded-sm border border-desktop-border bg-desktop-bg-secondary px-2.5 py-2"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className={`rounded-sm border px-1.5 py-0.5 text-[10px] font-semibold ${getSignalProviderBadgeClass(session.provider)}`}>
+                          {formatSignalProvider(session.provider)}
                         </span>
+                        <code className="break-all text-[10px] text-desktop-text-primary">{session.sessionId}</code>
                       </div>
-                      {session.promptSnippet ? (
-                        <div className="mt-1 text-[11px] leading-5 text-desktop-text-secondary">
-                          {session.promptSnippet}
-                        </div>
-                      ) : null}
-                      {session.toolNames.length > 0 ? (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {session.toolNames.map((toolName) => (
-                            <span
-                              key={`${session.sessionId}:${toolName}`}
-                              className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5 text-[10px] text-desktop-text-secondary"
-                            >
-                              {toolName}
-                            </span>
-                          ))}
+                      {session.resumeCommand ? (
+                        <div className="mt-1 break-all text-[10px] text-desktop-text-secondary">
+                          <span className="font-medium text-desktop-text-primary">{t.featureExplorer.resumeCommandLabel}: </span>
+                          <code>{session.resumeCommand}</code>
                         </div>
                       ) : null}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <SignalEmptyState message={t.featureExplorer.noSessionEvidence} />
-              )}
-            </div>
-            <div>
-              <div className="text-[10px] font-medium text-desktop-text-secondary">{t.featureExplorer.toolHistory}</div>
-              {activeFileSignal?.toolHistory.length ? (
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {activeFileSignal.toolHistory.map((toolName) => (
-                    <span
-                      key={toolName}
-                      className="rounded-sm border border-desktop-border bg-desktop-bg-secondary px-1.5 py-0.5 text-[10px] text-desktop-text-secondary"
-                    >
-                      {toolName}
+                    <span className="shrink-0 text-[10px] text-desktop-text-secondary">
+                      {formatShortDate(session.updatedAt)}
                     </span>
-                  ))}
-                </div>
-              ) : (
-                <SignalEmptyState message={t.featureExplorer.noToolHistory} />
-              )}
-            </div>
-            <div>
-              <div className="text-[10px] font-medium text-desktop-text-secondary">{t.featureExplorer.promptHistory}</div>
-              {activeFileSignal?.promptHistory.length ? (
-                <div className="mt-1 space-y-1">
-                  {activeFileSignal.promptHistory.map((prompt, index) => (
-                    <div
-                      key={`${index}-${prompt}`}
-                      className="rounded-sm border border-desktop-border bg-desktop-bg-secondary px-2 py-1.5 text-[11px] leading-5 text-desktop-text-secondary"
-                    >
-                      {prompt}
+                  </div>
+                  {(session.promptHistory?.length ?? 0) > 0 ? (
+                    <div className="mt-1.5 space-y-1">
+                      {session.promptHistory?.map((prompt, index) => (
+                        <div
+                          key={`${session.sessionId}:prompt:${index}`}
+                          className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-2 py-1 text-[10px] leading-4 text-desktop-text-secondary"
+                        >
+                          {prompt}
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : session.promptSnippet ? (
+                    <div className="mt-1.5 rounded-sm border border-desktop-border bg-desktop-bg-primary px-2 py-1 text-[10px] leading-4 text-desktop-text-secondary">
+                      {session.promptSnippet}
+                    </div>
+                  ) : null}
                 </div>
-              ) : (
-                <SignalEmptyState message={t.featureExplorer.noPromptHistory} />
-              )}
+              ))}
             </div>
-          </div>
+          ) : (
+            <SignalEmptyState message={t.featureExplorer.noSessionEvidence} />
+          )
         ) : (
           <div className="rounded-sm border border-desktop-border bg-desktop-bg-secondary px-2 py-1.5 text-[11px] text-desktop-text-secondary">
             {t.featureExplorer.noFilesSelected}
@@ -1309,20 +1393,11 @@ function ContextPanel({
         </ContextSection>
       ) : null}
 
-      {featureDetail && featureDetail.relatedFeatures.length > 0 && (
+      {featureDetail && (featureDetail.relatedFiles?.length ?? 0) > 0 ? (
         <ContextSection title={t.featureExplorer.relatedFiles}>
-          <div className="space-y-1">
-            {featureDetail.relatedFeatures.map((relId) => (
-              <div
-                key={relId}
-                className="rounded-sm border border-desktop-border bg-desktop-bg-secondary px-2 py-1.5 text-[11px] text-desktop-text-secondary"
-              >
-                {relId}
-              </div>
-            ))}
-          </div>
+          <CompactFileList files={featureDetail.relatedFiles ?? []} />
         </ContextSection>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -1331,6 +1406,15 @@ function SignalEmptyState({ message }: { message: string }) {
   return (
     <div className="mt-1 rounded-sm border border-desktop-border bg-desktop-bg-secondary px-2 py-1.5 text-[11px] text-desktop-text-secondary">
       {message}
+    </div>
+  );
+}
+
+function InlineMetricPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="inline-flex items-center gap-1 rounded-sm border border-desktop-border bg-desktop-bg-secondary px-2 py-1 text-[10px] text-desktop-text-secondary">
+      <span className="font-medium text-desktop-text-primary">{value}</span>
+      <span>{label}</span>
     </div>
   );
 }
@@ -1628,23 +1712,12 @@ function describeSurfaceKind(
 /* ── Shared components ── */
 function ContextSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-sm border border-desktop-border bg-desktop-bg-primary p-3">
-      <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-desktop-text-secondary">
+    <section className="rounded-sm border border-desktop-border bg-desktop-bg-primary p-2.5">
+      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-desktop-text-secondary">
         {title}
       </div>
       {children}
     </section>
-  );
-}
-
-function MetricCell({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-desktop-bg-primary px-2.5 py-2">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary">
-        {label}
-      </div>
-      <div className="mt-1 break-words text-[12px] font-medium text-desktop-text-primary">{value}</div>
-    </div>
   );
 }
 

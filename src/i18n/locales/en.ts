@@ -216,6 +216,7 @@ const en: TranslationDictionary = {
     whyThisFile: "Why this file",
     recentChanges: "Recent semantic changes",
     relatedFiles: "Related files",
+    relatedFeaturesLabel: "Related features",
     openGaps: "Open gaps / TODO",
     visualTesting: "Visual testing",
     apiPanel: "API / Postman-style panel",

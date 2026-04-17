@@ -31,6 +31,7 @@ interface FeatureDetailResponse {
   pages: string[];
   apis: string[];
   sourceFiles: string[];
+  relatedFiles: string[];
   relatedFeatures: string[];
   domainObjects: string[];
   sessionCount: number;
@@ -47,6 +48,7 @@ interface FeatureDetailResponse {
       sessionId: string;
       updatedAt: string;
       promptSnippet: string;
+      promptHistory: string[];
       toolNames: string[];
       resumeCommand?: string;
     }>;
@@ -59,13 +61,15 @@ function toMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function collectRelatedFiles(
+function collectFeatureFileScope(
   feature: FeatureTree["features"][number],
   repoRoot: string,
   observedFiles: string[],
-): string[] {
+): { allFiles: string[]; relatedFiles: string[] } {
   const catalog = parseFeatureSurfaceCatalog(repoRoot);
-  const files = new Set<string>([...feature.sourceFiles, ...observedFiles]);
+  const declaredSourceFiles = [...new Set(feature.sourceFiles)].sort();
+  const declaredSourceFileSet = new Set(declaredSourceFiles);
+  const files = new Set<string>([...declaredSourceFiles, ...observedFiles]);
 
   for (const sourceFile of files) {
     const links = parseFeatureSurfaceLinks(catalog, sourceFile);
@@ -74,7 +78,13 @@ function collectRelatedFiles(
     }
   }
 
-  return [...files].sort();
+  const allFiles = [...files].sort();
+  const relatedFiles = allFiles.filter((filePath) => !declaredSourceFileSet.has(filePath));
+
+  return {
+    allFiles,
+    relatedFiles,
+  };
 }
 
 function collectSurfaceLinks(
@@ -172,7 +182,7 @@ export async function GET(
       updatedAt: "",
       matchedFiles: [],
     };
-    const allFiles = collectRelatedFiles(feature, repoRoot, featureStat.matchedFiles);
+    const { allFiles, relatedFiles } = collectFeatureFileScope(feature, repoRoot, featureStat.matchedFiles);
 
     const response: FeatureDetailResponse = {
       id: feature.id,
@@ -182,7 +192,8 @@ export async function GET(
       status: feature.status,
       pages: feature.pages,
       apis: feature.apis,
-      sourceFiles: allFiles,
+      sourceFiles: [...new Set(feature.sourceFiles)].sort(),
+      relatedFiles,
       relatedFeatures: feature.relatedFeatures,
       domainObjects: feature.domainObjects,
       sessionCount: featureStat.sessionCount,

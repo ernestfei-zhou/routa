@@ -27,6 +27,7 @@ export interface FeatureDetail {
   pages: string[];
   apis: string[];
   sourceFiles: string[];
+  relatedFiles?: string[];
   relatedFeatures: string[];
   domainObjects: string[];
   sessionCount: number;
@@ -51,6 +52,7 @@ export interface FileSessionSignal {
   sessionId: string;
   updatedAt: string;
   promptSnippet: string;
+  promptHistory?: string[];
   toolNames: string[];
   resumeCommand?: string;
 }

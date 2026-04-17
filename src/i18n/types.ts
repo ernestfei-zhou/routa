@@ -222,6 +222,7 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     whyThisFile: string;
     recentChanges: string;
     relatedFiles: string;
+    relatedFeaturesLabel: string;
     openGaps: string;
     visualTesting: string;
     apiPanel: string;

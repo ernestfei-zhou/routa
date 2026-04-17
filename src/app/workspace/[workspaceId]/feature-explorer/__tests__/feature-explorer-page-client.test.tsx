@@ -85,6 +85,7 @@ import { FeatureExplorerPageClient } from "../feature-explorer-page-client";
 
 describe("FeatureExplorerPageClient", () => {
   beforeEach(() => {
+    window.history.replaceState({}, "", "/workspace/default/feature-explorer");
     window.localStorage.clear();
     navState.push.mockReset();
     useWorkspaces.mockReturnValue({
@@ -465,7 +466,6 @@ describe("FeatureExplorerPageClient", () => {
     render(<FeatureExplorerPageClient workspaceId="default" />);
 
     expect(screen.queryByText("Selected surface")).toBeNull();
-    expect(screen.getByText("Feature summary")).toBeTruthy();
     expect(screen.getAllByText("Kanban Workflow").length).toBeGreaterThan(0);
   });
 
@@ -606,6 +606,7 @@ describe("FeatureExplorerPageClient", () => {
         pages: [],
         apis: [],
         sourceFiles: ["src/app/workspace/[workspaceId]/page.tsx"],
+        relatedFiles: ["src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx"],
         relatedFeatures: [],
         domainObjects: [],
         sessionCount: 12,
@@ -613,28 +614,32 @@ describe("FeatureExplorerPageClient", () => {
         updatedAt: "2026-04-17T08:00:00.000Z",
         fileTree: [
           {
-            id: "file-workspace-page",
-            name: "page.tsx",
-            path: "src/app/workspace/[workspaceId]/page.tsx",
+            id: "file-kanban-page",
+            name: "kanban-page-client.tsx",
+            path: "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx",
             kind: "file",
             children: [],
           },
         ],
         fileStats: {
-          "src/app/workspace/[workspaceId]/page.tsx": {
+          "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx": {
             changes: 3,
             sessions: 3,
             updatedAt: "2026-04-17T08:00:00.000Z",
           },
         },
         fileSignals: {
-          "src/app/workspace/[workspaceId]/page.tsx": {
+          "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx": {
             sessions: [
               {
                 provider: "codex",
                 sessionId: "019d-selected-file",
                 updatedAt: "2026-04-17T08:00:00.000Z",
                 promptSnippet: "Connect selected file signals to the right inspector panel",
+                promptHistory: [
+                  "Connect selected file signals to the right inspector panel",
+                  "Keep user prompts grouped under the owning session card",
+                ],
                 toolNames: ["exec_command", "apply_patch"],
                 resumeCommand: "codex resume 019d-selected-file",
               },
@@ -657,7 +662,119 @@ describe("FeatureExplorerPageClient", () => {
 
     expect(screen.getByText("019d-selected-file")).toBeTruthy();
     expect(screen.getByText("codex resume 019d-selected-file")).toBeTruthy();
-    expect(screen.getAllByText("exec_command").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Connect selected file signals to the right inspector panel").length).toBeGreaterThan(0);
+    expect(screen.queryByText("exec_command")).toBeNull();
+    expect(screen.getByText("Connect selected file signals to the right inspector panel")).toBeTruthy();
+    expect(screen.getByText("Keep user prompts grouped under the owning session card")).toBeTruthy();
+    expect(screen.getByText("Related files")).toBeTruthy();
+    expect(screen.getAllByText("src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx").length).toBeGreaterThan(0);
+  });
+
+  it("hydrates file selection from the url and keeps it in sync", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/workspace/default/feature-explorer?feature=workspace-overview&file=src%2Fapp%2Fworkspace%2F%5BworkspaceId%5D%2Fkanban%2Fkanban-page-client.tsx",
+    );
+
+    useFeatureExplorerData.mockReturnValue({
+      loading: false,
+      error: null,
+      capabilityGroups: [{ id: "workspace", name: "Workspace", description: "" }],
+      features: [
+        {
+          id: "workspace-overview",
+          name: "Workspace Overview",
+          group: "workspace",
+          summary: "Workspace shell",
+          status: "shipped",
+          sessionCount: 12,
+          changedFiles: 2,
+          updatedAt: "2026-04-17T08:00:00.000Z",
+          sourceFileCount: 2,
+          pageCount: 1,
+          apiCount: 0,
+        },
+      ],
+      surfaceIndex: {
+        generatedAt: "",
+        pages: [],
+        apis: [],
+        contractApis: [],
+        nextjsApis: [],
+        rustApis: [],
+        metadata: null,
+        repoRoot: "",
+        warnings: [],
+      },
+      featureDetail: {
+        id: "workspace-overview",
+        name: "Workspace Overview",
+        group: "workspace",
+        summary: "Workspace shell",
+        status: "shipped",
+        pages: [],
+        apis: [],
+        sourceFiles: [
+          "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx",
+          "src/app/workspace/[workspaceId]/overview/page.tsx",
+        ],
+        relatedFeatures: [],
+        domainObjects: [],
+        sessionCount: 12,
+        changedFiles: 2,
+        updatedAt: "2026-04-17T08:00:00.000Z",
+        fileTree: [
+          {
+            id: "file-kanban-page",
+            name: "kanban-page-client.tsx",
+            path: "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx",
+            kind: "file",
+            children: [],
+          },
+          {
+            id: "file-overview-page",
+            name: "page.tsx",
+            path: "src/app/workspace/[workspaceId]/overview/page.tsx",
+            kind: "file",
+            children: [],
+          },
+        ],
+        fileStats: {
+          "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx": {
+            changes: 3,
+            sessions: 3,
+            updatedAt: "2026-04-17T08:00:00.000Z",
+          },
+          "src/app/workspace/[workspaceId]/overview/page.tsx": {
+            changes: 1,
+            sessions: 1,
+            updatedAt: "2026-04-16T08:00:00.000Z",
+          },
+        },
+        fileSignals: {},
+      },
+      featureDetailLoading: false,
+      initialFeatureId: "workspace-overview",
+      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
+    });
+
+    render(<FeatureExplorerPageClient workspaceId="default" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("kanban-page-client.tsx").length).toBeGreaterThan(0);
+    });
+
+    expect(window.location.search).toContain("feature=workspace-overview");
+    expect(window.location.search).toContain(
+      "file=src%2Fapp%2Fworkspace%2F%5BworkspaceId%5D%2Fkanban%2Fkanban-page-client.tsx",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "page.tsx" }));
+
+    await waitFor(() => {
+      expect(window.location.search).toContain(
+        "file=src%2Fapp%2Fworkspace%2F%5BworkspaceId%5D%2Foverview%2Fpage.tsx",
+      );
+    });
   });
 });

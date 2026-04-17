@@ -419,6 +419,7 @@ describe("feature explorer transcript stats", () => {
       sessionId: "019d-signal-session",
       resumeCommand: "codex resume 019d-signal-session",
     });
+    expect(signal?.sessions[0]?.promptHistory[0]).toContain("feature explorer file signals");
     expect(signal?.sessions[0]?.toolNames).toContain("apply_patch");
     expect(signal?.toolHistory).toContain("exec_command");
     expect(signal?.promptHistory[0]).toContain("feature explorer file signals");

@@ -215,6 +215,7 @@ const zh: TranslationDictionary = {
     whyThisFile: "为什么是这个文件",
     recentChanges: "最近语义改动",
     relatedFiles: "相关文件",
+    relatedFeaturesLabel: "关联 Feature",
     openGaps: "待补项 / TODO",
     visualTesting: "视觉测试",
     apiPanel: "API / Postman 风格面板",
