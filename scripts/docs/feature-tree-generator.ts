@@ -9,8 +9,18 @@ import yaml from "js-yaml";
 import { fromRoot } from "../lib/paths";
 import { loadYamlFile } from "../lib/yaml";
 import featureSurfaceMetadata from "../../src/core/spec/feature-surface-metadata";
+import * as featureTreeGeneratorModule from "../../src/core/spec/feature-tree-generator.ts";
 
 const { INFERRED_GROUP_ID, buildApiLookupKey, normalizeSurfaceMetadata } = featureSurfaceMetadata;
+const generateFeatureTreeArtifacts =
+  ("generateFeatureTree" in featureTreeGeneratorModule
+    ? featureTreeGeneratorModule.generateFeatureTree
+    : undefined)
+  ?? featureTreeGeneratorModule.default?.generateFeatureTree;
+
+if (typeof generateFeatureTreeArtifacts !== "function") {
+  throw new Error("Unable to resolve generateFeatureTree from src/core/spec/feature-tree-generator.ts");
+}
 
 type RouteInfo = {
   route: string;
@@ -1060,7 +1070,7 @@ export function renderMarkdown(
     "  - src/app/api/**/route.ts",
     "  - crates/routa-server/src/api/**/*.rs",
     "update_policy:",
-    "  - \"Regenerate with `node --import tsx scripts/docs/feature-tree-generator.ts --save`.\"",
+    "  - \"Regenerate with `routa feature-tree generate` or via the Feature Explorer UI.\"",
     "  - \"Hand-edit semantic `feature_metadata` fields in this frontmatter block.\"",
     "  - \"`feature_metadata.features[].source_files` is regenerated from declared pages/APIs.\"",
     "  - \"Do not hand-edit generated endpoint or route tables below.\"",
@@ -1160,8 +1170,18 @@ function printTreeTable(tree: FeatureTree): void {
   console.log(`📊 Total features: ${countNodes(tree) - 1}`);
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const args = new Set(process.argv.slice(2));
+
+  if (args.has("--json")) {
+    const result = await generateFeatureTreeArtifacts({
+      repoRoot: REPO_ROOT,
+      dryRun: true,
+    });
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
   const routes = scanFrontendRoutes();
   const nextjsApis = scanNextjsApiRoutes();
   const rustApis = scanRustApiRoutes();
@@ -1173,25 +1193,23 @@ function main(): void {
   const tree = buildFeatureTree(routes, apiFeatures);
   const surfaceIndex = buildFeatureSurfaceIndex(routes, apiFeatures, nextjsApis, rustApis, metadata);
 
-  if (args.has("--json")) {
-    console.log(JSON.stringify(tree, null, 2));
-    return;
-  }
   if (args.has("--mermaid")) {
     console.log(renderMermaid(tree));
     return;
   }
   if (args.has("--save")) {
-    fs.mkdirSync(path.dirname(OUTPUT_MD), { recursive: true });
-    fs.writeFileSync(OUTPUT_MD, renderMarkdown(tree, surfaceIndex), "utf8");
-    fs.writeFileSync(OUTPUT_JSON, JSON.stringify(surfaceIndex, null, 2) + "\n", "utf8");
-    console.log(`✅ Saved to ${OUTPUT_MD}`);
-    console.log(`✅ Saved to ${OUTPUT_JSON}`);
+    const result = await generateFeatureTreeArtifacts({
+      repoRoot: REPO_ROOT,
+      dryRun: false,
+    });
+    for (const file of result.wroteFiles) {
+      console.log(`✅ Saved to ${fromRoot(file)}`);
+    }
     return;
   }
   printTreeTable(tree);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main();
+  void main();
 }
