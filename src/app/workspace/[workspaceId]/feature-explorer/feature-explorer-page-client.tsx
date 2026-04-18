@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -132,6 +132,9 @@ export function FeatureExplorerPageClient({
   const [desiredFilePath, setDesiredFilePath] = useState<string>("");
   const [hasResolvedInitialUrlSelection, setHasResolvedInitialUrlSelection] = useState(false);
   const [hasHydratedClientState, setHasHydratedClientState] = useState(false);
+  const [isWideLayout, setIsWideLayout] = useState(false);
+  const [leftPanelWidth, setLeftPanelWidth] = useState(320);
+  const [rightPanelWidth, setRightPanelWidth] = useState(380);
   const [isSessionAnalysisDrawerOpen, setIsSessionAnalysisDrawerOpen] = useState(false);
   const [isGenerateDrawerOpen, setIsGenerateDrawerOpen] = useState(false);
   const [isStartingSessionAnalysis, setIsStartingSessionAnalysis] = useState(false);
@@ -140,6 +143,7 @@ export function FeatureExplorerPageClient({
   const [analysisSessionName, setAnalysisSessionName] = useState("");
   const [analysisSessionProviderId, setAnalysisSessionProviderId] = useState("");
   const [isAnalysisSessionPaneOpen, setIsAnalysisSessionPaneOpen] = useState(false);
+  const resizeContainerRef = useRef<HTMLElement | null>(null);
 
   const effectiveFeatureId = featureId || initialFeatureId;
   const {
@@ -187,7 +191,6 @@ export function FeatureExplorerPageClient({
     () => analysisProviders.find((provider) => provider.id === analysisSessionProviderId)?.name ?? analysisSessionProviderId,
     [analysisProviders, analysisSessionProviderId],
   );
-  const featureExplorerLayoutClassName = "grid min-h-0 flex-1 xl:grid-cols-[320px_minmax(280px,1fr)_minmax(340px,420px)] 2xl:grid-cols-[380px_minmax(320px,1fr)_minmax(400px,500px)]";
   const capabilityGroupMetrics = useMemo(
     () => capabilityTreeNodes.reduce<Record<string, { pages: number; apis: number; files: number }>>((acc, node) => {
       acc[node.id.replace("capability:", "")] = node.children.reduce(
@@ -211,6 +214,34 @@ export function FeatureExplorerPageClient({
     setHasResolvedInitialUrlSelection(urlState.featureId === "");
     setHasHydratedClientState(true);
   }, [workspaceId]);
+
+  useEffect(() => {
+    const syncWideLayout = () => {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      const nextIsWide = window.innerWidth >= 1280;
+      setIsWideLayout(nextIsWide);
+
+      if (window.innerWidth >= 1536) {
+        setLeftPanelWidth((prev) => Math.max(prev, 380));
+        setRightPanelWidth((prev) => Math.max(prev, 400));
+      }
+    };
+
+    syncWideLayout();
+    window.addEventListener("resize", syncWideLayout);
+    return () => window.removeEventListener("resize", syncWideLayout);
+  }, []);
+
+  useEffect(() => {
+    setStructureSectionCollapsed({
+      files: false,
+      pages: true,
+      apis: true,
+    });
+  }, [effectiveFeatureId]);
 
   const handleWorkspaceSelect = (nextWorkspaceId: string) => {
     router.push(`/workspace/${encodeURIComponent(nextWorkspaceId)}/feature-explorer`);
@@ -345,6 +376,46 @@ export function FeatureExplorerPageClient({
 
   const handleToggleStructureSection = (sectionId: string) => {
     setStructureSectionCollapsed((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }));
+  };
+
+  const startColumnResize = (panel: "left" | "right") => {
+    if (!isWideLayout || typeof window === "undefined") {
+      return;
+    }
+
+    const container = resizeContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const rect = container.getBoundingClientRect();
+    const minLeftWidth = 260;
+    const maxLeftWidth = Math.min(520, rect.width - rightPanelWidth - 360);
+    const minRightWidth = 300;
+    const maxRightWidth = Math.min(560, rect.width - leftPanelWidth - 360);
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (panel === "left") {
+        const nextWidth = Math.max(minLeftWidth, Math.min(maxLeftWidth, event.clientX - rect.left));
+        setLeftPanelWidth(nextWidth);
+        return;
+      }
+
+      const nextWidth = Math.max(minRightWidth, Math.min(maxRightWidth, rect.right - event.clientX));
+      setRightPanelWidth(nextWidth);
+    };
+
+    const handlePointerUp = () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
   };
 
   const handleSetActiveFile = (fileId: string) => {
@@ -533,7 +604,15 @@ export function FeatureExplorerPageClient({
     >
       <div className="flex h-full min-h-0 bg-desktop-bg-primary">
         <main className="flex min-w-0 flex-1">
-          <section className={featureExplorerLayoutClassName}>
+          <section
+            ref={resizeContainerRef}
+            className="grid min-h-0 flex-1 grid-cols-1"
+            style={isWideLayout
+              ? {
+                  gridTemplateColumns: `${leftPanelWidth}px 8px minmax(320px,1fr) 8px ${rightPanelWidth}px`,
+                }
+              : undefined}
+          >
             <aside className="flex min-h-0 flex-col border-r border-desktop-border bg-desktop-bg-secondary/20">
               <div className="border-b border-desktop-border px-3 py-2">
                 <div className="flex items-center gap-2">
@@ -724,6 +803,18 @@ export function FeatureExplorerPageClient({
                 )}
               </div>
             </aside>
+
+            {isWideLayout ? (
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize navigation panel"
+                onPointerDown={() => startColumnResize("left")}
+                className="group relative hidden cursor-col-resize bg-desktop-bg-secondary/10 xl:block"
+              >
+                <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-desktop-border transition-colors group-hover:bg-desktop-accent" />
+              </div>
+            ) : null}
 
             <section className="flex min-h-0 flex-col border-r border-desktop-border bg-desktop-bg-primary">
               <div className="border-b border-desktop-border px-3 py-2.5">
@@ -923,6 +1014,18 @@ export function FeatureExplorerPageClient({
                 </div>
               </div>
             </section>
+
+            {isWideLayout ? (
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize inspector panel"
+                onPointerDown={() => startColumnResize("right")}
+                className="group relative hidden cursor-col-resize bg-desktop-bg-secondary/10 xl:block"
+              >
+                <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-desktop-border transition-colors group-hover:bg-desktop-accent" />
+              </div>
+            ) : null}
 
             <FeatureExplorerInspectorPane
               featureDetail={surfaceOnlySelection ? null : resolvedFeatureDetail}

@@ -495,8 +495,6 @@ describe("FeatureExplorerPageClient", () => {
     expect(within(executionGroupToggle).getByText("1 Pages")).toBeTruthy();
     expect(within(executionGroupToggle).getByText("1 API")).toBeTruthy();
     expect(within(executionGroupToggle).getByText("1 files")).toBeTruthy();
-    expect(screen.getByText("/workspace/:workspaceId/feature-explorer")).toBeTruthy();
-    expect(screen.getByText("/api/feature-explorer")).toBeTruthy();
     expect(screen.getByLabelText("Expand Feature A")).toBeTruthy();
     expect(screen.getByText("Feature taxonomy ready")).toBeTruthy();
     expect(screen.getByText("1 curated")).toBeTruthy();
@@ -504,6 +502,15 @@ describe("FeatureExplorerPageClient", () => {
     expect(screen.getByText("Frontend routes")).toBeTruthy();
     expect(screen.getAllByText("API surfaces").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Source files").length).toBeGreaterThan(0);
+    expect(screen.queryByText("/workspace/:workspaceId/feature-explorer")).toBeNull();
+    expect(screen.queryByText("/api/feature-explorer")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /Frontend routes/i }));
+    expect(screen.getByText("/workspace/:workspaceId/feature-explorer")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /API Source/i }));
+    expect(screen.getByText("/api/feature-explorer")).toBeTruthy();
+
     expect(screen.queryByRole("button", { name: "Context" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Screenshot" })).toBeNull();
     expect(screen.queryByRole("button", { name: "API" })).toBeNull();
