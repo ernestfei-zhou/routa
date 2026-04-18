@@ -124,15 +124,12 @@ async fn list_sessions(
     let surface = query.surface.clone();
     let parent_session_id = query.parent_session_id.clone();
     let use_team_surface = should_apply_team_surface(surface.as_deref(), query.parent_session_id.as_deref());
+    let service_limit = service_limit_for_query(limit, query.parent_session_id.as_deref());
     let mut sessions = service
         .list_sessions(SessionListQuery {
             workspace_id: query.workspace_id,
             parent_session_id,
-            limit: if use_team_surface {
-                None
-            } else {
-                limit
-            },
+            limit: service_limit,
         })
         .await;
 
@@ -184,6 +181,14 @@ fn normalize_session_name(name: Option<&str>) -> String {
 
 fn should_apply_team_surface(surface: Option<&str>, parent_session_id: Option<&str>) -> bool {
     surface == Some("team") && parent_session_id.is_none()
+}
+
+fn service_limit_for_query(limit: Option<usize>, parent_session_id: Option<&str>) -> Option<usize> {
+    if parent_session_id.is_some() {
+        limit
+    } else {
+        None
+    }
 }
 
 fn has_explicit_team_run_marker(session: &Value) -> bool {
@@ -1158,8 +1163,8 @@ mod tests {
     use super::{
         build_transcript_payload, count_descendants, extract_reposlide_result,
         history_to_transcript_messages, list_team_runs, resolve_reposlide_deck_file,
-        session_is_non_empty, should_apply_team_surface, TranscriptMessage,
-        TEAM_LEAD_SPECIALIST_ID,
+        service_limit_for_query, session_is_non_empty, should_apply_team_surface,
+        TranscriptMessage, TEAM_LEAD_SPECIALIST_ID,
     };
 
     #[test]
@@ -1443,6 +1448,13 @@ mod tests {
         assert!(should_apply_team_surface(Some("team"), None));
         assert!(!should_apply_team_surface(Some("team"), Some("parent-1")));
         assert!(!should_apply_team_surface(None, None));
+    }
+
+    #[test]
+    fn top_level_queries_apply_limit_after_filtering() {
+        assert_eq!(service_limit_for_query(Some(5), None), None);
+        assert_eq!(service_limit_for_query(Some(5), Some("parent-1")), Some(5));
+        assert_eq!(service_limit_for_query(None, None), None);
     }
 
     #[test]
