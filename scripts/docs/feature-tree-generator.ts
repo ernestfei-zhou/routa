@@ -9,18 +9,9 @@ import yaml from "js-yaml";
 import { fromRoot } from "../lib/paths";
 import { loadYamlFile } from "../lib/yaml";
 import featureSurfaceMetadata from "../../src/core/spec/feature-surface-metadata";
-import * as featureTreeGeneratorModule from "../../src/core/spec/feature-tree-generator.ts";
+import { generateFeatureTree as generateFeatureTreeArtifacts } from "../../src/core/spec/feature-tree-generator";
 
 const { INFERRED_GROUP_ID, buildApiLookupKey, normalizeSurfaceMetadata } = featureSurfaceMetadata;
-const generateFeatureTreeArtifacts =
-  ("generateFeatureTree" in featureTreeGeneratorModule
-    ? featureTreeGeneratorModule.generateFeatureTree
-    : undefined)
-  ?? featureTreeGeneratorModule.default?.generateFeatureTree;
-
-if (typeof generateFeatureTreeArtifacts !== "function") {
-  throw new Error("Unable to resolve generateFeatureTree from src/core/spec/feature-tree-generator.ts");
-}
 
 type RouteInfo = {
   route: string;

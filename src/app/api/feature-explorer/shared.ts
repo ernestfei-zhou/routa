@@ -126,8 +126,11 @@ interface FeatureTreeIndexPayload {
       pages?: string[];
       apis?: string[];
       sourceFiles?: string[];
+      source_files?: string[];
       relatedFeatures?: string[];
+      related_features?: string[];
       domainObjects?: string[];
+      domain_objects?: string[];
     }>;
   };
   pages?: Array<{
@@ -651,14 +654,23 @@ function toSurfaceMetadata(
     return null;
   }
 
+  const capabilityGroups = Array.isArray((featureMetadata as FeatureMetadataRaw).capability_groups)
+    ? (featureMetadata as FeatureMetadataRaw).capability_groups ?? []
+    : Array.isArray((featureMetadata as { capabilityGroups?: CapabilityGroup[] }).capabilityGroups)
+      ? (featureMetadata as { capabilityGroups?: CapabilityGroup[] }).capabilityGroups ?? []
+      : [];
+  const features = Array.isArray(featureMetadata.features)
+    ? featureMetadata.features
+    : [];
+
   return {
     schemaVersion: typeof featureMetadata.schemaVersion === "number" ? featureMetadata.schemaVersion : 1,
-    capabilityGroups: (featureMetadata.capability_groups ?? featureMetadata.capabilityGroups ?? []).map((group) => ({
+    capabilityGroups: capabilityGroups.map((group: CapabilityGroup) => ({
       id: group.id ?? "",
       name: group.name ?? "",
       description: group.description ?? "",
     })),
-    features: (featureMetadata.features ?? []).map((feature) => ({
+    features: features.map((feature) => ({
       id: feature.id ?? "",
       name: feature.name ?? "",
       group: feature.group ?? "",
