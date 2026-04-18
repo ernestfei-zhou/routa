@@ -55,6 +55,27 @@ The script will:
 4. Create commit and tag
 5. Push to trigger GitHub Actions
 
+### Method 1.5: Prepare Release Artifacts And Blog Draft
+
+Use the preparation helper when you want the release notes/blog files written into `docs/releases/` before deciding whether to publish:
+
+```bash
+# Prepare release notes, changelog, and docs/releases blog draft
+npm run release:prepare -- 0.2.5
+
+# Use a specific range and AI summary generation
+npm run release:prepare -- 0.2.5 --from v0.2.4 --ai --ai-provider claude
+```
+
+This helper:
+1. Syncs version fields across the repo
+2. Generates preview files under `dist/release/`
+3. Copies the generated release notes to `docs/releases/v<version>-release-notes.md`
+4. Copies the technical changelog to `docs/releases/v<version>-changelog.md`
+5. Leaves commit, tag, and push decisions to a later explicit step
+
+If you are using the repo skill system, the same workflow is exposed through `.claude/skills/release/`.
+
 ### Generate Release Notes
 
 Tauri draft releases use commit-derived release notes. Generate the same markdown locally before publishing:
