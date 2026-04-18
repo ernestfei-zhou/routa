@@ -4,11 +4,20 @@ use crate::catalog::{
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
+const MAX_PROMPT_PREVIEWS: usize = 4;
+const MAX_PROMPT_PREVIEW_LENGTH: usize = 180;
+
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FeatureTraceInput {
     pub session_id: String,
+    #[serde(default)]
     pub changed_files: Vec<String>,
+    #[serde(default)]
     pub tool_call_names: Vec<String>,
+    #[serde(default)]
+    pub prompt_previews: Vec<String>,
+    #[serde(default)]
+    pub file_operations: Vec<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -16,6 +25,10 @@ pub struct SessionAnalysis {
     pub session_id: String,
     pub changed_files: Vec<String>,
     pub tool_call_counts: BTreeMap<String, usize>,
+    #[serde(default)]
+    pub prompt_previews: Vec<String>,
+    #[serde(default)]
+    pub file_operation_counts: BTreeMap<String, usize>,
     pub surface_links: Vec<FeatureSurfaceLink>,
     pub feature_links: Vec<ProductFeatureLink>,
 }
@@ -77,6 +90,17 @@ impl<'a> SessionAnalyzer<'a> {
             *tool_call_counts.entry(tool_name.clone()).or_insert(0) += 1;
         }
 
+        let prompt_previews = summarize_prompt_previews(&input.prompt_previews);
+
+        let mut file_operation_counts = BTreeMap::new();
+        for operation in &input.file_operations {
+            let normalized = normalize_file_operation(operation);
+            if normalized.is_empty() {
+                continue;
+            }
+            *file_operation_counts.entry(normalized).or_insert(0) += 1;
+        }
+
         let mut surface_links = Vec::new();
         if let Some(catalog) = self.surface_catalog {
             for changed_file in &changed_files {
@@ -119,10 +143,45 @@ impl<'a> SessionAnalyzer<'a> {
             session_id: input.session_id.clone(),
             changed_files,
             tool_call_counts,
+            prompt_previews,
+            file_operation_counts,
             surface_links,
             feature_links,
         }
     }
+}
+
+fn summarize_prompt_previews(prompts: &[String]) -> Vec<String> {
+    let mut previews = Vec::new();
+
+    for prompt in prompts {
+        let normalized = normalize_prompt_preview(prompt);
+        if normalized.is_empty() || previews.contains(&normalized) {
+            continue;
+        }
+        previews.push(normalized);
+        if previews.len() >= MAX_PROMPT_PREVIEWS {
+            break;
+        }
+    }
+
+    previews
+}
+
+fn normalize_prompt_preview(prompt: &str) -> String {
+    let normalized = prompt.split_whitespace().collect::<Vec<_>>().join(" ");
+    if normalized.len() <= MAX_PROMPT_PREVIEW_LENGTH {
+        return normalized;
+    }
+
+    format!(
+        "{}...",
+        normalized[..MAX_PROMPT_PREVIEW_LENGTH.saturating_sub(3)].trim_end()
+    )
+}
+
+fn normalize_file_operation(operation: &str) -> String {
+    operation.trim().to_ascii_lowercase()
 }
 
 #[cfg(test)]
@@ -138,7 +197,8 @@ mod tests {
             surfaces: vec![FeatureSurface {
                 kind: FeatureSurfaceKind::Page,
                 route: "/workspace/:workspaceId/sessions/:sessionId".to_string(),
-                source_path: "src/app/workspace/[workspaceId]/sessions/[sessionId]/page.tsx".to_string(),
+                source_path: "src/app/workspace/[workspaceId]/sessions/[sessionId]/page.tsx"
+                    .to_string(),
                 source_dir: "src/app/workspace/[workspaceId]/sessions/[sessionId]".to_string(),
             }],
         };
@@ -162,10 +222,20 @@ mod tests {
                     .to_string(),
             ],
             tool_call_names: vec!["apply_patch".to_string(), "apply_patch".to_string()],
+            prompt_previews: vec![
+                " Investigate   session recovery route ".to_string(),
+                "Investigate session recovery route".to_string(),
+                "Update the session page and API route with trace learning context".to_string(),
+            ],
+            file_operations: vec![
+                "modified".to_string(),
+                "modified".to_string(),
+                "renamed".to_string(),
+            ],
         };
 
-        let analysis = SessionAnalyzer::with_catalogs(&surface_catalog, &feature_tree)
-            .analyze_input(&input);
+        let analysis =
+            SessionAnalyzer::with_catalogs(&surface_catalog, &feature_tree).analyze_input(&input);
 
         assert_eq!(analysis.surface_links.len(), 1);
         assert_eq!(analysis.feature_links.len(), 1);
@@ -175,5 +245,12 @@ mod tests {
             SurfaceLinkConfidence::Medium
         );
         assert_eq!(analysis.tool_call_counts.get("apply_patch"), Some(&2));
+        assert_eq!(analysis.prompt_previews.len(), 2);
+        assert_eq!(
+            analysis.prompt_previews[0],
+            "Investigate session recovery route"
+        );
+        assert_eq!(analysis.file_operation_counts.get("modified"), Some(&2));
+        assert_eq!(analysis.file_operation_counts.get("renamed"), Some(&1));
     }
 }

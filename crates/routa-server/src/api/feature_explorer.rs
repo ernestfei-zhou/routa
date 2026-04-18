@@ -299,6 +299,8 @@ fn build_feature_trace_input_from_transcript(
         session_id: transcript.session_id.clone(),
         changed_files,
         tool_call_names,
+        prompt_previews: transcript.prompt.iter().cloned().collect(),
+        file_operations: Vec::new(),
     }
 }
 
@@ -318,6 +320,26 @@ fn build_feature_trace_input_from_normalized_session(
         .iter()
         .map(|tool_call| tool_call.tool_name.clone())
         .collect::<Vec<_>>();
+    let prompt_previews = session
+        .prompts
+        .iter()
+        .filter(|prompt| prompt.role == trace_parser::PromptRole::User)
+        .map(|prompt| prompt.text.trim())
+        .filter(|prompt| !prompt.is_empty())
+        .map(ToOwned::to_owned)
+        .collect::<Vec<_>>();
+    let file_operations = session
+        .file_events
+        .iter()
+        .map(|event| match event.operation {
+            trace_parser::FileOperationKind::Added => "added",
+            trace_parser::FileOperationKind::Modified => "modified",
+            trace_parser::FileOperationKind::Deleted => "deleted",
+            trace_parser::FileOperationKind::Renamed => "renamed",
+            trace_parser::FileOperationKind::Unknown => "unknown",
+        })
+        .map(str::to_string)
+        .collect::<Vec<_>>();
 
     if changed_files.is_empty() && tool_call_names.is_empty() {
         return None;
@@ -327,6 +349,8 @@ fn build_feature_trace_input_from_normalized_session(
         session_id: session.session_id.clone(),
         changed_files,
         tool_call_names,
+        prompt_previews,
+        file_operations,
     })
 }
 
@@ -862,6 +886,8 @@ mod tests {
                 "src/app/workspace/[workspaceId]/sessions/page.tsx".to_string(),
             ],
             tool_call_counts: BTreeMap::new(),
+            prompt_previews: Vec::new(),
+            file_operation_counts: BTreeMap::new(),
             surface_links: Vec::new(),
             feature_links: vec![ProductFeatureLink {
                 feature_id: "session-recovery".to_string(),
