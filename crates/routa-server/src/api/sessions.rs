@@ -123,11 +123,12 @@ async fn list_sessions(
     let limit = query.limit;
     let surface = query.surface.clone();
     let parent_session_id = query.parent_session_id.clone();
+    let use_team_surface = should_apply_team_surface(surface.as_deref(), query.parent_session_id.as_deref());
     let mut sessions = service
         .list_sessions(SessionListQuery {
             workspace_id: query.workspace_id,
             parent_session_id,
-            limit: if surface.as_deref() == Some("team") {
+            limit: if use_team_surface {
                 None
             } else {
                 limit
@@ -139,7 +140,7 @@ async fn list_sessions(
         sessions.retain(session_is_non_empty);
     }
 
-    if surface.as_deref() == Some("team") {
+    if use_team_surface {
         sessions = list_team_runs(sessions);
     }
 
@@ -181,6 +182,10 @@ fn normalize_session_name(name: Option<&str>) -> String {
     name.unwrap_or_default().split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase()
 }
 
+fn should_apply_team_surface(surface: Option<&str>, parent_session_id: Option<&str>) -> bool {
+    surface == Some("team") && parent_session_id.is_none()
+}
+
 fn has_explicit_team_run_marker(session: &Value) -> bool {
     if session_specialist_id(session) == Some(TEAM_LEAD_SPECIALIST_ID) {
         return true;
@@ -206,14 +211,6 @@ fn has_explicit_team_run_marker(session: &Value) -> bool {
 fn list_team_runs(sessions: Vec<Value>) -> Vec<Value> {
     let mut child_map: HashMap<String, Vec<String>> = HashMap::new();
     let ordered_sessions = sessions;
-    let sessions_by_id: HashMap<String, Value> = ordered_sessions
-        .iter()
-        .cloned()
-        .filter_map(|session| {
-            let id = session_id(&session)?.to_string();
-            Some((id, session))
-        })
-        .collect();
 
     for session in ordered_sessions.iter() {
         let Some(parent_id) = parent_session_id(session) else {
@@ -287,7 +284,13 @@ fn count_descendants(
         .map(|children| {
             children
                 .iter()
-                .map(|child_id| 1 + count_descendants(child_id, child_map, descendants_by_session_id, visiting))
+                .map(|child_id| {
+                    if visiting.iter().any(|current| current == child_id) {
+                        0
+                    } else {
+                        1 + count_descendants(child_id, child_map, descendants_by_session_id, visiting)
+                    }
+                })
                 .sum()
         })
         .unwrap_or(0);
@@ -1155,7 +1158,8 @@ mod tests {
     use super::{
         build_transcript_payload, count_descendants, extract_reposlide_result,
         history_to_transcript_messages, list_team_runs, resolve_reposlide_deck_file,
-        session_is_non_empty, TranscriptMessage, TEAM_LEAD_SPECIALIST_ID,
+        session_is_non_empty, should_apply_team_surface, TranscriptMessage,
+        TEAM_LEAD_SPECIALIST_ID,
     };
 
     #[test]
@@ -1431,7 +1435,14 @@ mod tests {
             &mut Vec::new(),
         );
 
-        assert_eq!(descendants, 2);
+        assert_eq!(descendants, 1);
+    }
+
+    #[test]
+    fn team_surface_is_skipped_for_child_queries() {
+        assert!(should_apply_team_surface(Some("team"), None));
+        assert!(!should_apply_team_surface(Some("team"), Some("parent-1")));
+        assert!(!should_apply_team_surface(None, None));
     }
 
     #[test]
