@@ -14,7 +14,6 @@ interface GenerateRequestBody {
   workspaceId?: string;
   codebaseId?: string;
   repoPath?: string;
-  framework?: string;
   dryRun?: boolean;
 }
 
@@ -48,7 +47,6 @@ export async function POST(request: NextRequest) {
   try {
     const result = await generateFeatureTree({
       repoRoot,
-      framework: body.framework,
       dryRun: body.dryRun ?? false,
     });
     return NextResponse.json(result);

@@ -10,7 +10,6 @@ use std::process::Command;
 pub fn generate(
     repo_path: Option<&str>,
     dry_run: bool,
-    framework: Option<&str>,
 ) -> Result<(), String> {
     let repo_root = repo_path
         .map(std::path::PathBuf::from)
@@ -32,34 +31,6 @@ pub fn generate(
         args.push("--save");
     } else {
         args.push("--json");
-    }
-
-    if let Some(fw) = framework {
-        // For framework-specific generation, use the framework generator
-        let fw_script = repo_root.join("scripts/docs/framework-feature-tree-generator.ts");
-        if fw_script.exists() {
-            let fw_script_str = fw_script.to_string_lossy().to_string();
-            let mut fw_args = vec!["--import", "tsx", &fw_script_str];
-            fw_args.push("--repo-root");
-            let repo_root_str = repo_root.to_string_lossy().to_string();
-            fw_args.push(&repo_root_str);
-            if !dry_run {
-                fw_args.push("--save");
-            }
-            eprintln!("🔍 Running framework-specific generator for: {fw}");
-            let status = Command::new("node")
-                .args(&fw_args)
-                .current_dir(&repo_root)
-                .status()
-                .map_err(|e| format!("Failed to run framework generator: {e}"))?;
-            if !status.success() {
-                return Err(format!(
-                    "Framework generator exited with status: {}",
-                    status.code().unwrap_or(-1)
-                ));
-            }
-            return Ok(());
-        }
     }
 
     eprintln!("🌳 Generating feature tree…");

@@ -6,13 +6,6 @@ import { RefreshCw, X } from "lucide-react";
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
 import { useTranslation } from "@/i18n";
 
-const FRAMEWORK_OPTIONS = [
-  { value: "", label: "frameworkAuto" as const },
-  { value: "nextjs", label: "Next.js" },
-  { value: "spring-boot", label: "Spring Boot" },
-  { value: "eggjs", label: "Egg.js" },
-] as const;
-
 type GenerateResult = {
   generatedAt: string;
   frameworksDetected: string[];
@@ -36,7 +29,6 @@ export function GenerateFeatureTreeDrawer({
   onGenerated: () => void;
 }) {
   const { t } = useTranslation();
-  const [framework, setFramework] = useState("");
   const [dryRun, setDryRun] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +48,6 @@ export function GenerateFeatureTreeDrawer({
         body: JSON.stringify({
           workspaceId,
           repoPath: repoPath || undefined,
-          framework: framework || undefined,
           dryRun,
         }),
       });
@@ -121,31 +112,6 @@ export function GenerateFeatureTreeDrawer({
             </div>
             <div className="text-xs text-desktop-text-primary truncate">
               {repoPath || workspaceId}
-            </div>
-          </section>
-
-          {/* Framework selection */}
-          <section className="rounded-sm border border-desktop-border bg-desktop-bg-secondary/30 p-3">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-desktop-text-secondary mb-2">
-              {t.featureExplorer.frameworkLabel}
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {FRAMEWORK_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setFramework(option.value)}
-                  className={`rounded-sm border px-2.5 py-1 text-[11px] font-medium ${
-                    framework === option.value
-                      ? "border-desktop-accent bg-desktop-bg-active text-desktop-text-primary"
-                      : "border-desktop-border bg-desktop-bg-primary text-desktop-text-secondary hover:text-desktop-text-primary"
-                  }`}
-                >
-                  {option.value === ""
-                    ? t.featureExplorer.frameworkAuto
-                    : option.label}
-                </button>
-              ))}
             </div>
           </section>
 

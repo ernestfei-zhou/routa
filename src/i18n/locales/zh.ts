@@ -327,8 +327,6 @@ const zh: TranslationDictionary = {
     generateFeatureTree: "生成 Feature Tree",
     generateDrawerTitle: "生成 Feature Tree",
     generateDrawerDescription: "扫描仓库以生成或刷新 feature tree 索引。生成完成后结果会在当前页面刷新。",
-    frameworkLabel: "框架",
-    frameworkAuto: "自动检测",
     dryRunLabel: "仅预览",
     dryRunDescription: "预览将要生成的内容，不写入文件。",
     generateAction: "生成",

@@ -334,8 +334,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     generateFeatureTree: string;
     generateDrawerTitle: string;
     generateDrawerDescription: string;
-    frameworkLabel: string;
-    frameworkAuto: string;
     dryRunLabel: string;
     dryRunDescription: string;
     generateAction: string;

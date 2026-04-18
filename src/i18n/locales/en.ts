@@ -328,8 +328,6 @@ const en: TranslationDictionary = {
     generateFeatureTree: "Generate Feature Tree",
     generateDrawerTitle: "Generate Feature Tree",
     generateDrawerDescription: "Scan the repository to generate or refresh the feature tree index. The result will appear in this page after generation.",
-    frameworkLabel: "Framework",
-    frameworkAuto: "Auto-detect",
     dryRunLabel: "Preview only",
     dryRunDescription: "Preview what will be generated without writing files.",
     generateAction: "Generate",

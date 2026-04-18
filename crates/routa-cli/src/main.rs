@@ -751,9 +751,6 @@ enum FeatureTreeAction {
         /// Repository path (defaults to current working directory)
         #[arg(long)]
         repo_path: Option<String>,
-        /// Framework override (auto-detected if omitted): nextjs, spring-boot, eggjs
-        #[arg(long)]
-        framework: Option<String>,
         /// Preview what would be generated without writing files
         #[arg(long, default_value_t = false)]
         dry_run: bool,
@@ -1434,12 +1431,10 @@ async fn main() {
             Commands::FeatureTree { action } => match action {
                 FeatureTreeAction::Generate {
                     repo_path,
-                    framework,
                     dry_run,
                 } => commands::feature_tree::generate(
                     repo_path.as_deref(),
                     dry_run,
-                    framework.as_deref(),
                 ),
                 FeatureTreeAction::Inspect { repo_path } => {
                     commands::feature_tree::inspect(repo_path.as_deref())

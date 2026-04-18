@@ -100,7 +100,6 @@ type OpenApiDoc = {
 
 export type GenerateFeatureTreeOptions = {
   repoRoot: string;
-  framework?: string;
   dryRun?: boolean;
 };
 
@@ -629,7 +628,7 @@ function renderMarkdown(tree: FeatureTree, surfaceIndex: FeatureSurfaceIndex, ne
     "  - src/app/api/**/route.ts",
     "  - crates/routa-server/src/api/**/*.rs",
     "update_policy:",
-    "  - \"Regenerate with `node --import tsx scripts/docs/feature-tree-generator.ts --save`.\"",
+    "  - \"Regenerate with `routa feature-tree generate` or via the Feature Explorer UI.\"",
     "  - \"Hand-edit semantic `feature_metadata` fields in this frontmatter block.\"",
     "  - \"`feature_metadata.features[].source_files` is regenerated from declared pages/APIs.\"",
     "  - \"Do not hand-edit generated endpoint or route tables below.\"",
@@ -712,7 +711,7 @@ export async function generateFeatureTree(options: GenerateFeatureTreeOptions): 
   const warnings: string[] = [];
   const wroteFiles: string[] = [];
 
-  const frameworksDetected = options.framework ? [options.framework] : detectFramework(repoRoot);
+  const frameworksDetected = detectFramework(repoRoot);
 
   const outputMd = path.join(repoRoot, "docs", "product-specs", "FEATURE_TREE.md");
   const outputJson = path.join(repoRoot, "docs", "product-specs", "feature-tree.index.json");

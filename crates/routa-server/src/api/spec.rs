@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use axum::{
     extract::{Query, State},
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 use feature_trace::api_endpoints_from_openapi_contract;
@@ -18,6 +18,7 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/issues", get(list_spec_issues))
         .route("/surface-index", get(get_surface_index))
+        .route("/feature-tree/generate", post(generate_feature_tree))
 }
 
 const SPEC_STATUSES: [&str; 4] = ["open", "investigating", "resolved", "wontfix"];
@@ -515,6 +516,82 @@ async fn get_surface_index(
         ))),
         (None, None) => Ok(Json(empty_surface_index_response(&repo_root, warnings))),
     }
+}
+
+// ── Feature tree generation ─────────────────────────────────────────
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GenerateFeatureTreeRequest {
+    workspace_id: Option<String>,
+    codebase_id: Option<String>,
+    repo_path: Option<String>,
+    #[serde(default)]
+    dry_run: bool,
+}
+
+async fn generate_feature_tree(
+    State(state): State<AppState>,
+    Json(body): Json<GenerateFeatureTreeRequest>,
+) -> Result<Json<JsonValue>, ServerError> {
+    let repo_root = resolve_repo_root(
+        &state,
+        body.workspace_id.as_deref(),
+        body.codebase_id.as_deref(),
+        body.repo_path.as_deref(),
+        "Missing context: provide workspaceId, codebaseId, or repoPath",
+        ResolveRepoRootOptions {
+            prefer_current_repo_for_default_workspace: true,
+        },
+    )
+    .await?;
+
+    let dry_run = body.dry_run;
+    let result = tokio::task::spawn_blocking(move || {
+        run_feature_tree_generator(&repo_root, dry_run)
+    })
+    .await
+    .map_err(|e| ServerError::Internal(format!("Task join error: {e}")))?
+    .map_err(ServerError::Internal)?;
+
+    Ok(Json(result))
+}
+
+/// Run the TypeScript feature-tree generator via Node and return the
+/// JSON result. This is the same script the CLI wraps.
+fn run_feature_tree_generator(repo_root: &Path, dry_run: bool) -> Result<JsonValue, String> {
+    let script = repo_root.join("scripts/docs/feature-tree-generator.ts");
+    if !script.exists() {
+        return Err(format!(
+            "Feature tree generator script not found at {}",
+            script.display()
+        ));
+    }
+
+    let mut args = vec![
+        "--import".to_string(),
+        "tsx".to_string(),
+        script.to_string_lossy().to_string(),
+        "--json".to_string(),
+    ];
+    if !dry_run {
+        args.push("--save".to_string());
+    }
+
+    let output = std::process::Command::new("node")
+        .args(&args)
+        .current_dir(repo_root)
+        .output()
+        .map_err(|e| format!("Failed to run feature tree generator: {e}"))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Feature tree generator failed: {stderr}"));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    serde_json::from_str(stdout.trim())
+        .map_err(|e| format!("Failed to parse generator output: {e}"))
 }
 
 #[cfg(test)]

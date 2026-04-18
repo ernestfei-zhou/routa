@@ -48,25 +48,23 @@ describe("POST /api/spec/feature-tree/generate", () => {
     expect(body).toEqual(fakeResult);
     expect(mockGenerateFeatureTree).toHaveBeenCalledWith({
       repoRoot: "/tmp/repo",
-      framework: undefined,
       dryRun: false,
     });
   });
 
-  it("passes framework and dryRun options through", async () => {
+  it("passes dryRun option through", async () => {
     mockResolveFitnessRepoRoot.mockResolvedValue("/tmp/repo");
     mockGenerateFeatureTree.mockResolvedValue({ pagesCount: 0, apisCount: 0 });
 
     const req = new NextRequest("http://localhost/api/spec/feature-tree/generate", {
       method: "POST",
-      body: JSON.stringify({ repoPath: "/tmp/repo", framework: "spring-boot", dryRun: true }),
+      body: JSON.stringify({ repoPath: "/tmp/repo", dryRun: true }),
     });
 
     const res = await POST(req);
     expect(res.status).toBe(200);
     expect(mockGenerateFeatureTree).toHaveBeenCalledWith({
       repoRoot: "/tmp/repo",
-      framework: "spring-boot",
       dryRun: true,
     });
   });
