@@ -74,6 +74,10 @@ function normalizeSessionName(name: string | undefined): string {
 }
 
 function hasExplicitTeamRunMarker(session: RoutaSessionRecord): boolean {
+  if (session.role?.toUpperCase() !== "ROUTA") {
+    return false;
+  }
+
   if (session.specialistId === TEAM_LEAD_SPECIALIST_ID) {
     return true;
   }
@@ -100,12 +104,17 @@ function listTeamRuns(sessions: RoutaSessionRecord[]): TeamRunSummary[] {
   }
 
   const descendantsBySessionId = new Map<string, number>();
-  const countDescendants = (sessionId: string): number => {
+  const countDescendants = (sessionId: string, visiting = new Set<string>()): number => {
     const cached = descendantsBySessionId.get(sessionId);
     if (cached !== undefined) return cached;
+    if (visiting.has(sessionId)) {
+      return 0;
+    }
 
+    visiting.add(sessionId);
     const children = childMap.get(sessionId) ?? [];
-    const total = children.reduce((sum, child) => sum + 1 + countDescendants(child.sessionId), 0);
+    const total = children.reduce((sum, child) => sum + 1 + countDescendants(child.sessionId, visiting), 0);
+    visiting.delete(sessionId);
     descendantsBySessionId.set(sessionId, total);
     return total;
   };

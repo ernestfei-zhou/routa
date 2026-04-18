@@ -134,6 +134,14 @@ describe("/api/sessions GET", () => {
         createdAt: "2026-04-03T10:03:00.000Z",
       },
       {
+        sessionId: "named-non-routa-run",
+        name: "Team - not actually routa",
+        workspaceId: "workspace-1",
+        cwd: "/tmp/project",
+        role: "DEVELOPER",
+        createdAt: "2026-04-03T10:02:30.000Z",
+      },
+      {
         sessionId: "non-team-routa",
         workspaceId: "workspace-1",
         cwd: "/tmp/project",
@@ -176,6 +184,54 @@ describe("/api/sessions GET", () => {
       sessionId: "named-team-run",
       directDelegates: 0,
       descendants: 0,
+    });
+  });
+
+  it("ignores cyclic descendants and excludes named non-ROUTA sessions from the team surface", async () => {
+    listSessions.mockReturnValue([
+      {
+        sessionId: "cycle-root",
+        workspaceId: "workspace-1",
+        cwd: "/tmp/project",
+        role: "ROUTA",
+        createdAt: "2026-04-03T10:05:00.000Z",
+      },
+      {
+        sessionId: "cycle-child",
+        workspaceId: "workspace-1",
+        cwd: "/tmp/project",
+        role: "DEVELOPER",
+        parentSessionId: "cycle-root",
+        createdAt: "2026-04-03T10:04:00.000Z",
+      },
+      {
+        sessionId: "cycle-root",
+        workspaceId: "workspace-1",
+        cwd: "/tmp/project",
+        role: "DEVELOPER",
+        parentSessionId: "cycle-child",
+        createdAt: "2026-04-03T10:03:00.000Z",
+      },
+      {
+        sessionId: "named-non-routa-run",
+        name: "Team - not actually routa",
+        workspaceId: "workspace-1",
+        cwd: "/tmp/project",
+        role: "DEVELOPER",
+        createdAt: "2026-04-03T10:02:30.000Z",
+      },
+    ]);
+
+    const response = await GET(
+      new NextRequest("http://localhost/api/sessions?workspaceId=workspace-1&surface=team"),
+    );
+    const data = await response.json();
+
+    expect(data.sessions).toHaveLength(1);
+    expect(data.sessions[0]).toMatchObject({
+      sessionId: "cycle-root",
+      directDelegates: 1,
+      descendants: 2,
     });
   });
 });
