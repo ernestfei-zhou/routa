@@ -66,8 +66,8 @@ export type EntrixRunSummary = {
   checksCount?: number;
   /** Number of checks that did not pass (autoresearch alias for failingMetricCount). */
   failedChecks?: number;
-  /** Ratio of passed/waived checks to total checks (0.0–1.0). */
-  cacheHitRatio?: number;
+  /** Ratio of passed/waived checks to total checks (0.0-1.0). */
+  passRate?: number;
 };
 
 export type EntrixRunResponse = {

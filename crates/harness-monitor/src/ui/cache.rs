@@ -848,15 +848,14 @@ impl AppCache {
             self.queued_fitness_refresh = Some((repo_root, cache_key, force, mode));
             return;
         }
-        // Debounce: coalesce rapid consecutive force-refresh requests into a queued run
-        // when they arrive within FITNESS_DEBOUNCE_MS of each other.  This avoids
-        // redundant full runs when the file-watcher fires multiple events in quick
-        // succession (e.g. multi-file saves, git operations).
+        // Debounce: suppress identical force-refresh requests that arrive shortly
+        // after the previous dispatch. Queueing while idle would strand the refresh
+        // because there is no active run left to drain queued_fitness_refresh.
         const FITNESS_DEBOUNCE_MS: i64 = 500;
         let now_ms = chrono::Utc::now().timestamp_millis();
         if let Some(last_triggered_ms) = self.fitness_last_triggered_ms {
-            if now_ms - last_triggered_ms < FITNESS_DEBOUNCE_MS {
-                self.queued_fitness_refresh = Some((repo_root, cache_key, force, mode));
+            let same_cache_key = self.fitness_cache_key.as_deref() == Some(cache_key.as_str());
+            if same_cache_key && now_ms - last_triggered_ms < FITNESS_DEBOUNCE_MS {
                 return;
             }
         }

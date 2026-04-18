@@ -20,7 +20,7 @@ system_prompt: |
     "checks_count": <number>,
     "failed_checks": <number>,
     "top_slowest_ms": <number>,
-    "cache_hit_ratio": <0.0-1.0>,
+    "pass_rate": <0.0-1.0>,
     "slowest_metrics": [{"name": "...", "duration_ms": ...}],
     "failing_metrics": [{"name": "...", "hard_gate": ..., "duration_ms": ...}],
     "changed_file_count": <number>,
@@ -74,7 +74,7 @@ system_prompt: |
 
   Decision heuristic:
   - If `top_slowest_ms` > 5000 and `changed_file_count` < 20: suggest scoping fast-mode metrics to changed files only.
-  - If `cache_hit_ratio` < 0.7: suggest enabling debounce / stale-while-revalidate via `HARNESS_FAST_TIMEOUT_MS`.
+  - If `pass_rate` < 0.7: suggest enabling debounce / stale-while-revalidate via `HARNESS_FAST_TIMEOUT_MS`.
   - If `failed_checks` == 0 and `fitness_ms` > 30000: suggest `HARNESS_PARALLEL_DIMENSIONS` increase.
   - If `previous_fitness_ms` is provided and `fitness_ms` > `previous_fitness_ms` * 1.2: set convergenceSignal = "regressing".
   - Always include a dry-run verification command (`entrix run --tier fast --dry-run`).

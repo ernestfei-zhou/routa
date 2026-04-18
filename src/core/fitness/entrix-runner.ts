@@ -201,7 +201,7 @@ export function summarizeEntrixReport(report: unknown): EntrixRunSummary {
   const slowestMetricMs = allMetrics.length > 0
     ? Math.max(...allMetrics.map((m) => m.durationMs ?? 0))
     : null;
-  const cacheHitRatio = metricCount > 0
+  const passRate = metricCount > 0
     ? (metricCount - failingMetricCount) / metricCount
     : 1.0;
 
@@ -216,7 +216,7 @@ export function summarizeEntrixReport(report: unknown): EntrixRunSummary {
     slowestMetricMs,
     checksCount: metricCount,
     failedChecks: failingMetricCount,
-    cacheHitRatio: Math.round(cacheHitRatio * 10000) / 10000,
+    passRate: Math.round(passRate * 10000) / 10000,
   };
 }
 

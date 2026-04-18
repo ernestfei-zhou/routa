@@ -7,7 +7,7 @@
 #   METRIC checks_count=<n>
 #   METRIC failed_checks=<n>
 #   METRIC top_slowest_ms=<ms_of_slowest_metric>
-#   METRIC cache_hit_ratio=<0.0-1.0>
+#   METRIC pass_rate=<0.0-1.0>
 #
 # Usage:
 #   ./scripts/fitness/harness-autoresearch.sh [--tier fast|normal] [--repo-root <path>]
@@ -76,7 +76,7 @@ if [[ -z "${JSON_OUTPUT}" ]]; then
   echo "METRIC checks_count=0"
   echo "METRIC failed_checks=0"
   echo "METRIC top_slowest_ms=0"
-  echo "METRIC cache_hit_ratio=0.0"
+  echo "METRIC pass_rate=0.0"
   echo "checks_failed=1"
   exit 1
 fi
@@ -100,7 +100,7 @@ except Exception:
     print("METRIC checks_count=0")
     print("METRIC failed_checks=0")
     print("METRIC top_slowest_ms=0")
-    print("METRIC cache_hit_ratio=0.0")
+    print("METRIC pass_rate=0.0")
     if exit_code != 0:
         print("checks_failed=1")
     sys.exit(0)
@@ -111,7 +111,7 @@ all_metrics = [m for d in dims for m in d.get("metrics", [])]
 checks_count   = len(all_metrics)
 failed_checks  = sum(1 for m in all_metrics if not m.get("passed", False) and m.get("state", "") not in ["waived"])
 passed_checks  = checks_count - failed_checks
-cache_hit_ratio = round(passed_checks / checks_count, 4) if checks_count > 0 else 0.0
+pass_rate = round(passed_checks / checks_count, 4) if checks_count > 0 else 0.0
 
 durations = sorted([m.get("duration_ms") or 0 for m in all_metrics], reverse=True)
 top_slowest_ms = int(durations[0]) if durations else 0
@@ -120,7 +120,7 @@ print(f"METRIC fitness_ms={elapsed_ms}")
 print(f"METRIC checks_count={checks_count}")
 print(f"METRIC failed_checks={failed_checks}")
 print(f"METRIC top_slowest_ms={top_slowest_ms}")
-print(f"METRIC cache_hit_ratio={cache_hit_ratio}")
+print(f"METRIC pass_rate={pass_rate}")
 
 if exit_code != 0 or data.get("hard_gate_blocked", False):
     print("checks_failed=1")
@@ -132,7 +132,7 @@ else
   echo "METRIC checks_count=0"
   echo "METRIC failed_checks=0"
   echo "METRIC top_slowest_ms=0"
-  echo "METRIC cache_hit_ratio=0.0"
+  echo "METRIC pass_rate=0.0"
   if [[ "${EXIT_CODE}" -ne 0 ]]; then
     echo "checks_failed=1"
   fi
