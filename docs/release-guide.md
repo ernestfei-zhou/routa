@@ -18,7 +18,8 @@ Ensure these GitHub secrets are configured:
 
 - `CRATE_TOKEN` - Get from [crates.io/me](https://crates.io/me) → API Tokens (Note: The workflow uses `CRATE_TOKEN`, not `CARGO_REGISTRY_TOKEN`)
 - `NPM_TOKEN` - Get from [npmjs.com](https://www.npmjs.com/) → Access Tokens → Generate New Token → Automation
-- `GITHUB_TOKEN` - Automatically provided by GitHub Actions
+- `ROUTA_GITHUB_TOKEN` - Preferred token for release baseline fetches against the GitHub Actions API
+- `GITHUB_TOKEN` - Automatically provided by GitHub Actions and used as fallback when `ROUTA_GITHUB_TOKEN` is not configured
 
 ### Local Setup
 
@@ -74,7 +75,7 @@ This helper:
 4. Copies the technical changelog to `docs/releases/v<version>-changelog.md`
 5. Leaves commit, tag, and push decisions to a later explicit step
 
-If you are using the repo skill system, the same workflow is exposed through `.claude/skills/release/`.
+If you are using the repo skill system, the same workflow is exposed through `.agents/skills/release/`.
 
 ### Generate Release Notes
 

@@ -216,7 +216,7 @@ jobs:
 
       - name: Fetch baseline manifest
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ROUTA_GITHUB_TOKEN: ${{ secrets.ROUTA_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           python scripts/release/fetch-release-baseline.py \
             --repo phodal/routa \

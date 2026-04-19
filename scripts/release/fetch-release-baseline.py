@@ -125,12 +125,16 @@ def main() -> int:
     parser.add_argument("--workflow", required=True, help="Workflow file name, e.g. cli-release.yml")
     parser.add_argument("--artifact-name", required=True, help="Artifact name to fetch")
     parser.add_argument("--out", required=True, help="Where to write the extracted manifest JSON")
-    parser.add_argument("--github-token", help="GitHub token (defaults to GITHUB_TOKEN or GH_TOKEN env)")
+    parser.add_argument(
+        "--github-token",
+        help="GitHub token (defaults to ROUTA_GITHUB_TOKEN, GITHUB_TOKEN, or GH_TOKEN env)",
+    )
     parser.add_argument("--exclude-run-id", type=int, help="Current run id to skip")
     args = parser.parse_args()
 
     token = (
         args.github_token
+        or os.environ.get("ROUTA_GITHUB_TOKEN", "")
         or os.environ.get("GITHUB_TOKEN", "")
         or os.environ.get("GH_TOKEN", "")
     )
