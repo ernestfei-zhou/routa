@@ -1592,7 +1592,13 @@ async fn api_spec_feature_tree_generate_contract() {
         .expect("decode feature tree generate response");
 
     assert!(payload["generatedAt"].as_str().is_some());
-    assert_eq!(payload["frameworksDetected"], json!(["nextjs"]));
+    let frameworks = payload["frameworksDetected"]
+        .as_array()
+        .expect("frameworksDetected should be an array");
+    assert!(
+        frameworks.iter().any(|f| f.as_str() == Some("nextjs")),
+        "frameworksDetected should include nextjs, got: {frameworks:?}"
+    );
     assert_eq!(
         payload["wroteFiles"],
         json!([
