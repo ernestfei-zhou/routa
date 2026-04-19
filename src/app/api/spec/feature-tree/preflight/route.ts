@@ -1,34 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import {
   type FitnessContext,
   isFitnessContextError,
   normalizeFitnessContextValue,
   resolveFitnessRepoRoot,
 } from "@/core/fitness/repo-root";
-import { generateFeatureTree, preflightFeatureTree } from "@/core/spec/feature-tree-generator";
+import { preflightFeatureTree } from "@/core/spec/feature-tree-generator";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-interface GenerateRequestBody {
-  workspaceId?: string;
-  codebaseId?: string;
-  repoPath?: string;
-  dryRun?: boolean;
-}
-
-export async function POST(request: NextRequest) {
-  let body: GenerateRequestBody;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
   const context: FitnessContext = {
-    workspaceId: normalizeFitnessContextValue(body.workspaceId ?? null),
-    codebaseId: normalizeFitnessContextValue(body.codebaseId ?? null),
-    repoPath: normalizeFitnessContextValue(body.repoPath ?? null),
+    workspaceId: normalizeFitnessContextValue(searchParams.get("workspaceId")),
+    codebaseId: normalizeFitnessContextValue(searchParams.get("codebaseId")),
+    repoPath: normalizeFitnessContextValue(searchParams.get("repoPath")),
   };
 
   let repoRoot: string;
@@ -45,13 +33,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const preflight = preflightFeatureTree(repoRoot);
-    const result = await generateFeatureTree({
-      repoRoot,
-      scanRoot: preflight.selectedScanRoot,
-      dryRun: body.dryRun ?? false,
-    });
-    return NextResponse.json(result);
+    return NextResponse.json(preflightFeatureTree(repoRoot));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: message }, { status: 500 });

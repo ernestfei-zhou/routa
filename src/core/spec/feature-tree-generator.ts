@@ -57,7 +57,7 @@ type FeatureMetadataItem = {
   status?: string;
 };
 
-type FeatureMetadata = {
+export type FeatureTreeMetadata = {
   schemaVersion: number;
   capabilityGroups: FeatureMetadataGroup[];
   features: FeatureMetadataItem[];
@@ -70,7 +70,8 @@ type FeatureSurfaceIndex = {
   contractApis: Array<{ domain: string; method: string; path: string; operationId: string; summary: string }>;
   nextjsApis: Array<{ domain: string; method: string; path: string; sourceFiles: string[] }>;
   rustApis: Array<{ domain: string; method: string; path: string; sourceFiles: string[] }>;
-  metadata: FeatureMetadata | null;
+  implementationApis: Array<{ label: string; domain: string; method: string; path: string; sourceFiles: string[] }>;
+  metadata: FeatureTreeMetadata | null;
 };
 
 type FeatureNode = {
@@ -98,8 +99,12 @@ type OpenApiDoc = {
   paths?: Record<string, Record<string, OpenApiMethod>>;
 };
 
+const IGNORED_PATHS = new Set([".git", "node_modules", ".next", "dist", "out", "target"]);
+
 export type GenerateFeatureTreeOptions = {
   repoRoot: string;
+  scanRoot?: string;
+  metadata?: FeatureTreeMetadata | null;
   dryRun?: boolean;
 };
 
@@ -112,6 +117,40 @@ export type GenerateFeatureTreeResult = {
   apisCount: number;
 };
 
+export type FeatureTreeAdapterId =
+  | "nextjs-app-router"
+  | "nextjs-pages-api"
+  | "axum"
+  | "spring-boot"
+  | "eggjs";
+
+export type FeatureTreeCandidateRoot = {
+  path: string;
+  kind: "root" | "workspace" | "package" | "app";
+  score: number;
+  surfaceCounts: {
+    pages: number;
+    appRouterApis: number;
+    pagesApis: number;
+    rustApis: number;
+  };
+  adapters: FeatureTreeAdapterId[];
+  warnings: string[];
+};
+
+export type FeatureTreePreflightResult = {
+  repoRoot: string;
+  selectedScanRoot: string;
+  frameworksDetected: string[];
+  adapters: Array<{
+    id: FeatureTreeAdapterId;
+    confidence: "high" | "medium";
+    signals: string[];
+  }>;
+  candidateRoots: FeatureTreeCandidateRoot[];
+  warnings: string[];
+};
+
 // ── Helpers ─────────────────────────────────────────────────────────
 
 function normalizeString(value: unknown): string {
@@ -121,6 +160,16 @@ function normalizeString(value: unknown): string {
 function normalizeStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.map((item) => normalizeString(item)).filter(Boolean);
+}
+
+function uniqueSorted(values: string[]): string[] {
+  return [...new Set(values.filter(Boolean))].sort((left, right) => left.localeCompare(right));
+}
+
+function isSameOrDescendant(parentPath: string, targetPath: string): boolean {
+  const resolvedParent = path.resolve(parentPath);
+  const resolvedTarget = path.resolve(targetPath);
+  return resolvedTarget === resolvedParent || resolvedTarget.startsWith(`${resolvedParent}${path.sep}`);
 }
 
 function toRepoRelative(repoRoot: string, filePath: string): string {
@@ -169,7 +218,7 @@ function parsePageComment(content: string): { title: string | null; description:
 
 // ── Metadata parsing ────────────────────────────────────────────────
 
-function normalizeFeatureMetadata(input: unknown): FeatureMetadata | null {
+function normalizeFeatureMetadata(input: unknown): FeatureTreeMetadata | null {
   if (!input || typeof input !== "object") return null;
   const raw = input as Record<string, unknown>;
   const schemaVersion = Number(raw.schemaVersion ?? raw.schema_version);
@@ -208,7 +257,7 @@ function normalizeFeatureMetadata(input: unknown): FeatureMetadata | null {
   return { schemaVersion: Number.isFinite(schemaVersion) && schemaVersion > 0 ? schemaVersion : 1, capabilityGroups, features };
 }
 
-function readFeatureMetadataFromMarkdown(markdown: string): FeatureMetadata | null {
+function readFeatureMetadataFromMarkdown(markdown: string): FeatureTreeMetadata | null {
   const match = markdown.match(/^---\n([\s\S]*?)\n---\n/);
   if (!match) return null;
   let parsed: unknown;
@@ -217,7 +266,7 @@ function readFeatureMetadataFromMarkdown(markdown: string): FeatureMetadata | nu
   return normalizeFeatureMetadata(featureMetadata);
 }
 
-function readFeatureMetadataFromJson(raw: string): FeatureMetadata | null {
+function readFeatureMetadataFromJson(raw: string): FeatureTreeMetadata | null {
   if (!raw.trim()) return null;
   let parsed: unknown;
   try { parsed = JSON.parse(raw); } catch { return null; }
@@ -233,7 +282,7 @@ function readTrackedFileFromHead(repoRoot: string, relativePath: string): string
   } catch { return ""; }
 }
 
-function loadPersistedFeatureMetadata(repoRoot: string, mdPath: string, jsonPath: string): FeatureMetadata | null {
+function loadPersistedFeatureMetadata(repoRoot: string, mdPath: string, jsonPath: string): FeatureTreeMetadata | null {
   const existingMd = fs.existsSync(mdPath) ? fs.readFileSync(mdPath, "utf8") : "";
   const existingJson = fs.existsSync(jsonPath) ? fs.readFileSync(jsonPath, "utf8") : "";
   return readFeatureMetadataFromMarkdown(existingMd)
@@ -243,18 +292,23 @@ function loadPersistedFeatureMetadata(repoRoot: string, mdPath: string, jsonPath
 
 // ── Scanning ────────────────────────────────────────────────────────
 
-function scanFrontendRoutes(repoRoot: string): RouteInfo[] {
-  const appDir = path.join(repoRoot, "src", "app");
+function scanFrontendRoutes(repoRoot: string, scanRoot: string): RouteInfo[] {
+  const appDirs = [
+    path.join(scanRoot, "src", "app"),
+    path.join(scanRoot, "app"),
+  ];
   const routes: RouteInfo[] = [];
+  const pageFileNames = new Set(["page.tsx", "page.ts", "page.jsx", "page.js"]);
 
   function walk(dir: string): void {
     if (!fs.existsSync(dir)) return;
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) { walk(fullPath); continue; }
-      if (entry.name !== "page.tsx") continue;
+      if (!pageFileNames.has(entry.name)) continue;
       if (fullPath.includes(`${path.sep}api${path.sep}`)) continue;
 
+      const appDir = appDirs.find((candidate) => isSameOrDescendant(candidate, fullPath)) ?? scanRoot;
       const relDir = path.relative(appDir, path.dirname(fullPath));
       let route = `/${relDir.replace(/\\/g, "/")}`;
       if (route === "/" || route === "/.") route = "/";
@@ -282,20 +336,25 @@ function scanFrontendRoutes(repoRoot: string): RouteInfo[] {
     }
   }
 
-  walk(appDir);
+  for (const appDir of appDirs) {
+    walk(appDir);
+  }
   return routes.sort((a, b) => a.route.localeCompare(b.route));
 }
 
-function scanNextjsApiRoutes(repoRoot: string): ImplementationApiRoute[] {
-  const nextApiDir = path.join(repoRoot, "src", "app", "api");
+function scanNextjsAppRouterApiRoutes(repoRoot: string, scanRoot: string): ImplementationApiRoute[] {
+  const nextApiDirs = [
+    path.join(scanRoot, "src", "app", "api"),
+    path.join(scanRoot, "app", "api"),
+  ];
   const routes = new Map<string, ImplementationApiRoute>();
   const exportedMethods = ["GET", "POST", "PUT", "DELETE", "PATCH"];
 
-  function walk(dir: string): void {
+  function walk(dir: string, nextApiDir: string): void {
     if (!fs.existsSync(dir)) return;
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) { walk(fullPath); continue; }
+      if (entry.isDirectory()) { walk(fullPath, nextApiDir); continue; }
       if (entry.name !== "route.ts" && entry.name !== "route.js") continue;
 
       const relativeDir = path.relative(nextApiDir, path.dirname(fullPath));
@@ -312,8 +371,86 @@ function scanNextjsApiRoutes(repoRoot: string): ImplementationApiRoute[] {
     }
   }
 
-  walk(nextApiDir);
+  for (const nextApiDir of nextApiDirs) {
+    walk(nextApiDir, nextApiDir);
+  }
   return [...routes.values()].sort((a, b) => a.domain.localeCompare(b.domain) || a.path.localeCompare(b.path) || a.method.localeCompare(b.method));
+}
+
+function normalizePagesApiPath(relativeFile: string): string {
+  const withoutExt = relativeFile.replace(/\.(tsx?|jsx?)$/, "");
+  const normalized = withoutExt
+    .replace(/\\/g, "/")
+    .replace(/\/index$/, "")
+    .split("/")
+    .filter(Boolean)
+    .map(normalizeApiPathSegment)
+    .join("/");
+  return normalized ? `/api/${normalized}` : "/api";
+}
+
+function detectPagesApiMethods(content: string): string[] {
+  const explicitMatches = [...content.matchAll(/req\.method\s*(?:===|==)\s*["'`](GET|POST|PUT|DELETE|PATCH)["'`]/g)]
+    .map((match) => (match[1] ?? "").toUpperCase())
+    .filter(Boolean);
+  if (explicitMatches.length > 0) {
+    return uniqueSorted(explicitMatches);
+  }
+
+  const switchMatches = [...content.matchAll(/case\s+["'`](GET|POST|PUT|DELETE|PATCH)["'`]/g)]
+    .map((match) => (match[1] ?? "").toUpperCase())
+    .filter(Boolean);
+  if (switchMatches.length > 0) {
+    return uniqueSorted(switchMatches);
+  }
+
+  if (/export\s+default\b|module\.exports\s*=|NextApiHandler/u.test(content)) {
+    return ["GET"];
+  }
+
+  return [];
+}
+
+function scanNextjsPagesApiRoutes(repoRoot: string, scanRoot: string): ImplementationApiRoute[] {
+  const pagesApiDirs = [
+    path.join(scanRoot, "src", "pages", "api"),
+    path.join(scanRoot, "pages", "api"),
+  ];
+  const routes = new Map<string, ImplementationApiRoute>();
+
+  function walk(dir: string, pagesApiDir: string): void {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(fullPath, pagesApiDir);
+        continue;
+      }
+      if (!/\.(tsx?|jsx?)$/u.test(entry.name)) continue;
+
+      const relativeFile = path.relative(pagesApiDir, fullPath);
+      const routePath = normalizePagesApiPath(relativeFile);
+      const content = fs.readFileSync(fullPath, "utf8");
+      const sourceFile = toRepoRelative(repoRoot, fullPath);
+
+      for (const method of detectPagesApiMethods(content)) {
+        const key = `${method} ${routePath}`;
+        routes.set(key, {
+          method,
+          path: routePath,
+          domain: domainFromApiPath(routePath),
+          sourceFiles: [sourceFile],
+        });
+      }
+    }
+  }
+
+  for (const pagesApiDir of pagesApiDirs) {
+    walk(pagesApiDir, pagesApiDir);
+  }
+
+  return [...routes.values()].sort((a, b) =>
+    a.domain.localeCompare(b.domain) || a.path.localeCompare(b.path) || a.method.localeCompare(b.method));
 }
 
 function extractMethods(handlerChain: string): string[] {
@@ -428,10 +565,10 @@ function collectRustApiRoutes(params: {
   }
 }
 
-function scanRustApiRoutes(repoRoot: string): ImplementationApiRoute[] {
-  const rustApiDir = path.join(repoRoot, "crates", "routa-server", "src", "api");
+function scanRustApiRoutes(repoRoot: string, scanRoot: string): ImplementationApiRoute[] {
+  const rustApiDir = path.join(scanRoot, "crates", "routa-server", "src", "api");
   const rustApiMod = path.join(rustApiDir, "mod.rs");
-  const rustLib = path.join(repoRoot, "crates", "routa-server", "src", "lib.rs");
+  const rustLib = path.join(scanRoot, "crates", "routa-server", "src", "lib.rs");
   const routes = new Map<string, ImplementationApiRoute>();
   const visitedRouters = new Set<string>();
 
@@ -453,12 +590,22 @@ function scanRustApiRoutes(repoRoot: string): ImplementationApiRoute[] {
 
 // ── API contract loading ────────────────────────────────────────────
 
-function loadApiContract(repoRoot: string): OpenApiDoc | null {
-  const contractPath = path.join(repoRoot, "api-contract.yaml");
-  if (!fs.existsSync(contractPath)) return null;
-  try {
-    return yaml.load(fs.readFileSync(contractPath, "utf8")) as OpenApiDoc;
-  } catch { return null; }
+function loadApiContract(repoRoot: string, scanRoot: string): OpenApiDoc | null {
+  const candidatePaths = uniqueSorted([
+    path.join(scanRoot, "api-contract.yaml"),
+    path.join(repoRoot, "api-contract.yaml"),
+  ]);
+
+  for (const contractPath of candidatePaths) {
+    if (!fs.existsSync(contractPath)) continue;
+    try {
+      return yaml.load(fs.readFileSync(contractPath, "utf8")) as OpenApiDoc;
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
 }
 
 function extractApiFeatures(apiContract: OpenApiDoc | null): Record<string, ContractApiFeature[]> {
@@ -488,7 +635,8 @@ function flattenContractApis(apiFeatures: Record<string, ContractApiFeature[]>):
 function buildFeatureSurfaceIndex(
   routes: RouteInfo[], apiFeatures: Record<string, ContractApiFeature[]>,
   nextjsApis: ImplementationApiRoute[], rustApis: ImplementationApiRoute[],
-  metadata: FeatureMetadata | null = null,
+  implementationApis: Array<ImplementationApiRoute & { label: string }>,
+  metadata: FeatureTreeMetadata | null = null,
 ): FeatureSurfaceIndex {
   const contractApis = flattenContractApis(apiFeatures).map((f) => ({
     domain: f.domain, method: f.method, path: f.path, operationId: f.operationId, summary: f.summary,
@@ -500,7 +648,202 @@ function buildFeatureSurfaceIndex(
     contractApis,
     nextjsApis: nextjsApis.map((a) => ({ domain: a.domain, method: a.method, path: a.path, sourceFiles: a.sourceFiles })),
     rustApis: rustApis.map((a) => ({ domain: a.domain, method: a.method, path: a.path, sourceFiles: a.sourceFiles })),
+    implementationApis: implementationApis.map((a) => ({
+      label: a.label,
+      domain: a.domain,
+      method: a.method,
+      path: a.path,
+      sourceFiles: a.sourceFiles,
+    })),
     metadata,
+  };
+}
+
+function detectFramework(repoRoot: string): string[] {
+  const detected: string[] = [];
+  if (
+    fs.existsSync(path.join(repoRoot, "next.config.ts"))
+    || fs.existsSync(path.join(repoRoot, "next.config.js"))
+    || fs.existsSync(path.join(repoRoot, "src", "app"))
+    || fs.existsSync(path.join(repoRoot, "src", "pages"))
+  ) {
+    detected.push("nextjs");
+  }
+  if (fs.existsSync(path.join(repoRoot, "pom.xml"))) detected.push("spring-boot");
+  if (fs.existsSync(path.join(repoRoot, "config", "plugin.ts")) || fs.existsSync(path.join(repoRoot, "config", "plugin.js"))) {
+    detected.push("eggjs");
+  }
+  if (fs.existsSync(path.join(repoRoot, "Cargo.toml")) || fs.existsSync(path.join(repoRoot, "crates", "routa-server"))) {
+    detected.push("rust");
+  }
+  if (detected.length === 0) detected.push("generic");
+  return detected;
+}
+
+function validateScanRoot(repoRoot: string, scanRoot?: string): string {
+  const resolvedRepoRoot = path.resolve(repoRoot);
+  const requestedScanRoot = path.resolve(scanRoot ?? repoRoot);
+  if (!isSameOrDescendant(resolvedRepoRoot, requestedScanRoot)) {
+    throw new Error(`scanRoot must be within repoRoot: ${requestedScanRoot}`);
+  }
+  if (!fs.existsSync(requestedScanRoot) || !fs.statSync(requestedScanRoot).isDirectory()) {
+    throw new Error(`scanRoot does not exist: ${requestedScanRoot}`);
+  }
+  return requestedScanRoot;
+}
+
+function detectAdapters(repoRoot: string): Array<{ id: FeatureTreeAdapterId; confidence: "high" | "medium"; signals: string[] }> {
+  const adapters: Array<{ id: FeatureTreeAdapterId; confidence: "high" | "medium"; signals: string[] }> = [];
+  const hasAppRouter = fs.existsSync(path.join(repoRoot, "src", "app")) || fs.existsSync(path.join(repoRoot, "app"));
+  if (hasAppRouter) {
+    adapters.push({
+      id: "nextjs-app-router",
+      confidence: "high",
+      signals: uniqueSorted([
+        fs.existsSync(path.join(repoRoot, "src", "app")) ? "src/app" : "",
+        fs.existsSync(path.join(repoRoot, "app")) ? "app" : "",
+        fs.existsSync(path.join(repoRoot, "next.config.js")) ? "next.config.js" : "",
+        fs.existsSync(path.join(repoRoot, "next.config.ts")) ? "next.config.ts" : "",
+      ]),
+    });
+  }
+  const hasPagesApi = fs.existsSync(path.join(repoRoot, "src", "pages", "api")) || fs.existsSync(path.join(repoRoot, "pages", "api"));
+  if (hasPagesApi) {
+    adapters.push({
+      id: "nextjs-pages-api",
+      confidence: "high",
+      signals: uniqueSorted([
+        fs.existsSync(path.join(repoRoot, "src", "pages", "api")) ? "src/pages/api" : "",
+        fs.existsSync(path.join(repoRoot, "pages", "api")) ? "pages/api" : "",
+      ]),
+    });
+  }
+  const hasAxum = fs.existsSync(path.join(repoRoot, "crates", "routa-server", "src", "api")) || fs.existsSync(path.join(repoRoot, "Cargo.toml"));
+  if (hasAxum) {
+    adapters.push({
+      id: "axum",
+      confidence: fs.existsSync(path.join(repoRoot, "crates", "routa-server", "src", "api")) ? "high" : "medium",
+      signals: uniqueSorted([
+        fs.existsSync(path.join(repoRoot, "Cargo.toml")) ? "Cargo.toml" : "",
+        fs.existsSync(path.join(repoRoot, "crates", "routa-server", "src", "api")) ? "crates/routa-server/src/api" : "",
+      ]),
+    });
+  }
+  if (fs.existsSync(path.join(repoRoot, "pom.xml"))) {
+    adapters.push({ id: "spring-boot", confidence: "medium", signals: ["pom.xml"] });
+  }
+  if (fs.existsSync(path.join(repoRoot, "config", "plugin.ts")) || fs.existsSync(path.join(repoRoot, "config", "plugin.js"))) {
+    adapters.push({ id: "eggjs", confidence: "medium", signals: ["config/plugin"] });
+  }
+  return adapters;
+}
+
+function candidateKindForRoot(repoRoot: string, candidateRoot: string): FeatureTreeCandidateRoot["kind"] {
+  if (path.resolve(repoRoot) === path.resolve(candidateRoot)) {
+    return "root";
+  }
+  if (fs.existsSync(path.join(candidateRoot, "src", "app")) || fs.existsSync(path.join(candidateRoot, "app"))) {
+    return "app";
+  }
+  if (fs.existsSync(path.join(candidateRoot, "package.json"))) {
+    return "package";
+  }
+  return "workspace";
+}
+
+function collectCandidateRoots(repoRoot: string): string[] {
+  const candidates = new Set<string>([path.resolve(repoRoot)]);
+  const maxDepth = 4;
+
+  function walk(dir: string, depth: number): void {
+    if (depth > maxDepth || !fs.existsSync(dir)) return;
+    const dirName = path.basename(dir);
+    if (depth > 0 && (IGNORED_PATHS.has(dirName) || dirName.startsWith("."))) return;
+
+    const hasRootSignal = [
+      "package.json",
+      "Cargo.toml",
+      "pom.xml",
+      "next.config.js",
+      "next.config.ts",
+    ].some((entry) => fs.existsSync(path.join(dir, entry)));
+    const hasSurfaceSignal = [
+      path.join(dir, "src", "app"),
+      path.join(dir, "app"),
+      path.join(dir, "src", "pages", "api"),
+      path.join(dir, "pages", "api"),
+      path.join(dir, "crates", "routa-server", "src", "api"),
+    ].some((entry) => fs.existsSync(entry));
+
+    if (hasRootSignal || hasSurfaceSignal) {
+      candidates.add(path.resolve(dir));
+    }
+
+    if (depth === maxDepth) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      if (IGNORED_PATHS.has(entry.name) || entry.name.startsWith(".")) continue;
+      walk(path.join(dir, entry.name), depth + 1);
+    }
+  }
+
+  walk(repoRoot, 0);
+
+  return [...candidates].sort((left, right) => left.length - right.length || left.localeCompare(right));
+}
+
+function buildCandidateRoot(repoRoot: string, candidateRoot: string): FeatureTreeCandidateRoot {
+  const pages = scanFrontendRoutes(repoRoot, candidateRoot);
+  const appRouterApis = scanNextjsAppRouterApiRoutes(repoRoot, candidateRoot);
+  const pagesApis = scanNextjsPagesApiRoutes(repoRoot, candidateRoot);
+  const rustApis = scanRustApiRoutes(repoRoot, candidateRoot);
+  const adapters = detectAdapters(candidateRoot).map((entry) => entry.id);
+  const warnings: string[] = [];
+  if (!loadApiContract(repoRoot, candidateRoot)) {
+    warnings.push("No api-contract.yaml found for selected root; using implementation-only API discovery.");
+  }
+  const score = (pages.length * 10)
+    + ((appRouterApis.length + pagesApis.length + rustApis.length) * 12)
+    + (adapters.length * 25)
+    - Math.max(path.relative(repoRoot, candidateRoot).split(path.sep).filter(Boolean).length - 1, 0);
+
+  return {
+    path: candidateRoot,
+    kind: candidateKindForRoot(repoRoot, candidateRoot),
+    score,
+    surfaceCounts: {
+      pages: pages.length,
+      appRouterApis: appRouterApis.length,
+      pagesApis: pagesApis.length,
+      rustApis: rustApis.length,
+    },
+    adapters,
+    warnings,
+  };
+}
+
+export function preflightFeatureTree(repoRoot: string): FeatureTreePreflightResult {
+  const resolvedRepoRoot = path.resolve(repoRoot);
+  const candidateRoots = collectCandidateRoots(resolvedRepoRoot).map((candidateRoot) =>
+    buildCandidateRoot(resolvedRepoRoot, candidateRoot));
+  const selectedCandidate = [...candidateRoots].sort((left, right) =>
+    right.score - left.score || left.path.localeCompare(right.path))[0];
+  const selectedScanRoot = selectedCandidate?.path ?? resolvedRepoRoot;
+  const warnings = uniqueSorted([
+    ...candidateRoots.flatMap((candidate) => candidate.warnings),
+    selectedCandidate && selectedCandidate.path !== resolvedRepoRoot
+      ? `Selected nested scan root ${path.relative(resolvedRepoRoot, selectedCandidate.path) || "."} based on detected product surface.`
+      : "",
+  ]);
+
+  return {
+    repoRoot: resolvedRepoRoot,
+    selectedScanRoot,
+    frameworksDetected: detectFramework(selectedScanRoot),
+    adapters: detectAdapters(selectedScanRoot),
+    candidateRoots: [...candidateRoots].sort((left, right) =>
+      right.score - left.score || left.path.localeCompare(right.path)),
+    warnings,
   };
 }
 
@@ -515,7 +858,7 @@ function formatSourceFiles(sourceFiles: string[]): string {
   return sourceFiles.map((f) => `\`${f}\``).join(", ");
 }
 
-function buildFrontmatterMetadata(metadata: FeatureMetadata, surfaceIndex: FeatureSurfaceIndex): string {
+function buildFrontmatterMetadata(metadata: FeatureTreeMetadata, surfaceIndex: FeatureSurfaceIndex): string {
   const preferredApiDeclarations = new Map<string, string>();
   for (const api of surfaceIndex.contractApis) {
     preferredApiDeclarations.set(buildApiLookupKey(api.method, api.path), `${api.method} ${api.path}`);
@@ -682,21 +1025,6 @@ function buildFeatureTree(routes: RouteInfo[], apiFeatures: Record<string, Contr
   };
 }
 
-// ── Framework detection ─────────────────────────────────────────────
-
-function detectFramework(repoRoot: string): string[] {
-  const detected: string[] = [];
-  if (fs.existsSync(path.join(repoRoot, "next.config.ts")) || fs.existsSync(path.join(repoRoot, "next.config.js"))) {
-    detected.push("nextjs");
-  }
-  if (fs.existsSync(path.join(repoRoot, "pom.xml"))) detected.push("spring-boot");
-  if (fs.existsSync(path.join(repoRoot, "config/plugin.ts")) || fs.existsSync(path.join(repoRoot, "config/plugin.js"))) {
-    detected.push("eggjs");
-  }
-  if (detected.length === 0) detected.push("generic");
-  return detected;
-}
-
 // ── Public entry point ──────────────────────────────────────────────
 
 /**
@@ -707,27 +1035,44 @@ function detectFramework(repoRoot: string): string[] {
  * *would* have been written.
  */
 export async function generateFeatureTree(options: GenerateFeatureTreeOptions): Promise<GenerateFeatureTreeResult> {
-  const { repoRoot, dryRun = false } = options;
-  const warnings: string[] = [];
+  const { repoRoot, scanRoot, metadata: metadataOverride = null, dryRun = false } = options;
+  const effectiveRepoRoot = path.resolve(repoRoot);
+  const preflight = preflightFeatureTree(effectiveRepoRoot);
+  const effectiveScanRoot = validateScanRoot(effectiveRepoRoot, scanRoot ?? preflight.selectedScanRoot);
+  const warnings = [...preflight.warnings];
   const wroteFiles: string[] = [];
 
-  const frameworksDetected = detectFramework(repoRoot);
+  const frameworksDetected = detectFramework(effectiveScanRoot);
 
-  const outputMd = path.join(repoRoot, "docs", "product-specs", "FEATURE_TREE.md");
-  const outputJson = path.join(repoRoot, "docs", "product-specs", "feature-tree.index.json");
+  const outputMd = path.join(effectiveRepoRoot, "docs", "product-specs", "FEATURE_TREE.md");
+  const outputJson = path.join(effectiveRepoRoot, "docs", "product-specs", "feature-tree.index.json");
 
   // Scan sources
-  const routes = scanFrontendRoutes(repoRoot);
-  const nextjsApis = scanNextjsApiRoutes(repoRoot);
-  const rustApis = scanRustApiRoutes(repoRoot);
-  const apiContract = loadApiContract(repoRoot);
-  const metadata = loadPersistedFeatureMetadata(repoRoot, outputMd, outputJson);
+  const routes = scanFrontendRoutes(effectiveRepoRoot, effectiveScanRoot);
+  const nextjsAppRouterApis = scanNextjsAppRouterApiRoutes(effectiveRepoRoot, effectiveScanRoot);
+  const nextjsPagesApis = scanNextjsPagesApiRoutes(effectiveRepoRoot, effectiveScanRoot);
+  const nextjsApis = [...nextjsAppRouterApis, ...nextjsPagesApis].sort((a, b) =>
+    a.domain.localeCompare(b.domain) || a.path.localeCompare(b.path) || a.method.localeCompare(b.method));
+  const rustApis = scanRustApiRoutes(effectiveRepoRoot, effectiveScanRoot);
+  const apiContract = loadApiContract(effectiveRepoRoot, effectiveScanRoot);
+  const metadata = metadataOverride ?? loadPersistedFeatureMetadata(effectiveRepoRoot, outputMd, outputJson);
   const apiFeatures = extractApiFeatures(apiContract);
   const tree = buildFeatureTree(routes, apiFeatures);
-  const surfaceIndex = buildFeatureSurfaceIndex(routes, apiFeatures, nextjsApis, rustApis, metadata);
+  const implementationApis = [
+    ...nextjsAppRouterApis.map((api) => ({ ...api, label: "nextjsAppRouter" })),
+    ...nextjsPagesApis.map((api) => ({ ...api, label: "nextjsPagesApi" })),
+    ...rustApis.map((api) => ({ ...api, label: "rust" })),
+  ];
+  const surfaceIndex = buildFeatureSurfaceIndex(routes, apiFeatures, nextjsApis, rustApis, implementationApis, metadata);
 
-  if (!apiContract) {
-    warnings.push("No api-contract.yaml found; contract API sections will be empty.");
+  if (!apiContract && implementationApis.length === 0) {
+    warnings.push("No api-contract.yaml found and no implementation APIs were detected.");
+  } else if (!apiContract) {
+    warnings.push("No api-contract.yaml found; using implementation-only API discovery.");
+  }
+
+  if (effectiveScanRoot !== effectiveRepoRoot) {
+    warnings.push(`Scanned ${path.relative(effectiveRepoRoot, effectiveScanRoot) || "."} and wrote outputs to repo root.`);
   }
 
   const generatedAt = surfaceIndex.generatedAt;
@@ -746,8 +1091,8 @@ export async function generateFeatureTree(options: GenerateFeatureTreeOptions): 
     generatedAt,
     frameworksDetected,
     wroteFiles,
-    warnings,
+    warnings: uniqueSorted(warnings),
     pagesCount: routes.length,
-    apisCount: surfaceIndex.contractApis.length + nextjsApis.length + rustApis.length,
+    apisCount: surfaceIndex.contractApis.length + implementationApis.length,
   };
 }

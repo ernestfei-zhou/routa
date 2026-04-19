@@ -1,24 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import {
   type FitnessContext,
   isFitnessContextError,
   normalizeFitnessContextValue,
   resolveFitnessRepoRoot,
 } from "@/core/fitness/repo-root";
-import { generateFeatureTree, preflightFeatureTree } from "@/core/spec/feature-tree-generator";
+import {
+  type FeatureTreeMetadata,
+  generateFeatureTree,
+  preflightFeatureTree,
+} from "@/core/spec/feature-tree-generator";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-interface GenerateRequestBody {
+interface CommitRequestBody {
   workspaceId?: string;
   codebaseId?: string;
   repoPath?: string;
-  dryRun?: boolean;
+  scanRoot?: string;
+  metadata?: FeatureTreeMetadata | null;
 }
 
 export async function POST(request: NextRequest) {
-  let body: GenerateRequestBody;
+  let body: CommitRequestBody;
   try {
     body = await request.json();
   } catch {
@@ -48,8 +54,9 @@ export async function POST(request: NextRequest) {
     const preflight = preflightFeatureTree(repoRoot);
     const result = await generateFeatureTree({
       repoRoot,
-      scanRoot: preflight.selectedScanRoot,
-      dryRun: body.dryRun ?? false,
+      scanRoot: body.scanRoot ?? preflight.selectedScanRoot,
+      metadata: body.metadata ?? null,
+      dryRun: false,
     });
     return NextResponse.json(result);
   } catch (error) {
