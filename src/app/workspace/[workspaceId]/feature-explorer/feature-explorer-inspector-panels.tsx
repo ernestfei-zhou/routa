@@ -203,7 +203,16 @@ export function ContextPanel({
   const [expandedPromptSessions, setExpandedPromptSessions] = useState<Record<string, boolean>>({});
 
   if (!featureDetail && !selectedSurface) {
-    return <div className="text-xs text-desktop-text-secondary">-</div>;
+    return (
+      <div className="space-y-3 py-4">
+        <div className="text-[13px] font-semibold text-desktop-text-primary">
+          {t.featureExplorer.inspectorEmptyTitle}
+        </div>
+        <div className="text-[11px] leading-5 text-desktop-text-secondary">
+          {t.featureExplorer.inspectorEmptyDescription}
+        </div>
+      </div>
+    );
   }
 
   const isFeatureSurface = selectedSurface?.kind === "feature";
@@ -264,19 +273,6 @@ export function ContextPanel({
             ) : null}
           </div>
         </ContextSection>
-      ) : null}
-
-      {featureDetail ? (
-        <section className="rounded-sm border border-desktop-border bg-desktop-bg-primary p-2.5">
-          <div className="space-y-1.5">
-            <div>
-              <div className="text-[14px] font-semibold text-desktop-text-primary">{featureDetail.name}</div>
-              {featureDetail.summary ? (
-                <div className="mt-1 text-[11px] leading-5 text-desktop-text-secondary">{featureDetail.summary}</div>
-              ) : null}
-            </div>
-          </div>
-        </section>
       ) : null}
 
       {featureDetail?.promptContext ? (

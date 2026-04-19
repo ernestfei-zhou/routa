@@ -21,7 +21,7 @@ const { useFeatureExplorerData } = vi.hoisted(() => ({
 const analysisAcpState = vi.hoisted(() => ({
   connected: false,
   sessionId: null as string | null,
-  updates: [],
+  updates: [] as Array<{ sessionId: string; update?: Record<string, unknown> }>,
   providers: [
     {
       id: "opencode",
@@ -200,6 +200,7 @@ describe("FeatureExplorerPageClient", () => {
     sessionLaunchState.storePendingPrompt.mockReset();
     analysisAcpState.connected = false;
     analysisAcpState.sessionId = null;
+    analysisAcpState.updates = [];
     analysisAcpState.selectedProvider = "opencode";
     analysisAcpState.error = null;
     analysisAcpState.connect.mockClear();
@@ -351,7 +352,23 @@ describe("FeatureExplorerPageClient", () => {
   });
 
   it("opens the generate drawer and posts generation requests with the selected repo context", async () => {
-    sessionLaunchState.desktopAwareFetch.mockResolvedValue(
+    sessionLaunchState.desktopAwareFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          repoRoot: "/repo/default",
+          selectedScanRoot: "/repo/default",
+          frameworksDetected: ["nextjs"],
+          adapters: [{ id: "nextjs-app-router", confidence: "high", signals: ["src/app"] }],
+          candidateRoots: [],
+          warnings: [],
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+    sessionLaunchState.desktopAwareFetch.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
           generatedAt: "2026-04-18T07:50:22.614Z",
@@ -377,6 +394,8 @@ describe("FeatureExplorerPageClient", () => {
 
     expect(screen.getByTestId("generate-feature-tree-drawer")).toBeTruthy();
 
+    await screen.findByText("Quick scan");
+    fireEvent.click(screen.getByRole("button", { name: "Quick scan" }));
     fireEvent.click(screen.getByLabelText("Preview only"));
     fireEvent.click(screen.getByRole("button", { name: "Generate" }));
 
@@ -390,9 +409,10 @@ describe("FeatureExplorerPageClient", () => {
       );
     });
 
-    const requestBody = JSON.parse(
-      (sessionLaunchState.desktopAwareFetch.mock.calls[0]?.[1] as RequestInit)?.body as string,
+    const generateCall = sessionLaunchState.desktopAwareFetch.mock.calls.find(
+      ([input]) => input === "/spec/feature-tree/generate",
     );
+    const requestBody = JSON.parse((generateCall?.[1] as RequestInit)?.body as string);
     expect(requestBody).toEqual({
       workspaceId: "default",
       repoPath: "/repo/default",
@@ -400,12 +420,149 @@ describe("FeatureExplorerPageClient", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("nextjs")).toBeTruthy();
+      expect(screen.getAllByText("nextjs").length).toBeGreaterThan(0);
       expect(screen.getByText("737")).toBeTruthy();
     });
   });
 
-  it("renders surface sections from the feature tree index", async () => {
+  it("runs agent-first generation and auto-commits returned metadata after turn completion", async () => {
+    analysisAcpState.createSession.mockResolvedValue({ sessionId: "feature-tree-session-1" });
+    sessionLaunchState.desktopAwareFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            repoRoot: "/repo/default",
+            selectedScanRoot: "/repo/default/packages/app",
+            frameworksDetected: ["nextjs"],
+            adapters: [{ id: "nextjs-app-router", confidence: "high", signals: ["src/app"] }],
+            candidateRoots: [
+              {
+                path: "/repo/default/packages/app",
+                kind: "app",
+                score: 99,
+                surfaceCounts: { pages: 16, appRouterApis: 1, pagesApis: 3, rustApis: 0 },
+                adapters: ["nextjs-app-router", "nextjs-pages-api"],
+                warnings: [],
+              },
+            ],
+            warnings: ["Selected nested scan root packages/app based on detected product surface."],
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            sessionId: "feature-tree-session-1",
+            messages: [
+              {
+                role: "assistant",
+                content: JSON.stringify({
+                  schemaVersion: 1,
+                  capabilityGroups: [{ id: "workspace", name: "Workspace" }],
+                  features: [{ id: "workspace-overview", name: "Workspace Overview", group: "workspace", status: "draft" }],
+                }),
+              },
+            ],
+            latestEventKind: "usage_update",
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            generatedAt: "2026-04-19T12:00:00.000Z",
+            frameworksDetected: ["nextjs"],
+            wroteFiles: [
+              "docs/product-specs/FEATURE_TREE.md",
+              "docs/product-specs/feature-tree.index.json",
+            ],
+            warnings: ["Scanned packages/app and wrote outputs to repo root."],
+            pagesCount: 16,
+            apisCount: 4,
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      );
+
+    const view = render(<FeatureExplorerPageClient workspaceId="default" />);
+
+    fireEvent.click(screen.getByTestId("generate-feature-tree-button"));
+
+    await screen.findByText("Agent");
+    fireEvent.click(screen.getByRole("button", { name: "Generate with agent" }));
+
+    await waitFor(() => {
+      expect(analysisAcpState.connect).toHaveBeenCalled();
+      expect(analysisAcpState.createSession).toHaveBeenCalledWith(
+        "/repo/default",
+        "opencode",
+        undefined,
+        "ROUTA",
+        "default",
+        undefined,
+        undefined,
+        "feature-tree-orchestrator",
+        "en",
+        undefined,
+        undefined,
+        "main",
+      );
+      expect(analysisAcpState.promptSession).toHaveBeenCalledWith(
+        "feature-tree-session-1",
+        expect.stringContaining("Preferred scan root: /repo/default/packages/app"),
+      );
+    });
+
+    analysisAcpState.updates = [
+      {
+        sessionId: "feature-tree-session-1",
+        update: { sessionUpdate: "usage_update" },
+      },
+    ];
+
+    view.rerender(<FeatureExplorerPageClient workspaceId="default" />);
+
+    await waitFor(() => {
+      expect(sessionLaunchState.desktopAwareFetch).toHaveBeenCalledWith(
+        "/sessions/feature-tree-session-1/transcript",
+      );
+      expect(sessionLaunchState.desktopAwareFetch).toHaveBeenCalledWith(
+        "/spec/feature-tree/commit",
+        expect.objectContaining({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    });
+
+    const commitCall = sessionLaunchState.desktopAwareFetch.mock.calls.find(
+      ([input]) => input === "/spec/feature-tree/commit",
+    );
+    const commitBody = JSON.parse((commitCall?.[1] as RequestInit)?.body as string);
+    expect(commitBody).toEqual({
+      workspaceId: "default",
+      repoPath: "/repo/default",
+      scanRoot: "/repo/default/packages/app",
+      metadata: {
+        schemaVersion: 1,
+        capabilityGroups: [{ id: "workspace", name: "Workspace" }],
+        features: [{ id: "workspace-overview", name: "Workspace Overview", group: "workspace", status: "draft" }],
+      },
+    });
+  });
+
+  it("renders a feature-first structure view from the feature tree index", async () => {
     useFeatureExplorerData.mockReturnValue({
       loading: false,
       error: null,
@@ -485,22 +642,38 @@ describe("FeatureExplorerPageClient", () => {
 
     render(<FeatureExplorerPageClient workspaceId="default" />);
 
-    expect(screen.getByText("Pages")).toBeTruthy();
-    expect(screen.getByText("API Contract")).toBeTruthy();
-    expect(screen.getAllByText("Next.js API").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Rust API").length).toBeGreaterThan(0);
-    expect(screen.getByText("/workspace")).toBeTruthy();
+    const executionGroupToggle = screen.getByRole("button", { name: /Execution/i });
+    expect(screen.getAllByText("Execution").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Feature A").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Feature Structure")).toBeNull();
+    expect(screen.getByText("Summary")).toBeTruthy();
+    expect(screen.getByTestId("feature-metric-pages-feature-a").textContent).toContain("1");
+    expect(screen.getByTestId("feature-metric-apis-feature-a").textContent).toContain("1");
+    expect(within(executionGroupToggle).getByText("1 Pages")).toBeTruthy();
+    expect(within(executionGroupToggle).getByText("1 API")).toBeTruthy();
+    expect(within(executionGroupToggle).getByText("1 files")).toBeTruthy();
+    expect(screen.getByLabelText("Expand Feature A")).toBeTruthy();
+    expect(screen.getByText("Feature taxonomy ready")).toBeTruthy();
+    expect(screen.getByText("1 curated")).toBeTruthy();
+    expect(screen.getByText("0 inferred")).toBeTruthy();
+    expect(screen.getByText("Frontend routes")).toBeTruthy();
+    expect(screen.getAllByText("API surfaces").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Source files").length).toBeGreaterThan(0);
     expect(screen.queryByText("/workspace/:workspaceId/feature-explorer")).toBeNull();
-    expect(screen.getAllByText("/feature-explorer").length).toBeGreaterThan(0);
     expect(screen.queryByText("/api/feature-explorer")).toBeNull();
-    expect(screen.getByTestId("feature-section-metric-sessions").textContent).toBe("0 sessions");
-    expect(screen.getByTestId("feature-metric-sessions-feature-a").textContent).toBe("0 sessions");
-    expect(screen.getByTestId("feature-metric-files-feature-a").textContent).toBe("1 files");
-    expect(screen.getAllByText("1 items").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Summary")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /Frontend routes/i }));
+    expect(screen.getByText("/workspace/:workspaceId/feature-explorer")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /API Source/i }));
+    expect(screen.getByText("/api/feature-explorer")).toBeTruthy();
+
+    expect(screen.queryByRole("button", { name: "Context" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Screenshot" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "API" })).toBeNull();
   });
 
-  it("switches surface navigation to browser-url tree mode", async () => {
+  it("switches surface navigation to surfaces tree mode", async () => {
     useFeatureExplorerData.mockReturnValue({
       loading: false,
       error: null,
@@ -532,11 +705,87 @@ describe("FeatureExplorerPageClient", () => {
 
     render(<FeatureExplorerPageClient workspaceId="default" />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Browser URL" }));
+    fireEvent.click(screen.getByRole("button", { name: "Surfaces" }));
 
     expect(screen.getByText("/workspace")).toBeTruthy();
     expect(screen.queryByText(":workspaceId")).toBeNull();
     expect(screen.queryByText("feature-explorer")).toBeNull();
+  });
+
+  it("shows inferred repository status when only auto-generated feature groups exist", async () => {
+    useFeatureExplorerData.mockReturnValue({
+      loading: false,
+      error: null,
+      capabilityGroups: [{ id: "inferred-surfaces", name: "Inferred Surfaces", description: "Auto-derived groups" }],
+      features: [
+        {
+          id: "feature-explorer",
+          name: "Feature Explorer",
+          group: "inferred-surfaces",
+          summary: "Auto-inferred from routes and APIs",
+          status: "inferred",
+          sessionCount: 2,
+          changedFiles: 1,
+          updatedAt: "-",
+          sourceFileCount: 0,
+          pageCount: 1,
+          apiCount: 1,
+        },
+      ],
+      surfaceIndex: {
+        generatedAt: "",
+        pages: [
+          {
+            route: "/workspace/:workspaceId/feature-explorer",
+            title: "Feature Explorer",
+            description: "Explore features.",
+            sourceFile: "",
+          },
+        ],
+        apis: [],
+        contractApis: [
+          {
+            domain: "feature-explorer",
+            method: "GET",
+            path: "/api/feature-explorer",
+            operationId: "listFeatureExplorer",
+            summary: "List features",
+          },
+        ],
+        nextjsApis: [],
+        rustApis: [],
+        metadata: {
+          schemaVersion: 1,
+          capabilityGroups: [{ id: "inferred-surfaces", name: "Inferred Surfaces", description: "Auto-derived groups" }],
+          features: [
+            {
+              id: "feature-explorer",
+              name: "Feature Explorer",
+              group: "inferred-surfaces",
+              summary: "Auto-inferred from routes and APIs",
+              status: "inferred",
+              pages: ["/workspace/:workspaceId/feature-explorer"],
+              apis: ["GET /api/feature-explorer"],
+              sourceFiles: [],
+            },
+          ],
+        },
+        repoRoot: "/repo/default",
+        warnings: [],
+      },
+      featureDetail: null,
+      featureDetailLoading: false,
+      initialFeatureId: "feature-explorer",
+      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
+    });
+
+    render(<FeatureExplorerPageClient workspaceId="default" />);
+
+    expect(screen.getByText("Inferred feature map available")).toBeTruthy();
+    expect(screen.getByText("0 curated")).toBeTruthy();
+    expect(screen.getByText("1 inferred")).toBeTruthy();
+    expect(screen.queryByText("Feature taxonomy missing")).toBeNull();
+    expect(screen.getAllByText("Inferred Surfaces").length).toBeGreaterThan(0);
   });
 
   it("keeps feature navigation in the incoming source order", async () => {
@@ -597,7 +846,7 @@ describe("FeatureExplorerPageClient", () => {
     expect(lowFeature.compareDocumentPosition(highFeature) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("filters feature navigation by nextjs api work view", async () => {
+  it("switches to the API tree work view", async () => {
     useFeatureExplorerData.mockReturnValue({
       loading: false,
       error: null,
@@ -668,13 +917,98 @@ describe("FeatureExplorerPageClient", () => {
 
     render(<FeatureExplorerPageClient workspaceId="default" />);
 
-    expect(screen.getByRole("button", { name: /Feature Next.js/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Feature Hidden/ })).toBeTruthy();
+    expect(screen.getByLabelText("Expand Feature Next.js")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Feature Hidden" })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Next.js API" }));
+    fireEvent.click(screen.getByRole("button", { name: "APIs" }));
 
-    expect(screen.getByRole("button", { name: /Feature Next.js/ })).toBeTruthy();
+    expect(screen.getByText("/feature-explorer")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Feature Next\.js/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Feature Hidden/ })).toBeNull();
+  });
+
+  it("expands capability features into concrete page and api surfaces", async () => {
+    useFeatureExplorerData.mockReturnValue({
+      loading: false,
+      error: null,
+      capabilityGroups: [{ id: "execution", name: "Execution", description: "Execution surfaces" }],
+      features: [
+        {
+          id: "feature-explorer",
+          name: "Feature Explorer",
+          group: "execution",
+          summary: "Inspect workspace feature surfaces.",
+          status: "evolving",
+          sessionCount: 7,
+          changedFiles: 7,
+          updatedAt: "-",
+          sourceFileCount: 7,
+          pageCount: 1,
+          apiCount: 2,
+        },
+      ],
+      surfaceIndex: {
+        generatedAt: "",
+        pages: [
+          {
+            route: "/workspace/:workspaceId/feature-explorer",
+            title: "Feature Explorer",
+            description: "Explore features.",
+            sourceFile: "src/app/workspace/[workspaceId]/feature-explorer/page.tsx",
+          },
+        ],
+        apis: [],
+        contractApis: [
+          {
+            domain: "feature-explorer",
+            method: "GET",
+            path: "/api/feature-explorer",
+            operationId: "listFeatureExplorer",
+            summary: "List features",
+          },
+        ],
+        nextjsApis: [
+          {
+            domain: "feature-explorer",
+            method: "GET",
+            path: "/api/feature-explorer",
+            sourceFiles: ["src/app/api/feature-explorer/route.ts"],
+          },
+        ],
+        rustApis: [],
+        metadata: {
+          schemaVersion: 1,
+          capabilityGroups: [{ id: "execution", name: "Execution", description: "Execution surfaces" }],
+          features: [
+            {
+              id: "feature-explorer",
+              name: "Feature Explorer",
+              group: "execution",
+              pages: ["/workspace/:workspaceId/feature-explorer"],
+              apis: ["GET /api/feature-explorer"],
+              sourceFiles: ["src/app/workspace/[workspaceId]/feature-explorer/page.tsx"],
+            },
+          ],
+        },
+        repoRoot: "/repo/default",
+        warnings: [],
+      },
+      featureDetail: null,
+      featureDetailLoading: false,
+      initialFeatureId: "feature-explorer",
+      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
+    });
+
+    render(<FeatureExplorerPageClient workspaceId="default" />);
+
+    expect(screen.getByLabelText("Expand Feature Explorer")).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText("Expand Feature Explorer"));
+
+    expect(screen.getByRole("button", { name: "Feature Explorer" })).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "/workspace/:workspaceId/feature-explorer" })).toBeTruthy();
+    });
   });
 
   it("does not duplicate feature details in the inspector for feature selections", async () => {
@@ -828,714 +1162,19 @@ describe("FeatureExplorerPageClient", () => {
       expect(screen.getByTestId("feature-tree-sessions-folder-src").textContent).toBe("6");
     });
 
-    expect(screen.getByTestId("feature-section-metric-sessions").textContent).toBe("6 sessions");
+    expect(screen.getAllByText("Kanban Workflow").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Source files").length).toBeGreaterThan(0);
     expect(screen.getByTestId("feature-tree-changes-folder-src").textContent).toBe("6");
     expect(screen.getByTestId("feature-tree-sessions-folder-app").textContent).toBe("6");
     expect(screen.getByTestId("feature-tree-updated-folder-src").textContent).not.toBe("-");
 
     fireEvent.click(screen.getByTestId("feature-tree-select-folder-src"));
-    expect(screen.getByText("0f")).toBeTruthy();
+    expect((screen.getByTestId("feature-tree-select-folder-src") as HTMLInputElement).checked).toBe(false);
+    expect((screen.getByTestId("feature-tree-select-file-route") as HTMLInputElement).checked).toBe(false);
 
     fireEvent.click(screen.getByTestId("feature-tree-select-folder-src"));
-    expect(screen.getByText("1f")).toBeTruthy();
+    expect((screen.getByTestId("feature-tree-select-folder-src") as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByTestId("feature-tree-select-file-route") as HTMLInputElement).checked).toBe(true);
   });
 
-  it("renders selected file session evidence with resume command", async () => {
-    useFeatureExplorerData.mockReturnValue({
-      loading: false,
-      error: null,
-      capabilityGroups: [{ id: "workspace", name: "Workspace", description: "" }],
-      features: [
-        {
-          id: "workspace-overview",
-          name: "Workspace Overview",
-          group: "workspace",
-          summary: "Workspace shell",
-          status: "shipped",
-          sessionCount: 12,
-          changedFiles: 1,
-          updatedAt: "2026-04-17T08:00:00.000Z",
-          sourceFileCount: 1,
-          pageCount: 1,
-          apiCount: 0,
-        },
-      ],
-      surfaceIndex: {
-        generatedAt: "",
-        pages: [],
-        apis: [],
-        contractApis: [],
-        nextjsApis: [],
-        rustApis: [],
-        metadata: null,
-        repoRoot: "",
-        warnings: [],
-      },
-      featureDetail: {
-        id: "workspace-overview",
-        name: "Workspace Overview",
-        group: "workspace",
-        summary: "Workspace shell",
-        status: "shipped",
-        pages: [],
-        apis: [],
-        sourceFiles: ["src/app/workspace/[workspaceId]/page.tsx"],
-        relatedFiles: ["src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx"],
-        relatedFeatures: [],
-        domainObjects: [],
-        sessionCount: 12,
-        changedFiles: 1,
-        updatedAt: "2026-04-17T08:00:00.000Z",
-        fileTree: [
-          {
-            id: "file-kanban-page",
-            name: "kanban-page-client.tsx",
-            path: "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx",
-            kind: "file",
-            children: [],
-          },
-        ],
-        fileStats: {
-          "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx": {
-            changes: 3,
-            sessions: 3,
-            updatedAt: "2026-04-17T08:00:00.000Z",
-          },
-        },
-        fileSignals: {
-          "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx": {
-            sessions: [
-              {
-                provider: "codex",
-                sessionId: "019d-selected-file",
-                updatedAt: "2026-04-17T08:00:00.000Z",
-                promptSnippet: "Connect selected file signals to the right inspector panel",
-                promptHistory: [
-                  "Connect selected file signals to the right inspector panel",
-                  "Keep user prompts grouped under the owning session card",
-                  "Move session changed files into the owning session card",
-                ],
-                toolNames: ["exec_command", "apply_patch"],
-                changedFiles: [
-                  "crates/routa-server/src/api/mcp_routes/tool_executor/agents_tasks.rs",
-                  "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx",
-                ],
-                resumeCommand: "codex resume 019d-selected-file",
-              },
-            ],
-            toolHistory: ["exec_command", "apply_patch"],
-            promptHistory: ["Connect selected file signals to the right inspector panel"],
-          },
-        },
-      },
-      featureDetailLoading: false,
-      initialFeatureId: "workspace-overview",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
-    });
-
-    render(<FeatureExplorerPageClient workspaceId="default" />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Codex")).toBeTruthy();
-    });
-
-    expect(screen.getByText("019d-selected-file")).toBeTruthy();
-    expect(screen.queryByText("codex resume 019d-selected-file")).toBeNull();
-    expect(screen.queryByText("exec_command")).toBeNull();
-    expect(screen.getByText("Connect selected file signals to the right inspector panel")).toBeTruthy();
-    expect(screen.getByText("Keep user prompts grouped under the owning session card")).toBeTruthy();
-    expect(screen.queryByText("Move session changed files into the owning session card")).toBeNull();
-    expect(screen.getByRole("button", { name: "Show All" })).toBeTruthy();
-    expect(screen.getByText("Related files")).toBeTruthy();
-    expect(screen.getByText("crates/routa-server/src/api/mcp_routes/tool_executor/agents_tasks.rs")).toBeTruthy();
-    expect(screen.getByText("src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx")).toBeTruthy();
-    expect(screen.queryByText("Active file")).toBeNull();
-
-    fireEvent.click(screen.getByRole("button", { name: "Show All" }));
-    expect(screen.getByText("Move session changed files into the owning session card")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Show Less" })).toBeTruthy();
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Resume: 019d-selected-file",
-      }),
-    );
-    expect(clipboardState.writeText).toHaveBeenCalledWith("codex resume 019d-selected-file");
-  });
-
-  it("launches a file session analysis specialist from the inspector", async () => {
-    sessionLaunchState.desktopAwareFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        result: {
-          sessionId: "analysis-session-1",
-        },
-      }),
-    });
-
-    useFeatureExplorerData.mockReturnValue({
-      loading: false,
-      error: null,
-      capabilityGroups: [{ id: "workspace", name: "Workspace", description: "" }],
-      features: [
-        {
-          id: "workspace-overview",
-          name: "Workspace Overview",
-          group: "workspace",
-          summary: "Workspace shell",
-          status: "shipped",
-          sessionCount: 12,
-          changedFiles: 1,
-          updatedAt: "2026-04-17T08:00:00.000Z",
-          sourceFileCount: 1,
-          pageCount: 1,
-          apiCount: 0,
-        },
-      ],
-      surfaceIndex: {
-        generatedAt: "",
-        pages: [],
-        apis: [],
-        contractApis: [],
-        nextjsApis: [],
-        rustApis: [],
-        metadata: null,
-        repoRoot: "",
-        warnings: [],
-      },
-      featureDetail: {
-        id: "workspace-overview",
-        name: "Workspace Overview",
-        group: "workspace",
-        summary: "Workspace shell",
-        status: "shipped",
-        pages: [],
-        apis: [],
-        sourceFiles: ["crates/routa-server/src/api/kanban.rs"],
-        relatedFeatures: [],
-        domainObjects: [],
-        sessionCount: 12,
-        changedFiles: 1,
-        updatedAt: "2026-04-17T08:00:00.000Z",
-        fileTree: [
-          {
-            id: "file-kanban-api",
-            name: "kanban.rs",
-            path: "crates/routa-server/src/api/kanban.rs",
-            kind: "file",
-            children: [],
-          },
-        ],
-        fileStats: {
-          "crates/routa-server/src/api/kanban.rs": {
-            changes: 4,
-            sessions: 6,
-            updatedAt: "2026-04-17T08:00:00.000Z",
-          },
-        },
-        fileSignals: {
-          "crates/routa-server/src/api/kanban.rs": {
-            sessions: [
-              {
-                provider: "codex",
-                sessionId: "019d-kanban-analysis",
-                updatedAt: "2026-04-17T08:00:00.000Z",
-                promptSnippet: "Trace why kanban.rs needed multiple follow-up passes",
-                promptHistory: [
-                  "Trace why kanban.rs needed multiple follow-up passes",
-                  "Summarize what context should have been provided earlier",
-                ],
-                toolNames: ["exec_command", "apply_patch"],
-                changedFiles: [
-                  "fatal: Unable to create '/Users/phodal/ai/routa-js/.git/index.lock': Operation not permitted",
-                  "crates/routa-server/src/api/kanban.rs",
-                ],
-                diagnostics: {
-                  toolCallCount: 4,
-                  failedToolCallCount: 1,
-                  toolCallsByName: {
-                    exec_command: 3,
-                    apply_patch: 1,
-                  },
-                  readFiles: ["crates/routa-server/src/api/kanban.rs"],
-                  writtenFiles: ["crates/routa-server/src/api/kanban.rs"],
-                  repeatedReadFiles: ["crates/routa-server/src/api/kanban.rs x2"],
-                  repeatedCommands: ["sed -n 1,200p crates/routa-server/src/api/kanban.rs x2"],
-                  failedTools: [
-                    {
-                      toolName: "exec_command",
-                      command: "git status --short",
-                      message: "fatal: Unable to create '/Users/phodal/ai/routa-js/.git/index.lock'",
-                    },
-                  ],
-                },
-                resumeCommand: "codex resume 019d-kanban-analysis",
-              },
-              {
-                provider: "codex",
-                sessionId: "019d-kanban-followup",
-                updatedAt: "2026-04-17T06:00:00.000Z",
-                promptSnippet: "Verify whether kanban handlers were re-read too often",
-                promptHistory: [
-                  "Verify whether kanban handlers were re-read too often",
-                ],
-                toolNames: ["exec_command"],
-                changedFiles: [
-                  "crates/routa-server/src/api/kanban.rs",
-                  "src/app/workspace/[workspaceId]/kanban/kanban-tab.tsx",
-                ],
-                diagnostics: {
-                  toolCallCount: 2,
-                  failedToolCallCount: 0,
-                  toolCallsByName: {
-                    exec_command: 2,
-                  },
-                  readFiles: [
-                    "crates/routa-server/src/api/kanban.rs",
-                    "src/app/workspace/[workspaceId]/kanban/kanban-tab.tsx",
-                  ],
-                  writtenFiles: ["src/app/workspace/[workspaceId]/kanban/kanban-tab.tsx"],
-                  repeatedReadFiles: [],
-                  repeatedCommands: ["rg -n kanban src/app/workspace/[workspaceId]/kanban/kanban-tab.tsx x2"],
-                  failedTools: [],
-                },
-                resumeCommand: "codex resume 019d-kanban-followup",
-              },
-            ],
-            toolHistory: ["exec_command", "apply_patch"],
-            promptHistory: ["Trace why kanban.rs needed multiple follow-up passes"],
-          },
-        },
-      },
-      featureDetailLoading: false,
-      initialFeatureId: "workspace-overview",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
-    });
-
-    const view = render(<FeatureExplorerPageClient workspaceId="default" />);
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Open analysis panel" })).toBeTruthy();
-    });
-
-    expect(screen.queryByText(/Operation not permitted/i)).toBeNull();
-
-    fireEvent.click(screen.getByRole("button", { name: "Open analysis panel" }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("feature-explorer-session-analysis-drawer")).toBeTruthy();
-    });
-
-    expect(screen.getByText("Session diagnostics")).toBeTruthy();
-    expect(screen.getByText("Tool call breakdown")).toBeTruthy();
-    expect(screen.getAllByText("Read files").length).toBeGreaterThan(0);
-    expect(screen.getByText("Repeated reads")).toBeTruthy();
-    expect(screen.getByText("Repeated commands")).toBeTruthy();
-    expect(screen.getByText("Failed tools")).toBeTruthy();
-    expect(screen.getByText("git status --short")).toBeTruthy();
-    expect(screen.getByText("crates/routa-server/src/api/kanban.rs x2")).toBeTruthy();
-    expect(
-      (screen.getByTestId("feature-explorer-session-analysis-toggle-019d-kanban-analysis") as HTMLInputElement).checked,
-    ).toBe(true);
-    expect(
-      (screen.getByTestId("feature-explorer-session-analysis-toggle-019d-kanban-followup") as HTMLInputElement).checked,
-    ).toBe(true);
-
-    fireEvent.click(
-      within(screen.getByTestId("feature-explorer-session-analysis-provider")).getByRole("button", { name: "Codex" }),
-    );
-    view.rerender(<FeatureExplorerPageClient workspaceId="default" />);
-    fireEvent.click(screen.getByRole("button", { name: "Analyze selected sessions" }));
-
-    await waitFor(() => {
-      expect(sessionLaunchState.desktopAwareFetch).toHaveBeenCalledTimes(1);
-    });
-
-    const [path, options] = sessionLaunchState.desktopAwareFetch.mock.calls[0] as [
-      string,
-      { body: string; method: string },
-    ];
-    expect(path).toBe("/api/acp");
-    expect(options.method).toBe("POST");
-
-    const body = JSON.parse(options.body);
-    expect(body.method).toBe("session/new");
-    expect(body.params).toMatchObject({
-      workspaceId: "default",
-      cwd: "/repo/default",
-      branch: "main",
-      role: "ROUTA",
-      specialistId: "file-session-analyst",
-      specialistLocale: "en",
-      provider: "codex",
-    });
-
-    await waitFor(() => {
-      expect(analysisAcpState.selectSession).toHaveBeenCalledWith("analysis-session-1");
-      expect(analysisAcpState.promptSession).toHaveBeenCalledWith(
-        "analysis-session-1",
-        expect.stringContaining("crates/routa-server/src/api/kanban.rs"),
-      );
-    });
-
-    const prompt = analysisAcpState.promptSession.mock.calls[0]?.[1];
-    expect(prompt).toBeTruthy();
-    expect(prompt).toContain("019d-kanban-analysis");
-    expect(prompt).toContain("019d-kanban-followup");
-    expect(prompt).toContain("Summarize what context should have been provided earlier");
-    expect(prompt).not.toContain("Operation not permitted");
-    expect(sessionLaunchState.storePendingPrompt).not.toHaveBeenCalled();
-    expect(navState.push).not.toHaveBeenCalledWith("/workspace/default/sessions/analysis-session-1");
-    await waitFor(() => {
-      expect(screen.getByTestId("feature-explorer-analysis-session-drawer")).toBeTruthy();
-    });
-    expect(screen.getByTestId("chat-panel").textContent).toBe("analysis-session-1");
-  });
-
-  it("aggregates folder selection sessions across descendant files", async () => {
-    useFeatureExplorerData.mockReturnValue({
-      loading: false,
-      error: null,
-      capabilityGroups: [{ id: "workspace", name: "Workspace", description: "" }],
-      features: [
-        {
-          id: "workspace-overview",
-          name: "Workspace Overview",
-          group: "workspace",
-          summary: "Workspace shell",
-          status: "shipped",
-          sessionCount: 12,
-          changedFiles: 2,
-          updatedAt: "2026-04-17T08:00:00.000Z",
-          sourceFileCount: 2,
-          pageCount: 1,
-          apiCount: 0,
-        },
-      ],
-      surfaceIndex: {
-        generatedAt: "",
-        pages: [],
-        apis: [],
-        contractApis: [],
-        nextjsApis: [],
-        rustApis: [],
-        metadata: null,
-        repoRoot: "",
-        warnings: [],
-      },
-      featureDetail: {
-        id: "workspace-overview",
-        name: "Workspace Overview",
-        group: "workspace",
-        summary: "Workspace shell",
-        status: "shipped",
-        pages: [],
-        apis: [],
-        sourceFiles: [
-          "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx",
-          "src/app/workspace/[workspaceId]/overview/page.tsx",
-        ],
-        relatedFeatures: [],
-        domainObjects: [],
-        sessionCount: 12,
-        changedFiles: 2,
-        updatedAt: "2026-04-17T08:00:00.000Z",
-        fileTree: [
-          {
-            id: "folder-workspace",
-            name: "workspace",
-            path: "src/app/workspace/[workspaceId]",
-            kind: "folder",
-            children: [
-              {
-                id: "file-kanban-page",
-                name: "kanban-page-client.tsx",
-                path: "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx",
-                kind: "file",
-                children: [],
-              },
-              {
-                id: "file-overview-page",
-                name: "page.tsx",
-                path: "src/app/workspace/[workspaceId]/overview/page.tsx",
-                kind: "file",
-                children: [],
-              },
-            ],
-          },
-        ],
-        fileStats: {
-          "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx": {
-            changes: 3,
-            sessions: 1,
-            updatedAt: "2026-04-17T08:00:00.000Z",
-          },
-          "src/app/workspace/[workspaceId]/overview/page.tsx": {
-            changes: 1,
-            sessions: 1,
-            updatedAt: "2026-04-16T08:00:00.000Z",
-          },
-        },
-        fileSignals: {
-          "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx": {
-            sessions: [
-              {
-                provider: "codex",
-                sessionId: "019d-folder-a",
-                updatedAt: "2026-04-17T08:00:00.000Z",
-                promptSnippet: "Kanban workspace file changes",
-                promptHistory: ["Kanban workspace file changes"],
-                toolNames: ["apply_patch"],
-                changedFiles: ["src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx"],
-                resumeCommand: "codex resume 019d-folder-a",
-              },
-            ],
-            toolHistory: ["apply_patch"],
-            promptHistory: ["Kanban workspace file changes"],
-          },
-          "src/app/workspace/[workspaceId]/overview/page.tsx": {
-            sessions: [
-              {
-                provider: "codex",
-                sessionId: "019d-folder-b",
-                updatedAt: "2026-04-16T08:00:00.000Z",
-                promptSnippet: "Overview page cleanup",
-                promptHistory: ["Overview page cleanup"],
-                toolNames: ["exec_command"],
-                changedFiles: ["src/app/workspace/[workspaceId]/overview/page.tsx"],
-                resumeCommand: "codex resume 019d-folder-b",
-              },
-            ],
-            toolHistory: ["exec_command"],
-            promptHistory: ["Overview page cleanup"],
-          },
-        },
-      },
-      featureDetailLoading: false,
-      initialFeatureId: "workspace-overview",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
-    });
-
-    render(<FeatureExplorerPageClient workspaceId="default" />);
-
-    await waitFor(() => {
-      expect(screen.getByText("019d-folder-a")).toBeTruthy();
-    });
-
-    expect(screen.queryByText("019d-folder-b")).toBeNull();
-
-    fireEvent.click(screen.getByTestId("feature-tree-select-folder-workspace"));
-
-    await waitFor(() => {
-      expect(screen.getByText("019d-folder-b")).toBeTruthy();
-    });
-
-    expect(screen.getByText("2f")).toBeTruthy();
-  });
-
-  it("hydrates file selection from the url and keeps it in sync", async () => {
-    window.history.replaceState(
-      {},
-      "",
-      "/workspace/default/feature-explorer?feature=workspace-overview&file=src%2Fapp%2Fworkspace%2F%5BworkspaceId%5D%2Fkanban%2Fkanban-page-client.tsx",
-    );
-
-    useFeatureExplorerData.mockReturnValue({
-      loading: false,
-      error: null,
-      capabilityGroups: [{ id: "workspace", name: "Workspace", description: "" }],
-      features: [
-        {
-          id: "workspace-overview",
-          name: "Workspace Overview",
-          group: "workspace",
-          summary: "Workspace shell",
-          status: "shipped",
-          sessionCount: 12,
-          changedFiles: 2,
-          updatedAt: "2026-04-17T08:00:00.000Z",
-          sourceFileCount: 2,
-          pageCount: 1,
-          apiCount: 0,
-        },
-      ],
-      surfaceIndex: {
-        generatedAt: "",
-        pages: [],
-        apis: [],
-        contractApis: [],
-        nextjsApis: [],
-        rustApis: [],
-        metadata: null,
-        repoRoot: "",
-        warnings: [],
-      },
-      featureDetail: {
-        id: "workspace-overview",
-        name: "Workspace Overview",
-        group: "workspace",
-        summary: "Workspace shell",
-        status: "shipped",
-        pages: [],
-        apis: [],
-        sourceFiles: [
-          "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx",
-          "src/app/workspace/[workspaceId]/overview/page.tsx",
-        ],
-        relatedFeatures: [],
-        domainObjects: [],
-        sessionCount: 12,
-        changedFiles: 2,
-        updatedAt: "2026-04-17T08:00:00.000Z",
-        fileTree: [
-          {
-            id: "file-kanban-page",
-            name: "kanban-page-client.tsx",
-            path: "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx",
-            kind: "file",
-            children: [],
-          },
-          {
-            id: "file-overview-page",
-            name: "page.tsx",
-            path: "src/app/workspace/[workspaceId]/overview/page.tsx",
-            kind: "file",
-            children: [],
-          },
-        ],
-        fileStats: {
-          "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx": {
-            changes: 3,
-            sessions: 3,
-            updatedAt: "2026-04-17T08:00:00.000Z",
-          },
-          "src/app/workspace/[workspaceId]/overview/page.tsx": {
-            changes: 1,
-            sessions: 1,
-            updatedAt: "2026-04-16T08:00:00.000Z",
-          },
-        },
-        fileSignals: {},
-      },
-      featureDetailLoading: false,
-      initialFeatureId: "workspace-overview",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
-    });
-
-    render(<FeatureExplorerPageClient workspaceId="default" />);
-
-    await waitFor(() => {
-      expect(screen.getAllByText("kanban-page-client.tsx").length).toBeGreaterThan(0);
-    });
-
-    expect(window.location.search).toContain("feature=workspace-overview");
-    expect(window.location.search).toContain(
-      "file=src%2Fapp%2Fworkspace%2F%5BworkspaceId%5D%2Fkanban%2Fkanban-page-client.tsx",
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "page.tsx" }));
-
-    await waitFor(() => {
-      expect(window.location.search).toContain(
-        "file=src%2Fapp%2Fworkspace%2F%5BworkspaceId%5D%2Foverview%2Fpage.tsx",
-      );
-    });
-  });
-
-  it("shows learned prompt context when the feature detail includes aggregated session patterns", async () => {
-    useFeatureExplorerData.mockReturnValue({
-      loading: false,
-      error: null,
-      capabilityGroups: [{ id: "workspace", name: "Workspace", description: "" }],
-      features: [
-        {
-          id: "workspace-overview",
-          name: "Workspace Overview",
-          group: "workspace",
-          summary: "Workspace shell",
-          status: "shipped",
-          sessionCount: 12,
-          changedFiles: 2,
-          updatedAt: "2026-04-17T08:00:00.000Z",
-          sourceFileCount: 2,
-          pageCount: 1,
-          apiCount: 0,
-        },
-      ],
-      surfaceIndex: {
-        generatedAt: "",
-        pages: [],
-        apis: [],
-        contractApis: [],
-        nextjsApis: [],
-        rustApis: [],
-        implementationApis: [],
-        metadata: null,
-        repoRoot: "",
-        warnings: [],
-      },
-      featureDetail: {
-        id: "workspace-overview",
-        name: "Workspace Overview",
-        group: "workspace",
-        summary: "Workspace shell",
-        status: "shipped",
-        pages: [],
-        apis: [],
-        sourceFiles: [
-          "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx",
-        ],
-        relatedFeatures: [],
-        domainObjects: [],
-        sessionCount: 12,
-        changedFiles: 2,
-        updatedAt: "2026-04-17T08:00:00.000Z",
-        promptContext: {
-          featureId: "workspace-overview",
-          sessionCount: 3,
-          promptPreviews: [
-            { name: "Refine workspace overview context panel", count: 2 },
-          ],
-          toolCallCounts: [
-            { name: "Read", count: 4 },
-            { name: "apply_patch", count: 2 },
-          ],
-          fileOperationCounts: [
-            { name: "modified", count: 5 },
-          ],
-        },
-        fileTree: [
-          {
-            id: "file-kanban-page",
-            name: "kanban-page-client.tsx",
-            path: "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx",
-            kind: "file",
-            children: [],
-          },
-        ],
-        fileStats: {
-          "src/app/workspace/[workspaceId]/kanban/kanban-page-client.tsx": {
-            changes: 3,
-            sessions: 3,
-            updatedAt: "2026-04-17T08:00:00.000Z",
-          },
-        },
-        fileSignals: {},
-      },
-      featureDetailLoading: false,
-      initialFeatureId: "workspace-overview",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
-    });
-
-    render(<FeatureExplorerPageClient workspaceId="default" />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Learned prompt context")).toBeTruthy();
-    });
-
-    expect(screen.getByText("Historical feature-linked sessions summarized into reusable prompt, tool, and file-operation patterns.")).toBeTruthy();
-    expect(screen.getByText("Refine workspace overview context panel")).toBeTruthy();
-    expect(screen.getByText("apply_patch")).toBeTruthy();
-    expect(screen.getByText("modified")).toBeTruthy();
-  });
 });

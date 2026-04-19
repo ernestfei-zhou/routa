@@ -5,7 +5,7 @@ import {
   normalizeFitnessContextValue,
   resolveFitnessRepoRoot,
 } from "@/core/fitness/repo-root";
-import { generateFeatureTree } from "@/core/spec/feature-tree-generator";
+import { generateFeatureTree, preflightFeatureTree } from "@/core/spec/feature-tree-generator";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,8 +45,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const preflight = preflightFeatureTree(repoRoot);
     const result = await generateFeatureTree({
       repoRoot,
+      scanRoot: preflight.selectedScanRoot,
       dryRun: body.dryRun ?? false,
     });
     return NextResponse.json(result);
